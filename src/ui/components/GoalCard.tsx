@@ -36,6 +36,7 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [timerError, setTimerError] = useState<DomainError | null>(null);
+  const starting = useRef(false);
   const logButtonRef = useRef<HTMLButtonElement>(null);
   const met = minutes >= target;
   const hours = goal.targetType === 'total' ? f.number(goal.targetMinutes / 60) : null;
@@ -49,10 +50,16 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
     : t('goalCard.toGo', { n: f.number(target - minutes) });
 
   async function startTimer() {
-    if (timer !== 'none' || !onStartTimer) return;
+    // A double-click must not start twice (the second call would report TIMER_ALREADY_RUNNING).
+    if (timer !== 'none' || !onStartTimer || starting.current) return;
+    starting.current = true;
     setTimerError(null);
-    const r = await onStartTimer();
-    if (!r.ok) setTimerError(r.errors[0] ?? null);
+    try {
+      const r = await onStartTimer();
+      if (!r.ok) setTimerError(r.errors[0] ?? null);
+    } finally {
+      starting.current = false;
+    }
   }
 
   const timerErrorText = timerError ? (({ key, params }) => t(key, params))(errorMessage(timerError, f)) : null;

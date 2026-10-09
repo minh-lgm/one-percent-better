@@ -150,6 +150,34 @@ describe('TimerService.stop / save / discard (M2-AC3, M2-AC4)', () => {
   });
 });
 
+describe('concurrent calls are serialised (M2-D3 regression)', () => {
+  it('two simultaneous start() calls leave exactly one timer and one TIMER_ALREADY_RUNNING', async () => {
+    const [a, b] = await Promise.all([timers.start('g1', FIXED_NOW), timers.start('g2', FIXED_NOW)]);
+    expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
+    const failed = [a, b].find((r) => !r.ok);
+    if (failed && !failed.ok) expect(failed.errors[0].code).toBe('TIMER_ALREADY_RUNNING');
+    expect((await timers.current())?.goalId).toBe('g1');
+  });
+
+  it('two simultaneous save() calls create exactly one entry; the second gets TIMER_NOT_RUNNING', async () => {
+    await timers.start('g1', FIXED_NOW);
+    const later = at('2026-10-09T10:25:00+07:00');
+    const [r1, r2] = await Promise.all([timers.save({ minutes: 25, note: '' }, later), timers.save({ minutes: 25, note: '' }, later)]);
+    expect([r1.ok, r2.ok].filter(Boolean)).toHaveLength(1);
+    if (!r2.ok) expect(r2.errors[0].code).toBe('TIMER_NOT_RUNNING');
+    expect(await db.entries.where('goalId').equals('g1').and((e) => e.date === '2026-10-09').count()).toBe(1);
+    expect(await timers.current()).toBeUndefined();
+  });
+
+  it('save() and discard() racing: at most one of them wins', async () => {
+    await timers.start('g1', FIXED_NOW);
+    const later = at('2026-10-09T10:25:00+07:00');
+    const [r1, r2] = await Promise.all([timers.save({ minutes: 25, note: '' }, later), timers.discard()]);
+    expect([r1.ok, r2.ok].filter(Boolean)).toHaveLength(1);
+    expect(await timers.current()).toBeUndefined();
+  });
+});
+
 describe('GoalService.remove discards the timer of the deleted goal (M2-AC5)', () => {
   it('clears activeTimer when it belongs to the removed goal', async () => {
     await timers.start('g1', FIXED_NOW);

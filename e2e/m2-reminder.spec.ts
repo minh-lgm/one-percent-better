@@ -53,6 +53,18 @@ test.describe('M2 reminders — settings', () => {
     await expect(reminderSwitch(page)).toBeChecked();
     await expect(timeInput(page)).toHaveValue('07:30');
     await expectAxeClean(page);
+
+    // M2-D1 regression: type the time segment by segment with real key presses.
+    await timeInput(page).click({ position: { x: 8, y: 10 } });
+    await page.keyboard.type('0945PM');
+    await expect(timeInput(page)).toHaveValue('21:45');
+    await expect.poll(() => kvGet(page, 'settings')).toMatchObject({ reminderTime: '21:45' });
+    await expect(toast(page)).toHaveText(EN.toast.reminderTime);
+    await timeInput(page).blur();
+    await expect(timeInput(page)).toHaveValue('21:45');
+    await expect(page.getByText('Adds a repeating daily event at 21:45.')).toBeVisible();
+    await page.reload();
+    await expect(timeInput(page)).toHaveValue('21:45');
   });
 
   test('M2-AC11: the .ics download has the fixed name and a daily event at the reminder time', async ({ page }) => {

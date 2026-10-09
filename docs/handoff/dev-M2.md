@@ -122,3 +122,28 @@ Không có.
 ## Open questions
 
 - Không có câu hỏi chặn. Ghi nhận: DESIGN §7.5 không có `reminder.banner_one` cho `vi` (đúng quy tắc 7.0, `vi` chỉ có `_other`) — đã làm theo.
+
+## Fix log
+
+### Round 1 — theo report-M2-r1.md
+
+| Defect | Nguyên nhân gốc | Cách sửa | Regression test |
+| :- | :- | :- | :- |
+| M2-D1 (Major) — gõ giờ nhắc bằng bàn phím ra giá trị sai (`0730AM` → `15:00`) | `<input type="time">` được kiểm soát bằng `reminderTime` lấy từ liveQuery; `onChange` ghi Dexie bất đồng bộ nên ngay sau mỗi phím React ghi lại giá trị cũ vào DOM, Chrome mất trạng thái soạn thảo từng phần của ô giờ (phím kế tiếp lại rơi vào phần giờ). Mỗi giá trị trung gian cũng hiện toast | Component mới `src/ui/components/ReminderTimeField.tsx`: khi ô đang focus, giá trị hiển thị là **draft cục bộ** phản ánh đúng những gì trình duyệt báo (kể cả `''` khi gõ dở), React không bao giờ ghi giá trị đã lưu đè lên lúc đang gõ; giá trị hợp lệ và khác giá trị đã lưu được lưu ngay (`SettingsService.setReminderTime`); toast `Reminder time saved` chỉ hiện **một lần** khi giá trị ổn định (700 ms sau phím cuối) hoặc khi blur; rời ô thì hiện lại giá trị đã lưu. `Settings.tsx` dùng component này | Component `src/ui/components/ReminderTimeField.test.tsx` (3 case: draft không bị echo liveQuery ghi đè, `''` không lưu, toast gộp, không lưu trùng/không hợp lệ); `Settings.reminders.test.tsx` "changing the time…" cập nhật (focus/blur, `''` hiển thị nhưng không lưu). E2E gõ phím thật: `e2e/m2-reminder.spec.ts` "M2-AC6" (`keyboard.type('0945PM')` → `21:45`, kv, toast, reload) và `e2e/m2-i18n.spec.ts` (`vi-VN`, `keyboard.type('0730')` + chỉnh SA/CH bằng ArrowDown nếu Chromium hiện bộ chọn 12 giờ → `07:30`, rồi `20:00`). QC `tests/qc/m2-qc.spec.ts` "M2-D1" nay **pass** |
+| M2-D2 (Minor) — tên goal 60 ký tự liền nhau làm TimerCard kéo trang cuộn ngang ở 360 px | `h2` trong `.row` (flex) có `min-width: auto` mặc định và không ngắt từ dài — cùng cơ chế M1-D1 | `src/ui/styles/app.css`: `.timer h2 { min-width: 0; overflow-wrap: anywhere }`, `.dialog h2, .dialog p { overflow-wrap: anywhere }` (tóm tắt D1 và tiêu đề D2 cũng chứa tên goal) | E2E dev `e2e/m2-timer.spec.ts` "M2-D2 regression" (360×740, tên 60 `W`: Today, TimerCard, D1 mở, D2 xoá goal đều không cuộn ngang). **QC lưu ý:** `tests/qc/m2-qc.spec.ts` "M2-D2" đang `test.fail()` nên lần chạy này báo `Expected to fail, but passed` — vòng 2 bỏ dòng `test.fail()` |
+| M2-D3 (Minor) — `TimerService.start/save` và `ReminderService.check` không nguyên tử khi gọi đồng thời | Chuỗi kiểm-rồi-ghi (`get` → `set`/`add`/`delete`, `shouldNotify` → `show` → `update`) không có khoá; hai lời gọi song song cùng thấy trạng thái cũ | `src/services/mutex.ts` (`Mutex.run` tuần tự hoá promise, sống sót khi task reject). `TimerService`: `start`, `save`, `discard` chạy qua một `Mutex` chung; `ReminderService.check` qua `Mutex` riêng. Kèm theo: `GoalCard` chặn double-click Start khi một lời gọi đang chạy (trước đây lần thứ hai cũng "ok" nên không thấy lỗi; sau khi tuần tự hoá, lần hai trả `TIMER_ALREADY_RUNNING` và sẽ hiện Alert — test QC "double-clicking Start gives one timer and no error alert" phát hiện, đã sửa) | `src/services/mutex.test.ts`; `timer-service.test.ts` "concurrent calls are serialised" (2 start → 1 ok + `TIMER_ALREADY_RUNNING`; 2 save → 1 entry + `TIMER_NOT_RUNNING`; save/discard đua → tối đa 1 thắng); `reminder-service.test.ts` "two simultaneous check()… send exactly once"; component `Today.timer.test.tsx` "double-clicking Start starts once". **QC lưu ý:** 3 test `it.fails` "M2-D3: …" trong `tests/qc/m2-domain.test.ts` nay pass nên Vitest báo đỏ "Error: Expect test to fail" — vòng 2 bỏ `.fails` |
+
+Giới hạn còn lại của D3: khoá nằm trong một tab (một JS context). Hai **tab khác nhau** bấm Save đúng cùng lúc vẫn có thể tạo 2 entry vì IndexedDB không khoá được chuỗi kiểm-rồi-ghi giữa hai transaction riêng biệt; muốn chặn hẳn cần thêm thao tác nguyên tử ở `KvRepository` (ví dụ `putIfAbsent`/`deleteIfEquals` trong một transaction `rw` kv+entries) — đề xuất planner cân nhắc ở M3 cùng với `EntryRepository.getById`. Notification hai tab đã được trình duyệt gộp theo `tag`.
+
+Lệnh đã chạy tại project root `D:\minh\Coderschool\GitHub\one-percent-better` (2026-10-10), kết quả thật:
+
+| Lệnh | Kết quả |
+| :- | :- |
+| `npm run lint` | exit 0, 0 lỗi, 0 warning |
+| `npm run typecheck` | exit 0 |
+| `npm test` | 41 file; **313 passed / 3 failed** — 3 "failed" đúng là 3 `it.fails` M2-D3 của QC nay pass ("Error: Expect test to fail"). Chỉ test dev (`npx vitest run src`): 39 file, **266/266** |
+| `npm run build` | exit 0; `index-*.js` 672,6 kB raw / **206,7 kB gzip**; `dist/sw.js` |
+| `npm run check` | exit 1 **chỉ vì** bước `npm test` có 3 `it.fails` nói trên (chuỗi dừng trước build); lint/typecheck/build chạy riêng đều exit 0 |
+| `npx cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright test` | **158 passed / 1 failed** (35,0 s) — 1 "failed" là QC "M2-D2" `test.fail()` nay báo "Expected to fail, but passed". QC "M2-D1" pass. Gồm 20 dev M1 + 89 QC M1 + 13 dev M2 + 37 QC M2 |
+
+Không sửa file nào trong `tests/qc/`, `docs/qc/`, `docs/plan/`, `docs/design/`. Đề xuất không chặn của QC: (a) toast gộp khi đổi giờ — đã làm trong D1; (b) E2E gõ phím thật — đã thêm; (c) đếm `showNotification` bằng spy — giữ `getNotifications` ở E2E dev, phần đếm chính xác đã có ở service test + spec QC; (d) tie-break sort theo `createdAt` (M1-P1) và `timerNote` trong `aria-describedby` của D2 — để M3/M5 xem xét.

@@ -757,6 +757,15 @@ dialog.dialog::backdrop {
   border: 2px solid var(--primary);
   margin-bottom: 16px;
 }
+/* Long unbroken goal names must wrap instead of widening the page (M2-D2, cf. M1-D1). */
+.timer h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dialog h2,
+.dialog p {
+  overflow-wrap: anywhere;
+}
 .timer .clock {
   font-size: var(--text-display);
   line-height: 44px;

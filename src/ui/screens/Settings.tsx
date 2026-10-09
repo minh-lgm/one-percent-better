@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { toISODate } from '../../domain/dates';
 import { buildReminderIcs, ICS_FILE_NAME } from '../../domain/ics';
-import { isValidReminderTime, type NotificationPermissionState } from '../../domain/reminder';
+import type { NotificationPermissionState } from '../../domain/reminder';
 import type { MessageKey } from '../../i18n/types';
 import { downloadTextFile, ICS_MIME_TYPE } from '../../integration/file-io';
 import type { PersistState } from '../../integration/storage';
@@ -9,6 +9,7 @@ import { Badge, type BadgeTone } from '../components/Badge';
 import { Button } from '../components/Button';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/PageHeader';
+import { ReminderTimeField } from '../components/ReminderTimeField';
 import { Switch } from '../components/Switch';
 import { useServices } from '../hooks/useServices';
 import { useSubscribable } from '../hooks/useSubscribable';
@@ -74,9 +75,7 @@ export function Settings() {
   }
 
   async function changeTime(value: string) {
-    if (!isValidReminderTime(value) || value === reminderTime) return;
     await settingsService.setReminderTime(value);
-    toast.show('toast.reminderTime');
   }
 
   function downloadIcs() {
@@ -116,18 +115,14 @@ export function Settings() {
             disabled={settings.loading}
             onChange={(checked) => void toggleReminder(checked)}
           />
-          <div className="field">
-            <label htmlFor={`${id}-time`}>{t('settings.reminders.time')}</label>
-            <input
-              id={`${id}-time`}
-              className="input num time"
-              type="time"
-              step={60}
-              value={reminderTime}
-              disabled={!reminderEnabled}
-              onChange={(e) => void changeTime(e.target.value)}
-            />
-          </div>
+          <ReminderTimeField
+            id={`${id}-time`}
+            label={t('settings.reminders.time')}
+            value={reminderTime}
+            disabled={!reminderEnabled}
+            onCommit={changeTime}
+            onSettled={() => toast.show('toast.reminderTime')}
+          />
           <div className="perm">
             <strong id={`${id}-perm-label`}>{t('settings.reminders.permission')}</strong>
             <Badge tone={perm.tone} id={`${id}-perm-value`}>

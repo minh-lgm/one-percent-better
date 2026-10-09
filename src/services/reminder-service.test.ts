@@ -54,6 +54,14 @@ describe('ReminderService.check (M2-AC7, M2-AC8)', () => {
     expect(notifications.shown).toHaveLength(1);
   });
 
+  it('two simultaneous check() calls (two listeners) send exactly once (M2-D3 regression)', async () => {
+    const service = makeService('en');
+    const results = await Promise.all([service.check(at('20:00:30')), service.check(at('20:00:30')), service.check(at('20:00:31'))]);
+    expect(results.filter(Boolean)).toHaveLength(1);
+    expect(notifications.shown).toHaveLength(1);
+    expect((await settings.get()).lastReminderDate).toBe('2026-10-09');
+  });
+
   it('sends again the next day', async () => {
     const service = makeService('en');
     await service.check(at('20:00:30'));

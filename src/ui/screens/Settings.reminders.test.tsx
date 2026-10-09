@@ -95,13 +95,22 @@ describe('Settings — Reminders card (M2-AC6, M2-AC11, M2-AC13)', () => {
     await renderApp({ route: '/settings', container: tc });
     const time = screen.getByLabelText(en.settings.reminders.time);
     await waitFor(() => expect(time).toBeEnabled());
+    fireEvent.focus(time);
     fireEvent.change(time, { target: { value: '07:30' } });
     await waitFor(async () => expect((await tc!.container.settingsService.get()).reminderTime).toBe('07:30'));
-    expect(screen.getByRole('status')).toHaveTextContent(en.toast.reminderTime);
     await waitFor(() => expect(screen.getByText('Adds a repeating daily event at 07:30.')).toBeInTheDocument());
-    // An empty/invalid value (cleared picker) is ignored.
+    // One toast once the value settles (here: on blur).
+    expect(screen.getByRole('status')).toHaveTextContent('');
+    fireEvent.blur(time);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.reminderTime));
+    expect(time).toHaveValue('07:30');
+    // An empty/invalid value (half-typed segment or cleared picker) is shown but not saved (M2-D1).
+    fireEvent.focus(time);
     fireEvent.change(time, { target: { value: '' } });
+    expect(time).toHaveValue('');
     expect((await tc!.container.settingsService.get()).reminderTime).toBe('07:30');
+    fireEvent.blur(time);
+    expect(time).toHaveValue('07:30');
   });
 
   it('downloads the .ics file with the current time and language', async () => {

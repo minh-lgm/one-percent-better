@@ -4,6 +4,7 @@ import { goalStatus } from '../domain/goal';
 import { previewTimer, type TimerPreview } from '../domain/timer';
 import { fail, ok, type ActiveTimer, type LogEntry, type Result } from '../domain/types';
 import type { EntryService } from './entry-service';
+import { Mutex } from './mutex';
 
 export interface SaveTimerInput {
   minutes: number;
@@ -21,13 +22,20 @@ export class TimerService {
     private readonly entries: EntryService,
   ) {}
 
+  /** start/save/discard are check-then-write sequences: run one at a time (M2-D3). */
+  private readonly lock = new Mutex();
+
   async current(): Promise<ActiveTimer | undefined> {
     const timer = await this.kv.get<ActiveTimer>('activeTimer');
     if (!timer || typeof timer.goalId !== 'string' || typeof timer.startedAt !== 'string') return undefined;
     return timer;
   }
 
-  async start(goalId: string, now: Date): Promise<Result<ActiveTimer>> {
+  start(goalId: string, now: Date): Promise<Result<ActiveTimer>> {
+    return this.lock.run(() => this.doStart(goalId, now));
+  }
+
+  private async doStart(goalId: string, now: Date): Promise<Result<ActiveTimer>> {
     const goal = await this.goals.getById(goalId);
     if (!goal) return fail({ code: 'GOAL_NOT_FOUND', message: `goal ${goalId} not found` });
     if (goalStatus(goal, toISODate(now)) !== 'active') return fail({ code: 'GOAL_NOT_ACTIVE', message: `goal ${goalId} is not active` });
@@ -50,7 +58,11 @@ export class TimerService {
   }
 
   /** Create the entry on the day the timer started; the timer is cleared only when the entry is saved. */
-  async save(input: SaveTimerInput, now: Date): Promise<Result<LogEntry>> {
+  save(input: SaveTimerInput, now: Date): Promise<Result<LogEntry>> {
+    return this.lock.run(() => this.doSave(input, now));
+  }
+
+  private async doSave(input: SaveTimerInput, now: Date): Promise<Result<LogEntry>> {
     const timer = await this.current();
     if (!timer) return fail({ code: 'TIMER_NOT_RUNNING', message: 'no active timer' });
     const preview = previewTimer(timer, now);
@@ -60,11 +72,13 @@ export class TimerService {
     return result;
   }
 
-  async discard(): Promise<Result<void>> {
-    const timer = await this.current();
-    if (!timer) return fail({ code: 'TIMER_NOT_RUNNING', message: 'no active timer' });
-    await this.kv.delete('activeTimer');
-    return ok(undefined);
+  discard(): Promise<Result<void>> {
+    return this.lock.run(async () => {
+      const timer = await this.current();
+      if (!timer) return fail({ code: 'TIMER_NOT_RUNNING', message: 'no active timer' });
+      await this.kv.delete('activeTimer');
+      return ok(undefined);
+    });
   }
 
   watch(): Subscribable<ActiveTimer | undefined> {

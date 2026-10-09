@@ -97,6 +97,21 @@ test.describe('M2-AC13: timer, reminders and .ics in Vietnamese', () => {
     await expect(page.getByText('Thêm một sự kiện lặp lại hằng ngày lúc 20:00.')).toBeVisible();
     await page.getByRole('switch', { name: VI.settings.reminders.switch }).click();
     await expect(page.getByRole('switch', { name: VI.settings.reminders.switch })).toBeChecked();
+    // M2-D1 regression (vi-VN, 24-hour picker): typing the time with the keyboard keeps the typed value.
+    const time = page.getByLabel(VI.settings.reminders.time);
+    await time.click({ position: { x: 8, y: 10 } });
+    await page.keyboard.type('0730');
+    // Chromium shows a 12-hour picker for vi-VN; the period segment keeps PM from 20:00 — toggle it.
+    if ((await time.inputValue()) !== '07:30') await page.keyboard.press('ArrowDown');
+    await expect(time).toHaveValue('07:30');
+    await expect(toast(page)).toHaveText(VI.toast.reminderTime);
+    await time.blur();
+    await expect(page.getByText('Thêm một sự kiện lặp lại hằng ngày lúc 07:30.')).toBeVisible();
+    await time.click({ position: { x: 8, y: 10 } });
+    await page.keyboard.type('0800');
+    if ((await time.inputValue()) !== '20:00') await page.keyboard.press('ArrowDown');
+    await expect(time).toHaveValue('20:00');
+    await time.blur();
     await expectNoViLeaks(page);
     await expectAxeClean(page);
     await expectNoHorizontalScroll(page);

@@ -5,6 +5,7 @@ import {
   EN,
   expectAmount,
   expectAxeClean,
+  expectNoHorizontalScroll,
   freezeClock,
   goalCard,
   gotoHash,
@@ -139,6 +140,25 @@ test.describe('M2 timer', () => {
     await expect(page.getByRole('heading', { level: 2, name: EN.settings.reminders.title })).toBeVisible();
     await expectAxeClean(page);
     expect(external).toEqual([]);
+  });
+
+  test('M2-D2 regression: a 60-char goal name without spaces does not widen Today, the TimerCard or D1 at 360 px', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    const long = 'W'.repeat(60);
+    await createGoal(page, { name: long, targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' });
+    await gotoHash(page, '/today');
+    await expectNoHorizontalScroll(page);
+    await startTimer(page, long);
+    await expect(timerCard(page).getByRole('heading', { level: 2, name: `Timer running · ${long}` })).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    await timerCard(page).getByRole('button', { name: /^Stop timer for/ }).click();
+    await expect(stopDialog(page)).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    await page.keyboard.press('Escape');
+    await gotoHash(page, '/goals');
+    await page.getByTestId('goal-row').getByRole('button', { name: EN.common.delete }).click();
+    await expect(page.getByRole('dialog')).toContainText(EN.goal.delete.timerNote);
+    await expectNoHorizontalScroll(page);
   });
 
   test('M2-AC5: deleting the goal with the running timer discards the timer', async ({ page }) => {

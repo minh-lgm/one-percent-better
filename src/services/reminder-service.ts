@@ -4,6 +4,7 @@ import { minutesByGoal } from '../domain/entry';
 import { activeGoals, dailyTarget } from '../domain/goal';
 import { reminderData, shouldNotify, shouldShowBanner, type GoalProgress, type ReminderData } from '../domain/reminder';
 import type { Translator } from '../i18n/types';
+import { Mutex } from './mutex';
 import type { NotificationPort } from './notification-port';
 import type { SettingsService } from './settings-service';
 
@@ -30,6 +31,9 @@ export class ReminderService {
     private readonly iconUrl?: string,
   ) {}
 
+  /** `check` reads settings, sends, then writes `lastReminderDate`: one at a time (M2-D3). */
+  private readonly lock = new Mutex();
+
   /** Today's progress of every active goal (Today order). */
   async progress(now: Date): Promise<GoalProgress[]> {
     const today = toISODate(now);
@@ -39,7 +43,11 @@ export class ReminderService {
   }
 
   /** Send the reminder if due. Returns `true` when a notification was sent. */
-  async check(now: Date): Promise<boolean> {
+  check(now: Date): Promise<boolean> {
+    return this.lock.run(() => this.doCheck(now));
+  }
+
+  private async doCheck(now: Date): Promise<boolean> {
     const settings = await this.settings.get();
     if (!settings.reminderEnabled) return false;
     const permission = this.notifications.permission();

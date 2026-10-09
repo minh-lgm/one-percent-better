@@ -179,6 +179,20 @@ describe('Today timer (M2-AC1, AC2, AC3, AC4, AC5)', () => {
     await waitFor(() => expect(screen.queryByTestId('timer-card')).toBeNull());
   });
 
+  it('double-clicking Start starts once and shows no error (M2-D3 UI regression)', async () => {
+    const u = userEvent.setup();
+    await seededS1();
+    await renderApp({ route: '/today', container: tc });
+    const read = await screen.findByRole('article', { name: 'Read' });
+    const start = vitest.spyOn(tc!.container.timerService, 'start');
+    await u.dblClick(within(read).getByRole('button', { name: en.goalCard.startTimer }));
+    await screen.findByTestId('timer-card');
+    await new Promise((r) => setTimeout(r, 100));
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect((await tc!.container.db.kv.get('activeTimer'))?.value).toMatchObject({ goalId: 'g1' });
+  });
+
   it('shows the start error inline when the service refuses', async () => {
     const u = userEvent.setup();
     await seededS1();
