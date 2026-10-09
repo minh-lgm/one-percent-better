@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review — 1% Better (mockup S6)</title>
+<style>
+:root{color-scheme:light dark;
+--font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--bg:#F7F6F2;--surface:#FFFFFF;--surface-2:#F0EEE7;--border:#DDD9CE;--border-input:#7F8882;
+--text:#1D2320;--text-muted:#5A625D;
+--primary:#1F7A4D;--primary-hover:#17613D;--on-primary:#FFFFFF;--primary-soft:#E3F2E9;--on-primary-soft:#14573A;
+--plus-bg:#FDF1DC;--plus-text:#8A3F06;--plus-border:#E9C98F;
+--danger:#B3261E;--on-danger:#FFFFFF;--danger-soft:#FCE9E7;--on-danger-soft:#8C1D18;
+--info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;
+--heat-0:#E7E5DC;--heat-1:#BFE3CC;--heat-2:#82C69C;--heat-3:#3FA06A;--heat-4:#1F7A4D;
+--scrim:rgba(20,28,24,.5);--shadow-1:0 1px 2px rgba(20,30,25,.06);--shadow-2:0 12px 40px rgba(20,30,25,.22);
+--r-sm:6px;--r-md:10px;--r-lg:16px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:56px;--content-max:960px;
+--cell:11px;--gap:2px}
+@media (min-width:640px){:root{--cell:13px;--gap:3px}}
+@media (prefers-color-scheme:dark){:root{
+--bg:#121513;--surface:#1B1F1C;--surface-2:#242925;--border:#343B36;--border-input:#7C867F;
+--text:#ECEFEA;--text-muted:#A3ACA5;
+--primary:#5CC98F;--primary-hover:#7AD6A5;--on-primary:#0C2217;--primary-soft:#1E3328;--on-primary-soft:#A8E6C3;
+--plus-bg:#3A2D14;--plus-text:#F5C97F;--plus-border:#6B5224;
+--danger:#FF8A80;--on-danger:#3B0A07;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;
+--info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;
+--heat-0:#2A302C;--heat-1:#24503A;--heat-2:#2F7A55;--heat-3:#43A773;--heat-4:#7FDDA8;
+--scrim:rgba(0,0,0,.6);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 12px 40px rgba(0,0,0,.55)}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/24px var(--font);-webkit-text-size-adjust:100%}
+h1,h2,h3,p,ul{margin:0}ul{padding:0;list-style:none}
+a{color:var(--primary)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;background:var(--surface);padding:8px 12px;border-radius:var(--r-md);z-index:60}
+.skip:focus{top:8px}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-variant-numeric:tabular-nums}.muted{color:var(--text-muted)}.small{font-size:14px;line-height:20px}
+/* shell */
+.nav{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.nav .brand{display:none}
+.nav .item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--tabbar-h);border-top:3px solid transparent;color:var(--text-muted);text-decoration:none;font-size:12px;line-height:16px;font-weight:600}
+.nav .item[aria-current=page]{color:var(--primary);border-top-color:var(--primary);font-weight:700}
+.nav .ic{width:24px;height:24px}
+.mark{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--primary);color:var(--on-primary);font-weight:800;font-size:14px}
+.content{min-width:0}
+main{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--tabbar-h) + 32px)}
+main.wide{max-width:var(--content-max)}
+@media (min-width:1024px){
+.nav{top:0;right:auto;width:var(--nav-w);flex-direction:column;justify-content:flex-start;gap:4px;padding:24px 12px;border-top:0;border-right:1px solid var(--border)}
+.nav .brand{display:flex;align-items:center;gap:10px;padding:0 12px 20px;font-weight:700;color:var(--text);text-decoration:none}
+.nav .item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;min-height:var(--tap);padding:0 12px;border-top:0;border-radius:var(--r-md);font-size:15px}
+.nav .item[aria-current=page]{background:var(--primary-soft);color:var(--on-primary-soft)}
+.content{margin-left:var(--nav-w)}main{padding:32px 40px 64px}}
+.page-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+h1{font-size:24px;line-height:30px;font-weight:700}
+@media (min-width:1024px){h1{font-size:28px;line-height:34px}}
+h2{font-size:18px;line-height:26px;font-weight:600}
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:0 16px;border:1px solid transparent;border-radius:var(--r-md);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;background:none;color:var(--text)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-1)}
+.progress{height:8px;background:var(--surface-2);border-radius:var(--r-full);overflow:hidden;border:1px solid var(--border);margin-top:8px}
+.progress>span{display:block;height:100%;background:var(--primary);border-radius:var(--r-full)}
+.input{width:100%;min-height:var(--tap);padding:10px 12px;border:1px solid var(--border-input);border-radius:var(--r-md);background:var(--surface);color:var(--text);font:400 16px/24px var(--font)}
+.hint{font-size:14px;line-height:20px;color:var(--text-muted);margin-top:6px}
+.mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* screen-specific */
+.controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.ctl{flex:1 1 140px}
+@media (min-width:640px){.ctl{flex:0 0 200px}}
+.ctl label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat .label{font-size:14px;line-height:20px;color:var(--text-muted);font-weight:600}
+.stat .value{font-size:24px;line-height:30px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.stat .sub{font-size:14px;line-height:20px;color:var(--text-muted)}
+.sec{margin-bottom:16px}
+.sec h2{margin-bottom:4px}
+.hm-wrap{display:flex;gap:6px;margin-top:12px}
+.hm-days{display:grid;grid-template-rows:repeat(7,var(--cell));gap:var(--gap);margin-top:calc(16px + var(--gap));font-size:11px;color:var(--text-muted);flex:none}
+.hm-days span{line-height:var(--cell);height:var(--cell)}
+.hm-scroll{overflow-x:auto;min-width:0;flex:1;padding-bottom:8px}
+.hm-months{display:grid;column-gap:var(--gap);height:16px;margin-bottom:var(--gap);font-size:11px;line-height:16px;color:var(--text-muted);width:max-content}
+.hm-months span{grid-row:1;white-space:nowrap}
+.heatmap{display:grid;gap:var(--gap);width:max-content;grid-template-rows:repeat(7,var(--cell))}
+.cell{display:block;width:var(--cell);height:var(--cell);border-radius:2px;background:var(--heat-0);box-shadow:inset 0 0 0 1px rgba(0,0,0,.07);cursor:pointer}
+.cell.l1{background:var(--heat-1)}.cell.l2{background:var(--heat-2)}.cell.l3{background:var(--heat-3)}.cell.l4{background:var(--heat-4)}
+.cell.fut{background:transparent;box-shadow:none;border:1px dashed var(--border);cursor:default}
+.cell.out{background:repeating-linear-gradient(45deg,transparent 0 2px,var(--border) 2px 3px);box-shadow:none;cursor:default}
+.cell.sp{visibility:hidden}
+.cell.today{box-shadow:0 0 0 1px var(--surface),0 0 0 3px var(--text)}
+.cell:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.hm-legend{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:var(--text-muted);flex-wrap:wrap}
+.hm-legend .sw{width:13px;height:13px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.07)}
+.tip{position:fixed;z-index:70;background:var(--text);color:var(--bg);padding:6px 10px;border-radius:var(--r-sm);font-size:13px;line-height:18px;pointer-events:none;max-width:260px;transform:translate(-50%,-100%)}
+.grid-2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1024px){.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.grid-2>*{min-width:0}
+.chart svg{display:block;max-width:100%}
+.chart .gl{stroke:var(--border);stroke-width:1}
+.chart .tx{fill:var(--text-muted);font:11px var(--font)}
+.chart .b{fill:var(--heat-3)}.chart .b.cur{fill:var(--primary)}
+.chart-sum{margin-top:8px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></symbol>
+<symbol id="i-goals" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/></symbol>
+<symbol id="i-review" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V5M19 20v-12"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+</defs></svg>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav class="nav" aria-label="Main">
+  <a class="brand" href="01-today.html" aria-label="1% Better per Day"><span class="mark" aria-hidden="true">1%</span><span>Better per Day</span></a>
+  <a class="item" href="01-today.html"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span>Today</span></a>
+  <a class="item" href="02-goals.html"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span>Goals</span></a>
+  <a class="item" href="06-review.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span>Review</span></a>
+  <a class="item" href="08-settings.html"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></a>
+</nav>
+
+<div class="content">
+<main id="main" class="wide" tabindex="-1">
+  <header class="page-head"><h1>Review</h1></header>
+
+  <div class="controls">
+    <div class="ctl"><label for="goal">Goal</label>
+      <select id="goal" class="input">
+        <option value="all">All goals</option><option value="read">Read</option><option value="guitar">Guitar</option>
+        <option value="spanish">Spanish</option><option value="marathon">Marathon prep</option><option value="old">Old course</option>
+      </select></div>
+    <div class="ctl"><label for="year">Year</label>
+      <select id="year" class="input"><option value="2026">2026</option><option value="2025">2025</option></select></div>
+  </div>
+
+  <noscript><p class="muted">This mockup needs a little inline JavaScript to draw the sample data (dataset S1 from TASKS.md).</p></noscript>
+
+  <div class="stats" id="stats"></div>
+  <p class="hint" id="stats-note" style="margin:-8px 0 16px"></p>
+
+  <section class="card sec" aria-labelledby="hm-h">
+    <h2 id="hm-h">Activity in <span id="hm-year">2026</span></h2>
+    <p class="muted small" id="hm-summary"></p>
+    <div class="hm-wrap">
+      <div class="hm-days" aria-hidden="true"><span style="grid-row:1">Mon</span><span style="grid-row:3">Wed</span><span style="grid-row:5">Fri</span></div>
+      <div class="hm-scroll" id="hm-scroll" tabindex="-1">
+        <div class="hm-months" id="hm-months" aria-hidden="true"></div>
+        <div class="heatmap" id="heatmap" role="grid"></div>
+      </div>
+    </div>
+    <div class="hm-legend"><span>Less</span><span class="sw" style="background:var(--heat-0)"></span><span class="sw" style="background:var(--heat-1)"></span><span class="sw" style="background:var(--heat-2)"></span><span class="sw" style="background:var(--heat-3)"></span><span class="sw" style="background:var(--heat-4)"></span><span>More</span><span id="hm-legend-note" style="margin-left:8px"></span></div>
+  </section>
+
+  <div class="grid-2">
+    <section class="card" aria-labelledby="wk-h">
+      <h2 id="wk-h">Last 12 weeks</h2>
+      <p class="muted small">Hours logged per week</p>
+      <div class="chart" id="wk"></div>
+      <p class="muted small chart-sum" id="wk-sum"></p>
+      <table class="sr-only" id="wk-table"></table>
+    </section>
+    <section class="card" aria-labelledby="mo-h">
+      <h2 id="mo-h">Months of <span id="mo-year">2026</span></h2>
+      <p class="muted small">Hours logged per month</p>
+      <div class="chart" id="mo"></div>
+      <p class="muted small chart-sum" id="mo-sum"></p>
+      <table class="sr-only" id="mo-table"></table>
+    </section>
+  </div>
+
+  <aside class="mock-note">Mockup S6 Review (M4). Uses dataset S1 from TASKS.md with "today" = 2026-10-09; try the Goal select (Read: 4.0 h, 25.8%, 30 min behind). Heatmap cells: Tab goes to one cell, arrow keys move (left/right = week, up/down = day), Enter/click opens Day for past days. The real component renders the 7 weekday rows as role="row" with role="gridcell" cells, exactly like the markup generated here. Charts are drawn as plain SVG here; the app uses Recharts with the same look, plus the visually hidden data table.</aside>
+</main>
+</div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script>
+(function () {
+  'use strict';
+  var TODAY = '2026-10-09';
+  var WD = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var MN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+  var iso = function (d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); };
+  var parse = function (s) { var a = s.split('-'); return new Date(+a[0], +a[1] - 1, +a[2]); };
+  var addDays = function (d, n) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; };
+  var diffDays = function (a, b) { return Math.round((parse(b) - parse(a)) / 864e5); };
+
+  // Dataset S1 (TASKS.md section 0)
+  var goals = {
+    read:     { name: 'Read',          target: 30, start: '2026-10-01', end: '2026-10-31', total: 930 },
+    guitar:   { name: 'Guitar',        target: 20, start: '2026-09-01', end: '2026-12-31', total: 2440 },
+    spanish:  { name: 'Spanish',       target: 17, start: '2026-01-01', end: '2026-12-31', total: 6000 },
+    marathon: { name: 'Marathon prep', target: 45, start: '2026-11-01', end: '2026-11-30', total: 1350 },
+    old:      { name: 'Old course',    target: 15, start: '2026-01-01', end: '2026-06-30', total: 2715 }
+  };
+  var order = ['read', 'guitar', 'spanish', 'marathon', 'old'];
+  var logs = { read: {}, guitar: {}, spanish: {}, marathon: {}, old: {} };
+  function fill(g, from, to, m) { for (var d = parse(from); iso(d) <= to; d = addDays(d, 1)) logs[g][iso(d)] = m; }
+  fill('read', '2026-10-01', '2026-10-08', 30);
+  fill('guitar', '2026-09-01', '2026-09-10', 20);
+  logs.guitar['2026-09-15'] = 10; logs.guitar['2026-10-07'] = 20; logs.guitar['2026-10-08'] = 20;
+  logs.spanish['2026-03-02'] = 60; logs.old['2026-06-30'] = 15;
+
+  var dur = function (m) { if (m < 60) return m + ' min'; var h = Math.floor(m / 60), r = m % 60; return h + ' h' + (r ? ' ' + r + ' min' : ''); };
+  var hrs = function (m) { return (m / 60).toFixed(1) + ' h'; };
+  var longDate = function (d) { return WD[d.getDay()] + ', ' + MN[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear(); };
+  var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : many); };
+
+  function lvlGoal(m, t) { if (m <= 0) return 0; var r = m / t; return r < 0.5 ? 1 : r < 1 ? 2 : r < 2 ? 3 : 4; }
+  function lvlAll(m) { return m <= 0 ? 0 : m < 30 ? 1 : m < 60 ? 2 : m < 120 ? 3 : 4; }
+  function minOn(sel, date) { if (sel === 'all') { var t = 0; order.forEach(function (k) { t += logs[k][date] || 0; }); return t; } return logs[sel][date] || 0; }
+
+  function info(sel, date) {
+    if (date > TODAY) return { state: 'fut' };
+    if (sel !== 'all') {
+      var g = goals[sel];
+      if (date < g.start || date > g.end) return { state: 'out' };
+      var m = logs[sel][date] || 0;
+      return { state: 'in', min: m, met: m >= g.target, level: lvlGoal(m, g.target) };
+    }
+    var tot = 0, met = false;
+    order.forEach(function (k) {
+      var v = logs[k][date] || 0, g2 = goals[k]; tot += v;
+      if (v && date >= g2.start && date <= g2.end && v >= g2.target) met = true;
+    });
+    return { state: 'in', min: tot, met: met, level: lvlAll(tot) };
+  }
+  function cellText(d, i) {
+    var t = longDate(d) + ': ';
+    if (i.state === 'fut') return t + 'upcoming';
+    if (i.state === 'out') return t + "outside this goal's dates";
+    if (!i.min) return t + 'no time logged';
+    return t + i.min + ' min, target ' + (i.met ? 'met' : 'not met');
+  }
+
+  function streaks(sel) {
+    var days = [], longest = 0, run = 0, cur = 0;
+    for (var d = parse('2026-01-01'); iso(d) <= TODAY; d = addDays(d, 1)) days.push(iso(d));
+    var met = function (x) { var i = info(sel, x); return i.state === 'in' && i.met; };
+    days.forEach(function (x) { if (met(x)) { run++; if (run > longest) longest = run; } else run = 0; });
+    var i = days.length - 1; if (!met(days[i])) i--;
+    while (i >= 0 && met(days[i])) { cur++; i--; }
+    return { cur: cur, longest: longest };
+  }
+  function yearSum(sel, yr) {
+    var t = 0;
+    (sel === 'all' ? order : [sel]).forEach(function (k) { for (var d in logs[k]) if (d.indexOf(yr + '-') === 0 && d <= TODAY) t += logs[k][d]; });
+    return t;
+  }
+  function goalSum(k) { var t = 0; for (var d in logs[k]) t += logs[k][d]; return t; }
+
+  function stat(label, value, sub, extra) {
+    return '<div class="card stat"><div class="label">' + label + '</div><div class="value">' + value + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + (extra || '') + '</div>';
+  }
+  function renderStats(sel, yr) {
+    var st = streaks(sel), el = document.getElementById('stats'), note = document.getElementById('stats-note');
+    var ytotal = yearSum(sel, yr), daysMet = 0, daysLogged = 0;
+    for (var d = parse(yr + '-01-01'); d.getFullYear() === +yr; d = addDays(d, 1)) {
+      var i = info(sel, iso(d)); if (i.state === 'in') { if (i.min) daysLogged++; if (i.met) daysMet++; }
+    }
+    var html = stat('Time logged', hrs(ytotal), 'In ' + yr + (sel !== 'all' ? ' · Whole goal: ' + hrs(goalSum(sel)) : ''));
+    if (sel === 'all') {
+      html += stat('Days on target', daysMet, 'Any goal on target');
+    } else {
+      var g = goals[sel], tot = goalSum(sel), prog = tot / g.total * 100;
+      var days = TODAY < g.start ? 0 : (TODAY < g.end ? diffDays(g.start, TODAY) + 1 : diffDays(g.start, g.end) + 1);
+      var exp = g.target * days, pace = tot - exp;
+      var paceTxt = pace > 0 ? dur(pace) + ' ahead' : pace < 0 ? dur(-pace) + ' behind' : 'On pace';
+      html += stat('Days on target', daysMet, 'Days you hit your daily target');
+      html += stat('Progress', prog.toFixed(1) + '%', tot + ' of ' + g.total + ' min',
+        '<div class="progress" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + prog.toFixed(1) + '"><span style="width:' + Math.min(prog, 100) + '%"></span></div>');
+      html += stat('Pace', paceTxt, 'Expected ' + exp + ' min by today');
+    }
+    html += stat('Current streak', plural(st.cur, 'day', 'days'), sel === 'all' ? 'Any goal on target' : '');
+    html += stat('Longest streak', plural(st.longest, 'day', 'days'), '');
+    el.innerHTML = html;
+    var outOfYear = sel !== 'all' && (goals[sel].end.slice(0, 4) < yr || goals[sel].start.slice(0, 4) > yr);
+    note.textContent = sel === 'all' ? 'Pick a goal to see progress and pace.' : (outOfYear ? "This goal doesn't run in " + yr + '.' : 'Progress and pace cover the whole goal period.');
+    return { logged: daysLogged, met: daysMet, longest: st.longest, ytotal: ytotal, outOfYear: outOfYear };
+  }
+
+  var grid = document.getElementById('heatmap'), monthsEl = document.getElementById('hm-months'), tip = document.getElementById('tip');
+  function activate(c) { if (c.getAttribute('data-go')) window.location.href = '05-day.html'; }
+  function renderHeat(sel, yr, s) {
+    grid.innerHTML = ''; monthsEl.innerHTML = '';
+    var jan1 = new Date(yr, 0, 1), off = (jan1.getDay() + 6) % 7, start = addDays(jan1, -off);
+    var ndays = Math.round((new Date(yr + 1, 0, 1) - jan1) / 864e5), cols = Math.ceil((off + ndays) / 7);
+    grid.style.gridTemplateColumns = 'repeat(' + cols + ',var(--cell))';
+    monthsEl.style.gridTemplateColumns = 'repeat(' + cols + ',var(--cell))';
+    grid.setAttribute('aria-label', 'Activity heatmap for ' + yr + ', ' + (sel === 'all' ? 'All goals' : goals[sel].name));
+    grid.setAttribute('aria-rowcount', 7);
+    var rows = [], r, c, first = null, todayCell = null;
+    for (r = 0; r < 7; r++) { var row = document.createElement('div'); row.setAttribute('role', 'row'); row.style.display = 'contents'; grid.appendChild(row); rows.push(row); }
+    for (c = 0; c < cols; c++) for (r = 0; r < 7; r++) {
+      var d = addDays(start, c * 7 + r), cell = document.createElement('div');
+      cell.style.gridColumn = (c + 1); cell.style.gridRow = (r + 1);
+      if (d.getFullYear() !== yr) { cell.className = 'cell sp'; cell.setAttribute('aria-hidden', 'true'); rows[r].appendChild(cell); continue; }
+      var i = info(sel, iso(d)), txt = cellText(d, i);
+      cell.className = 'cell ' + (i.state === 'fut' ? 'fut' : i.state === 'out' ? 'out' : 'l' + i.level);
+      if (iso(d) === TODAY) { cell.className += ' today'; todayCell = cell; }
+      cell.setAttribute('role', 'gridcell'); cell.setAttribute('aria-label', txt); cell.tabIndex = -1;
+      cell.setAttribute('data-c', c); cell.setAttribute('data-r', r); cell.setAttribute('data-t', txt);
+      if (i.state === 'in') cell.setAttribute('data-go', '1'); else cell.setAttribute('aria-disabled', 'true');
+      if (!first) first = cell;
+      rows[r].appendChild(cell);
+    }
+    (todayCell || first).tabIndex = 0;
+    for (var m = 0; m < 12; m++) {
+      var col = Math.floor(diffDays(iso(start), yr + '-' + p2(m + 1) + '-01') / 7), sp = document.createElement('span');
+      sp.textContent = MS[m]; sp.style.gridColumn = (col + 1); monthsEl.appendChild(sp);
+    }
+    var sc = document.getElementById('hm-scroll');
+    if (sc.scrollWidth > sc.clientWidth && todayCell) {
+      var step = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell')) + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap'));
+      sc.scrollLeft = Math.max(0, (+todayCell.getAttribute('data-c') + 1) * step - sc.clientWidth + 48);
+    } else sc.scrollLeft = 0;
+    document.getElementById('hm-year').textContent = yr;
+    document.getElementById('hm-summary').textContent = s.outOfYear ? "This goal doesn't run in " + yr + '.' :
+      (s.ytotal === 0 ? 'No time logged in ' + yr + ' yet.' :
+        'In ' + yr + ' you logged time on ' + s.logged + ' days and hit your target on ' + s.met + ' days. Longest streak: ' + s.longest + ' days.');
+    document.getElementById('hm-legend-note').textContent = sel === 'all' ? 'Colors show total minutes per day.' : 'Colors show the share of your daily target.';
+  }
+
+  grid.addEventListener('keydown', function (e) {
+    var t = e.target; if (!t.getAttribute || t.getAttribute('data-c') === null) return;
+    var c = +t.getAttribute('data-c'), r = +t.getAttribute('data-r');
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(t); return; }
+    if (e.key === 'ArrowRight') c++; else if (e.key === 'ArrowLeft') c--;
+    else if (e.key === 'ArrowDown') { r++; if (r > 6) { r = 0; c++; } }
+    else if (e.key === 'ArrowUp') { r--; if (r < 0) { r = 6; c--; } } else return;
+    e.preventDefault();
+    var n = grid.querySelector('[data-c="' + c + '"][data-r="' + r + '"]');
+    if (n) { t.tabIndex = -1; n.tabIndex = 0; n.focus(); }
+  });
+  grid.addEventListener('click', function (e) { var t = e.target; if (t.getAttribute && t.getAttribute('data-go')) activate(t); });
+  function showTip(e) {
+    var t = e.target; if (!t.getAttribute || !t.getAttribute('data-t')) return;
+    var b = t.getBoundingClientRect(); tip.textContent = t.getAttribute('data-t');
+    tip.style.left = Math.min(Math.max(b.left + b.width / 2, 135), window.innerWidth - 135) + 'px';
+    tip.style.top = (b.top - 8) + 'px'; tip.hidden = false;
+  }
+  function hideTip() { tip.hidden = true; }
+  grid.addEventListener('mouseover', showTip); grid.addEventListener('focusin', showTip);
+  grid.addEventListener('mouseout', hideTip); grid.addEventListener('focusout', hideTip);
+
+  function drawBars(el, items, lw) {
+    var W = Math.max(el.clientWidth, 240), H = 210, ml = 34, mr = 4, mt = 20, mb = 26, max = 0, n = items.length;
+    items.forEach(function (i) { if (i.v > max) max = i.v; });
+    var maxH = max / 60, steps = [0.5, 1, 2, 5, 10, 20, 50], step = 50;
+    for (var s = 0; s < steps.length; s++) if (maxH / steps[s] <= 4) { step = steps[s]; break; }
+    var top = Math.max(step, Math.ceil(maxH / step) * step), pw = W - ml - mr, ph = H - mt - mb, slot = pw / n, bw = Math.min(slot * 0.62, 28);
+    var y = function (h) { return mt + ph * (1 - h / top); };
+    var o = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true" focusable="false">';
+    for (var t = 0; t <= top + 1e-9; t += step) o += '<line class="gl" x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(t) + '" y2="' + y(t) + '"/><text class="tx" x="' + (ml - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + (step < 1 ? t.toFixed(1) : t) + '</text>';
+    var skip = Math.max(1, Math.ceil(lw / slot));
+    items.forEach(function (it, i) {
+      var h = it.v / 60, x = ml + slot * i + (slot - bw) / 2;
+      if (it.v > 0) {
+        o += '<rect class="b' + (it.cur ? ' cur' : '') + '" x="' + x + '" y="' + y(h) + '" width="' + bw + '" height="' + (y(0) - y(h)) + '" rx="3"><title>' + it.title + '</title></rect>';
+        if (slot >= 34) o += '<text class="tx" x="' + (x + bw / 2) + '" y="' + (y(h) - 4) + '" text-anchor="middle">' + h.toFixed(1) + '</text>';
+      }
+      if ((n - 1 - i) % skip === 0) o += '<text class="tx" x="' + (ml + slot * i + slot / 2) + '" y="' + (H - 8) + '" text-anchor="middle">' + it.label + '</text>';
+    });
+    el.innerHTML = o + '</svg>';
+  }
+  function fillTable(tb, cap, head, items) {
+    var h = '<caption>' + cap + '</caption><thead><tr><th scope="col">' + head + '</th><th scope="col">Time logged</th></tr></thead><tbody>';
+    items.forEach(function (i) { h += '<tr><th scope="row">' + i.title.split(': ')[0] + '</th><td>' + dur(i.v) + '</td></tr>'; });
+    tb.innerHTML = h + '</tbody>';
+  }
+  function summary(items, what) {
+    var tot = 0, best = null; items.forEach(function (i) { tot += i.v; if (!best || i.v > best.v) best = i; });
+    if (!tot) return 'No time logged in this range.';
+    return what + ': ' + dur(tot) + ' logged, busiest ' + (what.indexOf('weeks') > -1 ? 'week starting ' : 'month ') + best.label + ' with ' + dur(best.v) + '.';
+  }
+  function weekItems(sel) {
+    var t = parse(TODAY), mon = addDays(t, -((t.getDay() + 6) % 7)), out = [];
+    for (var i = 0; i < 12; i++) {
+      var ws = addDays(mon, -7 * (11 - i)), v = 0;
+      for (var k = 0; k < 7; k++) { var ds = iso(addDays(ws, k)); if (ds <= TODAY) v += minOn(sel, ds); }
+      var we = addDays(ws, 6), lab = MS[ws.getMonth()] + ' ' + ws.getDate();
+      out.push({ label: lab, v: v, cur: i === 11, title: lab + ' – ' + MS[we.getMonth()] + ' ' + we.getDate() + ': ' + dur(v) });
+    }
+    return out;
+  }
+  function monthItems(sel, yr) {
+    var out = [];
+    for (var m = 0; m < 12; m++) {
+      var v = 0, last = new Date(yr, m + 1, 0).getDate();
+      for (var d = 1; d <= last; d++) { var ds = yr + '-' + p2(m + 1) + '-' + p2(d); if (ds <= TODAY) v += minOn(sel, ds); }
+      out.push({ label: MS[m], v: v, cur: yr === 2026 && m === 9, title: MN[m] + ' ' + yr + ': ' + dur(v) });
+    }
+    return out;
+  }
+  function renderCharts(sel, yr) {
+    var w = weekItems(sel), m = monthItems(sel, yr);
+    drawBars(document.getElementById('wk'), w, 44); drawBars(document.getElementById('mo'), m, 28);
+    fillTable(document.getElementById('wk-table'), 'Time logged per week, last 12 weeks', 'Week', w);
+    fillTable(document.getElementById('mo-table'), 'Time logged per month in ' + yr, 'Month', m);
+    document.getElementById('wk-sum').textContent = summary(w, 'Last 12 weeks');
+    document.getElementById('mo-sum').textContent = summary(m, 'Months of ' + yr);
+    document.getElementById('mo-year').textContent = yr;
+  }
+
+  function render() {
+    var sel = document.getElementById('goal').value, yr = +document.getElementById('year').value;
+    var s = renderStats(sel, yr); renderHeat(sel, yr, s); renderCharts(sel, yr);
+  }
+  document.getElementById('goal').addEventListener('change', render);
+  document.getElementById('year').addEventListener('change', render);
+  var rz; window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(function () { renderCharts(document.getElementById('goal').value, +document.getElementById('year').value); }, 120); });
+  render();
+})();
+</script>
+</body>
+</html>

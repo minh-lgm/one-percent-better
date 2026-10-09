@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New goal — 1% Better (mockup S3)</title>
+<style>
+:root{color-scheme:light dark;
+--font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--bg:#F7F6F2;--surface:#FFFFFF;--surface-2:#F0EEE7;--border:#DDD9CE;--border-input:#7F8882;
+--text:#1D2320;--text-muted:#5A625D;
+--primary:#1F7A4D;--primary-hover:#17613D;--on-primary:#FFFFFF;--primary-soft:#E3F2E9;--on-primary-soft:#14573A;
+--plus-bg:#FDF1DC;--plus-text:#8A3F06;--plus-border:#E9C98F;
+--danger:#B3261E;--on-danger:#FFFFFF;--danger-soft:#FCE9E7;--on-danger-soft:#8C1D18;
+--info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;
+--heat-0:#E7E5DC;--heat-1:#BFE3CC;--heat-2:#82C69C;--heat-3:#3FA06A;--heat-4:#1F7A4D;
+--scrim:rgba(20,28,24,.5);--shadow-1:0 1px 2px rgba(20,30,25,.06);--shadow-2:0 12px 40px rgba(20,30,25,.22);
+--r-sm:6px;--r-md:10px;--r-lg:16px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:56px;--content-max:960px}
+@media (prefers-color-scheme:dark){:root{
+--bg:#121513;--surface:#1B1F1C;--surface-2:#242925;--border:#343B36;--border-input:#7C867F;
+--text:#ECEFEA;--text-muted:#A3ACA5;
+--primary:#5CC98F;--primary-hover:#7AD6A5;--on-primary:#0C2217;--primary-soft:#1E3328;--on-primary-soft:#A8E6C3;
+--plus-bg:#3A2D14;--plus-text:#F5C97F;--plus-border:#6B5224;
+--danger:#FF8A80;--on-danger:#3B0A07;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;
+--info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;
+--heat-0:#2A302C;--heat-1:#24503A;--heat-2:#2F7A55;--heat-3:#43A773;--heat-4:#7FDDA8;
+--scrim:rgba(0,0,0,.6);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 12px 40px rgba(0,0,0,.55)}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/24px var(--font);-webkit-text-size-adjust:100%}
+h1,h2,h3,p,ul{margin:0}ul{padding:0;list-style:none}
+a{color:var(--primary)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;background:var(--surface);padding:8px 12px;border-radius:var(--r-md);z-index:60}
+.skip:focus{top:8px}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-variant-numeric:tabular-nums}.muted{color:var(--text-muted)}.small{font-size:14px;line-height:20px}
+/* shell */
+.nav{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.nav .brand{display:none}
+.nav .item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--tabbar-h);border-top:3px solid transparent;color:var(--text-muted);text-decoration:none;font-size:12px;line-height:16px;font-weight:600}
+.nav .item[aria-current=page]{color:var(--primary);border-top-color:var(--primary);font-weight:700}
+.nav .ic{width:24px;height:24px}
+.mark{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--primary);color:var(--on-primary);font-weight:800;font-size:14px}
+.content{min-width:0}
+main{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--tabbar-h) + 32px)}
+main.wide{max-width:var(--content-max)}
+@media (min-width:1024px){
+.nav{top:0;right:auto;width:var(--nav-w);flex-direction:column;justify-content:flex-start;gap:4px;padding:24px 12px;border-top:0;border-right:1px solid var(--border)}
+.nav .brand{display:flex;align-items:center;gap:10px;padding:0 12px 20px;font-weight:700;color:var(--text);text-decoration:none}
+.nav .item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;min-height:var(--tap);padding:0 12px;border-top:0;border-radius:var(--r-md);font-size:15px}
+.nav .item[aria-current=page]{background:var(--primary-soft);color:var(--on-primary-soft)}
+.content{margin-left:var(--nav-w)}main{padding:32px 40px 64px}}
+.page-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.page-head .titles{min-width:0}
+h1{font-size:24px;line-height:30px;font-weight:700}
+@media (min-width:1024px){h1{font-size:28px;line-height:34px}}
+h2{font-size:18px;line-height:26px;font-weight:600}
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:0 16px;border:1px solid transparent;border-radius:var(--r-md);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;background:none;color:var(--text)}
+.btn.primary{background:var(--primary);color:var(--on-primary)}.btn.primary:hover{background:var(--primary-hover)}
+.btn.secondary{background:var(--surface);border-color:var(--border-input)}.btn.secondary:hover{background:var(--surface-2)}
+.btn.ghost{color:var(--primary)}.btn.ghost:hover{background:var(--primary-soft)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-1)}
+.field{margin-top:16px}
+.field label,.legend{display:block;font-weight:600;font-size:15px;margin-bottom:6px;padding:0}
+fieldset{border:0;margin:16px 0 0;padding:0;min-width:0}
+.label-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.input{width:100%;min-height:var(--tap);padding:10px 12px;border:1px solid var(--border-input);border-radius:var(--r-md);background:var(--surface);color:var(--text);font:400 16px/24px var(--font)}
+textarea.input{min-height:88px;resize:vertical}
+.input[aria-invalid=true]{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
+.hint{font-size:14px;line-height:20px;color:var(--text-muted);margin-top:6px}
+.err{display:flex;gap:6px;align-items:flex-start;font-size:14px;line-height:20px;color:var(--danger);margin-top:6px;font-weight:500}
+.err .ic{width:16px;height:16px;margin-top:2px}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:12px 16px;border-radius:var(--r-md);background:var(--danger-soft);color:var(--on-danger-soft);font-weight:600}
+.alert .ic{margin-top:2px}
+.seg{display:flex;border:1px solid var(--border-input);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.seg label{flex:1;position:relative;margin:0;font-weight:600;cursor:pointer}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:flex;align-items:center;justify-content:center;min-height:calc(var(--tap) - 2px);padding:0 12px;text-align:center;font-size:15px}
+.seg input:checked+span{background:var(--primary);color:var(--on-primary)}
+.seg input:focus-visible+span{outline:2px solid var(--focus);outline-offset:-4px}
+.radio{display:flex;align-items:center;gap:10px;min-height:var(--tap);font-weight:400!important;margin:0!important}
+.radio input{width:20px;height:20px;accent-color:var(--primary);margin:0}
+.mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* screen-specific */
+form.card{padding:20px 16px 24px}
+@media (min-width:640px){form.card{padding:24px}}
+.with-suffix{display:flex;align-items:center;gap:8px}
+.with-suffix .input{max-width:160px}
+.form-actions{display:flex;flex-direction:column;gap:8px;margin-top:24px}
+@media (min-width:640px){.form-actions{flex-direction:row}}
+.back{margin-left:-12px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></symbol>
+<symbol id="i-goals" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/></symbol>
+<symbol id="i-review" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V5M19 20v-12"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+<symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></symbol>
+</defs></svg>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav class="nav" aria-label="Main">
+  <a class="brand" href="01-today.html" aria-label="1% Better per Day"><span class="mark" aria-hidden="true">1%</span><span>Better per Day</span></a>
+  <a class="item" href="01-today.html"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span>Today</span></a>
+  <a class="item" href="02-goals.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span>Goals</span></a>
+  <a class="item" href="06-review.html"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span>Review</span></a>
+  <a class="item" href="08-settings.html"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></a>
+</nav>
+
+<div class="content">
+<main id="main" tabindex="-1">
+  <header class="page-head">
+    <div class="titles">
+      <a class="btn ghost back" href="02-goals.html"><svg class="ic" aria-hidden="true"><use href="#i-left"/></svg>Goals</a>
+      <h1>New goal</h1>
+    </div>
+  </header>
+
+  <form class="card" novalidate aria-labelledby="form-title">
+    <p id="form-title" class="sr-only">New goal form</p>
+    <div class="alert" role="alert"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p>Fix 1 field to save.</p></div>
+
+    <div class="field">
+      <div class="label-row"><label for="name">Name <span aria-hidden="true">*</span><span class="sr-only">(required)</span></label><span class="muted small num">0/60</span></div>
+      <input id="name" class="input" autocomplete="off" placeholder="e.g. Read" aria-invalid="true" aria-describedby="name-err" required>
+      <p id="name-err" class="err"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg>Enter a name for your goal.</p>
+    </div>
+
+    <div class="field">
+      <div class="label-row"><label for="why">Why (optional)</label><span class="muted small num">40/280</span></div>
+      <textarea id="why" class="input" placeholder="Why does this matter to you?">Talk with my grandmother in her language</textarea>
+    </div>
+
+    <fieldset>
+      <legend class="legend">Target</legend>
+      <div class="seg">
+        <label><input type="radio" name="type" value="daily"><span>Minutes per day</span></label>
+        <label><input type="radio" name="type" value="total" checked><span>Total hours</span></label>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label for="target">Total hours <span aria-hidden="true">*</span><span class="sr-only">(required)</span></label>
+        <div class="with-suffix"><input id="target" class="input num" inputmode="numeric" autocomplete="off" value="100" aria-describedby="target-hint"><span aria-hidden="true">h</span></div>
+        <p id="target-hint" class="hint">That's about 72 min per day over 84 days.</p>
+      </div>
+    </fieldset>
+
+    <div class="field">
+      <label for="start">Start date <span aria-hidden="true">*</span><span class="sr-only">(required)</span></label>
+      <input id="start" class="input num" type="date" value="2026-10-09" style="max-width:220px">
+    </div>
+
+    <fieldset>
+      <legend class="legend">Ends</legend>
+      <label class="radio"><input type="radio" name="end" checked>This year — ends 2026-12-31</label>
+      <label class="radio"><input type="radio" name="end">On a specific date</label>
+    </fieldset>
+
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Save goal</button>
+      <a class="btn secondary" href="02-goals.html">Cancel</a>
+    </div>
+  </form>
+
+  <aside class="mock-note">Mockup S3 Goal form (M1), shown in the error state after pressing "Save goal" with an empty name. Edit mode uses the title "Edit goal", the button "Save changes", and (when entries exist) a hint under Start date: "Your entries run from 2026-10-01 to 2026-10-08, so the period must include those dates." Choosing "On a specific date" reveals an "End date" field. Hint under Target switches to "That's 930 min (15.5 h) over 31 days." for Minutes per day.</aside>
+</main>
+</div>
+</body>
+</html>
