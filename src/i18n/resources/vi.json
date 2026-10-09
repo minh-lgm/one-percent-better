@@ -1,0 +1,226 @@
+{
+  "app": {
+    "name": "1% Better per Day",
+    "shortName": "1% Better",
+    "brandSuffix": "Better per Day",
+    "tagline": "Mỗi ngày tốt hơn 1%."
+  },
+  "doc": {
+    "title": "{{page}} — 1% Better"
+  },
+  "nav": {
+    "label": "Chính",
+    "today": "Hôm nay",
+    "goals": "Mục tiêu",
+    "settings": "Cài đặt"
+  },
+  "a11y": {
+    "skip": "Chuyển đến nội dung chính",
+    "required": "(bắt buộc)"
+  },
+  "offline": {
+    "chip": "Ngoại tuyến — lưu trên thiết bị"
+  },
+  "update": {
+    "message": "Đã có phiên bản mới.",
+    "reload": "Tải lại"
+  },
+  "common": {
+    "loading": "Đang tải…",
+    "saving": "Đang lưu…",
+    "cancel": "Hủy",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "keep": "Giữ lại",
+    "tryAgain": "Thử lại"
+  },
+  "unit": {
+    "min": "phút",
+    "hour": "giờ"
+  },
+  "format": {
+    "minutes": "{{n}} phút",
+    "duration": "{{h}} giờ {{m}} phút",
+    "durationHours": "{{h}} giờ",
+    "percent": "{{value}}%",
+    "dateRange": "{{start}} – {{end}}",
+    "goalsCount_other": "{{count}} mục tiêu",
+    "entriesCount_other": "{{count}} lần ghi",
+    "daysCount_other": "{{count}} ngày"
+  },
+  "toast": {
+    "goalCreated": "Đã tạo mục tiêu",
+    "goalUpdated": "Đã cập nhật mục tiêu",
+    "goalDeleted": "Đã xóa mục tiêu",
+    "entrySaved": "Đã lưu lần ghi",
+    "entryUpdated": "Đã cập nhật lần ghi",
+    "entryDeleted": "Đã xóa lần ghi",
+    "languageChanged": "Đã đổi ngôn ngữ"
+  },
+  "errors": {
+    "GOAL_NAME_REQUIRED": "Hãy nhập tên cho mục tiêu của bạn.",
+    "GOAL_NAME_TOO_LONG": "Tên tối đa 60 ký tự.",
+    "GOAL_WHY_TOO_LONG": "Lý do tối đa 280 ký tự.",
+    "GOAL_TARGET_INVALID_daily": "Hãy nhập số phút là số nguyên từ 1 đến 1.440.",
+    "GOAL_TARGET_INVALID_total": "Hãy nhập số giờ là số nguyên từ 1 đến 10.000.",
+    "GOAL_TARGET_INVALID_tooMuch": "Như vậy là hơn 1.440 phút mỗi ngày trong khoảng thời gian này. Hãy giảm số giờ hoặc chọn ngày kết thúc muộn hơn.",
+    "GOAL_PERIOD_INVALID": "Hãy chọn một ngày hợp lệ.",
+    "GOAL_PERIOD_INVALID_endBeforeStart": "Ngày kết thúc phải trùng hoặc sau ngày bắt đầu.",
+    "GOAL_PERIOD_INVALID_tooLong": "Một mục tiêu kéo dài tối đa 1.827 ngày (khoảng 5 năm). Hãy chọn ngày kết thúc sớm hơn.",
+    "GOAL_PERIOD_EXCLUDES_ENTRIES": "Một số lần ghi của bạn nằm ngoài các ngày này. Hãy chọn khoảng thời gian bao gồm mọi ngày đã ghi, hoặc xóa các lần ghi đó trước.",
+    "GOAL_NOT_FOUND": "Mục tiêu này không còn tồn tại. Có thể nó đã bị xóa.",
+    "ENTRY_NOT_FOUND": "Lần ghi này không còn tồn tại. Có thể nó đã bị xóa.",
+    "ENTRY_MINUTES_INVALID": "Hãy nhập số phút là số nguyên từ 1 đến 1.440.",
+    "ENTRY_NOTE_TOO_LONG": "Ghi chú tối đa 280 ký tự.",
+    "ENTRY_DAY_LIMIT_EXCEEDED": "Mỗi mục tiêu có tối đa 1.440 phút trong một ngày. Bạn chỉ có thể thêm tối đa {{remaining}} phút cho ngày này.",
+    "ENTRY_DAY_LIMIT_EXCEEDED_full": "Ngày này đã đầy (1.440 phút).",
+    "DATE_IN_FUTURE": "Bạn không thể ghi thời gian cho một ngày trong tương lai.",
+    "DATE_OUTSIDE_GOAL_PERIOD": "Ngày đó nằm ngoài thời gian của mục tiêu này ({{start}} – {{end}}).",
+    "WRITE_FAILED": "Không lưu được. Thay đổi của bạn vẫn còn trong biểu mẫu — hãy thử lại.",
+    "UNKNOWN": "Đã xảy ra lỗi. Hãy thử lại."
+  },
+  "empty": {
+    "today": {
+      "noGoals": "Bắt đầu với một mục tiêu nhỏ",
+      "noGoalsBody": "Chọn một việc bạn muốn làm một chút mỗi ngày. Ghi lại thời gian và xem nó dày lên theo ngày.",
+      "noGoalsAction": "Tạo mục tiêu đầu tiên",
+      "noActive": "Hôm nay chưa có mục tiêu nào đang chạy",
+      "noActiveBody": "Các mục tiêu của bạn chưa bắt đầu, đã kết thúc hoặc đã được lưu trữ.",
+      "noActiveAction": "Xem mục tiêu"
+    },
+    "goals": "Chưa có mục tiêu nào",
+    "goalsBody": "Chọn một việc bạn muốn làm một chút mỗi ngày. Ghi lại thời gian và xem nó dày lên theo ngày.",
+    "goalsAction": "Tạo mục tiêu đầu tiên"
+  },
+  "today": {
+    "title": "Hôm nay",
+    "summary_other": "Đã đạt {{n}}/{{count}} mục tiêu",
+    "allOnTarget_other": "Đạt cả {{count}} mục tiêu — tốt hơn hôm qua một chút.",
+    "goalsLabel": "Mục tiêu hôm nay"
+  },
+  "goalCard": {
+    "amount": "{{current}}/{{target}}",
+    "subtitleTotal": "{{daily}} phút/ngày · tổng {{hours}} giờ",
+    "toGo": "Còn {{n}} phút",
+    "reached": "Đã đạt chỉ tiêu",
+    "reachedExtra": "Đã đạt chỉ tiêu · vượt {{n}} phút",
+    "plusOne": "+1%",
+    "plusOneSrToday": "Hôm nay đã đạt chỉ tiêu",
+    "progressLabel": "{{goal}} hôm nay",
+    "progressValue": "{{current}} trên {{target}} phút",
+    "logTime": "Ghi thời gian"
+  },
+  "entry": {
+    "listTitle": "Các lần ghi hôm nay",
+    "form": {
+      "minutesLabel": "Số phút",
+      "minutesPlaceholder": "Ví dụ: 25",
+      "noteLabel": "Ghi chú (không bắt buộc)",
+      "notePlaceholder": "Bạn đã làm gì?",
+      "counter": "{{n}}/280",
+      "save": "Lưu lần ghi",
+      "saveChanges": "Lưu thay đổi",
+      "labelAdd": "Ghi thời gian cho {{goal}}",
+      "labelEdit": "Sửa lần ghi của {{goal}}"
+    },
+    "row": {
+      "summary": "{{minutes}}, {{note}}",
+      "summaryNoNote": "{{minutes}}",
+      "editAria": "Sửa lần ghi: {{summary}}",
+      "deleteAria": "Xóa lần ghi: {{summary}}",
+      "confirmTitle": "Xóa lần ghi này?",
+      "confirmAria": "Xác nhận xóa: {{summary}}"
+    }
+  },
+  "goals": {
+    "title": "Mục tiêu",
+    "new": "Mục tiêu mới",
+    "groupActive": "Đang chạy ({{n}})",
+    "groupUpcoming": "Sắp tới ({{n}})",
+    "groupEnded": "Đã kết thúc ({{n}})",
+    "startsOn": "Bắt đầu {{date}}",
+    "endedOn": "Đã kết thúc {{date}}",
+    "rowDaily": "{{n}} phút/ngày · {{range}}",
+    "rowTotal": "{{daily}} phút/ngày (tổng {{hours}} giờ) · {{range}}"
+  },
+  "goal": {
+    "status": {
+      "active": "Đang chạy",
+      "upcoming": "Sắp tới",
+      "ended": "Đã kết thúc"
+    },
+    "delete": {
+      "title": "Xóa mục tiêu \"{{name}}\"?",
+      "bodyNoEntries": "Thao tác này xóa vĩnh viễn mục tiêu. Mục tiêu chưa có lần ghi nào. Bạn không thể hoàn tác.",
+      "body_other": "Thao tác này xóa vĩnh viễn mục tiêu và {{count}} lần ghi của nó. Bạn không thể hoàn tác.",
+      "confirm": "Xóa mục tiêu"
+    },
+    "form": {
+      "titleNew": "Mục tiêu mới",
+      "titleEdit": "Sửa mục tiêu",
+      "srNew": "Biểu mẫu mục tiêu mới",
+      "srEdit": "Biểu mẫu sửa mục tiêu",
+      "summary_other": "Cần sửa {{count}} ô nhập để lưu.",
+      "nameLabel": "Tên",
+      "namePlaceholder": "Ví dụ: Đọc sách",
+      "nameCounter": "{{n}}/60",
+      "whyLabel": "Lý do (không bắt buộc)",
+      "whyPlaceholder": "Vì sao điều này quan trọng với bạn?",
+      "whyCounter": "{{n}}/280",
+      "targetLegend": "Chỉ tiêu",
+      "targetDaily": "Phút mỗi ngày",
+      "targetTotal": "Tổng số giờ",
+      "hintDaily": "Tổng cộng {{total}} phút ({{hours}} giờ) trong {{days}}.",
+      "hintTotal": "Khoảng {{daily}} phút mỗi ngày trong {{days}}.",
+      "startLabel": "Ngày bắt đầu",
+      "startHint": "Các lần ghi của bạn kéo dài từ {{first}} đến {{last}}, nên khoảng thời gian phải bao gồm các ngày đó.",
+      "endsLegend": "Kết thúc",
+      "endsThisYear": "Trong năm nay — kết thúc {{date}}",
+      "endsSpecific": "Vào một ngày cụ thể",
+      "endLabel": "Ngày kết thúc",
+      "save": "Lưu mục tiêu",
+      "saveChanges": "Lưu thay đổi"
+    }
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "language": {
+      "title": "Language / Ngôn ngữ",
+      "desc": "Chọn ngôn ngữ cho menu, thông báo và ngày tháng. Tên mục tiêu và ghi chú của bạn giữ nguyên như bạn đã viết.",
+      "option": {
+        "en": "English",
+        "vi": "Tiếng Việt"
+      },
+      "browserNote": "Ô chọn ngày, giờ và hộp xin quyền do trình duyệt hiển thị nên theo ngôn ngữ của trình duyệt.",
+      "saveFailed": "Đã đổi ngôn ngữ, nhưng không lưu được trên thiết bị này. Ngôn ngữ có thể trở về mặc định khi bạn tải lại trang."
+    },
+    "storage": {
+      "title": "Bộ nhớ",
+      "label": "Bảo vệ khỏi bị xóa tự động",
+      "protected": "Đã bảo vệ",
+      "notProtected": "Chưa bảo vệ",
+      "unknown": "Không rõ",
+      "protectedDesc": "Trình duyệt sẽ không tự động xóa dữ liệu này.",
+      "notProtectedDesc": "Trình duyệt có thể xóa dữ liệu này khi thiết bị sắp hết dung lượng. Hãy cài app (menu trình duyệt → Cài đặt ứng dụng, hoặc Thêm vào Màn hình chính) và thỉnh thoảng xuất bản sao lưu.",
+      "unknownDesc": "Trình duyệt không cho biết dữ liệu có được bảo vệ hay không. Hãy thỉnh thoảng xuất bản sao lưu."
+    },
+    "about": {
+      "title": "Giới thiệu",
+      "desc": "Mọi thứ bạn ghi lại đều nằm trên thiết bị này. Không tài khoản, không theo dõi."
+    }
+  },
+  "notFound": {
+    "pageTitle": "Không tìm thấy trang",
+    "pageBody": "Trang này không tồn tại hoặc đã được chuyển đi.",
+    "pageAction": "Về trang Hôm nay",
+    "goalTitle": "Không tìm thấy mục tiêu",
+    "goalAction": "Về trang Mục tiêu"
+  },
+  "storageError": {
+    "title": "Không mở được bộ nhớ cục bộ",
+    "body": "1% Better lưu dữ liệu của bạn trong bộ nhớ của trình duyệt, nhưng hiện không dùng được. Lỗi này thường gặp ở cửa sổ riêng tư (ẩn danh) hoặc khi trình duyệt chặn dữ liệu trang web. Chưa có gì bị thay đổi.",
+    "step1": "Mở app trong cửa sổ thường (không phải riêng tư).",
+    "step2": "Cho phép dữ liệu trang web và cookie cho trang này trong cài đặt trình duyệt.",
+    "step3": "Tải lại trang."
+  }
+}

@@ -1,0 +1,233 @@
+{
+  "app": {
+    "name": "1% Better per Day",
+    "shortName": "1% Better",
+    "brandSuffix": "Better per Day",
+    "tagline": "1% better, one day at a time."
+  },
+  "doc": {
+    "title": "{{page}} — 1% Better"
+  },
+  "nav": {
+    "label": "Main",
+    "today": "Today",
+    "goals": "Goals",
+    "settings": "Settings"
+  },
+  "a11y": {
+    "skip": "Skip to content",
+    "required": "(required)"
+  },
+  "offline": {
+    "chip": "Offline — saved on this device"
+  },
+  "update": {
+    "message": "A new version is available.",
+    "reload": "Reload"
+  },
+  "common": {
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "keep": "Keep",
+    "tryAgain": "Try again"
+  },
+  "unit": {
+    "min": "min",
+    "hour": "h"
+  },
+  "format": {
+    "minutes": "{{n}} min",
+    "duration": "{{h}} h {{m}} min",
+    "durationHours": "{{h}} h",
+    "percent": "{{value}}%",
+    "dateRange": "{{start}} – {{end}}",
+    "goalsCount_one": "{{count}} goal",
+    "goalsCount_other": "{{count}} goals",
+    "entriesCount_one": "{{count}} entry",
+    "entriesCount_other": "{{count}} entries",
+    "daysCount_one": "{{count}} day",
+    "daysCount_other": "{{count}} days"
+  },
+  "toast": {
+    "goalCreated": "Goal created",
+    "goalUpdated": "Goal updated",
+    "goalDeleted": "Goal deleted",
+    "entrySaved": "Entry saved",
+    "entryUpdated": "Entry updated",
+    "entryDeleted": "Entry deleted",
+    "languageChanged": "Language changed"
+  },
+  "errors": {
+    "GOAL_NAME_REQUIRED": "Enter a name for your goal.",
+    "GOAL_NAME_TOO_LONG": "Name must be 60 characters or fewer.",
+    "GOAL_WHY_TOO_LONG": "Why must be 280 characters or fewer.",
+    "GOAL_TARGET_INVALID_daily": "Enter a whole number of minutes from 1 to 1,440.",
+    "GOAL_TARGET_INVALID_total": "Enter a whole number of hours from 1 to 10,000.",
+    "GOAL_TARGET_INVALID_tooMuch": "That's more than 1,440 minutes a day for this period. Lower the hours or choose a later end date.",
+    "GOAL_PERIOD_INVALID": "Choose a valid date.",
+    "GOAL_PERIOD_INVALID_endBeforeStart": "End date must be on or after the start date.",
+    "GOAL_PERIOD_INVALID_tooLong": "A goal can last up to 1,827 days (about 5 years). Choose an earlier end date.",
+    "GOAL_PERIOD_EXCLUDES_ENTRIES": "Some of your entries fall outside these dates. Choose dates that include every logged day, or delete those entries first.",
+    "GOAL_NOT_FOUND": "This goal doesn't exist anymore. It may have been deleted.",
+    "ENTRY_NOT_FOUND": "This entry doesn't exist anymore. It may have been deleted.",
+    "ENTRY_MINUTES_INVALID": "Enter a whole number of minutes from 1 to 1,440.",
+    "ENTRY_NOTE_TOO_LONG": "Note must be 280 characters or fewer.",
+    "ENTRY_DAY_LIMIT_EXCEEDED": "A goal can have at most 1,440 minutes in one day. You can add up to {{remaining}} more for this day.",
+    "ENTRY_DAY_LIMIT_EXCEEDED_full": "This day is already full (1,440 minutes).",
+    "DATE_IN_FUTURE": "You can't log time for a future date.",
+    "DATE_OUTSIDE_GOAL_PERIOD": "That date is outside this goal's dates ({{start}} – {{end}}).",
+    "WRITE_FAILED": "Couldn't save. Your changes are still in the form — try again.",
+    "UNKNOWN": "Something went wrong. Please try again."
+  },
+  "empty": {
+    "today": {
+      "noGoals": "Start with one small goal",
+      "noGoalsBody": "Pick something you want to do a little every day. Log your time and watch it add up.",
+      "noGoalsAction": "Create your first goal",
+      "noActive": "No active goals today",
+      "noActiveBody": "Your goals haven't started yet, have ended, or are archived.",
+      "noActiveAction": "View goals"
+    },
+    "goals": "No goals yet",
+    "goalsBody": "Pick something you want to do a little every day. Log your time and watch it add up.",
+    "goalsAction": "Create your first goal"
+  },
+  "today": {
+    "title": "Today",
+    "summary_one": "{{n}} of 1 goal on target",
+    "summary_other": "{{n}} of {{count}} goals on target",
+    "allOnTarget_one": "Goal on target — a little better than yesterday.",
+    "allOnTarget_other": "All {{count}} goals on target — a little better than yesterday.",
+    "goalsLabel": "Goals for today"
+  },
+  "goalCard": {
+    "amount": "{{current}}/{{target}}",
+    "subtitleTotal": "{{daily}} min/day · {{hours}} h total",
+    "toGo": "{{n}} min to go",
+    "reached": "Target reached",
+    "reachedExtra": "Target reached · {{n}} min extra",
+    "plusOne": "+1%",
+    "plusOneSrToday": "Target reached for today",
+    "progressLabel": "{{goal}} today",
+    "progressValue": "{{current}} of {{target}} minutes",
+    "logTime": "Log time"
+  },
+  "entry": {
+    "listTitle": "Today's entries",
+    "form": {
+      "minutesLabel": "Minutes",
+      "minutesPlaceholder": "e.g. 25",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "What did you work on?",
+      "counter": "{{n}}/280",
+      "save": "Save entry",
+      "saveChanges": "Save changes",
+      "labelAdd": "Log time for {{goal}}",
+      "labelEdit": "Edit entry for {{goal}}"
+    },
+    "row": {
+      "summary": "{{minutes}}, {{note}}",
+      "summaryNoNote": "{{minutes}}",
+      "editAria": "Edit entry: {{summary}}",
+      "deleteAria": "Delete entry: {{summary}}",
+      "confirmTitle": "Delete this entry?",
+      "confirmAria": "Confirm delete: {{summary}}"
+    }
+  },
+  "goals": {
+    "title": "Goals",
+    "new": "New goal",
+    "groupActive": "Active ({{n}})",
+    "groupUpcoming": "Upcoming ({{n}})",
+    "groupEnded": "Ended ({{n}})",
+    "startsOn": "Starts {{date}}",
+    "endedOn": "Ended {{date}}",
+    "rowDaily": "{{n}} min/day · {{range}}",
+    "rowTotal": "{{daily}} min/day ({{hours}} h total) · {{range}}"
+  },
+  "goal": {
+    "status": {
+      "active": "Active",
+      "upcoming": "Upcoming",
+      "ended": "Ended"
+    },
+    "delete": {
+      "title": "Delete \"{{name}}\"?",
+      "bodyNoEntries": "This permanently deletes the goal. It has no entries yet. This can't be undone.",
+      "body_one": "This permanently deletes the goal and its 1 entry. This can't be undone.",
+      "body_other": "This permanently deletes the goal and its {{count}} entries. This can't be undone.",
+      "confirm": "Delete goal"
+    },
+    "form": {
+      "titleNew": "New goal",
+      "titleEdit": "Edit goal",
+      "srNew": "New goal form",
+      "srEdit": "Edit goal form",
+      "summary_one": "Fix 1 field to save.",
+      "summary_other": "Fix {{count}} fields to save.",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Read",
+      "nameCounter": "{{n}}/60",
+      "whyLabel": "Why (optional)",
+      "whyPlaceholder": "Why does this matter to you?",
+      "whyCounter": "{{n}}/280",
+      "targetLegend": "Target",
+      "targetDaily": "Minutes per day",
+      "targetTotal": "Total hours",
+      "hintDaily": "That's {{total}} min ({{hours}} h) over {{days}}.",
+      "hintTotal": "That's about {{daily}} min per day over {{days}}.",
+      "startLabel": "Start date",
+      "startHint": "Your entries run from {{first}} to {{last}}, so the period must include those dates.",
+      "endsLegend": "Ends",
+      "endsThisYear": "This year — ends {{date}}",
+      "endsSpecific": "On a specific date",
+      "endLabel": "End date",
+      "save": "Save goal",
+      "saveChanges": "Save changes"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "language": {
+      "title": "Language / Ngôn ngữ",
+      "desc": "Choose the language of menus, messages and dates. Your own goal names and notes stay as you wrote them.",
+      "option": {
+        "en": "English",
+        "vi": "Tiếng Việt"
+      },
+      "browserNote": "The date and time pickers and permission prompts follow your browser's language.",
+      "saveFailed": "Language changed, but it couldn't be saved on this device. It may reset when you reload."
+    },
+    "storage": {
+      "title": "Storage",
+      "label": "Protection from automatic clearing",
+      "protected": "Protected",
+      "notProtected": "Not protected",
+      "unknown": "Unknown",
+      "protectedDesc": "Your browser won't clear this data automatically.",
+      "notProtectedDesc": "Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.",
+      "unknownDesc": "Your browser doesn't report storage protection. Export a backup now and then."
+    },
+    "about": {
+      "title": "About",
+      "desc": "Everything you log stays on this device. No account, no tracking."
+    }
+  },
+  "notFound": {
+    "pageTitle": "Page not found",
+    "pageBody": "That page doesn't exist or has moved.",
+    "pageAction": "Go to Today",
+    "goalTitle": "Goal not found",
+    "goalAction": "Go to Goals"
+  },
+  "storageError": {
+    "title": "Can't open local storage",
+    "body": "1% Better keeps your data in your browser's storage, and it isn't available right now. This often happens in private or incognito windows, or when site data is blocked in browser settings. Nothing has been changed.",
+    "step1": "Open the app in a regular (non-private) window.",
+    "step2": "Allow site data and cookies for this site in your browser settings.",
+    "step3": "Reload the page."
+  }
+}

@@ -1,0 +1,107 @@
+/* Design tokens (DESIGN.md §6). Values match the mockups. */
+:root {
+  color-scheme: light dark;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --bg: #f7f6f2;
+  --surface: #ffffff;
+  --surface-2: #f0eee7;
+  --border: #ddd9ce;
+  --border-input: #7f8882;
+  --text: #1d2320;
+  --text-muted: #5a625d;
+  --primary: #1f7a4d;
+  --primary-hover: #17613d;
+  --on-primary: #ffffff;
+  --primary-soft: #e3f2e9;
+  --on-primary-soft: #14573a;
+  --plus-bg: #fdf1dc;
+  --plus-text: #8a3f06;
+  --plus-border: #e9c98f;
+  --danger: #b3261e;
+  --on-danger: #ffffff;
+  --danger-soft: #fce9e7;
+  --on-danger-soft: #8c1d18;
+  --info: #1d4e9e;
+  --info-soft: #e8f0fc;
+  --focus: #2457c5;
+  --heat-0: #e7e5dc;
+  --heat-1: #bfe3cc;
+  --heat-2: #82c69c;
+  --heat-3: #3fa06a;
+  --heat-4: #1f7a4d;
+  --chart-ideal: var(--text-muted);
+  --chart-actual: var(--primary);
+  --chart-bar: var(--heat-3);
+  --scrim: rgba(20, 28, 24, 0.5);
+  --shadow-1: 0 1px 2px rgba(20, 30, 25, 0.06);
+  --shadow-2: 0 12px 40px rgba(20, 30, 25, 0.22);
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-display: 40px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-full: 999px;
+
+  --tap: 44px;
+  --content-max: 960px;
+  --nav-w: 232px;
+  --tabbar-h: 56px;
+
+  --z-nav: 20;
+  --z-toast: 40;
+  --z-dialog: 50;
+
+  --dur-fast: 120ms;
+  --dur: 200ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121513;
+    --surface: #1b1f1c;
+    --surface-2: #242925;
+    --border: #343b36;
+    --border-input: #7c867f;
+    --text: #ecefea;
+    --text-muted: #a3aca5;
+    --primary: #5cc98f;
+    --primary-hover: #7ad6a5;
+    --on-primary: #0c2217;
+    --primary-soft: #1e3328;
+    --on-primary-soft: #a8e6c3;
+    --plus-bg: #3a2d14;
+    --plus-text: #f5c97f;
+    --plus-border: #6b5224;
+    --danger: #ff8a80;
+    --on-danger: #3b0a07;
+    --danger-soft: #3d1f1d;
+    --on-danger-soft: #ffb4ad;
+    --info: #8db4f5;
+    --info-soft: #1c2a44;
+    --focus: #8db4f5;
+    --heat-0: #2a302c;
+    --heat-1: #24503a;
+    --heat-2: #2f7a55;
+    --heat-3: #43a773;
+    --heat-4: #7fdda8;
+    --scrim: rgba(0, 0, 0, 0.6);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.55);
+  }
+}
