@@ -1,20 +1,21 @@
 # Design — 1% Better per Day
 
-Phiên bản: v1 (mode `new`, 2026-10-09). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
-Loại app: **GUI** (PWA một người dùng, mobile-first 360 px, dùng tốt trên desktop 1440 px). UI tiếng Anh. Tài liệu bằng tiếng Việt, **mọi chuỗi trong khối "Copy" và mục 7 là nguyên văn để developer dùng đúng như viết**.
+Phiên bản: v1.1 (mode `revise`, 2026-10-09: thêm tiếng Việt, PRD v1.2). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
+Loại app: **GUI** (PWA một người dùng, mobile-first 360 px, dùng tốt trên desktop 1440 px). **UI song ngữ English (`en`) / Tiếng Việt (`vi`)**: mặc định theo `navigator.language`, đổi trong Settings (FR-32 … FR-36). Tài liệu bằng tiếng Việt. **Nguồn sự thật của mọi chuỗi UI là mục 7 (bảng key `en` / `vi`); developer copy nguyên văn từ đó vào `en.json` / `vi.json`.** Các khối "Copy" trong mục 4 là bản `en` để đọc nhanh theo ngữ cảnh; nếu lệch với mục 7 thì mục 7 thắng.
 
-Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 px, tự theo sáng/tối của hệ thống): xem `docs/design/mockups/index.html`.
+Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 px, tự theo sáng/tối của hệ thống): xem `docs/design/mockups/index.html`. Các mockup viết bằng `en`; riêng Today có thêm bản `vi`.
 
 | Mockup | Màn hình | Milestone chính |
 | :- | :- | :- |
 | `mockups/01-today.html` | S1 Today (banner nhắc, form ghi nhanh, card đạt/chưa đạt) | M1 (+M2 banner) |
+| `mockups/01-today.vi.html` | S1 Today bản tiếng Việt (cùng dữ liệu; tham chiếu độ dài chuỗi `vi` ở 360 px) | M1 (+M2 banner) |
 | `mockups/02-goals.html` | S2 Goals (nhóm trạng thái, xác nhận xoá) | M1 |
 | `mockups/03-goal-form.html` | S3 Goal form (lỗi inline, gợi ý chỉ tiêu ngày) | M1 |
 | `mockups/04-timer.html` | S1 khi timer chạy + D1 Stop dialog | M2 |
 | `mockups/05-day.html` | S5 Day (ghi bù) | M3 |
 | `mockups/06-review.html` | S6 Review (heatmap, streak, thống kê, biểu đồ tuần/tháng; đổi được All goals / Read) | M4 |
 | `mockups/07-goal-detail.html` | S4 Goal detail với đường cong 1% | M3 (lịch sử) / M5 (đầy đủ) |
-| `mockups/08-settings.html` | S7 Settings (nhắc nhở, backup, storage) | M1–M3 |
+| `mockups/08-settings.html` | S7 Settings (ngôn ngữ, nhắc nhở, backup, storage) | M1–M3 |
 
 Mockup dùng một đoạn JS nhỏ inline chỉ để sinh heatmap/biểu đồ từ dataset S1 (đúng số liệu trong `TASKS.md`); không có request mạng.
 
@@ -186,11 +187,56 @@ Không có thanh cuộn ngang ở `documentElement` ở 360–1440 px (NFR-06). 
 
 | Milestone | Màn hình / component cần dựng |
 | :- | :- |
-| **M1** | Tokens + CSS nền; AppShell (tab bar/sidebar, skip link, 3 tab); S1 Today (GoalCard, ProgressBar, PlusOnePill tĩnh, EntryForm, EntryRow, EmptyState tối thiểu); S2 Goals; S3 Goal form; S7 Settings (chỉ mục Storage + About); S8 Not found; S9 StorageError (bản đầy đủ, rẻ); D2 Delete goal; Button, Field (Text/Number/TextArea/Date), SegmentedControl/Radio, Badge, Toast, ConfirmDialog (dùng `<dialog>`), OfflineChip, UpdateToast |
+| **M1** | Tokens + CSS nền; AppShell (tab bar/sidebar, skip link, 3 tab); S1 Today (GoalCard, ProgressBar, PlusOnePill tĩnh, EntryForm, EntryRow, EmptyState tối thiểu); S2 Goals; S3 Goal form; S7 Settings (mục **Language** + Storage + About; M1-T8); `LanguageSwitcher`; S8 Not found; S9 StorageError (bản đầy đủ, rẻ); D2 Delete goal; Button, Field (Text/Number/TextArea/Date), SegmentedControl/Radio, Badge, Toast, ConfirmDialog (dùng `<dialog>`), OfflineChip, UpdateToast |
+| *(i18n, mọi milestone)* | M1 dựng hạ tầng và copy `en`/`vi` của mọi màn M1; từ M2 trở đi, mỗi milestone thêm đủ cặp `en`/`vi` cho chuỗi mới của mình (bảng 7.x ghi sẵn milestone cho từng nhóm key). Mỗi màn hình mới phải qua kiểm tra bố cục 360 px ở `vi` (mục 3.4). |
 | **M2** | TimerCard + nút Start trên GoalCard; D1 StopTimerDialog; ReminderBanner; Settings mục Reminders (Switch, time input, trạng thái quyền, text giới hạn, iOS tip, nút `.ics`) |
 | **M3** | S5 Day + DateNav; S4 Goal detail bản cơ bản (thông tin + lịch sử, chưa có chart); Settings mục Backup + D3 ImportPreviewDialog + Alert lỗi import; BackupBanner (Today); link "Log a past day"; tên goal thành link |
 | **M4** | Tab Review + S6 Review; Heatmap; StatCard; BarChart (Recharts, lazy); chip streak trên Today |
 | **M5** | CurveChart + Goal detail đầy đủ (headline, stat, nút Archive); hiệu ứng/announce "+1%" một lần; Archive/Restore + nhóm "Archived"; EmptyState/ErrorState đầy đủ mọi màn; ErrorBoundary; Skeleton/loading rà soát |
+
+### 3.4 Bố cục với chuỗi tiếng Việt (rà 360 px)
+
+Chuỗi `vi` thường dài hơn `en` khoảng 10–30 % (nhất là câu hướng dẫn, hint, lỗi), nhưng nhãn nút và tab lại thường **ngắn hơn** vì đã được viết gọn. Bố cục hiện tại đã dùng `flex-wrap`, `min-width: 0` và không đặt chiều rộng cố định cho chữ, nên **không đổi layout**; mục này chốt quy tắc và chỉ ra chỗ phải kiểm.
+
+**Quy tắc chung (mọi màn, cả `en` lẫn `vi`)**
+
+1. Không đặt `width`/`height` cố định cho thứ chứa chữ; dùng `min-height` (44 px cho control). Mọi phần tử con của flex/grid có chữ phải có `min-width: 0`.
+2. Nút: `white-space: normal; text-align: center;` được phép xuống 2 dòng (nút cao lên, không cắt chữ, không `…`). Không dùng `text-overflow: ellipsis` cho nhãn control; chỉ dùng cho dòng `why` 1 dòng ở Goals (là dữ liệu người dùng, đã có sẵn).
+3. Hàng có ≥ 2 nút/chip/badge: `flex-wrap: wrap; gap: 8px` (đã có). Khi xuống hàng, nút giữ kích thước tự nhiên (không giãn), trừ nút trong dialog/bottom sheet và nút primary của form: xếp dọc, rộng đầy.
+4. Không giảm cỡ chữ dưới 12 px. Cách giảm duy nhất được phép: giá trị StatCard **dạng chữ** (không phải số thuần) dùng `--text-xl` (20/28) thay `--text-2xl` ở < 640 px.
+5. Dấu thanh tiếng Việt cao (Ể, Ớ, Ữ…): không dùng `overflow: hidden` trên khối có chiều cao cố định; `line-height` tối thiểu 1,33 (16/12 cho nhãn tab, đã đạt). Font hệ thống (`system-ui`, Segoe UI, Roboto, SF) đều có đủ glyph tiếng Việt; không thêm font ngoài (NFR-01).
+6. Văn bản do người dùng nhập (tên goal, why, note) luôn `overflow-wrap: anywhere` (đã có ở tên goal và note).
+7. Con số, ngày, giờ dùng `font-variant-numeric: tabular-nums`. Cụm "số + đơn vị" ngắn (`20 phút`, `20/30 phút`, `00:25:31`) bọc trong phần tử có `white-space: nowrap` khi nằm giữa câu dài (ví dụ cột `em` của EntryRow); **không** chèn ký tự đặc biệt (U+00A0) vào bản dịch, để chuỗi trong `vi.json` giữ nguyên văn như bảng ở mục 7. Ngày `dd/MM/yyyy` không có khoảng trắng nên không bị ngắt.
+
+**Bảng rủi ro ở viewport 360 px** (nội dung rộng 328 px; trong card còn ≈ 294 px)
+
+| Vị trí | Chuỗi `vi` | Ước lượng | Xử lý |
+| :- | :- | :- | :- |
+| Tab bar (4 tab × 90 px, chữ 12 px đậm) | `Hôm nay`, `Mục tiêu`, `Tổng kết`, `Cài đặt` (≤ 8 ký tự) | ≈ 56 px/tab, còn dư | Không `nowrap`; nếu zoom chữ 200 % thì tự xuống 2 dòng, thanh tab cao lên (không cắt). **Giới hạn copy: nhãn tab `vi` ≤ 10 ký tự** |
+| Goals: hàng 3 nút `Sửa` `Lưu trữ` `Xóa` (nhóm Archived: `Sửa` `Khôi phục` `Xóa`) | 3–9 ký tự | ≈ 216–250 px, **vừa một hàng** (nhãn `vi` ngắn hơn `en`) | Giữ `flex-wrap`; nếu tên rộng hơn (zoom, 320 px) nút xuống hàng thứ hai, đủ 44 px, khoảng cách 8 px. Không bao giờ thu nhỏ nút |
+| Goals: dòng ngày `17 phút/ngày (tổng 100 giờ) · 01/01/2026 – 31/12/2026` | ≈ 55 ký tự | ≈ 390 px > 294 | Cho xuống 2 dòng (đã là `<p>` thường, `en` cũng xuống dòng). Không cắt |
+| Goals: badge `Đã kết thúc` cạnh tên goal | 11 ký tự, `nowrap` | ≈ 100 px | Hàng tên + badge `flex-wrap`: badge xuống dưới tên nếu tên dài |
+| Today: hàng `Ghi thời gian` + `Đếm giờ` | 13 + 7 ký tự | ≈ 136 + 116 + 8 = 260 px, vừa | Nhãn `Start timer` ở `vi` cố ý viết gọn `Đếm giờ` (không dùng `Bắt đầu đếm giờ` ≈ 172 px làm hàng tràn). Nếu vẫn tràn (zoom): nút thứ hai xuống hàng |
+| Today: tiêu đề + chip `Chuỗi 8 ngày` | h1 `Hôm nay` + chip ≈ 110 px | vừa | `page-head` đã `flex-wrap` |
+| Today: banner nhắc `Đã quá 20:00 — còn 2 mục tiêu chưa đạt chỉ tiêu.` | ≈ 55 ký tự | 2 dòng | Banner cao theo nội dung |
+| Today: link `Quên ghi một ngày? Ghi bù cho ngày đã qua` | 42 ký tự | ≈ 300 px, có thể xuống 2 dòng | Link là `inline-block`, `min-height: 44px`; dùng `line-height: 24px` + `padding-block: 10px` thay `line-height: 44px` để 2 dòng không đè nhau |
+| Form: label + counter `Ghi chú (không bắt buộc)` `0/280` | 24 ký tự + counter | ≈ 230 px, vừa | `.label-row` thêm `flex-wrap: wrap` để counter xuống dòng khi hẹp hơn |
+| Goal form: SegmentedControl `Phút mỗi ngày` / `Tổng số giờ` (mỗi nửa ≈ 147 px) | 13 và 11 ký tự | ≈ 128 px, vừa | Cho chữ xuống 2 dòng trong nửa của nó (không `nowrap` ở form); chiều cao nút tự lớn. Quy tắc: tối đa 3 lựa chọn/segmented; mỗi nhãn ≤ 14 ký tự ở `vi` |
+| Goal form: radio `Trong năm nay — kết thúc 31/12/2026` | 36 ký tự | ≈ 290 px + radio | Chữ nhãn radio được xuống dòng, radio căn trên |
+| Goal detail: Range `Cả giai đoạn` / `Đến nay` (có `nowrap`) | 12 và 7 ký tự | ≈ 210 px | Vừa; tiêu đề chart `Lý tưởng và thực tế` đứng cùng hàng sẽ tự xuống dòng (`flex-wrap`). Giữ `nowrap` chỉ cho control này |
+| StatCard (lưới 2 cột ≈ 158 px, nội dung ≈ 124 px) | nhãn `Ngày đạt chỉ tiêu` (17), giá trị chữ `Chậm 30 phút` / `Nhanh 1 giờ 20 phút`, phụ `Dự kiến 270 phút tính đến hôm nay` | giá trị 24 px đậm ≈ 156–250 px > 124 | (a) Nhãn và phụ được xuống dòng, thẻ cao theo nội dung (các thẻ cùng hàng giãn bằng nhau). (b) Thẻ **Pace** (giá trị dạng chữ) chiếm cả hàng (`grid-column: 1 / -1`) ở < 640 px, cỡ giá trị 20 px. (c) Thẻ số thuần (`9,4 giờ`, `25,8%`, `8 ngày`) giữ 24 px. Áp dụng cho cả `en` (`30 min behind` cũng tràn) |
+| Heatmap: nhãn thứ `Th 2`, `Th 4`, `Th 6` và nhãn tháng `thg 10` (từ `Intl` `vi-VN`) | 4–6 ký tự, 11 px | thứ ≈ 24 px; tháng ≈ 36 px | Cột nhãn thứ rộng `auto` (tối thiểu 28 px); nhãn tháng `white-space: nowrap`, chỉ vẽ ở tuần đầu của tháng và bỏ nhãn nếu cách nhãn trước < 40 px. Heatmap vẫn cuộn ngang trong `.heatmap-scroll` như cũ |
+| Biểu đồ cột: nhãn trục 12 tuần (`9 thg 10`) và 12 tháng (`thg 10`) | 6–8 ký tự | 12 cột / 294 px ≈ 24 px mỗi cột | Recharts `interval="preserveStartEnd"` + `minTickGap={8}`: tự ẩn bớt nhãn, không xoay chữ. Giá trị đầy đủ có ở tooltip, tóm tắt và bảng ẩn |
+| Settings: hàng switch `Nhắc nhở hằng ngày` + mô tả + công tắc | nhãn 18, mô tả 55 ký tự | OK | Khối chữ `flex: 1; min-width: 0`, công tắc `flex: none` |
+| Settings: `Quyền thông báo` + chip `Đã cho phép` / `Không hỗ trợ` | 15 + 12 ký tự | ≈ 120 + 100 px, vừa | `.perm` đã `flex-wrap`; chip xuống dưới nếu hẹp |
+| Settings: nút `Thêm lời nhắc vào lịch (.ics)` | 29 ký tự | ≈ 280 px, sát mép | Cho xuống 2 dòng trong nút; icon căn giữa theo chiều dọc |
+| Settings: `Xuất sao lưu (JSON)` + `Nhập sao lưu…` | 19 + 14 ký tự | ≈ 300 px > 294 | `.btn-row` đã `flex-wrap`: nút thứ hai xuống hàng |
+| Dialog / bottom sheet: `Thay thế toàn bộ dữ liệu`, `Bỏ phiên này`, `Tiếp tục đếm` | ≤ 24 ký tự | vừa | Nút xếp dọc, rộng đầy ở < 640 px (đã có) |
+| Toast `Đã nhập bản sao lưu: 5 mục tiêu, 23 lần ghi` | 43 ký tự | ≈ 330 px > 296 | Toast `max-width: calc(100vw - 32px)`, chữ xuống dòng, không `nowrap` |
+| Chip Offline `Ngoại tuyến — lưu trên thiết bị` | 31 ký tự | ≈ 230 px | Cho xuống dòng, không cắt |
+| Lịch sử Goal detail (< 640 px xếp chồng) | cột `Số phút`, `Ghi chú`, `Nguồn`; nguồn `Thủ công` / `Đếm giờ` | OK | Giữ cách xếp chồng hiện tại |
+
+**Kiểm chứng** (NFR-11e, M1-AC18): Playwright viewport 360×740 ở `vi-VN`, `document.documentElement.scrollWidth <= clientWidth` trên Today (có form mở), Goals (đủ 3 nhóm), Goal form (có lỗi ở mọi field), Settings; từ M4 thêm Review (ngoại lệ `.heatmap-scroll`). Mockup tham chiếu: `mockups/01-today.vi.html` (mở ở 360 px, so với `01-today.html`).
 
 ---
 
@@ -202,7 +248,9 @@ Quy ước chung cho mọi màn hình:
 - **Offline**: app vẫn dùng bình thường. Khi `navigator.onLine === false` hiện `OfflineChip` nhỏ ở header: "Offline — saved on this device" (`role="status"`, không chặn). Không bao giờ chặn thao tác vì offline.
 - **Lỗi lưu** (StorageError khi ghi): thông báo inline gần form "Couldn't save. Your changes are still in the form — try again." giữ nguyên giá trị đã nhập (M5-AC6).
 - **Không có quyền**: app không có phân quyền người dùng. Trạng thái "quyền" duy nhất là quyền Notification (xem S7).
-- Ngày/giờ/số hiển thị theo quy ước ở mục 7.1.
+- Ngày/giờ/số hiển thị theo quy ước ở mục 7.1 (theo ngôn ngữ đang chọn).
+- **Ngôn ngữ**: mọi chuỗi trong khối *Copy* dưới đây là bản `en`; bản `vi` và **key i18n** của từng chuỗi nằm ở mục 7. Đổi ngôn ngữ trong Settings đổi ngay mọi màn (kể cả màn đang mở, toast đang hiện, `document.title`, `<html lang>`), không reload, không mất dữ liệu đang hiển thị hay giá trị đang nhập trong form (form đang mở giữ nguyên giá trị; chỉ nhãn, hint, lỗi đổi ngôn ngữ). Lỗi validate đang hiện được dịch lại theo ngôn ngữ mới (lưu mã lỗi, không lưu chuỗi).
+- Mỗi màn có trạng thái *default / loading / empty / error / success* như mô tả; trạng thái đó có đủ bản `vi` ở mục 7.
 
 ### S1 — Today  (Milestone: M1; M2 timer + banner; M3 link ghi bù + banner backup; M4 chip streak; M5 phản hồi "+1%", empty/error đầy đủ. User story: US-02, US-03, US-04, US-09)
 
@@ -437,13 +485,19 @@ Quy ước chung cho mọi màn hình:
   - Mobile: vùng heatmap tự cuộn tới tuần hiện tại khi mở.
 - **Copy:** `Review`, `Goal`, `All goals`, `Year`, `Time logged`, `Days on target`, `Current streak`, `Longest streak`, `Progress`, `Pace`, `Activity in {year}`, `Less`, `More`, `Last 12 weeks`, `Months of {year}`, `Pick a goal to see progress and pace.`, `{n} days` (`1 day`), pace: `{x} min ahead` / `{x} min behind` / `On pace` (≥ 60 phút: `{h} h {m} min ahead`), phụ đề card: Time logged `In {year}` (một goal thêm `Whole goal: {h} h`), Progress `{minutes} of {total} min`, Pace `Expected {n} min by today`. Heatmap tóm tắt (SR): `In {year} you logged time on {a} days and hit your target on {b} days. Longest streak: {c} days.` Tooltip/label ô: mục 7.5. Nút: `Retry`, `Create a goal`.
 
-### S7 — Settings  (Milestone: M1 [Storage + About]; M2 [Reminders]; M3 [Backup]. User story: US-09, US-10, US-11, US-13)
+### S7 — Settings  (Milestone: M1 [Language + Storage + About]; M2 [Reminders]; M3 [Backup]. User story: US-09, US-10, US-11, US-13, US-14)
 
-- **Mục đích:** Nhắc nhở, backup, thông tin lưu trữ. Primary action: không có (mỗi card có hành động riêng).
-- **Layout:** 4 card xếp dọc, mỗi card có h2:
+- **Mục đích:** Chọn ngôn ngữ, nhắc nhở, backup, thông tin lưu trữ. Primary action: không có (mỗi card có hành động riêng).
+- **Layout:** 5 card xếp dọc, mỗi card có h2. **Thứ tự card cố định: Language → Reminders → Backup → Storage → About.** Language đứng đầu vì (a) là thiết lập "toàn app" và người dùng lỡ vào nhầm ngôn ngữ cần tìm thấy nó ngay không phải cuộn, (b) tiêu đề card luôn song ngữ `Language / Ngôn ngữ` (cùng một chuỗi ở cả hai bản dịch) nên nhận ra được dù đang ở ngôn ngữ nào. Card chưa có ở milestone nào thì không hiện (M1: Language, Storage, About).
 
 ```text
-┌ Reminders ───────────────────────────┐ (M2)
+┌ Language / Ngôn ngữ ─────────────────┐ (M1)
+│ Choose the language of menus, ...    │  mô tả (theo ngôn ngữ đang chọn)
+│ ┌────────────────┬─────────────────┐ │  SegmentedControl 2 lựa chọn (radio group)
+│ │  ● English     │   Tiếng Việt    │ │  mỗi nhãn bằng chính ngôn ngữ của nó
+│ └────────────────┴─────────────────┘ │
+│ hint: ô chọn ngày/giờ, hộp xin quyền theo ngôn ngữ trình duyệt
+├ Reminders ───────────────────────────┤ (M2)
 │ [switch] Daily reminder              │
 │ Reminder time [20:00]                │
 │ Notification permission: [Allowed]   │  + mô tả theo trạng thái
@@ -458,8 +512,9 @@ Quy ước chung cho mọi màn hình:
 ├ About ───────────────────────────────┤ (M1)
 └──────────────────────────────────────┘
 ```
-- **Component dùng:** PageHeader, Switch, TimeField, StatusChip, Banner, Alert, Button, ImportPreviewDialog (D3), Toast.
+- **Component dùng:** PageHeader, LanguageSwitcher (SegmentedControl), Switch, TimeField, StatusChip, Banner, Alert, Button, ImportPreviewDialog (D3), Toast.
 - **Trạng thái:**
+  - *Language* (M1, FR-32 … FR-34): luôn có đúng một lựa chọn được chọn = **ngôn ngữ đang hiển thị** (kết quả `LocaleService.resolve`: lựa chọn đã lưu, nếu chưa có thì ngôn ngữ phát hiện từ trình duyệt). Hai lựa chọn: `English` (`lang="en"`) và `Tiếng Việt` (`lang="vi"`), **hiển thị bằng chính ngôn ngữ của nó ở cả hai chế độ** (nhãn không đổi khi đổi ngôn ngữ). Không có nút Save: chọn là áp dụng ngay. Trạng thái: *default* (một lựa chọn chọn sẵn), *focus* (vòng focus quanh lựa chọn), *hover*, *saving*: ghi kv gần như tức thì nên **không** có spinner; nếu ghi kv lỗi thì giao diện vẫn đổi ngôn ngữ cho phiên này và hiện Alert `settings.language.saveFailed` bên dưới control (lựa chọn không bền qua reload). *Loading/empty*: không áp dụng. *Offline*: không đổi. Chưa từng chọn thì chưa ghi gì vào kv (A-16); mô tả không nêu việc này để khỏi rối.
   - *Reminders*: switch tắt mặc định, giờ `20:00`; khi switch tắt, field giờ bị vô hiệu. **4 trạng thái quyền** (hiển thị bằng StatusChip có chữ + mô tả):
     - `default` → chip `Not asked yet`; mô tả `Turn on the reminder and your browser will ask for permission.`; nút `Allow notifications`.
     - `granted` → chip `Allowed`; mô tả `You'll get one notification a day while 1% Better is open.`
@@ -468,8 +523,10 @@ Quy ước chung cho mọi màn hình:
   - *Backup* (M3): `Last backup: Never` / `Last backup: 2026-10-09`; khi quá 30 ngày hoặc chưa từng và có goal: Banner `It's been {n} days since your last backup.` / `You haven't backed up yet.`; lỗi import hiện Alert (7.3) và không thay đổi dữ liệu; *loading* khi đang đọc/ghi file: nút vô hiệu + `Working…`; *success*: toast.
   - *Storage* (M1): `Protected` (persisted = true) — `Your browser won't clear this data automatically.`; `Not protected` — `Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.`; không hỗ trợ API → `Unknown` + `Your browser doesn't report storage protection. Export a backup now and then.`
   - *offline*: chip Offline chung; không đổi gì khác.
-- **Tương tác:** Switch → lưu ngay, lần đầu bật khi quyền `default` gọi `Notification.requestPermission()` đúng 1 lần; đổi giờ → lưu ngay (onBlur/onChange hợp lệ), toast `Reminder time saved`. `Allow notifications` → xin quyền. `Add reminder to calendar (.ics)` → tải `1percent-better-reminder.ics`, toast `Calendar file downloaded`. `Export backup (JSON)` → tải file, toast `Backup exported`. `Import backup…` → hộp chọn file → parse → D3 (hoặc Alert lỗi).
-- **Copy:** `Settings`; card `Reminders`, `Backup`, `Storage`, `About`; `Daily reminder`; mô tả switch `Get a nudge when you haven't hit your targets today.`; `Reminder time`; `Notification permission`; giới hạn: `Heads up: reminders are sent only while 1% Better is open (in a tab or an installed window, even in the background). To be reminded when the app is closed, add a daily event to your calendar.`; iOS: `On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).`; `Add reminder to calendar (.ics)`; phụ `Adds a repeating daily event at {time}.`; Backup mô tả `Your data lives only on this device. Export a backup now and then, or to move to another device.` và `Importing replaces everything currently on this device.`; nút `Export backup (JSON)`, `Import backup…`; About: `1% Better per Day` / `Everything you log stays on this device. No account, no tracking.`
+- **Tương tác:**
+  - *Language*: bấm/chạm một lựa chọn, hoặc dùng mũi tên Trái/Phải (radio group), Space chọn → `LocaleService.set` ghi kv, `i18next.changeLanguage`, `<html lang>`, `document.title` đổi **đồng bộ trong cùng khung hình**; toàn bộ chữ trên trang (kể cả h1 `Settings` → `Cài đặt`, tab bar, mô tả card, mọi card khác) đổi tại chỗ. Focus **giữ nguyên** trên lựa chọn vừa chọn (không nhảy về h1, không reload, không cuộn). Hiện toast `toast.languageChanged` bằng ngôn ngữ **mới** (`role="status"` để người dùng trình đọc màn hình nghe được rằng ngôn ngữ đã đổi). Chọn lại lựa chọn đang chọn: không làm gì, không toast. Toast, banner, form đang hiển thị ở màn khác sẽ dùng ngôn ngữ mới khi quay lại.
+  - Switch → lưu ngay, lần đầu bật khi quyền `default` gọi `Notification.requestPermission()` đúng 1 lần; đổi giờ → lưu ngay (onBlur/onChange hợp lệ), toast `Reminder time saved`. `Allow notifications` → xin quyền. `Add reminder to calendar (.ics)` → tải `1percent-better-reminder.ics`, toast `Calendar file downloaded`. `Export backup (JSON)` → tải file, toast `Backup exported`. `Import backup…` → hộp chọn file → parse → D3 (hoặc Alert lỗi).
+- **Copy:** `Settings`; card `Language / Ngôn ngữ` (cùng một chuỗi ở `en` và `vi`), mô tả `Choose the language of menus, messages and dates. Your own goal names and notes stay as you wrote them.`, lựa chọn `English` / `Tiếng Việt`, hint `The date and time pickers and permission prompts follow your browser's language.`, toast `Language changed`; card `Reminders`, `Backup`, `Storage`, `About`; `Daily reminder`; mô tả switch `Get a nudge when you haven't hit your targets today.`; `Reminder time`; `Notification permission`; giới hạn: `Heads up: reminders are sent only while 1% Better is open (in a tab or an installed window, even in the background). To be reminded when the app is closed, add a daily event to your calendar.`; iOS: `On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).`; `Add reminder to calendar (.ics)`; phụ `Adds a repeating daily event at {time}.`; Backup mô tả `Your data lives only on this device. Export a backup now and then, or to move to another device.` và `Importing replaces everything currently on this device.`; nút `Export backup (JSON)`, `Import backup…`; About: `1% Better per Day` / `Everything you log stays on this device. No account, no tracking.`
 - **D3 — Import preview dialog** (M3): tiêu đề `Replace all data?`; nội dung `This backup has {5 goals, 23 entries}, exported {2026-10-09}. Importing replaces everything currently on this device ({a goals, b entries}). This can't be undone.`; nút `Replace all data` (danger), `Cancel` (focus ban đầu ở `Cancel`). Pluralization: `1 goal`, `1 entry`.
 
 ### S8 — Not found  (Milestone: M1)
@@ -486,7 +543,8 @@ Quy ước chung cho mọi màn hình:
 - **Layout:** toàn trang (không có tab bar, vì app không dùng được), căn giữa, rộng tối đa 520 px: icon cảnh báo, `<h1>`, đoạn giải thích, danh sách 3 bước, nút `Try again`.
 - **Trạng thái:** *StorageError* (không mở được DB lúc khởi động, `STORAGE_UNAVAILABLE`); *ErrorBoundary* (lỗi render không lường trước); *write failure* không dùng màn này mà dùng lỗi inline (xem đầu mục 4).
 - **Tương tác:** `Try again` → thử mở DB lại (không reload nếu thành công); `Reload app` (ErrorBoundary) → `location.reload()`.
-- **Copy:**
+- **Ngôn ngữ:** vì không đọc được kv, màn này (và ErrorBoundary khi lỗi xảy ra trước khi biết ngôn ngữ đã lưu) dùng ngôn ngữ **phát hiện từ `navigator.language`** (FR-33). Không có control đổi ngôn ngữ ở màn này (không có nơi lưu); các bước 1–3 hiển thị bằng thẻ `<ol>`, số thứ tự do trình duyệt vẽ (chuỗi i18n **không** chứa "1.", "2.", "3.").
+- **Copy:** (bản `en`; `vi` ở mục 7.6)
   - StorageError: `Can't open local storage` / `1% Better keeps your data in your browser's storage, and it isn't available right now. This often happens in private or incognito windows, or when site data is blocked in browser settings. Nothing has been changed.` / bước: `1. Open the app in a regular (non-private) window.` `2. Allow site data and cookies for this site in your browser settings.` `3. Reload the page.` / nút `Try again`.
   - ErrorBoundary: `Something went wrong` / `The app ran into an unexpected problem. Your data is still stored on this device.` / nút `Reload app`, `Go to Today`.
 
@@ -506,6 +564,7 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 | `SegmentedControl` / `RadioGroup` | Chọn 1 trong ít lựa chọn | `legend`, `options`, `value` | default, selected, focus, disabled | Goal form (M1), Goal detail Range (M5) |
 | `Select` | Chọn Goal/Year | `label`, `options` | default, focus, disabled | Review (M4) |
 | `Switch` | Bật/tắt (role switch) | `label`, `description?`, `checked` | on, off, focus, disabled | Settings (M2) |
+| `LanguageSwitcher` | Chọn `en` / `vi` (dựng trên `SegmentedControl`/radio group; áp dụng ngay, không nút Save) | `value: 'en' \| 'vi'`, `onChange`; mỗi lựa chọn có `lang` riêng và nhãn endonym `English` / `Tiếng Việt` | default (1 lựa chọn đang chọn), hover, focus-visible, error (Alert khi ghi kv lỗi) | Settings card Language (M1) |
 | `Badge` / `StatusChip` | Nhãn trạng thái luôn có chữ | tone: success / info / neutral / warning | — | Goals, Goal detail, Settings, EntryRow nguồn (M1) |
 | `PlusOnePill` | Chỉ báo "+1%" khi đạt chỉ tiêu | `animate?` (M5, đúng 1 lần) | static, entering (≤ 240 ms, tắt khi reduced-motion) | GoalCard, Day (M1; animate M5) |
 | `ProgressBar` | Tiến độ hôm nay | `value`, `max`, `label` (`role="progressbar"`) | 0, partial, full (tối đa 100 %) | GoalCard, StatCard (M1) |
@@ -610,121 +669,538 @@ Heatmap: ô 11 px + khoảng 2 px (mobile < 640 px; cuộn ngang trong vùng ch�
 
 ## 7. Copy và thông báo
 
+### 7.0 Quy tắc key, tham số, số nhiều và cách viết tiếng Việt
+
+**Cách dùng mục này.** Mỗi bảng có cột `Key`, `en`, `vi` (và `Ngữ cảnh`/`MS` = milestone cần chuỗi đó). Developer tạo `en.json` / `vi.json` bằng cách copy nguyên văn hai cột này; key dạng `a.b.c` là đường dẫn lồng nhau trong JSON. Không dịch lại, không sửa dấu. Nếu thiếu chuỗi cho một thành phần thì dừng và báo orchestrator (M1-T8).
+
+**Quy tắc key**
+
+1. Tên key theo thành phần/màn hình: `app.*`, `nav.*`, `common.*`, `unit.*`, `offline.*`, `update.*`, `format.*`, `toast.*`, `plusone.*`, `chart.*`, `errors.*`, `empty.*`, `today.*`, `goalCard.*`, `entry.*`, `goals.*`, `goal.form.*`, `goal.delete.*`, `goal.detail.*`, `goal.status.*`, `day.*`, `review.*`, `stat.*`, `heatmap.*`, `timer.*`, `reminder.*`, `backup.*`, `import.*`, `settings.*`, `notFound.*`, `storageError.*`, `errorBoundary.*`, `notification.*`, `ics.*`, `a11y.*`, `doc.*`. Không dùng tiền tố `screen.` (xem A-D14).
+2. **Không key nào là tiền tố (theo dấu `.`) của key khác** (i18next không cho một khóa vừa là chuỗi vừa là object). Vì thế tiêu đề/nội dung/nút của một khối tách bằng hậu tố liền tên, không bằng dấu chấm: `empty.today.noGoals` (tiêu đề), `empty.today.noGoalsBody`, `empty.today.noGoalsAction`.
+3. Biến dùng cú pháp i18next `{{name}}`. Ngày, số, phút, giờ, phần trăm đã được `format.ts` định dạng theo locale **trước khi** truyền vào (`{{date}}` = `01/10/2026` ở `vi`). Tên goal/why/note truyền vào nguyên văn, không dịch.
+4. **Số nhiều:** key có biến `count` theo chuẩn i18next JSON v4: `key_one` / `key_other` cho `en`. `vi` chỉ có `key_other` (không chia số nhiều); trong bảng, dòng `key_one` ghi `vi` = `—` (không tạo key trong `vi.json`). Biến của `vi` `_other` phải **giống** biến của `en` `_other`. Cụm đếm được dùng lại trong câu khác (`1 goal`, `5 goals`, `1 entry`, `8 days`) lấy từ `format.goalsCount`, `format.entriesCount`, `format.daysCount`, rồi truyền vào câu dưới dạng biến chuỗi (`{{goals}}`, `{{days}}`); **không** ghép chuỗi bằng `+` trong UI.
+5. Chuỗi giống nhau ở `en` và `vi` (tên thương hiệu, `+1%`, `—`, `{{n}}/280`, `English`, `Tiếng Việt`, `Language / Ngôn ngữ`) vẫn có mặt ở cả hai file và được **miễn** test quét "không lẫn tiếng Anh" (NFR-11c); danh sách miễn = các dòng có cột `vi` ghi `= en`.
+6. `+1%`, `1% Better`, `1% Better per Day`, `JSON`, `.ics`, mã lỗi, tên file, `hh:mm:ss` và `HH:MM` không dịch.
+
+**Quy tắc viết tiếng Việt (A-18: designer chốt giọng văn)**
+
+- **Có dấu đầy đủ**, dùng Unicode dựng sẵn (NFC), kiểu đặt dấu thanh hiện đại, thống nhất toàn app (`Hủy`, `Xóa`, `hòa`, `thủy`, không viết `Huỷ`, `Xoá`, `hoà`). Không viết không dấu, không viết tắt kiểu nhắn tin.
+- **Xưng hô "bạn"** khi cần nhắc đến người dùng; câu mệnh lệnh mở đầu bằng `Hãy …` khi cần lịch sự, nút thì động từ trần (`Lưu`, `Xóa`). Không dùng "quý khách", "mình/ta". Không đổ lỗi ("bạn đã sai"); nói chuyện gì xảy ra và làm gì tiếp (giống `en`).
+- **Giọng ngắn gọn, bình tĩnh**, giống `en`: câu đơn, bỏ chủ ngữ khi hiển nhiên. Nút ≤ 3 từ nếu được; nhãn tab ≤ 10 ký tự.
+- **Thuật ngữ** (nhất quán toàn app):
+
+| Khái niệm (`en`) | `vi` | Ghi chú |
+| :- | :- | :- |
+| goal | mục tiêu | |
+| entry | lần ghi | đếm: `5 lần ghi` |
+| target (daily target) | chỉ tiêu | "đạt chỉ tiêu" = on target |
+| log time | ghi thời gian | |
+| timer | bộ đếm giờ (nút: `Đếm giờ`; badge nguồn: `Đếm giờ`) | không dùng "timer" |
+| session | phiên | `Bỏ phiên này` |
+| reminder | nhắc nhở / lời nhắc | |
+| backup / export / import | sao lưu / xuất / nhập | `Xuất sao lưu (JSON)`, `Nhập sao lưu…` |
+| archive / restore | lưu trữ / khôi phục | |
+| storage | bộ nhớ | không dùng "lưu trữ" (để dành cho archive) |
+| review | tổng kết | tab và h1 |
+| streak | chuỗi (… ngày) | `Chuỗi 8 ngày` |
+| pace | nhịp độ | khác với `tiến độ` (progress) |
+| heatmap | biểu đồ nhiệt / bản đồ nhiệt | aria: `Biểu đồ nhiệt hoạt động năm …` |
+| app | app | giữ như người Việt hay dùng; "ứng dụng" chỉ khi hướng dẫn menu trình duyệt |
+| file | tệp | "tệp" thay "file", trừ tên loại (`.ics`, JSON) |
+| notification | thông báo | |
+| today / yesterday | hôm nay / hôm qua | |
+
+- Giữ nguyên tiếng Anh: `JSON`, `.ics`, `iOS`, `iPhone`, `iPad`, `PWA`, `cookie`, `MB`, `1% Better`.
+- Số thập phân dùng dấu phẩy (`25,8%`), hàng nghìn dùng dấu chấm (`1.440`); các số có sẵn trong câu (ví dụ `1.440`, `10.000`, `1.827`) đã viết đúng theo quy ước này trong bảng.
+- Dấu câu: dấu chấm cuối câu đầy đủ cho câu hoàn chỉnh; không viết hoa mỗi từ ở tiêu đề (`Mục tiêu mới`, không phải `Mục Tiêu Mới`). Dấu ngoặc kép thẳng `"…"` như `en`. Dấu `—` (em dash) và `·`, `–` giữ như `en`.
+
 ### 7.1 Quy ước định dạng
 
-| Loại | Quy tắc | Ví dụ |
+Mọi định dạng do `src/i18n/format.ts` (ARCH §5.8) sinh ra; developer **không** gõ tay ngày/số vào bản dịch. Cột `vi` là kết quả mong đợi (ngày dài lấy từ `Intl.DateTimeFormat('vi-VN')`, có thể khác nhẹ giữa phiên bản ICU nên test so với `Intl` tại chỗ).
+
+| Loại | `en` (`en-US`) | `vi` (`vi-VN`) | Ví dụ `en` → `vi` |
+| :- | :- | :- | :- |
+| Ngày dài (tiêu đề, heatmap, `Day`) | thứ, tháng ngày (+ năm nếu không phải năm hiện tại hoặc ở màn Day) | `Intl` `vi-VN`: thứ, ngày tháng (+ năm) | `Friday, October 9` → `Thứ Sáu, 9 tháng 10`; `Thursday, October 8, 2026` → `Thứ Năm, 8 tháng 10, 2026` (có thể là `… 8 tháng 10 năm 2026` tùy ICU) |
+| Ngày ngắn (khoảng goal, lịch sử, `Last backup`, hint) | `YYYY-MM-DD`; khoảng nối bằng ` – ` (en dash) | `dd/MM/yyyy`; khoảng nối bằng ` – ` | `2026-10-01 – 2026-10-31` → `01/10/2026 – 31/10/2026` |
+| Ngày ngắn không năm (tooltip biểu đồ, trục tuần) | `Oct 9` | `9 thg 10` (`Intl` `vi-VN`) | |
+| Tên thứ, tháng ngắn (heatmap, trục) | `Mon`, `Oct` | `Th 2`, `thg 10` (theo `Intl` `vi-VN`) | Tuần luôn bắt đầu thứ Hai (A-01) |
+| Số, hàng nghìn | `1,440` | `1.440` | |
+| Số thập phân 1 chữ số | `15.5`, `4.0` | `15,5`, `4,0` | |
+| Phút | `{n} min`; card Today `{a}/{b} min` | `{n} phút`; `{a}/{b} phút` | `20/30 min` → `20/30 phút` |
+| Thời lượng dài | `< 60`: `{n} min`; `≥ 60`: `{h} h {m} min` (bỏ phần 0) | `{n} phút`; `{h} giờ {m} phút` (bỏ phần 0) | `2 h 40 min` → `2 giờ 40 phút` |
+| Tổng giờ (thống kê) | `{x.x} h` | `{x,x} giờ` | `4.0 h` → `4,0 giờ` |
+| Phần trăm | `25.8%`, `+8.3% better` | `25,8%`, `Tốt hơn +8,3%` | key `format.percent` = `{{value}}%` |
+| Timer | `hh:mm:ss` (giống nhau) | giống `en` | `00:25:31` |
+| Giờ nhắc | 24h `HH:MM` (giống nhau) | giống `en` | `20:00` |
+| Số nhiều | `1 goal`, `2 goals`; `1 entry`, `23 entries`; `1 day`, `8 days` | `1 mục tiêu`, `2 mục tiêu`; `23 lần ghi`; `8 ngày` (không chia số nhiều) | qua `format.*Count` |
+
+### 7.2 Chung: app, điều hướng, thành phần dùng lại, định dạng, toast
+
+Cột **MS** = milestone cần chuỗi đó (M1 = có ngay từ M1).
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `app.name` | M1 | tên app, `<title>` mặc định, About | `1% Better per Day` | `1% Better per Day` (= en) |
+| `app.shortName` | M1 | tên ngắn, `aria-label` logo, tiêu đề trang | `1% Better` | `1% Better` (= en) |
+| `app.brandSuffix` | M1 | chữ cạnh logo ở sidebar | `Better per Day` | `Better per Day` (= en) |
+| `app.tagline` | M1 | EmptyState/About | `1% better, one day at a time.` | `Mỗi ngày tốt hơn 1%.` |
+| `doc.title` | M1 | `document.title` mọi màn; `{{page}}` = tiêu đề h1 của màn | `{{page}} — 1% Better` | `{{page}} — 1% Better` (= en) |
+| `nav.label` | M1 | `aria-label` của thanh điều hướng | `Main` | `Chính` |
+| `nav.today` | M1 | tab | `Today` | `Hôm nay` |
+| `nav.goals` | M1 | tab; link "quay lại" ở Goal form/Goal detail | `Goals` | `Mục tiêu` |
+| `nav.review` | M4 | tab | `Review` | `Tổng kết` |
+| `nav.settings` | M1 | tab | `Settings` | `Cài đặt` |
+| `a11y.skip` | M1 | skip link | `Skip to content` | `Chuyển đến nội dung chính` |
+| `a11y.required` | M1 | chữ ẩn cạnh dấu `*` | `(required)` | `(bắt buộc)` |
+| `offline.chip` | M1 | OfflineChip | `Offline — saved on this device` | `Ngoại tuyến — lưu trên thiết bị` |
+| `update.message` | M1 | UpdateToast (SW có bản mới) | `A new version is available.` | `Đã có phiên bản mới.` |
+| `update.reload` | M1 | nút của UpdateToast | `Reload` | `Tải lại` |
+| `common.loading` | M1 | SR loading (`role="status"` ẩn) | `Loading…` | `Đang tải…` |
+| `common.saving` | M1 | nút đang lưu | `Saving…` | `Đang lưu…` |
+| `common.working` | M3 | nút đang đọc/ghi file | `Working…` | `Đang xử lý…` |
+| `common.cancel` | M1 | nút | `Cancel` | `Hủy` |
+| `common.edit` | M1 | nút | `Edit` | `Sửa` |
+| `common.delete` | M1 | nút | `Delete` | `Xóa` |
+| `common.keep` | M1 | nút (xác nhận xoá entry) | `Keep` | `Giữ lại` |
+| `common.retry` | M4 | nút | `Retry` | `Thử lại` |
+| `common.tryAgain` | M1 | nút ở StorageError | `Try again` | `Thử lại` |
+| `common.emptyValue` | M3 | ghi chú rỗng trong bảng | `—` | `—` (= en) |
+| `unit.min` | M1 | đơn vị sau số lớn ở card (`20/30` + đơn vị) | `min` | `phút` |
+| `unit.hour` | M1 | hậu tố field "Total hours" | `h` | `giờ` |
+| `format.minutes` | M1 | `{{n}}` đã định dạng | `{{n}} min` | `{{n}} phút` |
+| `format.hours` | M4 | `{{n}}` đã định dạng (1 chữ số thập phân khi là thống kê) | `{{n}} h` | `{{n}} giờ` |
+| `format.duration` | M1 | thời lượng ≥ 60 phút, có phần phút | `{{h}} h {{m}} min` | `{{h}} giờ {{m}} phút` |
+| `format.durationHours` | M1 | thời lượng tròn giờ (bỏ phần 0) | `{{h}} h` | `{{h}} giờ` |
+| `format.minSec` | M2 | gợi ý làm tròn của Stop dialog | `{{m}} min {{s}} s` | `{{m}} phút {{s}} giây` |
+| `format.percent` | M1 | `{{value}}` đã định dạng | `{{value}}%` | `{{value}}%` (= en) |
+| `format.dateRange` | M1 | khoảng ngày | `{{start}} – {{end}}` | `{{start}} – {{end}}` (= en) |
+| `format.goalsCount_one` | M1 | cụm đếm dùng trong câu | `{{count}} goal` | — |
+| `format.goalsCount_other` | M1 | | `{{count}} goals` | `{{count}} mục tiêu` |
+| `format.entriesCount_one` | M1 | | `{{count}} entry` | — |
+| `format.entriesCount_other` | M1 | | `{{count}} entries` | `{{count}} lần ghi` |
+| `format.daysCount_one` | M1 | | `{{count}} day` | — |
+| `format.daysCount_other` | M1 | | `{{count}} days` | `{{count}} ngày` |
+| `toast.goalCreated` | M1 | sau tạo goal | `Goal created` | `Đã tạo mục tiêu` |
+| `toast.goalUpdated` | M1 | sau sửa goal | `Goal updated` | `Đã cập nhật mục tiêu` |
+| `toast.goalDeleted` | M1 | sau xóa goal | `Goal deleted` | `Đã xóa mục tiêu` |
+| `toast.goalArchived` | M5 | | `Goal archived` | `Đã lưu trữ mục tiêu` |
+| `toast.goalRestored` | M5 | | `Goal restored` | `Đã khôi phục mục tiêu` |
+| `toast.entrySaved` | M1 | thêm entry, lưu từ timer | `Entry saved` | `Đã lưu lần ghi` |
+| `toast.entryUpdated` | M1 | sửa entry | `Entry updated` | `Đã cập nhật lần ghi` |
+| `toast.entryDeleted` | M1 | xóa entry | `Entry deleted` | `Đã xóa lần ghi` |
+| `toast.languageChanged` | M1 | sau khi đổi ngôn ngữ (hiện bằng ngôn ngữ mới) | `Language changed` | `Đã đổi ngôn ngữ` |
+| `toast.timerDiscarded` | M2 | | `Timer discarded` | `Đã bỏ phiên đếm giờ` |
+| `toast.reminderTime` | M2 | | `Reminder time saved` | `Đã lưu giờ nhắc` |
+| `toast.icsDownloaded` | M2 | | `Calendar file downloaded` | `Đã tải tệp lịch` |
+| `toast.backupExported` | M3 | | `Backup exported` | `Đã xuất bản sao lưu` |
+| `toast.backupImported` | M3 | `{{goals}}`, `{{entries}}` = cụm từ `format.goalsCount` / `format.entriesCount` | `Backup imported: {{goals}}, {{entries}}` | `Đã nhập bản sao lưu: {{goals}}, {{entries}}` |
+| `plusone.live` | M5 | vùng `aria-live` khi +1% | `+1% for {{goal}} today.` | `+1% cho {{goal}} hôm nay.` |
+
+### 7.3 Thông báo lỗi và ánh xạ `src/ui/error-messages.ts`
+
+Nguyên tắc: nói rõ chuyện gì, và làm gì tiếp. **`src/ui/error-messages.ts`** (thay cho `src/ui/copy.ts` nêu ở bản v1; ARCH §6) ánh xạ `DomainError` (code + ngữ cảnh) → `{ key, params }` rồi UI gọi `t(key, params)`; `DomainError.message` chỉ để debug/log, không bao giờ hiển thị. Lưu **mã lỗi** trong state của form (không lưu chuỗi đã dịch) để đổi ngôn ngữ thì lỗi đang hiện đổi theo.
+
+**Quy tắc chọn key** (biến thể thêm hậu tố `_variant` theo ARCH §5.4, không lồng):
+
+| Code | Điều kiện | Key |
 | :- | :- | :- |
-| Ngày trong tiêu đề | `Intl` `en-US`, thứ + tháng + ngày (+ năm nếu không phải năm hiện tại, hoặc ở màn Day) | `Friday, October 9` / `Thursday, October 8, 2026` |
-| Ngày kỹ thuật (khoảng goal, lịch sử, input) | `YYYY-MM-DD`, dấu `–` (en dash) giữa hai đầu khoảng | `2026-10-01 – 2026-10-31` |
-| Phút | `{n} min`; trên card Today `{a}/{b} min` | `20/30 min` |
-| Thời lượng dài | < 60: `{n} min`; ≥ 60: `{h} h {m} min` (bỏ phần 0); tổng giờ thống kê: một chữ số thập phân | `2 h 40 min`, `4.0 h` |
-| Phần trăm | một chữ số thập phân | `25.8%`, `+8.3% better` |
-| Timer | `hh:mm:ss` | `00:25:31` |
-| Số nhiều | `1 goal`, `2 goals`; `1 entry`, `23 entries`; `1 day`, `8 days` | |
-| Giờ nhắc | 24h `HH:MM` | `20:00` |
+| `GOAL_TARGET_INVALID` | `targetType = daily` | `errors.GOAL_TARGET_INVALID_daily` |
+| | `targetType = total`, số giờ ngoài 1–10.000 hoặc không nguyên | `errors.GOAL_TARGET_INVALID_total` |
+| | `targetType = total`, giờ hợp lệ nhưng `dailyTarget` > 1440 | `errors.GOAL_TARGET_INVALID_tooMuch` |
+| `GOAL_PERIOD_INVALID` | ngày trống/sai định dạng | `errors.GOAL_PERIOD_INVALID` |
+| | `endDate < startDate` | `errors.GOAL_PERIOD_INVALID_endBeforeStart` |
+| | khoảng > 1827 ngày | `errors.GOAL_PERIOD_INVALID_tooLong` |
+| `ENTRY_DAY_LIMIT_EXCEEDED` | `remaining > 0` (truyền `remaining`) | `errors.ENTRY_DAY_LIMIT_EXCEEDED` |
+| | `remaining = 0` | `errors.ENTRY_DAY_LIMIT_EXCEEDED_full` |
+| mọi code khác ở bảng dưới | — | `errors.<CODE>` |
+| `STORAGE_UNAVAILABLE` | khi mở DB | không dùng key `errors.*`: hiển thị màn S9 (`storageError.*`, mục 7.6) |
+| lỗi ghi storage (không phải `DomainError`) | trong form/dialog/Settings | `errors.WRITE_FAILED` |
+| lỗi tải chunk/đọc dữ liệu (ErrorState) | Review, Goal detail | `errors.loadViewTitle` + `errors.loadViewBody` + `common.retry` |
+| code không có trong bảng | phòng hờ | `errors.UNKNOWN` |
+| `NOTIFICATIONS_UNSUPPORTED` / `NOTIFICATIONS_DENIED` | mô tả dưới chip quyền ở Settings | dùng đúng các key `errors.NOTIFICATIONS_*` bên dưới |
+| tóm tắt form có lỗi | đầu form | `goal.form.summary_one/_other` (mục 7.6) |
 
-### 7.2 Nhãn, nút, toast
-
-| Key | Ngữ cảnh | Nội dung |
-| :- | :- | :- |
-| `app.name` | tên app, `<title>` mặc định | `1% Better per Day` |
-| `app.tagline` | EmptyState/About | `1% better, one day at a time.` |
-| `nav.today` / `nav.goals` / `nav.review` / `nav.settings` | tab | `Today` / `Goals` / `Review` / `Settings` |
-| `a11y.skip` | skip link | `Skip to content` |
-| `offline.chip` | OfflineChip | `Offline — saved on this device` |
-| `update.toast` | SW có bản mới | `A new version is available.` + nút `Reload` |
-| `common.loading` | SR loading | `Loading…` |
-| `common.saving` | nút đang lưu | `Saving…` |
-| `toast.goalCreated` | sau tạo goal | `Goal created` |
-| `toast.goalUpdated` | sau sửa goal | `Goal updated` |
-| `toast.goalDeleted` | sau xoá goal | `Goal deleted` |
-| `toast.goalArchived` / `toast.goalRestored` | M5 | `Goal archived` / `Goal restored` |
-| `toast.entrySaved` | thêm entry, lưu từ timer | `Entry saved` |
-| `toast.entryUpdated` | sửa entry | `Entry updated` |
-| `toast.entryDeleted` | xoá entry | `Entry deleted` |
-| `toast.timerDiscarded` | M2 | `Timer discarded` |
-| `toast.reminderTime` | M2 | `Reminder time saved` |
-| `toast.icsDownloaded` | M2 | `Calendar file downloaded` |
-| `toast.backupExported` | M3 | `Backup exported` |
-| `toast.backupImported` | M3 | `Backup imported: {n goals}, {m entries}` |
-| `plusone.live` | vùng `aria-live` khi +1% (M5) | `+1% for {goal name} today.` |
-
-### 7.3 Thông báo lỗi (map theo mã lỗi trong ARCH §5.4)
-
-Nguyên tắc: nói rõ chuyện gì, và làm gì tiếp. UI ánh xạ `code` → chuỗi dưới đây (file `src/ui/copy.ts`); `message` trong `DomainError` chỉ để debug/log.
-
-| Mã | Hiển thị ở | Nội dung |
-| :- | :- | :- |
-| `GOAL_NAME_REQUIRED` | dưới Name | `Enter a name for your goal.` |
-| `GOAL_NAME_TOO_LONG` | dưới Name | `Name must be 60 characters or fewer.` |
-| `GOAL_WHY_TOO_LONG` | dưới Why | `Why must be 280 characters or fewer.` |
-| `GOAL_TARGET_INVALID` (loại `daily`) | dưới field phút | `Enter a whole number of minutes from 1 to 1,440.` |
-| `GOAL_TARGET_INVALID` (loại `total`, số giờ sai) | dưới field giờ | `Enter a whole number of hours from 1 to 10,000.` |
-| `GOAL_TARGET_INVALID` (loại `total`, giờ hợp lệ nhưng `dailyTarget` > 1440) | dưới field giờ | `That's more than 1,440 minutes a day for this period. Lower the hours or choose a later end date.` |
-| `GOAL_PERIOD_INVALID` (ngày trống/sai) | dưới Start/End date | `Choose a valid date.` |
-| `GOAL_PERIOD_INVALID` (end < start) | dưới End date | `End date must be on or after the start date.` |
-| `GOAL_PERIOD_INVALID` (> 1827 ngày) | dưới End date | `A goal can last up to 1,827 days (about 5 years). Choose an earlier end date.` |
-| `GOAL_PERIOD_EXCLUDES_ENTRIES` | dưới Start/End date | `Some of your entries fall outside these dates. Choose dates that include every logged day, or delete those entries first.` |
-| `GOAL_NOT_FOUND` | Not found / Alert | `This goal doesn't exist anymore. It may have been deleted.` |
-| `ENTRY_NOT_FOUND` | Alert | `This entry doesn't exist anymore. It may have been deleted.` |
-| `ENTRY_MINUTES_INVALID` | dưới Minutes | `Enter a whole number of minutes from 1 to 1,440.` |
-| `ENTRY_NOTE_TOO_LONG` | dưới Note | `Note must be 280 characters or fewer.` |
-| `ENTRY_DAY_LIMIT_EXCEEDED` | dưới Minutes | `A goal can have at most 1,440 minutes in one day. You can add up to {remaining} more for this day.` (remaining = 0: `This day is already full (1,440 minutes).`) |
-| `DATE_IN_FUTURE` | Day / dialog | `You can't log time for a future date.` |
-| `DATE_OUTSIDE_GOAL_PERIOD` | Alert trong form/dialog | `That date is outside this goal's dates ({start} – {end}).` |
-| `GOAL_NOT_ACTIVE` | Alert (Start timer) | `Timers can only run on active goals.` |
-| `TIMER_ALREADY_RUNNING` | Alert | `A timer is already running. Stop it before starting another.` |
-| `TIMER_NOT_RUNNING` | Alert | `There's no timer running.` |
-| `GOAL_TIMER_RUNNING` | Alert/toast (Archive) | `Stop or discard the running timer before archiving this goal.` |
-| `IMPORT_FILE_TOO_LARGE` | Alert Backup | `This file is larger than 5 MB, so it can't be a 1% Better backup. Choose a different file. Nothing was changed.` |
-| `IMPORT_INVALID_JSON` | Alert Backup | `This file isn't valid JSON. Choose a backup exported from 1% Better. Nothing was changed.` |
-| `IMPORT_INVALID_SCHEMA` | Alert Backup | `This file doesn't look like a 1% Better backup. Choose a file exported from this app. Nothing was changed.` |
-| `IMPORT_UNSUPPORTED_VERSION` | Alert Backup | `This backup uses a format version ({v}) this app can't read. Export it again from an up-to-date copy of the app. Nothing was changed.` |
-| `IMPORT_INTEGRITY` | Alert Backup | `This backup is inconsistent (for example, entries that don't belong to any goal). Nothing was changed.` |
-| `STORAGE_UNAVAILABLE` | màn S9 | xem S9 |
-| (lỗi ghi storage) | Alert inline trong form | `Couldn't save. Your changes are still in the form — try again.` |
-| (lỗi đọc dữ liệu/chunk) | ErrorState | `Couldn't load this view` / `Check your connection if you just updated the app, then try again.` + `Retry` |
-| `NOTIFICATIONS_UNSUPPORTED` | Settings | `This browser doesn't support notifications. You'll still see a reminder banner in the app.` |
-| `NOTIFICATIONS_DENIED` | Settings | `Notifications are blocked for this site. Allow them in your browser's site settings, then come back. You'll still see a reminder banner in the app.` |
-| (chung, form có lỗi) | đầu form | `Fix {n} field to save.` / `Fix {n} fields to save.` |
+| Key | MS | Hiển thị ở | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `errors.GOAL_NAME_REQUIRED` | M1 | dưới Name | `Enter a name for your goal.` | `Hãy nhập tên cho mục tiêu của bạn.` |
+| `errors.GOAL_NAME_TOO_LONG` | M1 | dưới Name | `Name must be 60 characters or fewer.` | `Tên tối đa 60 ký tự.` |
+| `errors.GOAL_WHY_TOO_LONG` | M1 | dưới Why | `Why must be 280 characters or fewer.` | `Lý do tối đa 280 ký tự.` |
+| `errors.GOAL_TARGET_INVALID_daily` | M1 | dưới field phút | `Enter a whole number of minutes from 1 to 1,440.` | `Hãy nhập số phút là số nguyên từ 1 đến 1.440.` |
+| `errors.GOAL_TARGET_INVALID_total` | M1 | dưới field giờ | `Enter a whole number of hours from 1 to 10,000.` | `Hãy nhập số giờ là số nguyên từ 1 đến 10.000.` |
+| `errors.GOAL_TARGET_INVALID_tooMuch` | M1 | dưới field giờ | `That's more than 1,440 minutes a day for this period. Lower the hours or choose a later end date.` | `Như vậy là hơn 1.440 phút mỗi ngày trong khoảng thời gian này. Hãy giảm số giờ hoặc chọn ngày kết thúc muộn hơn.` |
+| `errors.GOAL_PERIOD_INVALID` | M1 | dưới Start/End date | `Choose a valid date.` | `Hãy chọn một ngày hợp lệ.` |
+| `errors.GOAL_PERIOD_INVALID_endBeforeStart` | M1 | dưới End date | `End date must be on or after the start date.` | `Ngày kết thúc phải trùng hoặc sau ngày bắt đầu.` |
+| `errors.GOAL_PERIOD_INVALID_tooLong` | M1 | dưới End date | `A goal can last up to 1,827 days (about 5 years). Choose an earlier end date.` | `Một mục tiêu kéo dài tối đa 1.827 ngày (khoảng 5 năm). Hãy chọn ngày kết thúc sớm hơn.` |
+| `errors.GOAL_PERIOD_EXCLUDES_ENTRIES` | M1 | dưới Start/End date | `Some of your entries fall outside these dates. Choose dates that include every logged day, or delete those entries first.` | `Một số lần ghi của bạn nằm ngoài các ngày này. Hãy chọn khoảng thời gian bao gồm mọi ngày đã ghi, hoặc xóa các lần ghi đó trước.` |
+| `errors.GOAL_NOT_FOUND` | M1 | Not found / Alert | `This goal doesn't exist anymore. It may have been deleted.` | `Mục tiêu này không còn tồn tại. Có thể nó đã bị xóa.` |
+| `errors.ENTRY_NOT_FOUND` | M1 | Alert | `This entry doesn't exist anymore. It may have been deleted.` | `Lần ghi này không còn tồn tại. Có thể nó đã bị xóa.` |
+| `errors.ENTRY_MINUTES_INVALID` | M1 | dưới Minutes | `Enter a whole number of minutes from 1 to 1,440.` | `Hãy nhập số phút là số nguyên từ 1 đến 1.440.` |
+| `errors.ENTRY_NOTE_TOO_LONG` | M1 | dưới Note | `Note must be 280 characters or fewer.` | `Ghi chú tối đa 280 ký tự.` |
+| `errors.ENTRY_DAY_LIMIT_EXCEEDED` | M1 | dưới Minutes | `A goal can have at most 1,440 minutes in one day. You can add up to {{remaining}} more for this day.` | `Mỗi mục tiêu có tối đa 1.440 phút trong một ngày. Bạn chỉ có thể thêm tối đa {{remaining}} phút cho ngày này.` |
+| `errors.ENTRY_DAY_LIMIT_EXCEEDED_full` | M1 | dưới Minutes | `This day is already full (1,440 minutes).` | `Ngày này đã đầy (1.440 phút).` |
+| `errors.DATE_IN_FUTURE` | M3 | Day / dialog | `You can't log time for a future date.` | `Bạn không thể ghi thời gian cho một ngày trong tương lai.` |
+| `errors.DATE_OUTSIDE_GOAL_PERIOD` | M2 | Alert trong form/dialog | `That date is outside this goal's dates ({{start}} – {{end}}).` | `Ngày đó nằm ngoài thời gian của mục tiêu này ({{start}} – {{end}}).` |
+| `errors.GOAL_NOT_ACTIVE` | M2 | Alert (Start timer) | `Timers can only run on active goals.` | `Chỉ có thể đếm giờ cho mục tiêu đang chạy.` |
+| `errors.TIMER_ALREADY_RUNNING` | M2 | Alert | `A timer is already running. Stop it before starting another.` | `Đang có một bộ đếm giờ chạy. Hãy dừng nó trước khi bắt đầu bộ khác.` |
+| `errors.TIMER_NOT_RUNNING` | M2 | Alert | `There's no timer running.` | `Hiện không có bộ đếm giờ nào đang chạy.` |
+| `errors.GOAL_TIMER_RUNNING` | M5 | Alert/toast (Archive) | `Stop or discard the running timer before archiving this goal.` | `Hãy dừng hoặc bỏ bộ đếm giờ đang chạy trước khi lưu trữ mục tiêu này.` |
+| `errors.IMPORT_FILE_TOO_LARGE` | M3 | Alert Backup | `This file is larger than 5 MB, so it can't be a 1% Better backup. Choose a different file. Nothing was changed.` | `Tệp này lớn hơn 5 MB nên không thể là bản sao lưu của 1% Better. Hãy chọn tệp khác. Chưa có gì bị thay đổi.` |
+| `errors.IMPORT_INVALID_JSON` | M3 | Alert Backup | `This file isn't valid JSON. Choose a backup exported from 1% Better. Nothing was changed.` | `Tệp này không phải JSON hợp lệ. Hãy chọn bản sao lưu đã xuất từ 1% Better. Chưa có gì bị thay đổi.` |
+| `errors.IMPORT_INVALID_SCHEMA` | M3 | Alert Backup | `This file doesn't look like a 1% Better backup. Choose a file exported from this app. Nothing was changed.` | `Tệp này không giống bản sao lưu của 1% Better. Hãy chọn tệp đã xuất từ app này. Chưa có gì bị thay đổi.` |
+| `errors.IMPORT_UNSUPPORTED_VERSION` | M3 | Alert Backup | `This backup uses a format version ({{v}}) this app can't read. Export it again from an up-to-date copy of the app. Nothing was changed.` | `Bản sao lưu này dùng phiên bản định dạng ({{v}}) mà app không đọc được. Hãy xuất lại từ bản app mới nhất. Chưa có gì bị thay đổi.` |
+| `errors.IMPORT_INTEGRITY` | M3 | Alert Backup | `This backup is inconsistent (for example, entries that don't belong to any goal). Nothing was changed.` | `Bản sao lưu này không nhất quán (ví dụ: có lần ghi không thuộc mục tiêu nào). Chưa có gì bị thay đổi.` |
+| `errors.WRITE_FAILED` | M1 | Alert inline trong form/dialog/Language | `Couldn't save. Your changes are still in the form — try again.` | `Không lưu được. Thay đổi của bạn vẫn còn trong biểu mẫu — hãy thử lại.` |
+| `errors.loadViewTitle` | M4 | ErrorState tải chunk/dữ liệu lỗi | `Couldn't load this view` | `Không tải được màn hình này` |
+| `errors.loadViewBody` | M4 | | `Check your connection if you just updated the app, then try again.` | `Nếu bạn vừa cập nhật app, hãy kiểm tra kết nối mạng rồi thử lại.` |
+| `errors.NOTIFICATIONS_UNSUPPORTED` | M2 | Settings | `This browser doesn't support notifications. You'll still see a reminder banner in the app.` | `Trình duyệt này không hỗ trợ thông báo. Bạn vẫn sẽ thấy lời nhắc ngay trong app.` |
+| `errors.NOTIFICATIONS_DENIED` | M2 | Settings | `Notifications are blocked for this site. Allow them in your browser's site settings, then come back. You'll still see a reminder banner in the app.` | `Thông báo đang bị chặn cho trang này. Hãy cho phép trong cài đặt trang web của trình duyệt rồi quay lại. Bạn vẫn sẽ thấy lời nhắc ngay trong app.` |
+| `errors.UNKNOWN` | M1 | phòng hờ khi gặp mã lỗi chưa biết | `Something went wrong. Please try again.` | `Đã xảy ra lỗi. Hãy thử lại.` |
 
 ### 7.4 Empty state
 
-| Key | Màn hình | Tiêu đề | Nội dung | Nút |
+Quy ước key (luật 2, mục 7.0): `<key>` = tiêu đề, `<key>Body` = nội dung, `<key>Action` = nhãn nút. Dòng không có tiêu đề/nút thì chỉ có `Body` hoặc chỉ có key đơn.
+
+| Key | MS | Màn hình | `en` | `vi` |
 | :- | :- | :- | :- | :- |
-| `empty.today.noGoals` | Today | `Start with one small goal` | `Pick something you want to do a little every day. Log your time and watch it add up.` | `Create your first goal` |
-| `empty.today.noActive` | Today | `No active goals today` | `Your goals haven't started yet, have ended, or are archived.` | `View goals` |
-| `empty.goals` | Goals | `No goals yet` | `Pick something you want to do a little every day. Log your time and watch it add up.` | `Create your first goal` |
-| `empty.review` | Review | `Nothing to review yet` | `Create a goal and log some time. Your year will show up here.` | `Create a goal` |
-| `empty.review.year` | Review (có goal, chưa entry) | — | `No time logged in {year} yet.` | — |
-| `empty.detail.history` | Goal detail | `No entries yet` | `Time you log for this goal will show up here.` | — |
-| `empty.detail.curve` | Goal detail | — | `Your line starts rising on the first day you hit your target.` | — |
-| `empty.day.noGoals` | Day | `No goals were running on this day` | `Goals show up here on the days they're active.` | `View goals` |
-| `empty.day.noEntries` | Day (một goal) | — | `No time logged for this goal on this day.` | `Add entry` |
+| `empty.today.noGoals` | M1 | Today — tiêu đề | `Start with one small goal` | `Bắt đầu với một mục tiêu nhỏ` |
+| `empty.today.noGoalsBody` | M1 | Today — nội dung | `Pick something you want to do a little every day. Log your time and watch it add up.` | `Chọn một việc bạn muốn làm một chút mỗi ngày. Ghi lại thời gian và xem nó dày lên theo ngày.` |
+| `empty.today.noGoalsAction` | M1 | Today — nút | `Create your first goal` | `Tạo mục tiêu đầu tiên` |
+| `empty.today.noActive` | M1 | Today (có goal nhưng không goal active) — tiêu đề | `No active goals today` | `Hôm nay chưa có mục tiêu nào đang chạy` |
+| `empty.today.noActiveBody` | M1 | — nội dung | `Your goals haven't started yet, have ended, or are archived.` | `Các mục tiêu của bạn chưa bắt đầu, đã kết thúc hoặc đã được lưu trữ.` |
+| `empty.today.noActiveAction` | M1 | — nút | `View goals` | `Xem mục tiêu` |
+| `empty.goals` | M1 | Goals — tiêu đề | `No goals yet` | `Chưa có mục tiêu nào` |
+| `empty.goalsBody` | M1 | Goals — nội dung | `Pick something you want to do a little every day. Log your time and watch it add up.` | `Chọn một việc bạn muốn làm một chút mỗi ngày. Ghi lại thời gian và xem nó dày lên theo ngày.` |
+| `empty.goalsAction` | M1 | Goals — nút | `Create your first goal` | `Tạo mục tiêu đầu tiên` |
+| `empty.review` | M4 | Review (chưa có goal) — tiêu đề | `Nothing to review yet` | `Chưa có gì để xem lại` |
+| `empty.reviewBody` | M4 | — nội dung | `Create a goal and log some time. Your year will show up here.` | `Hãy tạo một mục tiêu và ghi chút thời gian. Cả năm của bạn sẽ hiện ra ở đây.` |
+| `empty.reviewAction` | M4 | — nút | `Create a goal` | `Tạo mục tiêu` |
+| `empty.reviewYear` | M4 | Review (có goal, chưa entry trong năm) — dòng chữ | `No time logged in {{year}} yet.` | `Năm {{year}} chưa có thời gian nào được ghi.` |
+| `empty.detail.history` | M3 | Goal detail — tiêu đề | `No entries yet` | `Chưa có lần ghi nào` |
+| `empty.detail.historyBody` | M3 | — nội dung | `Time you log for this goal will show up here.` | `Thời gian bạn ghi cho mục tiêu này sẽ hiện ở đây.` |
+| `empty.detail.curve` | M5 | Goal detail (chưa entry) — dòng chữ | `Your line starts rising on the first day you hit your target.` | `Đường của bạn bắt đầu đi lên từ ngày đầu tiên bạn đạt chỉ tiêu.` |
+| `empty.day.noGoals` | M3 | Day — tiêu đề | `No goals were running on this day` | `Không có mục tiêu nào đang chạy trong ngày này` |
+| `empty.day.noGoalsBody` | M3 | — nội dung | `Goals show up here on the days they're active.` | `Mục tiêu sẽ hiện ở đây vào những ngày chúng đang chạy.` |
+| `empty.day.noGoalsAction` | M3 | — nút | `View goals` | `Xem mục tiêu` |
+| `empty.day.noEntries` | M3 | Day (một goal chưa có entry) — dòng chữ; nút dùng `goalCard.addEntry` | `No time logged for this goal on this day.` | `Chưa ghi thời gian nào cho mục tiêu này trong ngày này.` |
 
-### 7.5 Form, banner, nhắc nhở, heatmap
+### 7.5 Banner, nhắc nhở, notification, `.ics`, heatmap
 
-| Key | Ngữ cảnh | Nội dung |
-| :- | :- | :- |
-| `form.entry.minutes` | label | `Minutes` (placeholder `e.g. 25`) |
-| `form.entry.note` | label | `Note (optional)` (placeholder `What did you work on?`; counter `{n}/280`) |
-| `form.goal.name` | label | `Name` (placeholder `e.g. Read`) |
-| `reminder.banner` | Today banner (nhiều goal) | `It's past {HH:MM} — {n} goals are not on target yet.` |
-| `reminder.banner.one` | Today banner (1 goal) | `It's past {HH:MM} — 1 goal is not on target yet.` |
-| `backup.banner.never` | Today (có nút), Settings (không nút) | `You haven't backed up yet. Export a backup so your data is safe if this browser clears it.` + nút `Back up now` (chỉ ở Today, → `#/settings`) |
-| `backup.banner.old` | Today (có nút), Settings (không nút) | `It's been {n} days since your last backup.` + nút `Back up now` (chỉ ở Today, → `#/settings`) |
-| `notification.title` | Notification | `1% Better` |
-| `notification.body` | Notification | `{n} goals left today: Read 10/30 min, Guitar 0/20 min` — tối đa 3 goal rồi `, and {k} more`; 1 goal: `1 goal left today: Read 10/30 min` |
-| `heatmap.cell.goalMet` | accessible name ô (một goal) | `Wednesday, October 7, 2026: 30 min, target met` |
-| `heatmap.cell.goalNotMet` | ô có phút nhưng chưa đạt | `Tuesday, September 15, 2026: 10 min, target not met` |
-| `heatmap.cell.none` | ô không có entry (trong khoảng) | `Monday, October 5, 2026: no time logged` |
-| `heatmap.cell.all` | All goals | `Wednesday, October 7, 2026: 50 min, target met` (met = ít nhất một goal đạt; chưa đạt: `target not met`) |
-| `heatmap.cell.future` | ô tương lai | `Saturday, October 10, 2026: upcoming` |
-| `heatmap.cell.outside` | ngoài khoảng goal | `Friday, September 25, 2026: outside this goal's dates` |
-| `heatmap.legend` | chú giải | `Less` … `More` |
-| `heatmap.legend.all` / `heatmap.legend.goal` | ghi chú cạnh chú giải | `Colors show total minutes per day.` / `Colors show the share of your daily target.` |
-| `chart.bar.summary` | tóm tắt chart cột (SR) | `Last 12 weeks: {total} logged, busiest week starting {date} with {x}.` |
-| `chart.curve.alt` | alt chart cong | xem S4 "Tóm tắt cho SR" |
+Chuỗi sinh **ngoài React** (notification, `.ics`) được dịch bằng `Translator` theo ngôn ngữ đang chọn tại thời điểm gửi/tải (A-19). Notification: `title` = `notification.title`, `body` = `notification.body`; mỗi goal trong danh sách dùng `notification.item`, tối đa 3 goal, nối bằng `, `; nếu còn nữa thì bọc bằng `notification.more` (ví dụ `en`: `3 goals left today: Read 0/30 min, Guitar 0/20 min, Spanish 0/17 min` — 4 goal trở lên: `4 goals left today: Read 0/30 min, Guitar 0/20 min, Spanish 0/17 min, and 1 more`).
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `reminder.banner_one` | M2 | Today banner (1 goal); `{{time}}` = `HH:MM` | `It's past {{time}} — 1 goal is not on target yet.` | — |
+| `reminder.banner_other` | M2 | Today banner (nhiều goal) | `It's past {{time}} — {{count}} goals are not on target yet.` | `Đã quá {{time}} — còn {{count}} mục tiêu chưa đạt chỉ tiêu.` |
+| `reminder.bannerLabel` | M2 | `aria-label` của banner nhắc | `Reminder` | `Nhắc nhở` |
+| `backup.banner.never` | M3 | Today (có nút), Settings (không nút) | `You haven't backed up yet. Export a backup so your data is safe if this browser clears it.` | `Bạn chưa sao lưu lần nào. Hãy xuất một bản sao lưu để dữ liệu vẫn an toàn nếu trình duyệt xóa dữ liệu.` |
+| `backup.banner.old` | M3 | Today (có nút), Settings (không nút); `{{n}}` > 30 | `It's been {{n}} days since your last backup.` | `Đã {{n}} ngày kể từ lần sao lưu gần nhất.` |
+| `backup.banner.action` | M3 | nút chỉ ở Today (→ `#/settings`) | `Back up now` | `Sao lưu ngay` |
+| `notification.title` | M2 | tiêu đề notification | `1% Better` | `1% Better` (= en) |
+| `notification.body_one` | M2 | thân notification, 1 goal; `{{list}}` ghép từ `notification.item` | `1 goal left today: {{list}}` | — |
+| `notification.body_other` | M2 | | `{{count}} goals left today: {{list}}` | `Hôm nay còn {{count}} mục tiêu: {{list}}` |
+| `notification.item` | M2 | một goal trong danh sách | `{{goal}} {{current}}/{{target}} min` | `{{goal}} {{current}}/{{target}} phút` |
+| `notification.more` | M2 | khi > 3 goal; `{{items}}` = 3 item nối `, `, `{{k}}` = số còn lại | `{{items}}, and {{k}} more` | `{{items}} và {{k}} mục tiêu nữa` |
+| `ics.summary` | M2 | `SUMMARY` của sự kiện lịch | `1% Better — log today's time` | `1% Better — ghi thời gian hôm nay` |
+| `ics.alarm` | M2 | `DESCRIPTION` của `VALARM` | `Log today's time in 1% Better.` | `Hãy ghi thời gian hôm nay trong 1% Better.` |
+| `heatmap.cell.goalMet` | M4 | tên truy cập ô (một goal); `{{date}}` = ngày dài có năm, `{{minutes}}` = `format.minutes` | `{{date}}: {{minutes}}, target met` | `{{date}}: {{minutes}}, đã đạt chỉ tiêu` |
+| `heatmap.cell.goalNotMet` | M4 | ô có phút nhưng chưa đạt | `{{date}}: {{minutes}}, target not met` | `{{date}}: {{minutes}}, chưa đạt chỉ tiêu` |
+| `heatmap.cell.all` | M4 | All goals, đạt (ít nhất một goal đạt) | `{{date}}: {{minutes}}, target met` | `{{date}}: {{minutes}}, đã đạt chỉ tiêu` |
+| `heatmap.cell.allNotMet` | M4 | All goals, có phút nhưng không goal nào đạt | `{{date}}: {{minutes}}, target not met` | `{{date}}: {{minutes}}, chưa đạt chỉ tiêu` |
+| `heatmap.cell.none` | M4 | ô không có entry (trong khoảng) | `{{date}}: no time logged` | `{{date}}: chưa ghi thời gian` |
+| `heatmap.cell.future` | M4 | ô tương lai | `{{date}}: upcoming` | `{{date}}: sắp tới` |
+| `heatmap.cell.outside` | M4 | ngoài khoảng goal | `{{date}}: outside this goal's dates` | `{{date}}: ngoài thời gian của mục tiêu này` |
+| `heatmap.aria` | M4 | `aria-label` của lưới; `{{goal}}` = tên goal hoặc `review.goal.all` | `Activity heatmap for {{year}}, {{goal}}` | `Biểu đồ nhiệt hoạt động năm {{year}}, {{goal}}` |
+| `heatmap.legendLess` | M4 | chú giải | `Less` | `Ít hơn` |
+| `heatmap.legendMore` | M4 | chú giải | `More` | `Nhiều hơn` |
+| `heatmap.legendAll` | M4 | cạnh chú giải (All goals) | `Colors show total minutes per day.` | `Màu thể hiện tổng số phút mỗi ngày.` |
+| `heatmap.legendGoal` | M4 | cạnh chú giải (một goal) | `Colors show the share of your daily target.` | `Màu thể hiện tỷ lệ so với chỉ tiêu ngày của bạn.` |
+| `heatmap.summary` | M4 | tóm tắt trên lưới; `{{logged}}`, `{{met}}`, `{{streak}}` = `format.daysCount` | `In {{year}} you logged time on {{logged}} and hit your target on {{met}}. Longest streak: {{streak}}.` | `Năm {{year}}, bạn đã ghi thời gian trong {{logged}} và đạt chỉ tiêu trong {{met}}. Chuỗi dài nhất: {{streak}}.` |
+| `chart.bar.weeklySummary` | M4 | tóm tắt chart cột tuần (SR, hiển thị) | `Last 12 weeks: {{total}} logged, busiest week starting {{date}} with {{max}}.` | `12 tuần gần nhất: đã ghi {{total}}, tuần nhiều nhất bắt đầu từ {{date}} với {{max}}.` |
+| `chart.bar.monthlySummary` | M4 | tóm tắt chart cột tháng | `{{year}}: {{total}} logged, busiest month {{month}} with {{max}}.` | `Năm {{year}}: đã ghi {{total}}, tháng nhiều nhất là {{month}} với {{max}}.` |
+| `chart.bar.colWeek` | M4 | tiêu đề cột bảng ẩn | `Week starting` | `Tuần bắt đầu` |
+| `chart.bar.colMonth` | M4 | | `Month` | `Tháng` |
+| `chart.bar.colTime` | M4 | | `Time logged` | `Thời gian đã ghi` |
+| `chart.bar.tooltip` | M4 | tooltip/`<title>` cột; `{{label}}` = khoảng ngày hoặc tháng, `{{value}}` = `format.duration` | `{{label}}: {{value}}` | `{{label}}: {{value}}` (= en) |
+| `chart.bar.empty` | M4 | thay tóm tắt khi không có dữ liệu | `No time logged in this range.` | `Chưa ghi thời gian nào trong khoảng này.` |
+
+### 7.6 Chuỗi theo màn hình
+
+Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (không tạo key). `(= en)` nghĩa là `vi` giống hệt `en`.
+
+#### 7.6.1 Today (S1), GoalCard, Entry — M1 (timer M2; streak M4)
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `today.title` | M1 | h1 | `Today` | `Hôm nay` |
+| `today.summary_one` | M1 | tóm tắt khi có đúng 1 goal | `{{n}} of 1 goal on target` | — |
+| `today.summary_other` | M1 | `{{n}}` = số goal đạt, `{{count}}` = tổng | `{{n}} of {{count}} goals on target` | `Đã đạt {{n}}/{{count}} mục tiêu` |
+| `today.allOnTarget_one` | M1 | mọi goal đạt, 1 goal | `Goal on target — a little better than yesterday.` | — |
+| `today.allOnTarget_other` | M1 | mọi goal đạt | `All {{count}} goals on target — a little better than yesterday.` | `Đạt cả {{count}} mục tiêu — tốt hơn hôm qua một chút.` |
+| `today.streak` | M4 | chip streak tổng | `{{n}}-day streak` | `Chuỗi {{n}} ngày` |
+| `today.goalsLabel` | M1 | `aria-label` danh sách card | `Goals for today` | `Mục tiêu hôm nay` |
+| `today.pastDayLink` | M3 | link → Day | `Missed a day? Log time for a past day` | `Quên ghi một ngày? Ghi bù cho ngày đã qua` |
+| `goalCard.amount` | M1 | số lớn; đơn vị là `unit.min` | `{{current}}/{{target}}` | `{{current}}/{{target}}` (= en) |
+| `goalCard.subtitleTotal` | M1 | phụ đề goal loại `total` | `{{daily}} min/day · {{hours}} h total` | `{{daily}} phút/ngày · tổng {{hours}} giờ` |
+| `goalCard.toGo` | M1 | chưa đạt | `{{n}} min to go` | `Còn {{n}} phút` |
+| `goalCard.reached` | M1 | đạt | `Target reached` | `Đã đạt chỉ tiêu` |
+| `goalCard.reachedExtra` | M1 | vượt chỉ tiêu | `Target reached · {{n}} min extra` | `Đã đạt chỉ tiêu · vượt {{n}} phút` |
+| `goalCard.plusOne` | M1 | chữ trong pill | `+1%` | `+1%` (= en) |
+| `goalCard.plusOneSrToday` | M1 | chữ ẩn cạnh pill (Today) | `Target reached for today` | `Hôm nay đã đạt chỉ tiêu` |
+| `goalCard.plusOneSrDay` | M3 | chữ ẩn cạnh pill (Day) | `Target reached` | `Đã đạt chỉ tiêu` |
+| `goalCard.progressLabel` | M1 | `aria-label` progressbar (Today) | `{{goal}} today` | `{{goal}} hôm nay` |
+| `goalCard.progressLabelDay` | M3 | `aria-label` progressbar (Day) | `{{goal}} on {{date}}` | `{{goal}} ngày {{date}}` |
+| `goalCard.progressValue` | M1 | `aria-valuetext` | `{{current}} of {{target}} minutes` | `{{current}} trên {{target}} phút` |
+| `goalCard.logTime` | M1 | nút | `Log time` | `Ghi thời gian` |
+| `goalCard.addEntry` | M3 | nút (Day) | `Add entry` | `Thêm lần ghi` |
+| `goalCard.startTimer` | M2 | nút (vi cố ý gọn, xem 3.4) | `Start timer` | `Đếm giờ` |
+| `goalCard.timerDisabled` | M2 | lý do nút Start bị vô hiệu | `Stop the running timer first.` | `Hãy dừng bộ đếm giờ đang chạy trước.` |
+| `goalCard.timerRunningBadge` | M2 | badge trên card đang chạy timer | `Timer running` | `Đang đếm giờ` |
+| `entry.listTitle` | M1 | h3 danh sách entry | `Today's entries` | `Các lần ghi hôm nay` |
+| `entry.form.minutesLabel` | M1 | label | `Minutes` | `Số phút` |
+| `entry.form.minutesPlaceholder` | M1 | placeholder | `e.g. 25` | `Ví dụ: 25` |
+| `entry.form.noteLabel` | M1 | label | `Note (optional)` | `Ghi chú (không bắt buộc)` |
+| `entry.form.notePlaceholder` | M1 | placeholder | `What did you work on?` | `Bạn đã làm gì?` |
+| `entry.form.counter` | M1 | bộ đếm ký tự | `{{n}}/280` | `{{n}}/280` (= en) |
+| `entry.form.save` | M1 | nút (cả trong Stop dialog) | `Save entry` | `Lưu lần ghi` |
+| `entry.form.saveChanges` | M1 | nút khi sửa | `Save changes` | `Lưu thay đổi` |
+| `entry.form.labelAdd` | M1 | `aria-label` form (Today) | `Log time for {{goal}}` | `Ghi thời gian cho {{goal}}` |
+| `entry.form.labelAddDay` | M3 | `aria-label` form (Day) | `Add entry for {{goal}} on {{date}}` | `Thêm lần ghi cho {{goal}} ngày {{date}}` |
+| `entry.form.labelEdit` | M1 | `aria-label` form sửa | `Edit entry for {{goal}}` | `Sửa lần ghi của {{goal}}` |
+| `entry.row.summary` | M1 | `{{minutes}}` = `format.minutes`, `{{note}}` = ghi chú người dùng | `{{minutes}}, {{note}}` | `{{minutes}}, {{note}}` (= en) |
+| `entry.row.summaryNoNote` | M1 | entry không có ghi chú | `{{minutes}}` | `{{minutes}}` (= en) |
+| `entry.row.editAria` | M1 | `aria-label` nút icon; `{{summary}}` = một trong hai key trên | `Edit entry: {{summary}}` | `Sửa lần ghi: {{summary}}` |
+| `entry.row.deleteAria` | M1 | `aria-label` nút icon | `Delete entry: {{summary}}` | `Xóa lần ghi: {{summary}}` |
+| `entry.row.confirmTitle` | M1 | xác nhận xóa inline (kèm `common.delete` / `common.keep`) | `Delete this entry?` | `Xóa lần ghi này?` |
+| `entry.row.confirmAria` | M1 | `aria-label` nhóm xác nhận | `Confirm delete: {{summary}}` | `Xác nhận xóa: {{summary}}` |
+| `entry.source.manual` | M3 | badge nguồn | `Manual` | `Thủ công` |
+| `entry.source.timer` | M3 | badge nguồn | `Timer` | `Đếm giờ` |
+
+#### 7.6.2 Goals (S2) và dialog xóa goal (D2) — M1 (Archive/Restore M5)
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `goals.title` | M1 | h1 | `Goals` | `Mục tiêu` |
+| `goals.new` | M1 | nút primary | `New goal` | `Mục tiêu mới` |
+| `goals.groupActive` | M1 | h2 nhóm | `Active ({{n}})` | `Đang chạy ({{n}})` |
+| `goals.groupUpcoming` | M1 | h2 nhóm | `Upcoming ({{n}})` | `Sắp tới ({{n}})` |
+| `goals.groupEnded` | M1 | h2 nhóm | `Ended ({{n}})` | `Đã kết thúc ({{n}})` |
+| `goals.groupArchived` | M5 | h2 nhóm | `Archived ({{n}})` | `Đã lưu trữ ({{n}})` |
+| `goal.status.active` | M1 | badge | `Active` | `Đang chạy` |
+| `goal.status.upcoming` | M1 | badge | `Upcoming` | `Sắp tới` |
+| `goal.status.ended` | M1 | badge | `Ended` | `Đã kết thúc` |
+| `goal.status.archived` | M5 | badge | `Archived` | `Đã lưu trữ` |
+| `goals.startsOn` | M1 | dòng phụ goal upcoming | `Starts {{date}}` | `Bắt đầu {{date}}` |
+| `goals.endedOn` | M1 | dòng phụ goal ended | `Ended {{date}}` | `Đã kết thúc {{date}}` |
+| `goals.rowDaily` | M1 | `{{range}}` = `format.dateRange` | `{{n}} min/day · {{range}}` | `{{n}} phút/ngày · {{range}}` |
+| `goals.rowTotal` | M1 | | `{{daily}} min/day ({{hours}} h total) · {{range}}` | `{{daily}} phút/ngày (tổng {{hours}} giờ) · {{range}}` |
+| `goals.archive` | M5 | nút | `Archive` | `Lưu trữ` |
+| `goals.restore` | M5 | nút | `Restore` | `Khôi phục` |
+| `goal.delete.title` | M1 | D2 | `Delete "{{name}}"?` | `Xóa mục tiêu "{{name}}"?` |
+| `goal.delete.bodyNoEntries` | M1 | D2, goal 0 entry | `This permanently deletes the goal. It has no entries yet. This can't be undone.` | `Thao tác này xóa vĩnh viễn mục tiêu. Mục tiêu chưa có lần ghi nào. Bạn không thể hoàn tác.` |
+| `goal.delete.body_one` | M1 | D2, đúng 1 entry | `This permanently deletes the goal and its 1 entry. This can't be undone.` | — |
+| `goal.delete.body_other` | M1 | D2, nhiều entry | `This permanently deletes the goal and its {{count}} entries. This can't be undone.` | `Thao tác này xóa vĩnh viễn mục tiêu và {{count}} lần ghi của nó. Bạn không thể hoàn tác.` |
+| `goal.delete.timerNote` | M2 | đoạn riêng thêm khi có timer chạy | `Its running timer will be discarded.` | `Bộ đếm giờ đang chạy của mục tiêu này sẽ bị bỏ.` |
+| `goal.delete.confirm` | M1 | nút danger | `Delete goal` | `Xóa mục tiêu` |
+
+#### 7.6.3 Goal form (S3) — M1
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `goal.form.titleNew` | M1 | h1 (tạo) | `New goal` | `Mục tiêu mới` |
+| `goal.form.titleEdit` | M1 | h1 (sửa) | `Edit goal` | `Sửa mục tiêu` |
+| `goal.form.srNew` | M1 | `aria-label`/chữ ẩn của form (tạo) | `New goal form` | `Biểu mẫu mục tiêu mới` |
+| `goal.form.srEdit` | M1 | (sửa) | `Edit goal form` | `Biểu mẫu sửa mục tiêu` |
+| `goal.form.summary_one` | M1 | `role="alert"` đầu form | `Fix 1 field to save.` | — |
+| `goal.form.summary_other` | M1 | | `Fix {{count}} fields to save.` | `Cần sửa {{count}} ô nhập để lưu.` |
+| `goal.form.nameLabel` | M1 | label | `Name` | `Tên` |
+| `goal.form.namePlaceholder` | M1 | placeholder | `e.g. Read` | `Ví dụ: Đọc sách` |
+| `goal.form.nameCounter` | M1 | counter | `{{n}}/60` | `{{n}}/60` (= en) |
+| `goal.form.whyLabel` | M1 | label | `Why (optional)` | `Lý do (không bắt buộc)` |
+| `goal.form.whyPlaceholder` | M1 | placeholder | `Why does this matter to you?` | `Vì sao điều này quan trọng với bạn?` |
+| `goal.form.whyCounter` | M1 | counter | `{{n}}/280` | `{{n}}/280` (= en) |
+| `goal.form.targetLegend` | M1 | legend | `Target` | `Chỉ tiêu` |
+| `goal.form.targetDaily` | M1 | lựa chọn + label field số | `Minutes per day` | `Phút mỗi ngày` |
+| `goal.form.targetTotal` | M1 | lựa chọn + label field số | `Total hours` | `Tổng số giờ` |
+| `goal.form.hintDaily` | M1 | hint; `{{days}}` = `format.daysCount` | `That's {{total}} min ({{hours}} h) over {{days}}.` | `Tổng cộng {{total}} phút ({{hours}} giờ) trong {{days}}.` |
+| `goal.form.hintTotal` | M1 | hint | `That's about {{daily}} min per day over {{days}}.` | `Khoảng {{daily}} phút mỗi ngày trong {{days}}.` |
+| `goal.form.startLabel` | M1 | label | `Start date` | `Ngày bắt đầu` |
+| `goal.form.startHint` | M1 | chế độ sửa, goal đã có entry | `Your entries run from {{first}} to {{last}}, so the period must include those dates.` | `Các lần ghi của bạn kéo dài từ {{first}} đến {{last}}, nên khoảng thời gian phải bao gồm các ngày đó.` |
+| `goal.form.endsLegend` | M1 | legend | `Ends` | `Kết thúc` |
+| `goal.form.endsThisYear` | M1 | radio | `This year — ends {{date}}` | `Trong năm nay — kết thúc {{date}}` |
+| `goal.form.endsSpecific` | M1 | radio | `On a specific date` | `Vào một ngày cụ thể` |
+| `goal.form.endLabel` | M1 | label field ngày | `End date` | `Ngày kết thúc` |
+| `goal.form.save` | M1 | nút primary (tạo) | `Save goal` | `Lưu mục tiêu` |
+| `goal.form.saveChanges` | M1 | nút primary (sửa) | `Save changes` | `Lưu thay đổi` |
+
+#### 7.6.4 Goal detail (S4) và stat card dùng chung — M3 (lịch sử), M5 (phần còn lại), M4 (`stat.*` ở Review)
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `goal.detail.eyebrow` | M5 | nhãn nhỏ trên headline | `Your 1% curve` | `Đường cong 1% của bạn` |
+| `goal.detail.headline` | M5 | `{{value}}` = `decimal1` | `+{{value}}% better` | `Tốt hơn +{{value}}%` |
+| `goal.detail.headlineSub_one` | M5 | `{{k}}` ngày đã trôi, `{{total}}` tổng, `{{value}}` 3 chữ số thập phân | `Day {{k}} of {{total}} · {{count}} day on target · 1.01^{{count}} = {{value}}` | — |
+| `goal.detail.headlineSub_other` | M5 | | `Day {{k}} of {{total}} · {{count}} days on target · 1.01^{{count}} = {{value}}` | `Ngày {{k}}/{{total}} · {{count}} ngày đạt chỉ tiêu · 1,01^{{count}} = {{value}}` |
+| `goal.detail.chartTitle` | M5 | h2 | `Ideal vs. you` | `Lý tưởng và thực tế` |
+| `goal.detail.rangeLegend` | M5 | legend ẩn | `Range` | `Phạm vi` |
+| `goal.detail.rangeWhole` | M5 | lựa chọn | `Whole period` | `Cả giai đoạn` |
+| `goal.detail.rangeSoFar` | M5 | lựa chọn | `So far` | `Đến nay` |
+| `goal.detail.chartCaption` | M5 | `figcaption` ẩn | `Line chart comparing the ideal 1% a day curve with your progress` | `Biểu đồ đường so sánh đường cong lý tưởng 1% mỗi ngày với tiến độ thực tế của bạn` |
+| `goal.detail.legendIdeal` | M5 | legend | `Ideal (+1% every day)` | `Lý tưởng (+1% mỗi ngày)` |
+| `goal.detail.legendYou` | M5 | legend | `You (+1% on days you hit your target)` | `Bạn (+1% vào ngày đạt chỉ tiêu)` |
+| `goal.detail.chartSummary` | M5 | tóm tắt hiển thị dưới chart (SR) | `Day {{k}} of {{total}}: you are +{{x}}% better. The ideal line is +{{y}}%. You hit your target on {{n}} of {{k}} days.` | `Ngày {{k}}/{{total}}: bạn đã tốt hơn +{{x}}%. Đường lý tưởng là +{{y}}%. Bạn đạt chỉ tiêu {{n}}/{{k}} ngày.` |
+| `goal.detail.chartNote` | M5 | chú thích | `Each day on target multiplies your line by 1.01. Days you miss never take anything away.` | `Mỗi ngày đạt chỉ tiêu, đường của bạn được nhân với 1,01. Ngày bỏ lỡ không bao giờ bị trừ đi.` |
+| `goal.detail.tooltip` | M5 | tooltip; `{{date}}` = ngày ngắn không năm | `{{date}} · Ideal +{{ideal}}% · You +{{you}}%` | `{{date}} · Lý tưởng +{{ideal}}% · Bạn +{{you}}%` |
+| `goal.detail.tooltipIdeal` | M5 | tooltip cho ngày tương lai (chỉ đường Ideal) | `{{date}} · Ideal +{{ideal}}%` | `{{date}} · Lý tưởng +{{ideal}}%` |
+| `goal.detail.labelIdeal` | M5 | nhãn trực tiếp tại điểm hôm nay | `Ideal +{{value}}%` | `Lý tưởng +{{value}}%` |
+| `goal.detail.labelYou` | M5 | | `You +{{value}}%` | `Bạn +{{value}}%` |
+| `goal.detail.showTable` | M5 | `<summary>` của `<details>` | `Show data as table` | `Xem dữ liệu dạng bảng` |
+| `goal.detail.tableDate` | M5 | cột bảng chart | `Date` | `Ngày` |
+| `goal.detail.tableIdeal` | M5 | | `Ideal` | `Lý tưởng` |
+| `goal.detail.tableYou` | M5 | | `You` | `Bạn` |
+| `goal.detail.upcoming` | M5 | goal chưa bắt đầu | `Starts {{date}}. Your line will appear once the goal begins.` | `Bắt đầu {{date}}. Đường của bạn sẽ xuất hiện khi mục tiêu bắt đầu.` |
+| `goal.detail.historyTitle` | M3 | h2 | `History` | `Lịch sử` |
+| `goal.detail.colDate` | M3 | cột | `Date` | `Ngày` |
+| `goal.detail.colMinutes` | M3 | cột | `Minutes` | `Số phút` |
+| `goal.detail.colNote` | M3 | cột | `Note` | `Ghi chú` |
+| `goal.detail.colSource` | M3 | cột | `Source` | `Nguồn` |
+| `stat.timeLogged` | M4 | StatCard | `Time logged` | `Thời gian đã ghi` |
+| `stat.timeLoggedYear` | M4 | phụ đề | `In {{year}}` | `Trong năm {{year}}` |
+| `stat.timeLoggedWhole` | M4 | phụ đề (một goal); `{{hours}}` = `format.hours` | `Whole goal: {{hours}}` | `Cả mục tiêu: {{hours}}` |
+| `stat.daysOnTarget` | M4 | StatCard | `Days on target` | `Ngày đạt chỉ tiêu` |
+| `stat.daysOnTargetSub` | M4 | phụ đề (một goal) | `Days you hit your daily target` | `Số ngày bạn đạt chỉ tiêu ngày` |
+| `stat.anyGoal` | M4 | phụ đề (All goals: Days on target, Current streak) | `Any goal on target` | `Ít nhất một mục tiêu đạt chỉ tiêu` |
+| `stat.currentStreak` | M4 | StatCard; giá trị = `format.daysCount` | `Current streak` | `Chuỗi hiện tại` |
+| `stat.longestStreak` | M4 | StatCard | `Longest streak` | `Chuỗi dài nhất` |
+| `stat.progress` | M4 | StatCard (một goal) | `Progress` | `Tiến độ` |
+| `stat.progressSub` | M4 | phụ đề | `{{current}} of {{total}} min` | `{{current}}/{{total}} phút` |
+| `stat.pace` | M4 | StatCard | `Pace` | `Nhịp độ` |
+| `stat.paceAhead` | M4 | `{{value}}` = `format.minutes` hoặc `format.duration` | `{{value}} ahead` | `Nhanh {{value}}` |
+| `stat.paceBehind` | M4 | | `{{value}} behind` | `Chậm {{value}}` |
+| `stat.paceOnTrack` | M4 | | `On pace` | `Đúng nhịp` |
+| `stat.paceExpected` | M4 | phụ đề | `Expected {{n}} min by today` | `Dự kiến {{n}} phút tính đến hôm nay` |
+
+#### 7.6.5 Day (S5) — M3
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `day.title` | M3 | h1 | `Day` | `Ngày` |
+| `day.goToToday` | M3 | nút ghost; cũng dùng cho ngày tương lai | `Go to today` | `Về hôm nay` |
+| `day.navLabel` | M3 | `aria-label` nhóm DateNav | `Choose a day` | `Chọn ngày` |
+| `day.prev` | M3 | nút (chỉ icon < 640 px, vẫn có tên này) | `Previous day` | `Ngày trước` |
+| `day.next` | M3 | nút (vô hiệu ở hôm nay) | `Next day` | `Ngày sau` |
+| `day.dateLabel` | M3 | label ẩn của ô chọn ngày | `Date` | `Ngày` |
+| `day.onlyRunning` | M3 | ghi chú | `Only goals running on this day are shown.` | `Chỉ hiển thị các mục tiêu đang chạy trong ngày này.` |
+| `day.goalsLabel` | M3 | `aria-label` danh sách | `Goals on this day` | `Mục tiêu trong ngày này` |
+| `day.invalid` | M3 | URL ngày sai định dạng | `That date isn't valid.` | `Ngày này không hợp lệ.` |
+| `day.invalidAction` | M3 | link | `Go to Today` | `Về trang Hôm nay` |
+
+#### 7.6.6 Review (S6) — M4
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `review.title` | M4 | h1 | `Review` | `Tổng kết` |
+| `review.goalLabel` | M4 | label Select | `Goal` | `Mục tiêu` |
+| `review.goalAll` | M4 | option | `All goals` | `Tất cả mục tiêu` |
+| `review.goalArchived` | M4 | option goal đã archive | `{{name}} (archived)` | `{{name}} (đã lưu trữ)` |
+| `review.yearLabel` | M4 | label Select | `Year` | `Năm` |
+| `review.pickGoal` | M4 | thay thẻ Progress/Pace ở All goals | `Pick a goal to see progress and pace.` | `Chọn một mục tiêu để xem tiến độ và nhịp độ.` |
+| `review.progressNote` | M4 | ghi chú dưới hàng stat (một goal) | `Progress and pace cover the whole goal period.` | `Tiến độ và nhịp độ tính trên toàn bộ thời gian của mục tiêu.` |
+| `review.heatmapTitle` | M4 | h2 | `Activity in {{year}}` | `Hoạt động năm {{year}}` |
+| `review.weeklyTitle` | M4 | h2 | `Last 12 weeks` | `12 tuần gần nhất` |
+| `review.weeklySub` | M4 | phụ đề | `Hours logged per week` | `Số giờ đã ghi mỗi tuần` |
+| `review.monthlyTitle` | M4 | h2 | `Months of {{year}}` | `Các tháng của năm {{year}}` |
+| `review.monthlySub` | M4 | phụ đề | `Hours logged per month` | `Số giờ đã ghi mỗi tháng` |
+| `review.outsideYear` | M5 | một goal, năm ngoài khoảng | `This goal doesn't run in {{year}}.` | `Mục tiêu này không diễn ra trong năm {{year}}.` |
+
+#### 7.6.7 Timer và dialog D1 — M2
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `timer.cardTitle` | M2 | h2 TimerCard | `Timer running · {{goal}}` | `Đang đếm giờ · {{goal}}` |
+| `timer.badge` | M2 | badge | `Running` | `Đang chạy` |
+| `timer.elapsedLabel` | M2 | `aria-label` của `role="timer"` | `Elapsed time` | `Thời gian đã trôi qua` |
+| `timer.startedAt` | M2 | `{{time}}` = `HH:MM` | `Started at {{time}}` | `Bắt đầu lúc {{time}}` |
+| `timer.stop` | M2 | nút | `Stop` | `Dừng` |
+| `timer.stopAria` | M2 | `aria-label` nút Stop | `Stop timer for {{goal}}, running {{elapsed}}` | `Dừng đếm giờ cho {{goal}}, đã chạy {{elapsed}}` |
+| `timer.dialogTitle` | M2 | D1 | `Save this session?` | `Lưu phiên này?` |
+| `timer.dialogSummary` | M2 | D1; `{{elapsed}}` = `hh:mm:ss` | `{{goal}} · tracked {{elapsed}}` | `{{goal}} · đã đếm {{elapsed}}` |
+| `timer.roundedHint` | M2 | hint dưới Minutes; `{{raw}}` = `format.minSec` | `Rounded from {{raw}}. You can change it.` | `Làm tròn từ {{raw}}. Bạn có thể sửa lại.` |
+| `timer.savedTo` | M2 | `{{date}}` = ngày dài của ngày bắt đầu | `Saved to {{date}} (the day you started).` | `Sẽ lưu vào {{date}} (ngày bạn bắt đầu).` |
+| `timer.keepRunning` | M2 | nút secondary / Esc | `Keep running` | `Tiếp tục đếm` |
+| `timer.discard` | M2 | nút danger-ghost | `Discard session` | `Bỏ phiên này` |
+
+(D1 còn dùng `entry.form.minutesLabel`, `entry.form.noteLabel`, `entry.form.notePlaceholder`, `entry.form.counter`, `entry.form.save`.)
+
+#### 7.6.8 Settings (S7), dialog nhập (D3) — M1 (Language, Storage, About), M2 (Reminders), M3 (Backup)
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `settings.title` | M1 | h1 | `Settings` | `Cài đặt` |
+| `settings.language.title` | M1 | h2 card; **song ngữ cố định ở cả hai file** | `Language / Ngôn ngữ` | `Language / Ngôn ngữ` (= en) |
+| `settings.language.desc` | M1 | mô tả card | `Choose the language of menus, messages and dates. Your own goal names and notes stay as you wrote them.` | `Chọn ngôn ngữ cho menu, thông báo và ngày tháng. Tên mục tiêu và ghi chú của bạn giữ nguyên như bạn đã viết.` |
+| `settings.language.option.en` | M1 | lựa chọn (`lang="en"`) | `English` | `English` (= en) |
+| `settings.language.option.vi` | M1 | lựa chọn (`lang="vi"`) | `Tiếng Việt` | `Tiếng Việt` (= en) |
+| `settings.language.browserNote` | M1 | hint dưới control (A-17) | `The date and time pickers and permission prompts follow your browser's language.` | `Ô chọn ngày, giờ và hộp xin quyền do trình duyệt hiển thị nên theo ngôn ngữ của trình duyệt.` |
+| `settings.language.saveFailed` | M1 | Alert dưới control khi ghi kv lỗi (giao diện vẫn đã đổi ngôn ngữ) | `Language changed, but it couldn't be saved on this device. It may reset when you reload.` | `Đã đổi ngôn ngữ, nhưng không lưu được trên thiết bị này. Ngôn ngữ có thể trở về mặc định khi bạn tải lại trang.` |
+| `settings.reminders.title` | M2 | h2 | `Reminders` | `Nhắc nhở` |
+| `settings.reminders.switch` | M2 | label switch | `Daily reminder` | `Nhắc nhở hằng ngày` |
+| `settings.reminders.switchDesc` | M2 | mô tả switch | `Get a nudge when you haven't hit your targets today.` | `Nhận lời nhắc khi hôm nay bạn chưa đạt chỉ tiêu.` |
+| `settings.reminders.on` | M2 | chữ trạng thái cạnh switch | `On` | `Bật` |
+| `settings.reminders.off` | M2 | | `Off` | `Tắt` |
+| `settings.reminders.time` | M2 | label giờ | `Reminder time` | `Giờ nhắc` |
+| `settings.reminders.permission` | M2 | nhãn trạng thái quyền | `Notification permission` | `Quyền thông báo` |
+| `settings.permission.default` | M2 | chip | `Not asked yet` | `Chưa hỏi` |
+| `settings.permission.granted` | M2 | chip | `Allowed` | `Đã cho phép` |
+| `settings.permission.denied` | M2 | chip | `Blocked` | `Bị chặn` |
+| `settings.permission.unsupported` | M2 | chip | `Not supported` | `Không hỗ trợ` |
+| `settings.permission.defaultDesc` | M2 | mô tả (quyền chưa hỏi) | `Turn on the reminder and your browser will ask for permission.` | `Bật nhắc nhở và trình duyệt sẽ xin quyền thông báo của bạn.` |
+| `settings.permission.grantedDesc` | M2 | mô tả (cho phép) | `You'll get one notification a day while 1% Better is open.` | `Bạn sẽ nhận một thông báo mỗi ngày khi 1% Better đang mở.` |
+| (mô tả khi bị chặn / không hỗ trợ) | M2 | | dùng `errors.NOTIFICATIONS_DENIED` / `errors.NOTIFICATIONS_UNSUPPORTED` | |
+| `settings.reminders.allow` | M2 | nút (quyền `default`) | `Allow notifications` | `Cho phép thông báo` |
+| `settings.reminders.limit` | M2 | khung giới hạn NFR-07 | `Heads up: reminders are sent only while 1% Better is open (in a tab or an installed window, even in the background). To be reminded when the app is closed, add a daily event to your calendar.` | `Lưu ý: lời nhắc chỉ được gửi khi 1% Better đang mở (trong một tab hoặc cửa sổ đã cài, kể cả khi chạy nền). Để được nhắc khi đã đóng app, hãy thêm một sự kiện hằng ngày vào lịch của bạn.` |
+| `settings.reminders.ios` | M2 | mẹo iOS | `On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).` | `Trên iPhone hoặc iPad, thông báo chỉ hoạt động sau khi bạn thêm app vào Màn hình chính (iOS 16.4 trở lên).` |
+| `settings.reminders.ics` | M2 | nút | `Add reminder to calendar (.ics)` | `Thêm lời nhắc vào lịch (.ics)` |
+| `settings.reminders.icsHint` | M2 | `{{time}}` = `HH:MM` | `Adds a repeating daily event at {{time}}.` | `Thêm một sự kiện lặp lại hằng ngày lúc {{time}}.` |
+| `settings.backup.title` | M3 | h2 | `Backup` | `Sao lưu` |
+| `settings.backup.desc` | M3 | mô tả | `Your data lives only on this device. Export a backup now and then, or to move to another device.` | `Dữ liệu của bạn chỉ nằm trên thiết bị này. Hãy thỉnh thoảng xuất bản sao lưu, hoặc khi cần chuyển sang thiết bị khác.` |
+| `settings.backup.last` | M3 | `{{date}}` = ngày ngắn | `Last backup: {{date}}` | `Lần sao lưu gần nhất: {{date}}` |
+| `settings.backup.lastNever` | M3 | | `Last backup: Never` | `Lần sao lưu gần nhất: Chưa có` |
+| `settings.backup.export` | M3 | nút | `Export backup (JSON)` | `Xuất sao lưu (JSON)` |
+| `settings.backup.import` | M3 | nút | `Import backup…` | `Nhập sao lưu…` |
+| `settings.backup.importHint` | M3 | | `Importing replaces everything currently on this device.` | `Nhập sao lưu sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này.` |
+| `import.title` | M3 | D3 | `Replace all data?` | `Thay thế toàn bộ dữ liệu?` |
+| `import.body` | M3 | D3; `{{goals}}` `{{entries}}` `{{curGoals}}` `{{curEntries}}` = cụm `format.*Count`, `{{date}}` = ngày ngắn | `This backup has {{goals}}, {{entries}}, exported {{date}}. Importing replaces everything currently on this device ({{curGoals}}, {{curEntries}}). This can't be undone.` | `Bản sao lưu này có {{goals}}, {{entries}}, xuất ngày {{date}}. Nhập sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này ({{curGoals}}, {{curEntries}}). Bạn không thể hoàn tác.` |
+| `import.confirm` | M3 | nút danger | `Replace all data` | `Thay thế toàn bộ dữ liệu` |
+| `settings.storage.title` | M1 | h2 | `Storage` | `Bộ nhớ` |
+| `settings.storage.label` | M1 | nhãn dòng trạng thái | `Protection from automatic clearing` | `Bảo vệ khỏi bị xóa tự động` |
+| `settings.storage.protected` | M1 | chip | `Protected` | `Đã bảo vệ` |
+| `settings.storage.notProtected` | M1 | chip | `Not protected` | `Chưa bảo vệ` |
+| `settings.storage.unknown` | M1 | chip | `Unknown` | `Không rõ` |
+| `settings.storage.protectedDesc` | M1 | | `Your browser won't clear this data automatically.` | `Trình duyệt sẽ không tự động xóa dữ liệu này.` |
+| `settings.storage.notProtectedDesc` | M1 | | `Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.` | `Trình duyệt có thể xóa dữ liệu này khi thiết bị sắp hết dung lượng. Hãy cài app (menu trình duyệt → Cài đặt ứng dụng, hoặc Thêm vào Màn hình chính) và thỉnh thoảng xuất bản sao lưu.` |
+| `settings.storage.unknownDesc` | M1 | | `Your browser doesn't report storage protection. Export a backup now and then.` | `Trình duyệt không cho biết dữ liệu có được bảo vệ hay không. Hãy thỉnh thoảng xuất bản sao lưu.` |
+| `settings.about.title` | M1 | h2 | `About` | `Giới thiệu` |
+| `settings.about.desc` | M1 | (tên app lấy từ `app.name`) | `Everything you log stays on this device. No account, no tracking.` | `Mọi thứ bạn ghi lại đều nằm trên thiết bị này. Không tài khoản, không theo dõi.` |
+
+#### 7.6.9 Not found (S8), StorageError / ErrorBoundary (S9) — M1 (ErrorBoundary M5)
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `notFound.pageTitle` | M1 | h1, route lạ | `Page not found` | `Không tìm thấy trang` |
+| `notFound.pageBody` | M1 | | `That page doesn't exist or has moved.` | `Trang này không tồn tại hoặc đã được chuyển đi.` |
+| `notFound.pageAction` | M1 | nút (cũng dùng ở ErrorBoundary) | `Go to Today` | `Về trang Hôm nay` |
+| `notFound.goalTitle` | M1 | h1, goal id không tồn tại (nội dung = `errors.GOAL_NOT_FOUND`) | `Goal not found` | `Không tìm thấy mục tiêu` |
+| `notFound.goalAction` | M1 | nút | `Go to Goals` | `Về trang Mục tiêu` |
+| `storageError.title` | M1 | h1 (S9) | `Can't open local storage` | `Không mở được bộ nhớ cục bộ` |
+| `storageError.body` | M1 | | `1% Better keeps your data in your browser's storage, and it isn't available right now. This often happens in private or incognito windows, or when site data is blocked in browser settings. Nothing has been changed.` | `1% Better lưu dữ liệu của bạn trong bộ nhớ của trình duyệt, nhưng hiện không dùng được. Lỗi này thường gặp ở cửa sổ riêng tư (ẩn danh) hoặc khi trình duyệt chặn dữ liệu trang web. Chưa có gì bị thay đổi.` |
+| `storageError.step1` | M1 | mục 1 của `<ol>` (không chứa số) | `Open the app in a regular (non-private) window.` | `Mở app trong cửa sổ thường (không phải riêng tư).` |
+| `storageError.step2` | M1 | mục 2 | `Allow site data and cookies for this site in your browser settings.` | `Cho phép dữ liệu trang web và cookie cho trang này trong cài đặt trình duyệt.` |
+| `storageError.step3` | M1 | mục 3 | `Reload the page.` | `Tải lại trang.` |
+| `errorBoundary.title` | M5 | h1 | `Something went wrong` | `Đã xảy ra lỗi` |
+| `errorBoundary.body` | M5 | | `The app ran into an unexpected problem. Your data is still stored on this device.` | `App gặp sự cố ngoài dự kiến. Dữ liệu của bạn vẫn được lưu trên thiết bị này.` |
+| `errorBoundary.reload` | M5 | nút | `Reload app` | `Tải lại app` |
+
+(StorageError dùng nút `common.tryAgain`; ErrorBoundary dùng `errorBoundary.reload` và `notFound.pageAction`.)
 
 ---
 
@@ -760,16 +1236,16 @@ Ngoại lệ có chủ đích: các mức nhạt của heatmap (`--heat-0..2`) k
 **Label và ngữ nghĩa**
 
 - Mọi input có `<label>` hiển thị (placeholder không thay thế label). Lỗi nối bằng `aria-describedby` + `aria-invalid="true"`; field bắt buộc có `required` + dấu `*` kèm chữ ẩn "required".
-- Nút icon có `aria-label` mô tả đối tượng (`Edit entry: 20 min, Ch. 3`). Badge luôn có chữ.
-- `ProgressBar`: `role="progressbar"` với `aria-valuenow/min/max` và `aria-valuetext="20 of 30 minutes"`, `aria-label` nêu tên goal.
+- Nút icon có `aria-label` mô tả đối tượng (`en`: `Edit entry: 20 min, Ch. 3`; `vi`: `Sửa lần ghi: 20 phút, Ch. 3` — key `entry.row.editAria`). Badge luôn có chữ.
+- `ProgressBar`: `role="progressbar"` với `aria-valuenow/min/max` và `aria-valuetext="20 of 30 minutes"` (`vi`: `20 trên 30 phút`, key `goalCard.progressValue`), `aria-label` nêu tên goal (`goalCard.progressLabel`).
 - Switch: `role="switch"` + `aria-checked`. Toast/banner động: `role="status"` (polite), lỗi chặn: `role="alert"`. Toast không tự biến mất khi đang hover/focus.
-- `TimerCard`: `role="timer"` (không đọc từng giây); nút Stop có `aria-label="Stop timer for Read, running 00:25:31"` cập nhật khi nhận focus.
-- Trạng thái vô hiệu của `Start timer`: `aria-disabled="true"` + `aria-describedby` trỏ "Stop the running timer first." (vẫn focus được để người dùng đọc lý do).
-- Pill "+1%" là text thật (`+1%`), không dùng `aria-label`; kèm chữ ẩn visually `Target reached for today` cho SR. M5: vùng `aria-live="polite"` đọc `+1% for {goal} today.` đúng một lần.
+- `TimerCard`: `role="timer"` (không đọc từng giây); nút Stop có `aria-label="Stop timer for Read, running 00:25:31"` (`vi`: `Dừng đếm giờ cho Read, đã chạy 00:25:31`, key `timer.stopAria`; chứa chữ hiển thị `Dừng` nên thỏa "label in name") cập nhật khi nhận focus.
+- Trạng thái vô hiệu của `Start timer`: `aria-disabled="true"` + `aria-describedby` trỏ "Stop the running timer first." (`vi`: `Hãy dừng bộ đếm giờ đang chạy trước.`; vẫn focus được để người dùng đọc lý do).
+- Pill "+1%" là text thật (`+1%`), không dùng `aria-label`; kèm chữ ẩn visually `Target reached for today` (`vi`: `Hôm nay đã đạt chỉ tiêu`) cho SR. M5: vùng `aria-live="polite"` đọc `+1% for {goal} today.` (`vi`: `+1% cho {goal} hôm nay.`) đúng một lần.
 
 **Heatmap**
 
-- Container: `role="grid"`, `aria-label="Activity heatmap for {year}, {goal}"`, `aria-rowcount=7`; hàng = thứ Hai … Chủ nhật (trùng bố cục trực quan để phím mũi tên khớp hướng nhìn); mỗi ô `role="gridcell"`, `tabindex` roving (chỉ một ô `0`: hôm nay hoặc ô cuối cùng đã qua; còn lại `-1`), có accessible name đúng mục 7.5. Ô ngoài năm là ô đệm `aria-hidden="true"`.
+- Container: `role="grid"`, `aria-label` = key `heatmap.aria` (`en`: `Activity heatmap for {year}, {goal}`; `vi`: `Biểu đồ nhiệt hoạt động năm {year}, {goal}`), `aria-rowcount=7`; hàng = thứ Hai … Chủ nhật (trùng bố cục trực quan để phím mũi tên khớp hướng nhìn); mỗi ô `role="gridcell"`, `tabindex` roving (chỉ một ô `0`: hôm nay hoặc ô cuối cùng đã qua; còn lại `-1`), có accessible name đúng mục 7.5. Ô ngoài năm là ô đệm `aria-hidden="true"`.
 - Phím: Trái/Phải = tuần trước/sau (cùng thứ), Lên/Xuống = ngày trước/sau, Home/End = đầu/cuối năm, Enter/Space = mở Day (với ô hợp lệ). Ô tương lai/outside: `aria-disabled="true"`, vẫn focus được để đọc.
 - Trên heatmap có tóm tắt text ngay trên lưới (hiển thị, không ẩn) — xem S6 Copy — và danh sách số liệu ở stat card.
 - Không dùng `title` làm cơ chế duy nhất; tooltip hiện khi hover và focus.
@@ -786,14 +1262,17 @@ Ngoại lệ có chủ đích: các mức nhạt của heatmap (`--heat-0..2`) k
 - Vùng chạm ≥ 44×44 px (nút, tab, ô chọn, icon button); khoảng cách giữa hai vùng chạm kề nhau ≥ 8 px. Ngoại lệ: ô heatmap nhỏ (≥ 11 px) — thay bằng bàn phím và danh sách số liệu; trên mobile mỗi ô là đích bấm nhỏ nhưng thao tác này là phụ (Should, FR-26).
 - Text co giãn đến 200 % không mất nội dung (dùng `rem` cho cỡ chữ, bố cục dùng `min-width: 0`/wrap, không chiều cao cố định cho chữ). Reflow ở 320 px không cần cuộn ngang (trừ heatmap).
 - `prefers-reduced-motion`: tắt hiệu ứng pill, skeleton nhấp nháy, transition.
-- `lang="en"`; `viewport` không khoá zoom; input cỡ ≥ 16 px.
+- `viewport` không khoá zoom; input cỡ ≥ 16 px.
+- **Ngôn ngữ (NFR-08, FR-32):** `<html lang>` luôn khớp ngôn ngữ đang hiển thị (`en` hoặc `vi`) và đổi ngay khi người dùng đổi ngôn ngữ (cùng lúc với `document.title`). Trong Settings, mỗi lựa chọn ngôn ngữ có thuộc tính `lang` riêng (`lang="en"` cho `English`, `lang="vi"` cho `Tiếng Việt`) để trình đọc màn hình đọc đúng giọng; nhãn của hai lựa chọn không đổi theo ngôn ngữ giao diện. Tên goal/why/note của người dùng không gắn `lang` (không biết ngôn ngữ). Mọi `aria-label`, `aria-valuetext`, chữ ẩn (`sr-only`), `figcaption`, `caption` bảng ẩn, tooltip, tên truy cập của ô heatmap đều lấy từ bảng key ở mục 7 (có bản `vi`), không viết cứng trong JSX.
+- Sau khi đổi ngôn ngữ, focus không bị mất (ở lại trên lựa chọn vừa chọn) và có thông báo `role="status"` (`toast.languageChanged`) bằng ngôn ngữ mới. Kiểm tra bằng bàn phím: Tab tới nhóm ngôn ngữ, mũi tên Trái/Phải đổi lựa chọn (radio group), mọi chữ trên trang đổi ngay.
+- Bản `vi` không làm giảm tương phản (cùng token) và không cần cỡ chữ lớn hơn; dấu thanh tiếng Việt được chừa chỗ theo mục 3.4 (quy tắc 5). Người dùng phóng chữ 200 %: các hàng nút tự xuống dòng, không cắt chữ (mục 3.4).
 - Màu không phải kênh duy nhất: badge có chữ, lỗi có icon + chữ, pace có chữ "ahead/behind", tab active có vạch/đậm.
 
 ---
 
 ## 9. Interface spec (cho CLI/API/bot)
 
-Không áp dụng — app có giao diện đồ hoạ (PWA). Các "giao diện" không phải màn hình đã có đặc tả ở nơi khác: payload notification (`ARCHITECTURE.md` §5.6; copy ở mục 7.5), file `.ics` (§5.7), file backup (§5.5).
+Không áp dụng — app có giao diện đồ hoạ (PWA). Các "giao diện" không phải màn hình đã có đặc tả ở nơi khác: payload notification (`ARCHITECTURE.md` §5.6; copy `en`/`vi` ở mục 7.5: `notification.*`), file `.ics` (§5.7; `ics.summary`, `ics.alarm` ở mục 7.5), file backup (§5.5; tên file và nội dung JSON không dịch).
 
 ---
 
@@ -809,8 +1288,15 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). Các "giao diện" 
 - **A-D8.** Form Goal không hỏi xác nhận khi rời với thay đổi chưa lưu (giữ đơn giản).
 - **A-D9.** Banner nhắc (FR-15) không có nút đóng; banner backup đặt ở Today (dưới banner nhắc) và ở đầu card Backup trong Settings. Chỉ hiện ≤ 1 banner backup.
 - **A-D10.** Streak chip trên Today (`{n}-day streak`, tính streak tổng) chỉ xuất hiện từ M4 (cần `StatsService`).
-- **A-D11.** `Last backup` hiển thị ngày dạng `YYYY-MM-DD` theo giờ cục bộ từ `lastBackupAt`.
+- **A-D11.** `Last backup` hiển thị ngày ngắn theo giờ cục bộ từ `lastBackupAt`: `en` `YYYY-MM-DD`, `vi` `dd/MM/yyyy` (FR-36).
 - **A-D12.** Màu amber của "+1%" là điểm nhấn thương hiệu duy nhất ngoài xanh chủ đạo; logo là ô vuông bo góc chữ "1%" nền `--primary`. Icon vẽ bằng SVG inline (không icon font, không tải ngoài).
+- **A-D13 (i18n).** Card **Language / Ngôn ngữ** đứng **đầu** trang Settings (trước Reminders), tiêu đề card là cùng một chuỗi song ngữ ở cả `en.json` và `vi.json` để người lỡ vào nhầm ngôn ngữ vẫn nhận ra. Control là SegmentedControl 2 lựa chọn, áp dụng ngay (không nút Save), kèm toast `toast.languageChanged`. Nếu user muốn đặt card ở cuối (gần About) thì chỉ cần đổi thứ tự, không ảnh hưởng key.
+- **A-D14 (i18n).** Tên key theo thành phần/màn hình (`today.*`, `goal.form.*`, `errors.*`…) như yêu cầu, **không** dùng tiền tố `screen.<tên>.*` mà ARCH §5.8 nêu như ví dụ; không key nào là tiền tố của key khác (xem 7.0). Các key mà plan/AC đã tham chiếu giữ đúng tên: `nav.today`, `empty.today.noGoals`, `errors.GOAL_NAME_REQUIRED`, `errors.GOAL_TARGET_INVALID_daily`, `errors.GOAL_PERIOD_INVALID_tooLong`, `errors.IMPORT_INVALID_JSON`, `notification.body`, `heatmap.cell.all`, `ics.summary`, `settings.language.option.en|vi`, `format.percent`, `format.minutes`, `format.duration`, `app.name`, `app.shortName`.
+- **A-D15 (i18n).** Nhãn nút `Start timer` ở `vi` là `Đếm giờ` (gọn, ≈ 116 px) thay cho `Bắt đầu đếm giờ` (≈ 172 px) để hàng 2 nút ở card Today vừa 360 px; ngữ cảnh đã rõ nhờ biểu tượng play, badge `Đang đếm giờ` và TimerCard.
+- **A-D16 (i18n).** Bản dịch `vi` do designer viết, chưa qua người bản ngữ khác duyệt. Thuật ngữ đã chốt ở 7.0: `entry` = `lần ghi`, `Review` = `Tổng kết`, `Pace` = `Nhịp độ`, `Storage` = `Bộ nhớ` (tách khỏi `Lưu trữ` = archive), `timer` = `bộ đếm giờ`. Đổi thuật ngữ chỉ cần sửa bảng ở mục 7, không đụng layout.
+- **A-D17 (i18n).** Số nhiều: `vi` chỉ có `_other`; mọi cụm đếm được dùng trong câu qua `format.goalsCount` / `entriesCount` / `daysCount` (không ghép chuỗi). Riêng `goal.delete.*` tách `bodyNoEntries` (0 entry) khỏi `body_one/_other` vì i18next không dùng `_zero` cho `en`.
+- **A-D18 (i18n).** Lỗi đang hiện trong form được lưu dưới dạng mã lỗi và dịch lại khi đổi ngôn ngữ; giá trị người dùng đang nhập không bị reset khi đổi ngôn ngữ (đổi ngôn ngữ chỉ xảy ra ở Settings nên thực tế form chỉ giữ lại nếu người dùng quay về).
+- **A-D19 (i18n).** Thêm so với v1 để đủ chuỗi cho i18n (không thêm tính năng): `toast.languageChanged`, card Language (`settings.language.*`), `errors.UNKNOWN`, `errors.WRITE_FAILED` (đã có chữ nhưng chưa có key), `doc.title`, `nav.label`, `a11y.required`, các `aria-label`/chữ ẩn đã có sẵn trong mockup (`entry.form.label*`, `goalCard.progress*`, `timer.elapsedLabel`, `reminder.bannerLabel`, `today.goalsLabel`, `day.navLabel`, `day.goalsLabel`), `chart.bar.monthlySummary` và tiêu đề cột bảng ẩn, `goal.detail.table*`, `goal.detail.tooltip/label*`, `timer.*` của D1 (đã có trong mockup 04). Sửa nhẹ `en` cho đúng ngữ pháp số ít: `goal.delete.body_one` (`its 1 entry`, bản v1 chung `{n} entries`).
 
 ---
 
@@ -820,10 +1306,21 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). Các "giao diện" 
 - **OQ-D2 (cho user, nhỏ).** Control `Range` trên đường cong (A-D4) là phần thêm ngoài PRD để biểu đồ dùng được với goal dài. Duyệt hay bỏ (bỏ thì goal "This year" sẽ thấy đường You gần như phẳng ở đầu năm)?
 - **OQ-D3 (cho planner).** PRD chưa có luồng "đóng banner nhắc" hay "tắt nhắc hôm nay". Thiết kế không thêm (A-D9). Nếu muốn, thêm FR.
 - **OQ-D4 (cho planner, thông tin).** TASKS M1-AC7 mô tả "xoá entry" không nhắc bước xác nhận; thiết kế có xác nhận inline (A-D5) nên e2e cần thêm một cú bấm `Delete`.
-- **OQ-D5 (cho planner, thông tin).** Quy ước hiển thị mà các AC đang tham chiếu và thiết kế đã thống nhất: Today `20/30`, timer `00:01:05`, Stop điền sẵn `26`, khoảng goal `2026-10-01 – 2026-10-31`, `30 min/day`, `25.8%`, `+8.3% better`, preview import `5 goals, 23 entries`, notification body `3 goals left today: Read 0/30 min, …`.
+- **OQ-D5 (cho planner, thông tin).** Quy ước hiển thị mà các AC đang tham chiếu và thiết kế đã thống nhất: Today `20/30`, timer `00:01:05`, Stop điền sẵn `26`, khoảng goal `2026-10-01 – 2026-10-31`, `30 min/day`, `25.8%`, `+8.3% better`, preview import `5 goals, 23 entries`, notification body `3 goals left today: Read 0/30 min, …` (các giá trị này là của `en`; `vi` xem 7.1).
+- **OQ-D6 (cho user, quan trọng với i18n).** Bạn có muốn người bản ngữ xem lại bản dịch `vi` và thuật ngữ trong 7.0 trước khi developer M1 copy vào `vi.json` không (A-D16)? Mặc định: dùng nguyên văn như hiện tại; sửa chữ sau này chỉ là thay đổi trong `vi.json`.
+- **OQ-D7 (cho planner/QC, thông tin).** (a) Parity test (M1-AC17) phải so `vi` `_other` với `en` `_other` và bỏ qua `_one` (vi không có); biến `{{count}}` có mặt ở cả hai `_other`. (b) Các dòng đánh dấu `(= en)` ở mục 7 (`app.name`, `settings.language.title`, `settings.language.option.*`, `+1%`, `{{n}}/280`…) cần được miễn trong test "không lẫn tiếng Anh" (NFR-11c). (c) `settings.language.title` = `Language / Ngôn ngữ` chứa chữ tiếng Việt ở bản `en` và chữ tiếng Anh ở bản `vi` có chủ đích.
+- **OQ-D8 (cho planner/developer, thông tin).** Tên thứ/tháng ngắn của `Intl` `vi-VN` (`Th 2`, `thg 10`) khác nhau giữa các phiên bản ICU và có thể rộng hơn nhãn `en`; heatmap/biểu đồ phải chịu được (mục 3.4). Nếu QC thấy nhãn đè nhau ở 360 px, dùng dạng số (`T2`, `10`) cho nhãn trục ở < 640 px, chi tiết đầy đủ vẫn có ở tooltip/bảng ẩn.
+- **OQ-D9 (cho planner, nhỏ).** `LocaleService` chưa có API cho biết ngôn ngữ hiện tại là "đã chọn" hay "đang theo trình duyệt"; thiết kế không cần (Language chỉ hiện ngôn ngữ đang dùng). Nếu sau này muốn thêm tuỳ chọn "Theo trình duyệt" thì cần quyết định ở plan.
 
 ---
 
 ## Changelog
 
 - 2026-10-09 — v1, tạo mới (mode `new`): user flows, 9 màn hình + 3 dialog, component, tokens (sáng/tối), copy, a11y, 8 mockup HTML.
+- 2026-10-09 — v1.1 (mode `revise`, feedback Gate 2: thêm tiếng Việt; PRD v1.2, FR-32 … FR-36, NFR-11):
+  - Mục 7 viết lại: bảng đầy đủ key i18n với cột `en` / `vi` cho mọi chuỗi (nhãn, nút, placeholder, hint, toast, dialog, lỗi, empty/error state, aria-label, notification, `.ics`, heatmap/chart, Not found, StorageError, ErrorBoundary); thêm 7.0 (quy tắc key, tham số `{{}}`, số nhiều `_one/_other`, glossary và quy tắc viết tiếng Việt), 7.1 thêm cột `vi`, 7.3 thêm bảng ánh xạ `src/ui/error-messages.ts` → `errors.*` (thay `src/ui/copy.ts`), 7.6 chuỗi theo màn hình. Key cũ bị đổi tên để không có key nào là tiền tố của key khác (`empty.review.year` → `empty.reviewYear`, `reminder.banner(.one)` → `reminder.banner_one/_other`, `form.*` → `entry.form.*`/`goal.form.*`, `chart.bar.summary` → `chart.bar.weeklySummary`…).
+  - Settings (S7): thêm card **Language / Ngôn ngữ** (M1, đứng đầu), control `English` / `Tiếng Việt`, trạng thái, tương tác, a11y; cập nhật mục 3.3 (bản đồ milestone), mục 5 (`LanguageSwitcher`), mục 8 (a11y ngôn ngữ, `lang` từng lựa chọn), mục 9.
+  - Thêm 3.4 "Bố cục với chuỗi tiếng Việt (rà 360 px)": quy tắc chung và bảng rủi ro/xử lý (tab bar, nút Goals, segmented, StatCard, heatmap, chart, toast, dialog…). Thay đổi bố cục duy nhất: `.label-row` được `flex-wrap`, thẻ Pace chiếm cả hàng < 640 px và giá trị dạng chữ 20 px, link "ghi bù" dùng `line-height` 24 + padding thay cho `line-height` 44. Không đổi token màu, typography, spacing.
+  - Mockup: thêm `01-today.vi.html` (Today bản `vi`); `08-settings.html` thêm card Language (bản `en`) ở đầu; `index.html` thêm liên kết.
+  - Sửa nhẹ `en`: `goal.delete.body_one` ("its 1 entry"). Thêm `errors.UNKNOWN`, `toast.languageChanged`, `chart.bar.monthlySummary` và các aria-label đã có trong mockup nhưng chưa có key (A-D19).
+  - Assumptions A-D11 (sửa), A-D13 … A-D19 (mới); Open questions OQ-D5 (cập nhật), OQ-D6 … OQ-D9 (mới).

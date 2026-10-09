@@ -93,6 +93,12 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 .states li{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--border)}
 .states li .badge{flex:none;min-width:104px;justify-content:center}
 .states li p{font-size:14px;line-height:20px}
+.seg{display:flex;max-width:420px;margin-top:12px;border:1px solid var(--border-input);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.seg label{flex:1;position:relative;margin:0;font-weight:600;cursor:pointer}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:flex;align-items:center;justify-content:center;min-height:calc(var(--tap) - 2px);padding:0 12px;text-align:center;font-size:15px}
+.seg input:checked+span{background:var(--primary);color:var(--on-primary)}
+.seg input:focus-visible+span{outline:2px solid var(--focus);outline-offset:-4px}
 .dialog{background:var(--surface);border:1px solid var(--border);width:100%;max-width:480px;border-radius:var(--r-lg);padding:24px;box-shadow:var(--shadow-2)}
 .dialog h2{font-size:20px;line-height:28px}
 .dialog p{margin-top:8px;color:var(--text-muted)}
@@ -128,6 +134,20 @@ h2{font-size:18px;line-height:26px;font-weight:600}
   <header class="page-head"><h1>Settings</h1></header>
 
   <div class="sections">
+    <!-- M1: Language (first card; the title is the same bilingual string in en and vi) -->
+    <section class="card" aria-labelledby="h-lang">
+      <h2 id="h-lang">Language / Ngôn ngữ</h2>
+      <p class="desc" id="lang-d">Choose the language of menus, messages and dates. Your own goal names and notes stay as you wrote them.</p>
+      <fieldset style="border:0;margin:0;padding:0;min-width:0" aria-describedby="lang-d">
+        <legend class="sr-only">Language / Ngôn ngữ</legend>
+        <div class="seg">
+          <label><input type="radio" name="lang" value="en" checked><span lang="en">English</span></label>
+          <label><input type="radio" name="lang" value="vi"><span lang="vi">Tiếng Việt</span></label>
+        </div>
+      </fieldset>
+      <p class="hint">The date and time pickers and permission prompts follow your browser's language.</p>
+    </section>
+
     <!-- M2 -->
     <section class="card" aria-labelledby="h-rem">
       <h2 id="h-rem">Reminders</h2>
@@ -202,7 +222,8 @@ h2{font-size:18px;line-height:26px;font-weight:600}
     </div>
   </div>
 
-  <aside class="mock-note">Mockup S7 Settings. M1: Storage + About. M2: Reminders (switch, time, permission, limits, .ics). M3: Backup (the banner and the red alert are examples of states; only one of them shows at a time in the real app). The "Reference" card is for developers and not part of the real screen.</aside>
+  <aside class="mock-note">Mockup S7 Settings. M1: Language + Storage + About. Language: choosing an option applies immediately (no Save button), keeps focus on the option, and shows the toast "Language changed" in the new language; both option labels always stay "English" / "Tiếng Việt". Card order: Language, Reminders, Backup, Storage, About.</aside>
+<aside class="mock-note" style="margin-top:12px">M2: Reminders (switch, time, permission, limits, .ics). M3: Backup (the banner and the red alert are examples of states; only one of them shows at a time in the real app). The "Reference" card is for developers and not part of the real screen.</aside>
 </main>
 </div>
 </body>

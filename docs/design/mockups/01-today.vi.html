@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hôm nay — 1% Better (mockup S1, tiếng Việt)</title>
+<style>
+:root{color-scheme:light dark;
+--font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--bg:#F7F6F2;--surface:#FFFFFF;--surface-2:#F0EEE7;--border:#DDD9CE;--border-input:#7F8882;
+--text:#1D2320;--text-muted:#5A625D;
+--primary:#1F7A4D;--primary-hover:#17613D;--on-primary:#FFFFFF;--primary-soft:#E3F2E9;--on-primary-soft:#14573A;
+--plus-bg:#FDF1DC;--plus-text:#8A3F06;--plus-border:#E9C98F;
+--danger:#B3261E;--on-danger:#FFFFFF;--danger-soft:#FCE9E7;--on-danger-soft:#8C1D18;
+--info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;
+--heat-0:#E7E5DC;--heat-1:#BFE3CC;--heat-2:#82C69C;--heat-3:#3FA06A;--heat-4:#1F7A4D;
+--scrim:rgba(20,28,24,.5);--shadow-1:0 1px 2px rgba(20,30,25,.06);--shadow-2:0 12px 40px rgba(20,30,25,.22);
+--r-sm:6px;--r-md:10px;--r-lg:16px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:56px;--content-max:960px}
+@media (prefers-color-scheme:dark){:root{
+--bg:#121513;--surface:#1B1F1C;--surface-2:#242925;--border:#343B36;--border-input:#7C867F;
+--text:#ECEFEA;--text-muted:#A3ACA5;
+--primary:#5CC98F;--primary-hover:#7AD6A5;--on-primary:#0C2217;--primary-soft:#1E3328;--on-primary-soft:#A8E6C3;
+--plus-bg:#3A2D14;--plus-text:#F5C97F;--plus-border:#6B5224;
+--danger:#FF8A80;--on-danger:#3B0A07;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;
+--info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;
+--heat-0:#2A302C;--heat-1:#24503A;--heat-2:#2F7A55;--heat-3:#43A773;--heat-4:#7FDDA8;
+--scrim:rgba(0,0,0,.6);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 12px 40px rgba(0,0,0,.55)}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/24px var(--font);-webkit-text-size-adjust:100%}
+h1,h2,h3,p,ul{margin:0}ul{padding:0;list-style:none}
+a{color:var(--primary)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;background:var(--surface);padding:8px 12px;border-radius:var(--r-md);z-index:60}
+.skip:focus{top:8px}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-variant-numeric:tabular-nums}.muted{color:var(--text-muted)}.small{font-size:14px;line-height:20px}
+/* shell */
+.nav{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.nav .brand{display:none}
+.nav .item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--tabbar-h);border-top:3px solid transparent;color:var(--text-muted);text-decoration:none;font-size:12px;line-height:16px;font-weight:600;text-align:center}
+.nav .item[aria-current=page]{color:var(--primary);border-top-color:var(--primary);font-weight:700}
+.nav .ic{width:24px;height:24px}
+.mark{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--primary);color:var(--on-primary);font-weight:800;font-size:14px}
+.content{min-width:0}
+main{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--tabbar-h) + 80px)}
+main.wide{max-width:var(--content-max)}
+@media (min-width:1024px){
+.nav{top:0;right:auto;width:var(--nav-w);flex-direction:column;justify-content:flex-start;gap:4px;padding:24px 12px;border-top:0;border-right:1px solid var(--border)}
+.nav .brand{display:flex;align-items:center;gap:10px;padding:0 12px 20px;font-weight:700;color:var(--text);text-decoration:none}
+.nav .item{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;min-height:var(--tap);padding:0 12px;border-top:0;border-radius:var(--r-md);font-size:15px;text-align:left}
+.nav .item[aria-current=page]{background:var(--primary-soft);color:var(--on-primary-soft)}
+.content{margin-left:var(--nav-w)}main{padding:32px 40px 96px}}
+.page-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.page-head .titles{min-width:0}
+h1{font-size:24px;line-height:30px;font-weight:700}
+@media (min-width:1024px){h1{font-size:28px;line-height:34px}}
+h2{font-size:18px;line-height:26px;font-weight:600}
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:0 16px;border:1px solid transparent;border-radius:var(--r-md);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;background:none;color:var(--text)}
+.btn.primary{background:var(--primary);color:var(--on-primary)}.btn.primary:hover{background:var(--primary-hover)}
+.btn.secondary{background:var(--surface);border-color:var(--border-input)}.btn.secondary:hover{background:var(--surface-2)}
+.btn.ghost{color:var(--primary)}.btn.ghost:hover{background:var(--primary-soft)}
+.btn.danger{background:var(--danger);color:var(--on-danger)}
+.btn.danger-ghost{color:var(--danger)}
+.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed}
+.icon-btn{width:44px;height:44px;display:inline-grid;place-items:center;border-radius:var(--r-md);border:0;background:none;color:var(--text-muted);cursor:pointer;flex:none}
+.icon-btn:hover{background:var(--surface-2);color:var(--text)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-1)}
+.stack>*+*{margin-top:16px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--r-full);background:var(--surface);border:1px solid var(--border);font-size:14px;line-height:20px;font-weight:600}
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:var(--r-full);font-size:13px;line-height:20px;font-weight:600;background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.badge.ok{background:var(--primary-soft);color:var(--on-primary-soft);border-color:transparent}
+.badge.info{background:var(--info-soft);color:var(--info);border-color:transparent}
+.plus{display:inline-flex;align-items:center;gap:4px;padding:2px 10px 2px 8px;border-radius:var(--r-full);background:var(--plus-bg);color:var(--plus-text);border:1px solid var(--plus-border);font-weight:700;font-size:14px;line-height:20px}
+.plus .ic{width:14px;height:14px;stroke-width:2.5}
+.progress{height:8px;background:var(--surface-2);border-radius:var(--r-full);overflow:hidden;border:1px solid var(--border)}
+.progress>span{display:block;height:100%;background:var(--primary);border-radius:var(--r-full)}
+.field{margin-top:16px}
+.field label,.legend{display:block;font-weight:600;font-size:15px;margin-bottom:6px}
+.label-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 8px}
+.input{width:100%;min-height:var(--tap);padding:10px 12px;border:1px solid var(--border-input);border-radius:var(--r-md);background:var(--surface);color:var(--text);font:400 16px/24px var(--font)}
+.hint{font-size:14px;line-height:20px;color:var(--text-muted);margin-top:6px}
+.banner{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:var(--r-md);background:var(--info-soft);color:var(--info);font-weight:500}
+.banner .ic{margin-top:2px}
+.toast-region{position:fixed;z-index:40;left:0;right:0;bottom:calc(var(--tabbar-h) + 12px);display:flex;justify-content:center;padding:0 16px;pointer-events:none}
+.toast{pointer-events:auto;max-width:calc(100vw - 32px);background:var(--text);color:var(--bg);padding:12px 16px;border-radius:var(--r-md);box-shadow:var(--shadow-2);font-weight:500;display:flex;gap:10px;align-items:center}
+@media (min-width:1024px){.toast-region{bottom:24px;left:var(--nav-w)}}
+.mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* screen-specific: goal card */
+.summary{font-weight:600;margin-bottom:16px}
+.goal .amount{font-size:24px;line-height:30px;font-weight:700;margin-top:4px}
+.goal .amount .unit{font-size:16px;font-weight:400;color:var(--text-muted)}
+.goal .progress{margin-top:8px}
+.goal .status{margin-top:8px}
+.goal .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.entries-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-muted);margin-top:16px}
+.entries{margin-top:4px;border-top:1px solid var(--border)}
+.entries li{display:flex;align-items:center;gap:8px;padding:2px 0;border-bottom:1px solid var(--border);min-height:52px}
+.entries .em{font-weight:600;min-width:56px;white-space:nowrap}
+.entries .en{flex:1;min-width:0;color:var(--text-muted);overflow-wrap:anywhere}
+.entries .confirm{flex:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:600}
+.entry-form{margin-top:12px;padding-top:4px;border-top:1px solid var(--border)}
+.entry-form .actions{margin-top:16px}
+.past-link{display:inline-block;margin-top:24px;min-height:var(--tap);padding-block:10px;line-height:24px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></symbol>
+<symbol id="i-goals" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/></symbol>
+<symbol id="i-review" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V5M19 20v-12"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V6M6 11l6-6 6 6"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 17v-6a6 6 0 0112 0v6l1.5 2h-15zM10 21h4"/></symbol>
+</defs></svg>
+<a class="skip" href="#main">Chuyển đến nội dung chính</a>
+
+<nav class="nav" aria-label="Chính">
+  <a class="brand" href="01-today.vi.html" aria-label="1% Better per Day"><span class="mark" aria-hidden="true">1%</span><span>Better per Day</span></a>
+  <a class="item" href="01-today.vi.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span>Hôm nay</span></a>
+  <a class="item" href="02-goals.html"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span>Mục tiêu</span></a>
+  <a class="item" href="06-review.html"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span>Tổng kết</span></a>
+  <a class="item" href="08-settings.html"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Cài đặt</span></a>
+</nav>
+
+<div class="content">
+<main id="main" tabindex="-1">
+  <header class="page-head">
+    <div class="titles">
+      <h1>Hôm nay</h1>
+      <p class="muted">Thứ Sáu, 9 tháng 10</p>
+    </div>
+    <span class="chip num">Chuỗi 8 ngày</span>
+  </header>
+
+  <p class="summary" aria-live="polite">Đã đạt 1/3 mục tiêu</p>
+
+  <section class="banner" aria-label="Nhắc nhở" style="margin-bottom:16px">
+    <svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg>
+    <p>Đã quá 20:00 — còn 2 mục tiêu chưa đạt chỉ tiêu.</p>
+  </section>
+
+  <ul class="stack" aria-label="Mục tiêu hôm nay">
+
+    <!-- Goal chưa đạt chỉ tiêu, form ghi đang mở, một lần ghi ở trạng thái xác nhận xóa -->
+    <li><article class="card goal" aria-labelledby="g-read">
+      <h2 id="g-read">Read</h2>
+      <p class="amount num">20/30 <span class="unit">phút</span></p>
+      <div class="progress" role="progressbar" aria-label="Read hôm nay" aria-valuemin="0" aria-valuemax="30" aria-valuenow="20" aria-valuetext="20 trên 30 phút"><span style="width:66.7%"></span></div>
+      <p class="muted small status">Còn 10 phút</p>
+      <div class="actions">
+        <button class="btn secondary" type="button" aria-expanded="true" aria-controls="form-read">Ghi thời gian</button>
+        <button class="btn ghost" type="button"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>Đếm giờ</button>
+      </div>
+      <form class="entry-form" id="form-read" aria-label="Ghi thời gian cho Read">
+        <div class="field" style="margin-top:8px">
+          <label for="m-read">Số phút</label>
+          <input id="m-read" class="input num" inputmode="numeric" autocomplete="off" placeholder="Ví dụ: 25" value="10">
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="n-read">Ghi chú (không bắt buộc)</label><span class="muted small num">0/280</span></div>
+          <input id="n-read" class="input" autocomplete="off" placeholder="Bạn đã làm gì?">
+        </div>
+        <div class="actions">
+          <button class="btn primary" type="submit">Lưu lần ghi</button>
+          <button class="btn ghost" type="button">Hủy</button>
+        </div>
+      </form>
+      <h3 class="entries-title">Các lần ghi hôm nay</h3>
+      <ul class="entries">
+        <li>
+          <div class="confirm" role="group" aria-label="Xác nhận xóa: 20 phút, Ch. 3">
+            <span>Xóa lần ghi này?</span>
+            <button class="btn danger" type="button">Xóa</button>
+            <button class="btn secondary" type="button">Giữ lại</button>
+          </div>
+        </li>
+      </ul>
+    </article></li>
+
+    <!-- Goal đã đạt chỉ tiêu -->
+    <li><article class="card goal" aria-labelledby="g-guitar">
+      <div class="row"><h2 id="g-guitar">Guitar</h2><span class="plus"><svg class="ic" aria-hidden="true"><use href="#i-up"/></svg>+1%<span class="sr-only"> Hôm nay đã đạt chỉ tiêu</span></span></div>
+      <p class="amount num">20/20 <span class="unit">phút</span></p>
+      <div class="progress" role="progressbar" aria-label="Guitar hôm nay" aria-valuemin="0" aria-valuemax="20" aria-valuenow="20" aria-valuetext="20 trên 20 phút"><span style="width:100%"></span></div>
+      <p class="muted small status">Đã đạt chỉ tiêu</p>
+      <div class="actions">
+        <button class="btn secondary" type="button">Ghi thời gian</button>
+        <button class="btn ghost" type="button"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>Đếm giờ</button>
+      </div>
+      <h3 class="entries-title">Các lần ghi hôm nay</h3>
+      <ul class="entries">
+        <li><span class="em num">20 phút</span><span class="en">Scales</span>
+          <button class="icon-btn" type="button" aria-label="Sửa lần ghi: 20 phút, Scales"><svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg></button>
+          <button class="icon-btn" type="button" aria-label="Xóa lần ghi: 20 phút, Scales"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg></button></li>
+      </ul>
+    </article></li>
+
+    <!-- Goal loại total, chưa ghi gì -->
+    <li><article class="card goal" aria-labelledby="g-spanish">
+      <h2 id="g-spanish">Spanish</h2>
+      <p class="muted small">17 phút/ngày · tổng 100 giờ</p>
+      <p class="amount num">0/17 <span class="unit">phút</span></p>
+      <div class="progress" role="progressbar" aria-label="Spanish hôm nay" aria-valuemin="0" aria-valuemax="17" aria-valuenow="0" aria-valuetext="0 trên 17 phút"><span style="width:0%"></span></div>
+      <p class="muted small status">Còn 17 phút</p>
+      <div class="actions">
+        <button class="btn primary" type="button" aria-expanded="false">Ghi thời gian</button>
+        <button class="btn ghost" type="button"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>Đếm giờ</button>
+      </div>
+    </article></li>
+  </ul>
+
+  <a class="past-link" href="05-day.html">Quên ghi một ngày? Ghi bù cho ngày đã qua</a>
+
+  <aside class="mock-note">Mockup S1 Hôm nay, bản tiếng Việt (<code>vi</code>) của <a href="01-today.html">01-today.html</a>: cùng dữ liệu, cùng bố cục, chuỗi lấy từ DESIGN.md mục 7 (key <code>today.*</code>, <code>goalCard.*</code>, <code>entry.*</code>, <code>reminder.*</code>, <code>nav.*</code>). Tên mục tiêu và ghi chú (Read, Guitar, Spanish, Scales, Ch. 3) là dữ liệu người dùng nên không dịch. Mở ở 360 px để kiểm: hàng nút "Ghi thời gian" + "Đếm giờ" vừa một hàng, thanh tab không xuống dòng, banner và link "Quên ghi một ngày?" xuống 2 dòng, không có thanh cuộn ngang. Các trang khác trong bộ mockup vẫn là bản tiếng Anh; toast bên dưới là ví dụ "Đã lưu lần ghi".</aside>
+</main>
+</div>
+
+<div class="toast-region"><div class="toast" role="status"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Đã lưu lần ghi</div></div>
+</body>
+</html>
