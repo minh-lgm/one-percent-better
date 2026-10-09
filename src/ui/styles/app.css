@@ -835,6 +835,12 @@ dialog.dialog::backdrop {
     align-items: center;
   }
 }
+/* Grid items default to min-width:auto, which lets a long one-line "why" widen
+   the row past the viewport (M1-D1). Let both cells shrink. */
+.goal-row > .goal-info,
+.goal-row > .gr-actions {
+  min-width: 0;
+}
 .goal-row .top {
   display: flex;
   align-items: center;

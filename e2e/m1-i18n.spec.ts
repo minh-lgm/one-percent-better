@@ -220,6 +220,9 @@ test.describe('M1-AC17 + M1-AC18: main flow in vi-VN', () => {
     await createGoal(page, { name: 'Read', why: 'Be smarter', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, VI);
     await createGoal(page, { name: 'Marathon prep', targetValue: 45, startDate: '2026-11-01', endDate: '2026-11-30' }, VI);
     await createGoal(page, { name: 'Old course', targetValue: 15, startDate: '2026-01-01', endDate: '2026-06-30' }, VI);
+    // M1-D1 regression: long "why" (>= 100 chars) and a 60-char name on the Goals screen.
+    await createGoal(page, { name: 'Đ'.repeat(60), why: 'Đọc thêm sách mỗi ngày để hiểu biết hơn. '.repeat(3).slice(0, 100), targetValue: 30 }, VI);
+    await expect(page.getByRole('heading', { level: 3, name: 'Đ'.repeat(60) })).toBeVisible();
     await expectNoHorizontalScroll(page);
     await gotoHash(page, '/today');
     await goalCard(page, 'Read').getByRole('button', { name: VI.goalCard.logTime }).click();

@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ENTRY_NOTE_MAX } from '../../config/constants';
 import type { DomainError } from '../../domain/types';
 import { errorMessage, WRITE_FAILED_KEY } from '../error-messages';
+import { parseDecimalInput } from '../number-input';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../hooks/useT';
 import { Alert } from './Alert';
@@ -52,8 +53,7 @@ export function EntryForm({ mode, label, defaultValues, onSubmit, onCancel }: En
     if (saving) return;
     setSaving(true);
     setWriteFailed(false);
-    const trimmed = minutes.trim();
-    const parsed = trimmed === '' ? Number.NaN : Number(trimmed);
+    const parsed = parseDecimalInput(minutes);
     try {
       const result = await onSubmit({ minutes: parsed, note });
       if (result.ok) return;

@@ -9,7 +9,7 @@ Current milestone: **M1 — walking skeleton** (goals, manual time entries for t
 - Node.js 22.14 or later (see `.nvmrc`) and npm 10. Nothing is installed globally.
 - A Chromium-based browser for the full PWA experience (install prompt). Firefox and Safari work as a web app.
 
-> **Note (Windows):** npm cannot run `npm install`, `npm ci` or `npx` inside a folder whose path contains `%` (for example `1%better`), because npm decodes the path as a URL. Clone into a path without `%` (e.g. `one-percent-better`). `npm run …` scripts work from any path.
+On Windows, clone into a short path (well under the 260-character `MAX_PATH` limit) so Playwright can launch the Chromium binary stored under `node_modules`.
 
 ## Install
 

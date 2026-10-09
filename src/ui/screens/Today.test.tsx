@@ -125,6 +125,20 @@ describe('Today (M1-AC2, AC5, AC6, AC7, AC18)', () => {
     await waitFor(() => expect(within(card).getByRole('button', { name: /^Delete entry/ })).toHaveFocus());
   });
 
+  it.each(['0x1E', '1e1', '0b11'])('entry minutes reject JavaScript numeric syntax %s (M1-D3)', async (raw) => {
+    const user = userEvent.setup();
+    await withReadGoal();
+    await renderApp({ route: '/today', container: tc });
+    const card = await screen.findByRole('article', { name: 'Read' });
+    await user.click(within(card).getByRole('button', { name: en.goalCard.logTime }));
+    const minutes = within(card).getByLabelText(/^Minutes/);
+    await user.type(minutes, raw);
+    await user.click(within(card).getByRole('button', { name: en.entry.form.save }));
+    await waitFor(() => expect(minutes).toHaveAttribute('aria-invalid', 'true'));
+    expect(screen.getByText(en.errors.ENTRY_MINUTES_INVALID)).toBeInTheDocument();
+    expect(await tc!.container.db.entries.count()).toBe(0);
+  });
+
   it('plural summary uses _one/_other in en and _other in vi', async () => {
     tc = await createTestContainer();
     await tc.container.db.goals.put(buildGoal({ id: 'a', name: 'A' }));

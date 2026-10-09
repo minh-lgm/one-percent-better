@@ -11,6 +11,7 @@ import { PageHeader } from '../components/PageHeader';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { Skeleton } from '../components/Skeleton';
 import { errorMessage, WRITE_FAILED_KEY } from '../error-messages';
+import { parseDecimalInput } from '../number-input';
 import { useDelayed } from '../hooks/useDelayed';
 import { useFormat } from '../hooks/useFormat';
 import { useNow } from '../hooks/useNow';
@@ -47,11 +48,6 @@ function initialState(today: string, goal?: Goal): FormState {
     endsMode: thisYear ? 'thisYear' : 'specific',
     endDate: goal.endDate,
   };
-}
-
-function parseNumber(value: string): number {
-  const trimmed = value.trim();
-  return trimmed === '' ? Number.NaN : Number(trimmed);
 }
 
 /** Create/edit goal (DESIGN S3). Errors are kept as codes so a language change re-translates them. */
@@ -112,7 +108,7 @@ export function GoalForm() {
   };
 
   const hint = (() => {
-    const v = parseNumber(state.targetValue);
+    const v = parseDecimalInput(state.targetValue);
     if (!Number.isInteger(v) || v <= 0 || !isValidISODate(state.startDate) || !isValidISODate(effectiveEnd) || effectiveEnd < state.startDate) return undefined;
     const days = daysInclusive(state.startDate, effectiveEnd);
     const daysText = t('format.daysCount', { count: days });
@@ -137,7 +133,7 @@ export function GoalForm() {
       name: state.name,
       why: state.why,
       targetType: state.targetType,
-      targetValue: parseNumber(state.targetValue),
+      targetValue: parseDecimalInput(state.targetValue),
       startDate: state.startDate,
       endDate: effectiveEnd,
     };

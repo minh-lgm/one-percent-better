@@ -63,6 +63,9 @@ test.describe('M1 PWA, privacy, safety, a11y', () => {
     await gotoHash(page, '/goals/new');
     await expectAxeClean(page);
 
+    // M1-D1 regression: a long "why" and a 60-char name must not widen the Goals row.
+    await createGoal(page, { name: 'W'.repeat(60), why: 'Be smarter and read more books every day. '.repeat(7).slice(0, 280), targetValue: 30 });
+
     for (const viewport of [
       { width: 360, height: 740 },
       { width: 1440, height: 900 },

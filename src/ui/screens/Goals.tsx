@@ -105,7 +105,7 @@ export function Goals() {
                 const status = goalStatus(goal, today);
                 return (
                   <li key={goal.id} className="card goal-row" data-testid="goal-row">
-                    <div>
+                    <div className="goal-info">
                       <div className="top">
                         <h3>{goal.name}</h3>
                         <Badge tone={TONES[status]}>{t(`goal.status.${status === 'archived' ? 'ended' : status}`)}</Badge>

@@ -70,6 +70,24 @@ describe('GoalForm (M1-AC2, M1-AC3, M1-AC8)', () => {
     expect(document.getElementById('goal-end-err')).toHaveTextContent(en.errors.GOAL_PERIOD_INVALID_endBeforeStart);
   });
 
+  it.each(['0x1E', '1e1', '0b11'])('rejects JavaScript numeric syntax %s in Minutes per day and Total hours (M1-D3)', async (raw) => {
+    const user = userEvent.setup();
+    const app = await renderApp({ route: '/goals/new' });
+    tc = app.tc;
+    await user.type(screen.getByRole('textbox', { name: /^Name/ }), 'T');
+    await user.type(screen.getByRole('textbox', { name: /^Minutes per day/ }), raw);
+    await user.click(screen.getByRole('button', { name: en.goal.form.save }));
+    await waitFor(() => expect(document.getElementById('goal-target-err')).toHaveTextContent(en.errors.GOAL_TARGET_INVALID_daily));
+    expect(await tc.container.db.goals.count()).toBe(0);
+    await user.click(screen.getByRole('radio', { name: en.goal.form.targetTotal }));
+    const hours = screen.getByRole('textbox', { name: /^Total hours/ });
+    await user.clear(hours);
+    await user.type(hours, raw);
+    await user.click(screen.getByRole('button', { name: en.goal.form.save }));
+    await waitFor(() => expect(document.getElementById('goal-target-err')).toHaveTextContent(en.errors.GOAL_TARGET_INVALID_total));
+    expect(await tc.container.db.goals.count()).toBe(0);
+  });
+
   it('total hours: hint, derived target and tooMuch error', async () => {
     const user = userEvent.setup();
     const app = await renderApp({ route: '/goals/new' });

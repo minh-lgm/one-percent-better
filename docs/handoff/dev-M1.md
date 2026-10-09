@@ -76,7 +76,7 @@ Probe lint (ARCH §3, chạy `node node_modules/eslint/bin/eslint.js --stdin --s
 
 | AC | Kết quả | Bằng chứng (test / lệnh) |
 | :- | :- | :- |
-| M1-AC1 | PASS (bản sao sạch) / PASS một phần tại `1%better` | `npm ci`, `e2e:install`, `lint`, `typecheck`, `test`, `build`, `test:e2e` đều exit 0 trên bản sao ở đường dẫn không có `%`. Tại chính thư mục `1%better`: `npm ci`/`npx` lỗi `URI malformed` (npm), `env.test.ts` không load (Vite) — xem mục 8. `npm ls -g --depth=0` không đổi (không cài global; Chromium nằm trong `node_modules/playwright-core/.local-browsers`) |
+| M1-AC1 | PASS | Build round 1: toàn bộ lệnh chuẩn exit 0 trên bản sao sạch (thư mục gốc lúc đó tên `1%better` chặn `npm ci`/`npx`, xem mục 8). Sau khi đổi tên thư mục: `npm ci`, `e2e:install`, `lint`, `typecheck`, `test`, `build`, `test:e2e` chạy trực tiếp tại project root (QC round 1 xác nhận trên clone sạch; fix round 1 xem Fix log). `npm ls -g --depth=0` không đổi (Chromium nằm trong `node_modules/playwright-core/.local-browsers`) |
 | M1-AC2 | PASS | E2E `m1-goals.spec.ts` "M1-AC2"; component `GoalForm.test.tsx` "creates a goal" |
 | M1-AC3 | PASS | Unit `goal.test.ts` (đủ các case AC, 60/61 ký tự, 1827/1828 ngày, total 100 h/1 ngày → `tooMuch`); component `GoalForm.test.tsx` "empty name" (`aria-invalid`, `aria-describedby`, DB rỗng); E2E "M1-AC3" |
 | M1-AC4 | PASS | Unit `goal.test.ts` dailyTarget (17/17/30/9); E2E "M1-AC4" Spanish `0/17` |
@@ -110,13 +110,13 @@ Probe lint (ARCH §3, chạy `node node_modules/eslint/bin/eslint.js --stdin --s
 
 ## 8. Known issues và giới hạn
 
-- **Đường dẫn project chứa `%` (`1%better`) làm hỏng npm và Vite trên máy này.** `npm install`/`npm ci`/`npx` lỗi `URI malformed` (npm-package-arg `decodeURIComponent` cwd); Vitest không load được file dùng `import.meta.env`/`import.meta.url` (`src/config/env.test.ts`). `npm run <script>`, `vite build`, `vite preview`, Playwright, ESLint, tsc chạy bình thường từ thư mục này. Để cài dependency tôi đã dùng `subst Z: <project>` (đã gỡ bằng `subst Z: /D` sau khi xong) và để chạy **toàn bộ** lệnh chuẩn tôi dùng một bản sao của working tree ở `C:\Users\ADMIN\AppData\Local\Temp\claude\...\scratchpad\verify` (đường dẫn không có `%`). Đề nghị: đổi tên thư mục (vd. `one-percent-better`) trước khi QC chạy AC1 trên "clone sạch"; nếu không, QC dùng cùng cách (subst/clone sang đường dẫn khác). Ghi ở README.
+- **(Đã giải quyết)** Khi build lần đầu, thư mục project tên `1%better` làm `npm ci`/`npx` lỗi `URI malformed` và Vitest không load `src/config/env.test.ts`; vì vậy lần chạy đầu phải dùng `subst`/bản sao. Thư mục đã được đổi tên thành `one-percent-better` (2026-10-10); mọi lệnh chuẩn chạy trực tiếp tại project root (QC round 1 và fix round 1 xác nhận). Không còn workaround nào.
 - Kiểm thủ công chưa làm (không có thiết bị/điều kiện trong phiên này): nút Install trên Chrome/Edge desktop và app mở cửa sổ riêng (AC11); đóng hẳn Chrome rồi mở lại còn dữ liệu (AC10); Firefox/Safari iOS (NFR-06).
 - Bundle JS ban đầu 199 kB gzip (ngân sách 250 kB). Recharts (M4/M5) phải lazy-load như ADR-10 để không vượt; nếu chật có thể chuyển `zod` sang `zod/mini` hoặc lazy-load file dịch không dùng.
 - `EntryService.update/remove` tìm entry bằng `getByDateRange` toàn khoảng rồi lọc theo id vì `EntryRepository` của ARCH §5.2 không có `getById`. Đủ cho M1; nếu M3 cần, đề xuất planner thêm `getById` vào interface.
 - Dark mode theo hệ điều hành (A-D2); chưa có snapshot test cho dark mode.
 - Playwright đôi khi cần `reuseExistingServer`: nếu còn một `vite preview` cũ đang chiếm cổng 4173 thì E2E sẽ chạy trên bản build cũ; dừng nó trước (`npm run test:e2e` tự build và chạy preview).
-- Lần chạy `npm run test:e2e` trên bản sao sạch: lần đầu 20/20 fail chỉ vì Chromium chưa tải xong vào bản sao (không phải lỗi app); sau `npm run e2e:install` chạy lại → 20/20 pass (mục 5).
+- Lần chạy `npm run test:e2e` trên bản sao sạch ở build round 1 fail 20/20 lần đầu vì **đường dẫn tới `chrome-headless-shell.exe` trong bản sao dài hơn 260 ký tự (Windows MAX_PATH)** → `spawn ENOENT`; không phải vì Chromium chưa tải xong như handoff gốc ghi (QC round 1 phát hiện). Trên Windows nên clone vào đường dẫn ngắn (ghi ở README).
 
 ## 9. Dispute (nếu có)
 
@@ -132,5 +132,27 @@ Không có.
 
 ## Open questions
 
-- OQ-M1-1 (user/orchestrator): Có đổi tên thư mục project để bỏ ký tự `%` không? Nếu giữ, mọi vòng QC phải dùng workaround (mục 8) và `npm ci` của AC1 không chạy được tại chỗ.
+- OQ-M1-1: **Đã đóng** — thư mục đã đổi tên thành `one-percent-better`; `npm ci`, `npx`, Vitest chạy trực tiếp tại project root.
 - OQ-M1-2 (planner, nhỏ): có chấp nhận thêm `getById` vào `EntryRepository` ở M3 (xem Known issues)?
+
+## Fix log
+
+### Round 1 — theo report-M1-r1.md
+
+| Defect | Nguyên nhân gốc | Cách sửa | Regression test |
+| :- | :- | :- | :- |
+| M1-D1 (Major) — Goals cuộn ngang ở 360 px khi "Why" dài | Ô lưới chứa tên + why trong `.goal-row` (`display: grid`) có `min-width: auto` mặc định, nên `.why` với `white-space: nowrap` ép ô rộng bằng nội dung thay vì bị cắt `…`; hàng tràn khỏi viewport | `src/ui/styles/app.css`: thêm `.goal-row > .goal-info, .goal-row > .gr-actions { min-width: 0 }`; `src/ui/screens/Goals.tsx`: ô bọc tên/why có class `goal-info` | E2E dev: `e2e/m1-pwa.spec.ts` (M1-AC12) tạo thêm goal tên 60 ký tự + why 280 ký tự rồi kiểm 360×740 và 1440×900 không cuộn ngang ở Today/Goals/GoalForm/Settings; `e2e/m1-i18n.spec.ts` (M1-AC18, `vi-VN`, 360 px) tạo goal tên 60 ký tự `Đ` + why 100 ký tự có dấu. QC: `tests/qc/m1-qc-flows.spec.ts` "DEFECT PROBE" và `tests/qc/m1-qc.spec.ts` "long unbroken name / why / note" nay pass |
+| M1-D2 (Minor) — README còn callout `%` lỗi thời; handoff ghi sai nguyên nhân e2e fail trên bản sao | Thư mục đã đổi tên; nguyên nhân thật là MAX_PATH (QC xác minh) | `README.md`: bỏ callout `%`, thay bằng một dòng "clone vào đường dẫn ngắn (< 260 ký tự) trên Windows"; `docs/handoff/dev-M1.md` mục 6 (AC1), mục 8 và OQ-M1-1 cập nhật đúng thực tế | Không có (docs) |
+| M1-D3 (Minor) — ô số nhận `0x1E`, `1e1`, `0b11` | Form dùng `Number(value)` nên chấp nhận mọi cú pháp số của JS | Thêm `src/ui/number-input.ts` (`parseDecimalInput`, regex `^\d+(\.\d+)?$`, ngoài ra trả `NaN`); dùng ở `GoalForm.tsx` (minutes/day, total hours, cả hint) và `EntryForm.tsx` (minutes). `12.5` vẫn parse được để domain báo lỗi "số nguyên" như trước | Unit `src/ui/number-input.test.ts` (chấp nhận `30`, `30.0`, `12.5`; từ chối `0x1E`, `1e1`, `0b11`, `0o17`, `+30`, `-3`, `Infinity`, `NaN`, rỗng, `abc`, `1e2x`, `30.`, `.5`, `1_000`, `1,000`, số full-width); component `GoalForm.test.tsx` (3 cú pháp × 2 ô, lỗi inline, DB rỗng) và `Today.test.tsx` (3 cú pháp ở ô Minutes của entry, `aria-invalid`, 0 entry) |
+
+Lệnh đã chạy tại project root `D:\minh\Coderschool\GitHub\one-percent-better` (2026-10-10), kết quả thật:
+
+| Lệnh | Kết quả |
+| :- | :- |
+| `npm run lint` | exit 0, 0 lỗi, 0 warning |
+| `npm run typecheck` | exit 0 |
+| `npm test` | 24 file, **175 passed / 0 failed** (gồm 19 test QC trong `tests/qc/m1-domain.test.ts`) |
+| `npm run build` | exit 0; `index-*.js` 647,63 kB raw / 199,19 kB gzip; `dist/sw.js` |
+| `npx cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright test` | **58 passed / 0 failed** (17,5 s): 20 spec dev (đã mở rộng cho D1) + 38 spec QC trong `tests/qc/**`, kể cả 2 test QC trước đó đỏ vì D1 |
+
+Không sửa file nào trong `tests/qc/`, `docs/qc/`, `docs/plan/`, `docs/design/`. Đề xuất không chặn của QC (tie-break sort Today theo `id`, `getById` cho `EntryRepository`) để M3 xem xét, chưa làm trong vòng này.
