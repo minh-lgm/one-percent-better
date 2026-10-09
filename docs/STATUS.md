@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M2 PASS r3; planner revise nhỏ rồi M3)
-**Next step:** planner revise (ghi nhận deviation M2 + getById/transaction cho M3) → developer M3 build
+**Next step:** developer M3 mode build → qc M3 round 1
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -31,7 +31,7 @@
 | Design | DONE v1.1 (song ngữ, card Language) (duyệt 2026-10-09) | docs/design/DESIGN.md, docs/design/mockups/*.html | Figma: https://www.figma.com/design/DrO15cZxPcb9hp1lGSUddd (orchestrator đẩy từ mockup; 8 màn mobile 360 + 3 dialog + Dark mode + Today tiếng Việt + card Language, variables Light/Dark, components Button/Badge/PlusPill/TabBar) |
 | M1 | PASS (round 2) | docs/qc/report-M1-r2.md | AC10/AC11 phần thủ công NOT VERIFIED (user tự kiểm, mục 8 report) | Dev tự kiểm: lint/typecheck/Vitest 128/build/Playwright 20 xanh trên bản sao sạch; AC10/AC11 phần thủ công NOT VERIFIED |
 | M2 | PASS (round 3) | docs/qc/report-M2-r3.md | AC8/9/11 phần thủ công NOT VERIFIED (notification thật, import .ics, popup quyền) | AC8/9/11 phần thủ công NOT VERIFIED |
-| M3 | DOING — planner revise rồi developer build | | |
+| M3 | DOING — developer build | | plan v1.3: thêm M3-T7, AC14/15 |
 | M4 | TODO | | |
 | M5 | TODO | | |
 | Final QC | TODO | | |
@@ -39,10 +39,10 @@
 ## Backlog (defect Minor, đề xuất chưa làm)
 | ID | Mô tả | Nguồn |
 | :- | :- | :- |
-| M1-P1 | Today sort theo createdAt, chưa tie-break theo id/name khi trùng timestamp | QC r1 §9 |
-| M1-P2 | Thêm `getById` vào EntryRepository (EntryService.update/remove đang quét theo khoảng ngày) — làm ở M3 | dev handoff M1, QC r1 §9 |
-| M2-P1 | Hai tab bấm Save timer đúng cùng lúc có thể tạo 2 entry; cần transaction kv+entries trong TimerService.save — làm ở M3 | dev handoff M2, QC r3 |
-| M2-P2 | `aria-describedby` cho ô Reminder time; `goal.delete.timerNote` trong mô tả dialog xoá; pendingTimer có thể lưu lại tới lần emit sau nếu tab khác xoá timer | QC r3 |
+| M1-P1 | (→ plan v1.3: gộp vào M5-T4/AC13) Today sort tie-break theo id | QC r1 §9 |
+| M1-P2 | (→ plan v1.3: M3-T7/AC14) getById cho EntryRepository | dev handoff M1, QC r1 §9 |
+| M2-P1 | (→ plan v1.3: M3-T7/AC15) TimerService.save nguyên tử | dev handoff M2, QC r3 |
+| M2-P2 | (→ plan v1.3: M5-T6/AC13) aria-describedby Reminder time; goal.delete.timerNote; pendingTimer lưu lại khi tab khác xoá timer | QC r3 |
 | M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
 ## Ghi chú vận hành

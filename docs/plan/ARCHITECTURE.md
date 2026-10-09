@@ -83,9 +83,13 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `i18n/format.ts` | config | `createFormatters(locale)`: `dateLong`, `dateShort`, `weekdayShort`, `monthShort`, `number`, `decimal1`, `percent1`, `minutes`, `duration`, `hhmmss`; cache `Intl.*` theo locale | Intl |
 | `i18n/instance.ts` | config | Khởi tạo i18next (resources tĩnh, `lng`, `fallbackLng: 'en'`, `returnNull: false`, `missingKeyHandler` ném lỗi ở test), `setLocale()` cập nhật i18next + `<html lang>`; `createTranslator(i18n)` → `Translator` | i18next |
 | `services/locale-service.ts` | logic (application) | `resolve(navigatorLanguage)` (kv `locale` nếu có, ngược lại `detectLocale`), `set(locale)`, `watch()` | `KvRepository`, i18n/detect |
-| `data/repositories.ts` | data | Interface `GoalRepository`, `EntryRepository`, `KvRepository`, `BackupRepository`, `Subscribable<T>` | domain/types |
-| `data/dexie/*` | data | DB schema Dexie v1 và implementation các repository, cascade delete, replaceAll trong transaction | dexie |
-| `services/*` | logic (application) | Use case: goal, entry, timer, reminder, backup, stats; nhận repository qua constructor | domain, data interfaces |
+| `data/repositories.ts` | data | Interface `GoalRepository`, `EntryRepository`, `KvRepository` (có `update` nguyên tử, ADR-14), `TimerRepository` (M3, ADR-16), `BackupRepository`, `BackupData`, `Subscribable<T>` | domain/types |
+| `data/dexie/*` | data | DB schema Dexie v1 và implementation các repository, cascade delete, `KvRepository.update` trong một transaction `rw`, `saveTimerEntry` trong một transaction `rw` trên `goals`+`entries`+`kv` (M3), replaceAll trong transaction | dexie |
+| `services/*` | logic (application) | Use case: goal, entry, timer, settings, reminder, backup, stats; nhận repository qua constructor | domain, data interfaces |
+| `services/settings-service.ts` | logic (application) | Bọc kv `settings`: `normalizeSettings` (dữ liệu hỏng → mặc định), đọc/ghi, claim/release ngày nhắc nguyên tử (ADR-15) | `KvRepository` |
+| `services/mutex.ts` | logic (application) | `Mutex.run(task)` tuần tự hoá chuỗi kiểm-rồi-ghi **trong một tab** (không thay được transaction giữa các tab) | — |
+| `services/notification-port.ts` | logic (application) | Interface `NotificationPort` (permission, requestPermission, `show → boolean`); cài đặt ở `integration/notifications.ts`, giả trong test | domain/reminder (kiểu) |
+| `app/reminder-scheduler.ts` | config (composition) | `startReminderScheduler({ check, intervalMs, deps })` → hàm dừng; trigger: khởi động, interval, `visibilitychange`; trigger đến khi `check` đang chạy được ghi nhớ và chạy thêm đúng một lần | services (qua callback) |
 | `integration/notifications.ts` | integration | Hỗ trợ/quyền/xin quyền, `showNotification` qua `ServiceWorkerRegistration` | Notification API, SW |
 | `integration/sw-register.ts` | integration | Đăng ký SW (chỉ bản build), cập nhật SW | workbox-window |
 | `integration/file-io.ts` | integration | Tải file (Blob + `<a download>`), đọc file người dùng chọn | File API |
@@ -104,6 +108,7 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 - `src/ui/**` không import `dexie` hay `src/data/dexie/**`; không import `i18next` trực tiếp (dùng hook `useT`/`useFormat`).
 - `src/i18n/**` không import `react`, `src/ui/**`, `src/services/**`, `src/data/**`.
 - Chỉ `src/app/container.ts` (và `bootstrap.ts`) được ghép implementation cụ thể.
+- Rule tách lớp của `src/domain/**`, `src/services/**`, `src/ui/**` bỏ qua file `*.test.ts`/`*.test.tsx` (để test đọc `en.json`/`vi.json` và dựng repository Dexie thật trên fake-indexeddb). Code không phải test vẫn bị chặn (probe M1-AC13, M1-AC17 vẫn exit ≠ 0).
 
 **Quy tắc chuỗi hiển thị (bắt buộc, cưỡng chế bằng ESLint + test, NFR-11):**
 
@@ -218,6 +223,7 @@ interface GoalRepository {
   watchAll(): Subscribable<Goal[]>;
 }
 interface EntryRepository {
+  getById(id: string): Promise<LogEntry | undefined>;   // M3 (M3-T7): đọc theo khoá chính, không quét
   getByGoal(goalId: string): Promise<LogEntry[]>;
   getByDateRange(from: ISODate, to: ISODate): Promise<LogEntry[]>;
   sumMinutes(goalId: string, date: ISODate, excludeEntryId?: string): Promise<number>;
@@ -230,28 +236,60 @@ type KvKey = 'settings' | 'activeTimer' | 'locale';
 interface KvRepository {
   get<T>(key: KvKey): Promise<T | undefined>;
   set<T>(key: KvKey, value: T): Promise<void>;
+  // M2 (ADR-14): read-modify-write trong MỘT transaction rw (IndexedDB tuần tự hoá giữa các tab).
+  // `fn` nhận giá trị hiện tại, trả giá trị mới, hoặc `undefined` để không ghi.
+  // `fn` phải đồng bộ và thuần (không await, không side effect) vì có thể chạy trong transaction.
+  update<T>(key: KvKey, fn: (current: T | undefined) => T | undefined):
+    Promise<{ previous: T | undefined; written: boolean }>;
   delete(key: KvKey): Promise<void>;
   watch<T>(key: KvKey): Subscribable<T | undefined>;
 }
-interface BackupRepository {
-  exportAll(): Promise<{ goals: Goal[]; entries: LogEntry[]; settings: Settings }>;
-  replaceAll(data: { goals: Goal[]; entries: LogEntry[]; settings: Settings }): Promise<void>; // một transaction, lỗi thì rollback; giữ nguyên kv 'locale'
+// M3 (M3-T7, ADR-16): ghi entry từ timer và xoá activeTimer trong MỘT transaction rw trên goals + entries + kv.
+// Trong transaction: (1) kv 'activeTimer' phải khớp `expected` (cùng goalId và startedAt), ngược lại 'timer-changed';
+// (2) goal `entry.goalId` phải còn tồn tại, ngược lại 'goal-missing';
+// (3) sumMinutes(entry.goalId, entry.date) + entry.minutes ≤ maxDayMinutes, ngược lại 'day-limit';
+// (4) put(entry) + delete kv 'activeTimer'. Mọi nhánh khác 'saved' không ghi gì.
+type SaveTimerEntryOutcome =
+  | { status: 'saved' }
+  | { status: 'timer-changed' }
+  | { status: 'goal-missing' }
+  | { status: 'day-limit'; existingMinutes: number };
+interface TimerRepository {
+  saveTimerEntry(expected: ActiveTimer, entry: LogEntry, maxDayMinutes: number): Promise<SaveTimerEntryOutcome>;
+}
+interface BackupData { goals: Goal[]; entries: LogEntry[]; settings: Settings }
+interface BackupRepository {                              // M3
+  exportAll(): Promise<BackupData>;
+  replaceAll(data: BackupData): Promise<void>;            // một transaction, lỗi thì rollback; giữ nguyên kv 'locale'
 }
 ```
 
+**Ràng buộc cho mọi implementation repository (kể cả không phải Dexie, ví dụ adapter sync sau này):** `deleteWithEntries`, `KvRepository.update`, `TimerRepository.saveTimerEntry`, `BackupRepository.replaceAll` phải **nguyên tử và tuần tự hoá giữa các tab/tiến trình** (transaction, compare-and-set, hoặc khoá ngoài JS context). Một implementation chỉ dùng khoá trong bộ nhớ (như `Mutex`) là **không** đạt hợp đồng này. Test hợp đồng (chạy trên Dexie + fake-indexeddb) dùng hai instance repository trên cùng một DB để mô phỏng hai tab.
+
 ### 5.3 Service (chữ ký chính, `src/services/`)
 
-Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false; errors: DomainError[] }` với `DomainError = { code: ErrorCode; field?: string; message: string }`. Lỗi hạ tầng (IndexedDB) ném `StorageError` và được UI bắt hiển thị.
+Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false; errors: DomainError[] }` với `DomainError = { code: ErrorCode; field?: string; message: string; params?: Record<string, string | number> }`. `params` (thêm ở M1) mang biến thể (`variant`: `daily` \| `total` \| `tooMuch` \| `endBeforeStart` \| `tooLong`) và tham số thô (`remaining`, `start`, `end`) để `src/ui/error-messages.ts` chọn key `errors.*` và định dạng theo locale; mã lỗi không đổi. Lỗi hạ tầng (IndexedDB) ném `StorageError` và được UI bắt hiển thị.
 
-| Service | Hàm | Milestone |
-| :- | :- | :- |
-| `GoalService` | `create(input, now)`, `update(id, input, now)`, `remove(id)`, `setArchived(id, archived, now)` | M1 (archive M5) |
-| `EntryService` | `add({goalId, date, minutes, note, source}, now)`, `update(id, {minutes, note}, now)`, `remove(id)` | M1 (UI chọn ngày ≠ today từ M3; domain validate mọi ngày ngay từ M1 vì timer qua nửa đêm ở M2 ghi vào ngày hôm trước) |
-| `TimerService` | `start(goalId, now)`, `stop(now) → {goalId, date, minutes}`, `save({minutes, note}, now)`, `discard()`, `watch()`. `GoalService.remove` xoá luôn `activeTimer` nếu timer thuộc goal bị xoá | M2 |
-| `LocaleService` | `resolve(navigatorLanguage) → Locale`, `set(locale)`, `watch()` | M1 |
-| `ReminderService` | `check(now)` → gửi notification nếu `shouldNotify` (title/body dịch bằng `Translator` nhận qua constructor, theo locale hiện tại); `getBannerState(now)` trả dữ liệu, UI tự dịch | M2 |
-| `BackupService` | `export(now) → {fileName, json}`, `parse(text, sizeBytes) → Result<BackupPreview>`, `import(parsed, now)` | M3 |
-| `StatsService` | `goalStats(goalId, year, today)`, `overallStats(year, today)`, `curve(goalId, today)` | M4/M5 |
+| Service | Constructor | Hàm | Milestone |
+| :- | :- | :- | :- |
+| `GoalService` | `(goals: GoalRepository, entries: EntryRepository, newId?: IdGenerator, kv?: KvRepository)` — `kv` tuỳ chọn (M2) để `remove` huỷ timer của goal bị xoá | `create(input, now)`, `update(id, input, now)`, `remove(id)`, `setArchived(id, archived, now)` | M1 (archive M5) |
+| `EntryService` | `(entries: EntryRepository, goals: GoalRepository, newId?: IdGenerator)` | `add({goalId, date, minutes, note, source}, now)`, `update(id, {minutes, note}, now)`, `remove(id)`, `watchByDateRange(from, to)`. **M3 (M3-T7):** `update`/`remove` tìm entry bằng `EntryRepository.getById` (bỏ quét `getByDateRange('0000-01-01','9999-12-31')` hiện có); phần validate của `add` (goal tồn tại, field, ngày, tạo `LogEntry` với id/timestamp) tách thành hàm không ghi, ví dụ `prepareAdd(input, now) → Result<LogEntry>`, dùng chung cho `add` và `TimerService.save` | M1 (UI chọn ngày ≠ today từ M3; domain validate mọi ngày ngay từ M1 vì timer qua nửa đêm ở M2 ghi vào ngày hôm trước) |
+| `TimerService` | Hiện tại `(kv: KvRepository, goals: GoalRepository, entries: EntryService)`; **M3** thêm `timers: TimerRepository` | `current() → ActiveTimer \| undefined` (bỏ qua giá trị hỏng), `start(goalId, now)`, `stop(now) → TimerPreview {goalId, date, minutes}` (chỉ xem trước, timer vẫn chạy), `save({minutes, note}, now) → Result<LogEntry>`, `discard()`, `watch()`. `start`/`save`/`discard` chạy qua một `Mutex` (tuần tự trong tab). `start` thay thế im lặng timer mồ côi (goal không còn). **M3 (ADR-16):** `save` = `prepareAdd` (validate) rồi `TimerRepository.saveTimerEntry(timerĐãĐọc, entry, DAY_MINUTES_LIMIT)` (1440); ánh xạ `timer-changed` → `TIMER_NOT_RUNNING`, `goal-missing` → `GOAL_NOT_FOUND`, `day-limit` → `ENTRY_DAY_LIMIT_EXCEEDED` (qua `checkDayLimit(existingMinutes, minutes)` để có `params.remaining`). `GoalService.remove` xoá luôn `activeTimer` nếu timer thuộc goal bị xoá | M2 (nguyên tử giữa tab: M3) |
+| `SettingsService` | `(kv: KvRepository)` | `get() → Settings` (chuẩn hoá qua `normalizeSettings`), `update(patch)`, `setReminderEnabled(b)`, `setReminderTime('HH:MM')` (ném `RangeError` nếu sai định dạng; UI chỉ gửi giá trị hợp lệ), `claimReminderDay(date) → boolean` (qua `kv.update`: ghi `lastReminderDate = date` nếu chưa bằng `date`; `true` = caller thắng), `releaseReminderDay(date, previous)` (qua `kv.update`: trả `lastReminderDate` về `previous` chỉ khi nó vẫn là `date`), `watch()` | M2 |
+| `LocaleService` | `(kv: KvRepository)` | `resolve(navigatorLanguage) → Locale`, `set(locale)`, `watch()` | M1 |
+| `ReminderService` | `(settings: SettingsService, goals: GoalRepository, entries: EntryRepository, notifications: NotificationPort, translator: Translator, iconUrl?: string)` | `progress(now) → GoalProgress[]`; `check(now) → boolean` (qua `Mutex` riêng): nếu `shouldNotify` thì **claim ngày trước** (`claimReminderDay(today)`; thua claim → `false`), rồi `notifications.show(...)` với title/body dịch bằng `Translator` theo locale hiện tại; `show` trả `false` hoặc ném lỗi → `releaseReminderDay(today, lastReminderDateCũ)` để lần kiểm sau thử lại (ADR-15); `getBannerState(now)` trả dữ liệu, UI tự dịch; `body(data)` | M2 |
+| `BackupService` | developer chọn (nhận `BackupRepository`, `SettingsService` hoặc `KvRepository`) | `export(now) → {fileName, json}`, `parse(text, sizeBytes) → Result<BackupPreview>`, `import(parsed, now)` | M3 |
+| `StatsService` | developer chọn (repository qua constructor) | `goalStats(goalId, year, today)`, `overallStats(year, today)`, `curve(goalId, today)` | M4/M5 |
+
+`NotificationPort` (`src/services/notification-port.ts`): `permission() → NotificationPermissionState`, `requestPermission() → Promise<NotificationPermissionState>`, `show({ title, body, lang, tag, url, icon? }) → Promise<boolean>` (`false` khi không có SW registration, ví dụ `npm run dev`, hoặc trình duyệt từ chối hiển thị).
+
+**Ghi nhận triển khai M1–M2 (đã qua QC, là một phần của contract từ v1.3):**
+
+- **Tuần tự hoá trong tab:** `TimerService` (`start`/`save`/`discard`) và `ReminderService.check` dùng `Mutex` (`src/services/mutex.ts`). Mutex chỉ có tác dụng trong một JS context; tính đúng giữa các tab dựa vào transaction của repository (ADR-14 … ADR-16).
+- **Scheduler nhắc** (`src/app/reminder-scheduler.ts`): một trigger (interval, `visibilitychange`) đến khi `check` đang chạy không bị bỏ mà được ghi nhớ và chạy thêm **đúng một** lần sau khi lần hiện tại kết thúc; lỗi của `check` bị nuốt ở scheduler (không dừng lịch).
+- **UI Today chống bấm đúp Start:** `Today` giữ trạng thái lạc quan `pendingTimer` (kết quả `start()` thành công; `activeTimer = giá trị liveQuery ?? pendingTimer`), xoá khi liveQuery của kv `activeTimer` phát giá trị mới. `GoalCard` giữ cờ "đang start"; cờ chỉ được hạ bởi `useEffect` khi prop `timer` thực sự đổi khác `'none'`, hoặc khi `start()` trả lỗi (để thử lại). Không dựa vào timing.
+- **Banner nhắc tính ở UI** từ dữ liệu live bằng `shouldShowBanner`/`reminderData` của domain; `ReminderService.getBannerState` vẫn giữ và có test nhưng Today không gọi.
+- **`DomainError.params`** như mô tả ở đầu mục này.
 
 ### 5.4 Mã lỗi
 
@@ -307,7 +345,7 @@ Import: thay thế toàn bộ `goals`, `entries`, `settings`; xoá `activeTimer`
 - Hiển thị qua `(await navigator.serviceWorker.ready).showNotification(title, options)` (bắt buộc trên Android Chrome; `new Notification()` không dùng).
 - `title`: `"1% Better"` (thương hiệu, giống nhau ở hai ngôn ngữ); `body`: số goal chưa đạt và tiến độ, dịch theo locale đang chọn lúc gửi (key `notification.body`, số nhiều qua `_one`/`_other`), ví dụ `en`: `"2 goals left today: Read 10/30 min, Guitar 0/20 min"`; `vi`: theo copy trong DESIGN.md, tên goal giữ nguyên; `lang`: `"en"` hoặc `"vi"`; `tag`: `"daily-reminder"`; `data.url`: `"#/today"`; `icon`: icon 192 px.
 - `sw.ts` xử lý `notificationclick`: đóng notification, focus client đang mở cùng scope và điều hướng tới `#/today`, nếu không có thì `clients.openWindow(scope + '#/today')`.
-- Lịch kiểm tra nhắc (khi app đang mở): ngay khi app khởi động, mỗi `VITE_REMINDER_CHECK_INTERVAL_MS` (mặc định 60000 ms), và khi `visibilitychange`. Gửi xong ghi `lastReminderDate = today`.
+- Lịch kiểm tra nhắc (khi app đang mở): ngay khi app khởi động, mỗi `VITE_REMINDER_CHECK_INTERVAL_MS` (mặc định 60000 ms), và khi `visibilitychange` (trigger đến lúc đang kiểm được chạy bù một lần, §5.3). Thứ tự (ADR-15): `shouldNotify` → claim `lastReminderDate = today` nguyên tử qua `SettingsService.claimReminderDay` → `showNotification` → nếu không hiển thị được thì hoàn claim về giá trị cũ. Nhiều tab mở cùng lúc: tối đa một tab thắng claim mỗi ngày.
 - `shouldNotify(now, settings, permission, activeGoalsProgress)` = `reminderEnabled && permission === 'granted' && hh:mm(now) ≥ reminderTime && lastReminderDate !== today && có ≥ 1 goal active chưa đạt`. `shouldShowBanner` = như trên nhưng không cần quyền và không xét `lastReminderDate`.
 
 ### 5.7 File `.ics` (FR-16)
@@ -359,15 +397,16 @@ Tên `1percent-better-reminder.ics`; nội dung tối thiểu: `BEGIN:VCALENDAR`
 ├── src/
 │   ├── main.tsx
 │   ├── sw.ts
-│   ├── app/                   # container.ts, bootstrap.ts, AppContext.tsx, router.tsx, ErrorBoundary.tsx
+│   ├── app/                   # container.ts, bootstrap.ts, AppContext.tsx, router.tsx, ErrorBoundary.tsx, reminder-scheduler.ts
 │   ├── config/                # env.ts, constants.ts
 │   ├── i18n/                  # types.ts, detect.ts, format.ts, instance.ts, i18next.d.ts (kiểu key) (+ *.test.ts)
 │   │   └── resources/         # en.json, vi.json (cùng tập key; nguyên văn copy từ DESIGN.md)
 │   ├── domain/                # types, dates, goal, entry, stats, heatmap, curve, timer, reminder, backup, ics (+ *.test.ts)
 │   ├── data/
 │   │   ├── repositories.ts
-│   │   └── dexie/             # db.ts, goal-repo.ts, entry-repo.ts, kv-repo.ts, backup-repo.ts (+ *.test.ts)
-│   ├── services/              # goal-, entry-, timer-, reminder-, backup-, stats-, locale-service.ts (+ *.test.ts)
+│   │   └── dexie/             # db.ts, goal-repo.ts, entry-repo.ts, kv-repo.ts, timer-repo.ts (M3), backup-repo.ts (+ *.test.ts)
+│   ├── services/              # goal-, entry-, timer-, settings-, reminder-, backup-, stats-, locale-service.ts,
+│   │                          # mutex.ts, notification-port.ts (+ *.test.ts)
 │   ├── integration/           # notifications.ts, sw-register.ts, file-io.ts, storage.ts (+ *.test.ts)
 │   ├── ui/
 │   │   ├── screens/           # Today, Goals, GoalForm, GoalDetail, Day, Review, Settings, NotFound, StorageError
@@ -447,6 +486,7 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | Chuỗi tiếng Việt dài hơn gây tràn/xuống dòng xấu ở 360 px (nút, tab bar, stat card) | Trung bình | Thấp | Kiểm viewport 360 px ở `vi-VN` trong E2E (không cuộn ngang); designer chốt copy `vi` ngắn cho tab/nút; layout dùng wrap, không chiều rộng cố định cho chữ |
 | Kết quả `Intl` khác nhau giữa Node (Vitest) và trình duyệt, hoặc giữa phiên bản ICU (khoảng trắng hẹp, viết hoa thứ) | Trung bình | Thấp | Test so với `Intl` tính tại chỗ hoặc chuẩn hoá khoảng trắng; phần trăm/phút dùng key i18n thay vì `style: 'percent'`/`unit` |
 | Nháy ngôn ngữ khi khởi động (hiện `en` rồi đổi `vi`) | Thấp | Thấp | Đọc kv `locale` trước khi render router (§5.8); màn đầu tiên có 150 ms không hiển thị nội dung |
+| Nhiều tab cùng mở ghi đua nhau (bấm Save timer đồng thời → 2 entry; hai tab cùng gửi nhắc) | Thấp | Trung bình (entry trùng làm sai thống kê) | Khoá trong tab bằng `Mutex`; giữa tab dựa vào transaction IndexedDB: `KvRepository.update` (ADR-14), claim-trước-gửi (ADR-15, đã làm M2), `TimerRepository.saveTimerEntry` (ADR-16, M3). Còn lại chấp nhận được: hai tab cùng `add` thủ công cùng goal/ngày có thể vượt 1440 phút một chút (kiểm giới hạn ngoài transaction) — Later nếu cần |
 | Mã lỗi/notification sinh chữ trong service làm lẫn lớp | Thấp | Thấp | Domain chỉ trả dữ liệu; service chỉ dùng interface `Translator`; lint chặn import `i18next` ngoài `src/i18n` và `src/ui` (qua `react-i18next`) |
 
 ## 11. Quyết định kiến trúc
@@ -490,8 +530,18 @@ Bối cảnh: quyết định của user là lưu cục bộ trong kv store; imp
 **ADR-13 — Domain không biết ngôn ngữ; chữ chỉ sinh ở UI hoặc qua `Translator`.**
 Bối cảnh: notification và `.ics` sinh ngoài React; mã lỗi đã tách khỏi message (§5.4). Lựa chọn: domain trả mã lỗi + dữ liệu có cấu trúc; `ReminderService` (và nơi sinh `.ics`) nhận `Translator` từ composition root; UI dịch bằng hook. Hệ quả: domain test không phụ thuộc copy; đổi copy không làm vỡ test domain; service test dùng `Translator` giả hoặc instance i18n thật.
 
+**ADR-14 — `KvRepository.update` là read-modify-write nguyên tử (M2).**
+Bối cảnh: app có thể mở ở nhiều tab; chuỗi `get` → tính → `set` ở hai tab đọc cùng giá trị cũ rồi ghi đè nhau (QC M2 phát hiện hai tab cùng gửi nhắc). `Mutex` chỉ tuần tự trong một JS context. Lựa chọn: `update<T>(key, fn)` chạy đọc, gọi `fn`, ghi trong **một** transaction `rw` trên store `kv` (IndexedDB tuần tự hoá các transaction `rw` chồng phạm vi, kể cả giữa các tab); `fn` trả `undefined` = không ghi; trả `{ previous, written }`. Hệ quả: service dựng được "claim-if-absent", "release-if-equals" mà không biết Dexie; `fn` phải đồng bộ, thuần, không await (tránh transaction tự commit sớm). **Ràng buộc:** mọi `KvRepository` không phải Dexie (adapter sync, storage khác) phải cung cấp `update` có cùng bảo đảm (transaction, compare-and-set, hoặc khoá xuyên tiến trình); khoá trong bộ nhớ không đạt. Test hợp đồng: 20 `update` đồng thời không mất lần nào; hai instance repository trên cùng DB, claim đồng thời → đúng một `written: true`.
+
+**ADR-15 — Nhắc nhở: claim ngày trước, gửi sau, hoàn claim khi gửi hỏng (M2).**
+Bối cảnh: FR-14 cho tối đa 1 notification/ngày; cách cũ "gửi xong mới ghi `lastReminderDate`" để hở khoảng hai tab cùng thấy `shouldNotify = true`. Lựa chọn: `ReminderService.check` → `shouldNotify` → `SettingsService.claimReminderDay(today)` (dùng ADR-14; thua claim thì dừng) → `show` → nếu `show` trả `false` hoặc ném lỗi thì `releaseReminderDay(today, previous)` (chỉ hoàn nếu giá trị vẫn là `today`). Hệ quả: bảo đảm **at-most-once** mỗi ngày giữa các tab; hành vi bên ngoài không đổi (`check` trả boolean, ngày chỉ được đánh dấu khi đã hiển thị). Đánh đổi chấp nhận: nếu tab bị đóng giữa claim và show, hôm đó mất nhắc (không gửi lại); tab đã thua claim chỉ thử lại ở chu kỳ kế tiếp sau khi tab kia hoàn claim.
+
+**ADR-16 — Lưu timer là một transaction trên `goals` + `entries` + `kv` (M3).**
+Bối cảnh: `TimerService.save` hiện gọi `EntryService.add` (ghi `entries`) rồi `kv.delete('activeTimer')` ở hai transaction riêng; hai tab bấm Save cùng lúc đều thấy timer và tạo 2 entry; đây cũng là ghi đa bảng chưa nguyên tử (NFR-04). Lựa chọn: interface `TimerRepository.saveTimerEntry(expected, entry, maxDayMinutes)` (§5.2): trong một transaction `rw` kiểm `activeTimer` còn đúng là timer đã đọc (goalId + startedAt), goal còn tồn tại, tổng phút ngày còn trong giới hạn, rồi ghi entry và xoá `activeTimer`. Validate field/ngày vẫn ở domain/`EntryService` trước khi vào transaction; các điều kiện có thể bị tab khác làm đổi được kiểm lại trong transaction. Hệ quả: hai Save đồng thời (cùng tab hay khác tab) → đúng 1 entry, lần còn lại `TIMER_NOT_RUNNING`; Save đua Discard → tối đa 1 entry; repository mới phải giữ bảo đảm này (ràng buộc §5.2). `Mutex` trong `TimerService` giữ nguyên (rẻ, giữ thứ tự trong tab). Implementation Dexie không được await promise ngoài Dexie trong transaction.
+
 ## Changelog
 
 - 2026-10-09 — v1, tạo mới (mode `new`).
 - 2026-10-09 — v1.1 (khi viết TASKS.md): làm rõ `pace` tính cả hôm nay; thêm quy tắc số phút điền sẵn của timer (1–1440); ghi rõ EntryService validate mọi ngày từ M1 (timer qua nửa đêm ở M2) và xoá goal thì xoá `activeTimer` liên quan; thêm mã lỗi `GOAL_TIMER_RUNNING` (M5); thay `react/no-danger` (plugin không có trong stack) bằng `no-restricted-syntax`.
 - 2026-10-09 — v1.2 (mode `revise`, feedback Gate 2: song ngữ en/vi): §1 thêm luồng i18n; §2 thêm `i18next` 26.4.2 + `react-i18next` 17.0.16 và `Intl` (loại language detector plugin, tự viết, FormatJS, Lingui); §3 thêm component `src/i18n/*`, `LocaleService`, `bootstrap.ts`, `useT`/`useFormat`, `error-messages.ts`, sửa `domain/reminder.ts` (trả dữ liệu, không sinh chữ) và `domain/ics.ts` (nhận chuỗi đã dịch), mở rộng quy tắc phụ thuộc và thêm quy tắc chuỗi hiển thị (lint + test); §4 kv key `locale`; §5.2 `KvKey`; §5.3 `LocaleService`, `ReminderService` nhận `Translator`; §5.4 ánh xạ mã lỗi → key `errors.*`; §5.5 import giữ `locale`; §5.6 body notification theo locale; §5.7 `.ics` UTF-8, SUMMARY/DESCRIPTION theo locale; thêm §5.8 i18n contract; §6 thư mục `src/i18n/`, helper test; §8 chiến lược test i18n; §10 thêm 5 rủi ro; §11 thêm ADR-11 … ADR-13.
+- 2026-10-10 — v1.3 (mode `revise`, ghi nhận deviation M1–M2 đã PASS QC, chuẩn bị M3): §3 thêm `settings-service`, `mutex`, `notification-port`, `app/reminder-scheduler`, cập nhật mô tả `data/*`; quy tắc lint tách lớp bỏ qua `*.test.ts(x)`. §5.2 `KvRepository.update` (nguyên tử, ADR-14), `EntryRepository.getById` (M3), interface mới `TimerRepository.saveTimerEntry` + `SaveTimerEntryOutcome` (M3), `BackupData`, ràng buộc nguyên tử cho mọi implementation repository. §5.3 thêm cột Constructor; `DomainError.params`; `GoalService` tham số `kv` tuỳ chọn; `EntryService` dùng `getById` + tách `prepareAdd` (M3); `TimerService` (`current`, `stop` chỉ xem trước, `Mutex`, `save` nguyên tử ở M3); thêm `SettingsService` (claim/release ngày nhắc), `NotificationPort`; `ReminderService.check` claim-trước-gửi; ghi nhận scheduler chạy bù trigger, `Today.pendingTimer` + cờ `GoalCard` hạ bởi effect, banner tính ở UI. §5.6 thứ tự claim → show → release. §6 thêm file. §10 thêm rủi ro ghi đua nhiều tab. §11 thêm ADR-14 … ADR-16. Không đổi phạm vi, không đổi mã lỗi.
