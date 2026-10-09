@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M2 PASS r3; planner revise nhỏ rồi M3)
-**Next step:** developer M3 mode build → qc M3 round 1
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M3 dev DONE; QC M3 r1)
+**Next step:** qc M3 round 1 (report docs/qc/report-M3-r1.md)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -31,7 +31,7 @@
 | Design | DONE v1.1 (song ngữ, card Language) (duyệt 2026-10-09) | docs/design/DESIGN.md, docs/design/mockups/*.html | Figma: https://www.figma.com/design/DrO15cZxPcb9hp1lGSUddd (orchestrator đẩy từ mockup; 8 màn mobile 360 + 3 dialog + Dark mode + Today tiếng Việt + card Language, variables Light/Dark, components Button/Badge/PlusPill/TabBar) |
 | M1 | PASS (round 2) | docs/qc/report-M1-r2.md | AC10/AC11 phần thủ công NOT VERIFIED (user tự kiểm, mục 8 report) | Dev tự kiểm: lint/typecheck/Vitest 128/build/Playwright 20 xanh trên bản sao sạch; AC10/AC11 phần thủ công NOT VERIFIED |
 | M2 | PASS (round 3) | docs/qc/report-M2-r3.md | AC8/9/11 phần thủ công NOT VERIFIED (notification thật, import .ics, popup quyền) | AC8/9/11 phần thủ công NOT VERIFIED |
-| M3 | DOING — developer build | | plan v1.3: thêm M3-T7, AC14/15 |
+| M3 | DOING — dev DONE (commit ec60104), chờ QC r1 | docs/handoff/dev-M3.md | Dispute: test QC m2-r2-domain "entries.add throwing once" spy EntryService.add đã bị bỏ theo plan v1.3 |
 | M4 | TODO | | |
 | M5 | TODO | | |
 | Final QC | TODO | | |
