@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M4 dev DONE; QC M4 r1)
-**Next step:** developer M4 mode fix (docs/qc/report-M4-r1.md) → qc M4 round 2
+**Next step:** qc M4 round 2 (report docs/qc/report-M4-r2.md)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -33,7 +33,7 @@
 | M1 | PASS (round 2) | docs/qc/report-M1-r2.md | AC10/AC11 phần thủ công NOT VERIFIED (user tự kiểm, mục 8 report) | Dev tự kiểm: lint/typecheck/Vitest 128/build/Playwright 20 xanh trên bản sao sạch; AC10/AC11 phần thủ công NOT VERIFIED |
 | M2 | PASS (round 3) | docs/qc/report-M2-r3.md | AC8/9/11 phần thủ công NOT VERIFIED (notification thật, import .ics, popup quyền) | AC8/9/11 phần thủ công NOT VERIFIED |
 | M3 | PASS (round 1) | docs/qc/report-M3-r1.md | 4 Minor → backlog; dispute test QC đã re-target; dialog file thật NOT VERIFIED |
-| M4 | DOING — QC r1 FAIL (D3 Major: test flaky; D1/D2/D4 Minor), developer fix | docs/qc/report-M4-r1.md | bundle 218,8 kB gzip; Recharts lazy |
+| M4 | DOING — fix r1 DONE (commit be017d2), chờ QC r2 | docs/qc/report-M4-r1.md | bundle 218,8 kB gzip; Recharts lazy |
 | M5 | TODO | | |
 | Final QC | TODO | | |
 
