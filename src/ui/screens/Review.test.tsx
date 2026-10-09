@@ -38,7 +38,7 @@ describe('Review (M4-AC5, AC6, AC7, AC8)', () => {
     await withS1();
     await renderApp({ route: '/review', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: en.review.title })).toBeInTheDocument();
-    expect(document.title).toBe('Review — 1% Better');
+    await waitFor(() => expect(document.title).toBe('Review — 1% Better'));
     expect(await screen.findByRole('combobox', { name: en.review.goalLabel })).toHaveValue('all');
     expect(screen.getByRole('combobox', { name: en.review.yearLabel })).toHaveValue('2026');
     expect(within(screen.getByRole('combobox', { name: en.review.goalLabel })).getAllByRole('option').map((o) => o.textContent)).toEqual([en.review.goalAll, 'Read', 'Guitar', 'Spanish', 'Marathon prep', 'Old course']);
@@ -81,8 +81,7 @@ describe('Review (M4-AC5, AC6, AC7, AC8)', () => {
     await user.selectOptions(await screen.findByRole('combobox', { name: en.review.goalLabel }), 'g1');
     await waitFor(() => expect(app.router.state.location.search).toBe('?goal=g1&year=2026'));
     await waitFor(() => expect(stat('stat-time')).toHaveTextContent('4.0 h'), SLOW);
-    expect(stat('stat-time')).toHaveTextContent('In 2026');
-    expect(stat('stat-time')).toHaveTextContent('Whole goal: 4.0 h');
+    expect(stat('stat-time')).toHaveTextContent('In 2026 · Whole goal: 4.0 h'); // M4-D4: real space around the dot
     expect(stat('stat-days')).toHaveTextContent('8');
     expect(stat('stat-days')).toHaveTextContent(en.stat.daysOnTargetSub);
     expect(stat('stat-progress')).toHaveTextContent('25.8%');

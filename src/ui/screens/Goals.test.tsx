@@ -135,7 +135,7 @@ describe('Goals (M1-AC5, M1-AC9, M1-AC18)', () => {
     expect(screen.getByText('30 phút/ngày · 01/10/2026 – 31/10/2026')).toBeInTheDocument();
     expect(screen.getByText('17 phút/ngày (tổng 100 giờ) · 01/01/2026 – 31/12/2026')).toBeInTheDocument();
     expect(screen.getByText('Bắt đầu 01/11/2026')).toBeInTheDocument();
-    expect(document.title).toBe('Mục tiêu — 1% Better');
+    await waitFor(() => expect(document.title).toBe('Mục tiêu — 1% Better'));
     expect(scanVi()).toEqual([]);
     const read = screen.getByRole('heading', { level: 3, name: 'Read' }).closest('li')!;
     await user.click(within(read).getByRole('button', { name: vi.common.delete }));

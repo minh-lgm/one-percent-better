@@ -157,6 +157,13 @@ main.wide {
   max-width: var(--content-max);
 }
 @media (min-width: 1024px) {
+  /* 960 - 2*24 - card 2*16 - weekday column 34 = 846 px >= the 845 px of 53 heatmap columns (DESIGN 6). */
+  main.wide {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+@media (min-width: 1024px) {
   .nav {
     top: 0;
     right: auto;
@@ -1272,9 +1279,6 @@ table.hist {
   font-size: var(--text-sm);
   line-height: 20px;
   color: var(--text-muted);
-}
-.stat .sub .stat-sep::before {
-  content: " \00B7 ";
 }
 .stat .progress {
   margin-top: 8px;

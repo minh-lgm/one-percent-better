@@ -27,7 +27,7 @@ describe('Today (M1-AC2, AC5, AC6, AC7, AC18)', () => {
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: en.empty.today.noGoals })).toBeInTheDocument());
     expect(screen.getByRole('link', { name: en.empty.today.noGoalsAction })).toHaveAttribute('href', '/goals/new');
     expect(screen.getByText('Friday, October 9')).toBeInTheDocument();
-    expect(document.title).toBe('Today — 1% Better');
+    await waitFor(() => expect(document.title).toBe('Today — 1% Better'));
   });
 
   it('shows only active goals, with amount, progress and summary', async () => {
@@ -161,7 +161,7 @@ describe('Today (M1-AC2, AC5, AC6, AC7, AC18)', () => {
     await screen.findByRole('heading', { level: 2, name: vi.empty.today.noGoals });
     const expectedDate = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(2026, 9, 9));
     expect(screen.getByText(expectedDate)).toBeInTheDocument();
-    expect(document.title).toBe('Hôm nay — 1% Better');
+    await waitFor(() => expect(document.title).toBe('Hôm nay — 1% Better'));
     expect(document.documentElement.lang).toBe('vi');
     expect(scanVi()).toEqual([]);
 

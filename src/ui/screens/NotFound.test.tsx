@@ -22,7 +22,7 @@ describe('NotFound (M1-AC14)', () => {
     tc = app.tc;
     expect(screen.getByRole('heading', { level: 1, name: en.notFound.pageTitle })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: en.notFound.pageAction })).toHaveAttribute('href', '/today');
-    expect(document.title).toBe('Page not found — 1% Better');
+    await waitFor(() => expect(document.title).toBe('Page not found — 1% Better'));
     await app.router.navigate('/');
     await waitFor(() => expect(app.router.state.location.pathname).toBe('/today'));
   });

@@ -187,9 +187,21 @@ test.describe('M4 Review', () => {
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await expectNoHorizontalScroll(page);
+    // M4-D2: desktop uses the 960 px column and the whole 53-week heatmap fits without clipping.
+    const desktop = await page.evaluate(() => {
+      const s = document.querySelector<HTMLElement>('[data-testid="heatmap-scroll"]')!;
+      return { main: document.querySelector('main')!.getBoundingClientRect().width, hidden: s.scrollWidth - s.clientWidth, wide: document.querySelector('main')!.classList.contains('wide') };
+    });
+    expect(desktop.wide).toBe(true);
+    expect(desktop.main).toBeGreaterThanOrEqual(940);
+    expect(desktop.hidden).toBeLessThanOrEqual(2); // sub-pixel rounding only; nothing of the year is clipped
     await page.getByRole('combobox', { name: EN.review.goalLabel }).selectOption('g1');
+    await expect(stat(page, 'stat-time')).toContainText('In 2026 · Whole goal: 4.0 h');
     await expectNoHorizontalScroll(page);
     await expectAxeClean(page);
+    // Other screens keep the 720 px column.
+    await gotoHash(page, '/today');
+    expect(await page.evaluate(() => document.querySelector('main')!.classList.contains('wide'))).toBe(false);
   });
 
   test('M4-AC9: with large-backup.json (5 goals, 5,449 entries) Review shows the heatmap in < 1.5 s', async ({ page }) => {

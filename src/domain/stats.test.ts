@@ -121,6 +121,17 @@ describe('totals, progress, pace (M4-AC5, FR-24)', () => {
     expect(elapsedDays({ startDate: '2026-11-01', endDate: '2026-11-30', archived: false }, '2026-10-09')).toBe(0);
   });
 
+  it('M4-D1: an archived goal that has not started has 0 elapsed days and pace 0, like an upcoming one', () => {
+    const base = buildGoal({ id: 'x', targetMinutes: 45, startDate: '2026-11-01', endDate: '2026-11-30' });
+    expect(elapsedDays({ ...base, archived: true }, TODAY)).toBe(0);
+    const archived = goalStats({ ...base, archived: true }, [], 2026, TODAY);
+    expect(archived).toMatchObject({ elapsedDays: 0, expectedMinutes: 0, pace: 0 });
+    expect(archived.pace).toBe(goalStats(base, [], 2026, TODAY).pace);
+    // Archived goals that are running or ended keep the normal elapsed days.
+    expect(elapsedDays({ startDate: '2026-10-01', endDate: '2026-10-31', archived: true }, TODAY)).toBe(9);
+    expect(elapsedDays({ startDate: '2026-01-01', endDate: '2026-06-30', archived: true }, TODAY)).toBe(181);
+  });
+
   it('outsideYear is true when the period does not touch the year', () => {
     expect(goalStats(goal('g1'), entriesOf('g1'), 2025, TODAY).outsideYear).toBe(true);
     expect(goalStats(goal('g1'), entriesOf('g1'), 2027, TODAY).outsideYear).toBe(true);

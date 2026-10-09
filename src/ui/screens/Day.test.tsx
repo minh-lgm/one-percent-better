@@ -29,7 +29,7 @@ describe('Day (M3-AC1, AC2, AC3, AC4)', () => {
     await withS1();
     await renderApp({ route: '/day/2026-10-08', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: en.day.title })).toBeInTheDocument();
-    expect(document.title).toBe('Day — 1% Better');
+    await waitFor(() => expect(document.title).toBe('Day — 1% Better'));
     expect(screen.getByText('Thursday, October 8, 2026')).toBeInTheDocument();
     expect(screen.getByText(en.day.onlyRunning)).toBeInTheDocument();
     const list = await screen.findByRole('list', { name: en.day.goalsLabel });
@@ -162,7 +162,7 @@ describe('Day (M3-AC1, AC2, AC3, AC4)', () => {
     let app = await renderApp({ route: '/day/2026-10-08', container: tc });
     await screen.findByRole('list', { name: vi.day.goalsLabel });
     expect(screen.getByText(VI_LONG_2026_10_08)).toBeInTheDocument();
-    expect(document.title).toBe('Ngày — 1% Better');
+    await waitFor(() => expect(document.title).toBe('Ngày — 1% Better'));
     const spanish = screen.getByRole('article', { name: 'Spanish' });
     expect(within(spanish).getByText(vi.empty.day.noEntries)).toBeInTheDocument();
     expect(within(spanish).getByRole('progressbar', { name: 'Spanish ngày 08/10/2026' })).toBeInTheDocument();

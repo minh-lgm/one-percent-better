@@ -27,7 +27,7 @@ describe('Goal detail (M3-AC5)', () => {
     await withS1();
     await renderApp({ route: '/goals/g2', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: 'Guitar' })).toBeInTheDocument();
-    expect(document.title).toBe('Guitar — 1% Better');
+    await waitFor(() => expect(document.title).toBe('Guitar — 1% Better'));
     expect(screen.getByText(en.goal.status.active)).toBeInTheDocument();
     expect(screen.getByText('Play a full song by Christmas')).toBeInTheDocument();
     expect(screen.getByText('20 min/day · 2026-09-01 – 2026-12-31')).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('Goal detail (M3-AC5)', () => {
     await withS1('vi');
     const app = await renderApp({ route: '/goals/g2', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Guitar' });
-    expect(document.title).toBe('Guitar — 1% Better');
+    await waitFor(() => expect(document.title).toBe('Guitar — 1% Better'));
     expect(screen.getByText('20 phút/ngày · 01/09/2026 – 31/12/2026')).toBeInTheDocument();
     const rows = await screen.findAllByTestId('history-row');
     expect(within(rows[0]).getAllByRole('cell').map((c) => c.textContent)).toEqual(['08/10/2026', '5 phút', 'Riff', vi.entry.source.timer]);

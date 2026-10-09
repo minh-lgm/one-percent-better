@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { useT } from '../hooks/useT';
 import { Icon, type IconName } from './Icon';
 import { OfflineChip } from './OfflineChip';
@@ -17,6 +17,8 @@ const TABS: Array<{ to: string; icon: IconName; key: 'nav.today' | 'nav.goals' |
 export function AppShell() {
   const { t } = useT();
   const mainRef = useRef<HTMLElement>(null);
+  // Review uses the 960 px column (DESIGN §3.2 / S6, mockup 06 `main.wide`) so the 53-week heatmap fits on desktop.
+  const wide = useLocation().pathname.startsWith('/review');
   return (
     <>
       <a
@@ -44,7 +46,7 @@ export function AppShell() {
         ))}
       </nav>
       <div className="content">
-        <main id="main" ref={mainRef} tabIndex={-1}>
+        <main id="main" ref={mainRef} tabIndex={-1} className={wide ? 'wide' : undefined}>
           <OfflineChip />
           <Outlet />
         </main>

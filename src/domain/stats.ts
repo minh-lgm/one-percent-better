@@ -2,7 +2,7 @@
 // over goals + entries; no dates from the clock (callers pass `today`).
 // Hot paths use integer day numbers instead of date parsing (NFR-03).
 import { dayNumber, daysInclusive, isoFromDayNumber, yearOf } from './dates';
-import { dailyTarget, goalStatus, totalTarget } from './goal';
+import { dailyTarget, totalTarget } from './goal';
 import type { Goal, ISODate, LogEntry } from './types';
 
 /** Minutes per day for the given entries (all goals mixed). */
@@ -125,8 +125,9 @@ export function round1(n: number): number {
 
 /** Days of the goal period that have elapsed up to `today` (both ends inclusive; whole period once ended). */
 export function elapsedDays(goal: Pick<Goal, 'startDate' | 'endDate' | 'archived'>, today: ISODate): number {
-  const status = goalStatus(goal, today);
-  if (status === 'upcoming') return 0;
+  // Not started yet → nothing elapsed, whether or not the goal is archived (M4-D1:
+  // `goalStatus` reports `archived` before `upcoming`, so do not rely on it here).
+  if (today < goal.startDate) return 0;
   const end = today < goal.endDate ? today : goal.endDate;
   return daysInclusive(goal.startDate, end);
 }

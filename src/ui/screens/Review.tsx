@@ -168,7 +168,12 @@ export function Review() {
           sub={
             <>
               <span>{t('stat.timeLoggedYear', { year: yearText })}</span>
-              {goalStat ? <span className="stat-sep">{t('stat.timeLoggedWhole', { hours: f.hours(goalStat.minutesTotal) })}</span> : null}
+              {goalStat ? (
+                <>
+                  {' · '}
+                  <span>{t('stat.timeLoggedWhole', { hours: f.hours(goalStat.minutesTotal) })}</span>
+                </>
+              ) : null}
             </>
           }
         />
