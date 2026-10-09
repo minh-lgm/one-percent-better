@@ -16,5 +16,5 @@
     "noUnusedParameters": true,
     "skipLibCheck": true
   },
-  "include": ["src/sw.ts"]
+  "include": ["src/sw.ts", "src/integration/notification-click.ts"]
 }

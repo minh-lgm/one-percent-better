@@ -6,6 +6,8 @@ export interface ConfirmDialogProps {
   open: boolean;
   title: string;
   body: string;
+  /** Optional second paragraph (e.g. "Its running timer will be discarded."). */
+  extra?: string;
   confirmLabel: string;
   busy?: boolean;
   onConfirm: () => void;
@@ -13,7 +15,7 @@ export interface ConfirmDialogProps {
 }
 
 /** Native `<dialog>` + showModal(); initial focus on Cancel (DESIGN §5, §8). */
-export function ConfirmDialog({ open, title, body, confirmLabel, busy = false, onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({ open, title, body, extra, confirmLabel, busy = false, onConfirm, onCancel }: ConfirmDialogProps) {
   const { t } = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -44,6 +46,7 @@ export function ConfirmDialog({ open, title, body, confirmLabel, busy = false, o
     <dialog ref={ref} className="dialog" aria-labelledby="confirm-title" aria-describedby="confirm-body">
       <h2 id="confirm-title">{title}</h2>
       <p id="confirm-body">{body}</p>
+      {extra ? <p>{extra}</p> : null}
       <div className="actions">
         <Button variant="danger" onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>
           {confirmLabel}

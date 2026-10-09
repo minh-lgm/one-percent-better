@@ -16,6 +16,7 @@ export const SAME_VALUE_ALLOWLIST = [
   'settings.language.option.en',
   'settings.language.option.vi',
   'goalCard.plusOne',
+  'notification.title',
 ] as const;
 
 describe('translation parity (NFR-11a, M1-AC17)', () => {

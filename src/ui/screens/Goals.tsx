@@ -21,6 +21,8 @@ const TONES: Record<GoalStatus, BadgeTone> = { active: 'success', upcoming: 'inf
 interface PendingDelete {
   goal: Goal;
   entryCount: number;
+  /** True when the running timer belongs to this goal (it will be discarded). */
+  timerRunning: boolean;
   opener: HTMLElement | null;
 }
 
@@ -28,7 +30,7 @@ export function Goals() {
   const { t } = useT();
   const f = useFormat();
   const toast = useToast();
-  const { goalService } = useServices();
+  const { goalService, timerService } = useServices();
   const today = toISODate(useNow());
   const goals = useSubscribable(() => goalService.watchAll(), [goalService]);
   const showSkeleton = useDelayed(goals.loading);
@@ -42,8 +44,8 @@ export function Goals() {
   }, [pending]);
 
   async function openDelete(goal: Goal, opener: HTMLElement) {
-    const entryCount = await goalService.entryCount(goal.id);
-    setPending({ goal, entryCount, opener });
+    const [entryCount, timer] = await Promise.all([goalService.entryCount(goal.id), timerService.current()]);
+    setPending({ goal, entryCount, timerRunning: timer?.goalId === goal.id, opener });
   }
 
   async function confirmDelete() {
@@ -134,6 +136,7 @@ export function Goals() {
         open={pending !== null}
         title={pending ? t('goal.delete.title', { name: pending.goal.name }) : ''}
         body={deleteBody}
+        extra={pending?.timerRunning ? t('goal.delete.timerNote') : undefined}
         confirmLabel={t('goal.delete.confirm')}
         busy={busy}
         onConfirm={() => void confirmDelete()}

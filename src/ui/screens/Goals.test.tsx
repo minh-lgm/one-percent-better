@@ -76,6 +76,44 @@ describe('Goals (M1-AC5, M1-AC9, M1-AC18)', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Active (2)' })).toBeInTheDocument();
   });
 
+  it('deleting a goal with a running timer warns and discards the timer (M2-AC5)', async () => {
+    const user = userEvent.setup();
+    await seeded();
+    await tc!.container.db.kv.put({ key: 'activeTimer', value: { goalId: 'g1', startedAt: '2026-10-09T03:00:00.000Z' } });
+    await renderApp({ route: '/goals', container: tc });
+    const read = (await screen.findByRole('heading', { level: 3, name: 'Read' })).closest('li')!;
+    await user.click(within(read).getByRole('button', { name: en.common.delete }));
+    const dialog = await screen.findByRole('dialog', { hidden: true });
+    await waitFor(() => expect(dialog).toHaveAttribute('open'));
+    expect(within(dialog).getByText(en.goal.delete.timerNote)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: en.goal.delete.confirm }));
+    await waitFor(() => expect(screen.queryByRole('heading', { level: 3, name: 'Read' })).toBeNull());
+    expect(await tc!.container.db.kv.get('activeTimer')).toBeUndefined();
+
+    // A timer on another goal is not mentioned and survives.
+    await tc!.container.db.kv.put({ key: 'activeTimer', value: { goalId: 'g3', startedAt: '2026-10-09T03:00:00.000Z' } });
+    const guitar = screen.getByRole('heading', { level: 3, name: 'Guitar' }).closest('li')!;
+    await user.click(within(guitar).getByRole('button', { name: en.common.delete }));
+    await waitFor(() => expect(dialog).toHaveAttribute('open'));
+    expect(within(dialog).queryByText(en.goal.delete.timerNote)).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: en.goal.delete.confirm }));
+    await waitFor(() => expect(screen.queryByRole('heading', { level: 3, name: 'Guitar' })).toBeNull());
+    expect((await tc!.container.db.kv.get('activeTimer'))?.value).toMatchObject({ goalId: 'g3' });
+  });
+
+  it('vi: delete dialog with a running timer has no English leaks', async () => {
+    const user = userEvent.setup();
+    await seeded('vi');
+    await tc!.container.db.kv.put({ key: 'activeTimer', value: { goalId: 'g1', startedAt: '2026-10-09T03:00:00.000Z' } });
+    await renderApp({ route: '/goals', container: tc });
+    const read = (await screen.findByRole('heading', { level: 3, name: 'Read' })).closest('li')!;
+    await user.click(within(read).getByRole('button', { name: vi.common.delete }));
+    const dialog = await screen.findByRole('dialog', { hidden: true });
+    await waitFor(() => expect(dialog).toHaveAttribute('open'));
+    expect(within(dialog).getByText(vi.goal.delete.timerNote)).toBeInTheDocument();
+    expect(scanVi()).toEqual([]);
+  });
+
   it('delete body for a goal without entries uses the singular-free variant', async () => {
     const user = userEvent.setup();
     await seeded();

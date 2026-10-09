@@ -49,7 +49,8 @@
     "entriesCount_one": "{{count}} entry",
     "entriesCount_other": "{{count}} entries",
     "daysCount_one": "{{count}} day",
-    "daysCount_other": "{{count}} days"
+    "daysCount_other": "{{count}} days",
+    "minSec": "{{m}} min {{s}} s"
   },
   "toast": {
     "goalCreated": "Goal created",
@@ -58,7 +59,10 @@
     "entrySaved": "Entry saved",
     "entryUpdated": "Entry updated",
     "entryDeleted": "Entry deleted",
-    "languageChanged": "Language changed"
+    "languageChanged": "Language changed",
+    "timerDiscarded": "Timer discarded",
+    "reminderTime": "Reminder time saved",
+    "icsDownloaded": "Calendar file downloaded"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Enter a name for your goal.",
@@ -80,7 +84,12 @@
     "DATE_IN_FUTURE": "You can't log time for a future date.",
     "DATE_OUTSIDE_GOAL_PERIOD": "That date is outside this goal's dates ({{start}} – {{end}}).",
     "WRITE_FAILED": "Couldn't save. Your changes are still in the form — try again.",
-    "UNKNOWN": "Something went wrong. Please try again."
+    "UNKNOWN": "Something went wrong. Please try again.",
+    "GOAL_NOT_ACTIVE": "Timers can only run on active goals.",
+    "TIMER_ALREADY_RUNNING": "A timer is already running. Stop it before starting another.",
+    "TIMER_NOT_RUNNING": "There's no timer running.",
+    "NOTIFICATIONS_UNSUPPORTED": "This browser doesn't support notifications. You'll still see a reminder banner in the app.",
+    "NOTIFICATIONS_DENIED": "Notifications are blocked for this site. Allow them in your browser's site settings, then come back. You'll still see a reminder banner in the app."
   },
   "empty": {
     "today": {
@@ -113,7 +122,10 @@
     "plusOneSrToday": "Target reached for today",
     "progressLabel": "{{goal}} today",
     "progressValue": "{{current}} of {{target}} minutes",
-    "logTime": "Log time"
+    "logTime": "Log time",
+    "startTimer": "Start timer",
+    "timerDisabled": "Stop the running timer first.",
+    "timerRunningBadge": "Timer running"
   },
   "entry": {
     "listTitle": "Today's entries",
@@ -159,7 +171,8 @@
       "bodyNoEntries": "This permanently deletes the goal. It has no entries yet. This can't be undone.",
       "body_one": "This permanently deletes the goal and its 1 entry. This can't be undone.",
       "body_other": "This permanently deletes the goal and its {{count}} entries. This can't be undone.",
-      "confirm": "Delete goal"
+      "confirm": "Delete goal",
+      "timerNote": "Its running timer will be discarded."
     },
     "form": {
       "titleNew": "New goal",
@@ -201,6 +214,28 @@
       "browserNote": "The date and time pickers and permission prompts follow your browser's language.",
       "saveFailed": "Language changed, but it couldn't be saved on this device. It may reset when you reload."
     },
+    "reminders": {
+      "title": "Reminders",
+      "switch": "Daily reminder",
+      "switchDesc": "Get a nudge when you haven't hit your targets today.",
+      "on": "On",
+      "off": "Off",
+      "time": "Reminder time",
+      "permission": "Notification permission",
+      "allow": "Allow notifications",
+      "limit": "Heads up: reminders are sent only while 1% Better is open (in a tab or an installed window, even in the background). To be reminded when the app is closed, add a daily event to your calendar.",
+      "ios": "On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).",
+      "ics": "Add reminder to calendar (.ics)",
+      "icsHint": "Adds a repeating daily event at {{time}}."
+    },
+    "permission": {
+      "default": "Not asked yet",
+      "granted": "Allowed",
+      "denied": "Blocked",
+      "unsupported": "Not supported",
+      "defaultDesc": "Turn on the reminder and your browser will ask for permission.",
+      "grantedDesc": "You'll get one notification a day while 1% Better is open."
+    },
     "storage": {
       "title": "Storage",
       "label": "Protection from automatic clearing",
@@ -229,5 +264,35 @@
     "step1": "Open the app in a regular (non-private) window.",
     "step2": "Allow site data and cookies for this site in your browser settings.",
     "step3": "Reload the page."
+  },
+  "timer": {
+    "cardTitle": "Timer running · {{goal}}",
+    "badge": "Running",
+    "elapsedLabel": "Elapsed time",
+    "startedAt": "Started at {{time}}",
+    "stop": "Stop",
+    "stopAria": "Stop timer for {{goal}}, running {{elapsed}}",
+    "dialogTitle": "Save this session?",
+    "dialogSummary": "{{goal}} · tracked {{elapsed}}",
+    "roundedHint": "Rounded from {{raw}}. You can change it.",
+    "savedTo": "Saved to {{date}} (the day you started).",
+    "keepRunning": "Keep running",
+    "discard": "Discard session"
+  },
+  "reminder": {
+    "banner_one": "It's past {{time}} — 1 goal is not on target yet.",
+    "banner_other": "It's past {{time}} — {{count}} goals are not on target yet.",
+    "bannerLabel": "Reminder"
+  },
+  "notification": {
+    "title": "1% Better",
+    "body_one": "1 goal left today: {{list}}",
+    "body_other": "{{count}} goals left today: {{list}}",
+    "item": "{{goal}} {{current}}/{{target}} min",
+    "more": "{{items}}, and {{k}} more"
+  },
+  "ics": {
+    "summary": "1% Better — log today's time",
+    "alarm": "Log today's time in 1% Better."
   }
 }

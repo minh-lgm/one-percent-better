@@ -10,9 +10,83 @@ export const EN = en;
 export const VI = vi;
 const SCAN_DATA = { en: flattenMessages(en), vi: flattenMessages(vi) };
 
-/** Freeze "now" (TASKS §0) before any app script runs. */
-export async function freezeClock(page: Page): Promise<void> {
-  await page.clock.setFixedTime(FIXED_TIME);
+/** Freeze "now" (TASKS §0) before any app script runs. Call again to move the frozen time. */
+export async function freezeClock(page: Page, time: Date = FIXED_TIME): Promise<void> {
+  await page.clock.setFixedTime(time);
+}
+
+/** `FIXED_TIME` plus a `hh:mm:ss` offset (or an absolute `YYYY-MM-DDThh:mm:ss` local time). */
+export function at(value: string): Date {
+  if (value.includes('T')) return new Date(`${value}+07:00`);
+  const [h, m, s = '0'] = value.split(':');
+  return new Date(FIXED_TIME.getTime() + (Number(h) * 3600 + Number(m) * 60 + Number(s)) * 1000);
+}
+
+/**
+ * Move the frozen clock and tell the app the tab became visible, which refreshes
+ * "now" in the UI and runs the reminder check (same triggers as a real tab switch).
+ */
+export async function advanceTo(page: Page, time: Date): Promise<void> {
+  await freezeClock(page, time);
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+}
+
+/** Read a kv row from the app database (`null` when absent). */
+export async function kvGet(page: Page, key: string): Promise<unknown> {
+  return page.evaluate(
+    (k) =>
+      new Promise((resolve, reject) => {
+        const req = indexedDB.open('one-percent-better');
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction('kv', 'readonly');
+          const get = tx.objectStore('kv').get(k);
+          get.onsuccess = () => {
+            resolve(get.result ? get.result.value : null);
+            db.close();
+          };
+          get.onerror = () => reject(get.error);
+        };
+      }),
+    key,
+  );
+}
+
+/** Notifications currently shown by the app's service worker (tag `daily-reminder`). */
+export async function shownNotifications(page: Page): Promise<Array<{ title: string; body: string; lang: string; tag: string; data: unknown }>> {
+  return page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    const list = await registration.getNotifications({ tag: 'daily-reminder' });
+    return list.map((n) => ({ title: n.title, body: n.body, lang: n.lang, tag: n.tag, data: n.data as unknown }));
+  });
+}
+
+/** Force `Notification.permission` to a value before any app script runs (Playwright cannot deny directly). */
+export async function fakeNotificationPermission(page: Page, permission: 'default' | 'denied' | 'granted'): Promise<void> {
+  await page.addInitScript((p) => {
+    if (!('Notification' in window)) return;
+    Object.defineProperty(Notification, 'permission', { configurable: true, get: () => p });
+    Notification.requestPermission = async () => p;
+  }, permission);
+}
+
+export function timerCard(page: Page): Locator {
+  return page.getByTestId('timer-card');
+}
+
+export function timerElapsed(page: Page): Locator {
+  return page.getByTestId('timer-elapsed');
+}
+
+export function stopDialog(page: Page): Locator {
+  return page.getByTestId('stop-dialog');
+}
+
+/** Start the timer on a Today card. */
+export async function startTimer(page: Page, name: string, copy: Copy = en): Promise<void> {
+  await goalCard(page, name).getByRole('button', { name: copy.goalCard.startTimer }).click();
+  await expect(timerCard(page)).toBeVisible();
 }
 
 export async function gotoHash(page: Page, hash: string): Promise<void> {

@@ -83,7 +83,9 @@ export default tseslint.config(
   // ---- Layer rules (ARCHITECTURE §3) ----
   {
     // Domain: pure. No React, no Dexie, no i18n, no other app layers.
+    // (Domain *tests* may read the translation resources to check real copy.)
     files: ['src/domain/**/*.ts'],
+    ignores: TEST_FILES,
     rules: restrictImports([
       [pkg(['react', 'react-dom', 'dexie', 'recharts', 'i18next', 'react-i18next']), 'Domain must stay pure (ARCH §3).'],
       [dir(['data', 'services', 'integration', 'ui', 'app', 'i18n']), 'Domain must not import other app layers (ARCH §3).'],

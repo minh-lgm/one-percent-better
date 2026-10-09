@@ -41,6 +41,11 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
     case 'ENTRY_MINUTES_INVALID':
     case 'ENTRY_NOTE_TOO_LONG':
     case 'DATE_IN_FUTURE':
+    case 'GOAL_NOT_ACTIVE':
+    case 'TIMER_ALREADY_RUNNING':
+    case 'TIMER_NOT_RUNNING':
+    case 'NOTIFICATIONS_UNSUPPORTED':
+    case 'NOTIFICATIONS_DENIED':
       return { key: `errors.${error.code}` };
     default:
       return { key: 'errors.UNKNOWN' };

@@ -29,12 +29,29 @@ describe('errorMessage (DESIGN §7.3)', () => {
   });
 
   it('every mapped key exists in the resources (strict instance throws otherwise)', () => {
-    const codes = ['GOAL_NAME_REQUIRED', 'GOAL_NAME_TOO_LONG', 'GOAL_WHY_TOO_LONG', 'GOAL_PERIOD_EXCLUDES_ENTRIES', 'GOAL_NOT_FOUND', 'ENTRY_NOT_FOUND', 'ENTRY_MINUTES_INVALID', 'ENTRY_NOTE_TOO_LONG', 'DATE_IN_FUTURE'] as const;
+    const codes = [
+      'GOAL_NAME_REQUIRED',
+      'GOAL_NAME_TOO_LONG',
+      'GOAL_WHY_TOO_LONG',
+      'GOAL_PERIOD_EXCLUDES_ENTRIES',
+      'GOAL_NOT_FOUND',
+      'ENTRY_NOT_FOUND',
+      'ENTRY_MINUTES_INVALID',
+      'ENTRY_NOTE_TOO_LONG',
+      'DATE_IN_FUTURE',
+      // M2
+      'GOAL_NOT_ACTIVE',
+      'TIMER_ALREADY_RUNNING',
+      'TIMER_NOT_RUNNING',
+      'NOTIFICATIONS_UNSUPPORTED',
+      'NOTIFICATIONS_DENIED',
+    ] as const;
     for (const code of codes) {
       const m = errorMessage({ code, message: '' }, f);
       expect(m.key).toBe(`errors.${code}`);
       expect(() => i18n.t(m.key)).not.toThrow();
     }
-    expect(errorMessage({ code: 'TIMER_NOT_RUNNING', message: '' }, f).key).toBe('errors.UNKNOWN');
+    // Codes without a key yet (M3) fall back to the generic message.
+    expect(errorMessage({ code: 'IMPORT_INVALID_JSON', message: '' }, f).key).toBe('errors.UNKNOWN');
   });
 });

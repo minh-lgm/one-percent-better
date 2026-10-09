@@ -1,6 +1,6 @@
-import type { EntryRepository, GoalRepository } from '../data/repositories';
+import type { EntryRepository, GoalRepository, KvRepository } from '../data/repositories';
 import { entriesOutsidePeriod, validateGoalInput, type GoalInput } from '../domain/goal';
-import { fail, ok, type Goal, type Result } from '../domain/types';
+import { fail, ok, type ActiveTimer, type Goal, type Result } from '../domain/types';
 
 export type IdGenerator = () => string;
 
@@ -11,6 +11,8 @@ export class GoalService {
     private readonly goals: GoalRepository,
     private readonly entries: EntryRepository,
     private readonly newId: IdGenerator = defaultIdGenerator,
+    /** Optional: lets `remove` discard a timer running on the deleted goal (M2). */
+    private readonly kv?: KvRepository,
   ) {}
 
   async create(input: GoalInput, now: Date): Promise<Result<Goal>> {
@@ -44,6 +46,10 @@ export class GoalService {
     const existing = await this.goals.getById(id);
     if (!existing) return fail({ code: 'GOAL_NOT_FOUND', message: `goal ${id} not found` });
     await this.goals.deleteWithEntries(id);
+    if (this.kv) {
+      const timer = await this.kv.get<ActiveTimer>('activeTimer');
+      if (timer && timer.goalId === id) await this.kv.delete('activeTimer');
+    }
     return ok(undefined);
   }
 

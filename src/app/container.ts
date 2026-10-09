@@ -1,5 +1,5 @@
 // Composition root (ARCHITECTURE §3): the only place that wires concrete
-// implementations (Dexie repositories, Intl, workbox) to services and UI.
+// implementations (Dexie repositories, Intl, workbox, Notification API) to services and UI.
 import type { i18n } from 'i18next';
 import { createDatabase, openDatabase, type AppDatabase } from '../data/dexie/db';
 import { DexieEntryRepository } from '../data/dexie/entry-repo';
@@ -8,10 +8,15 @@ import { DexieKvRepository } from '../data/dexie/kv-repo';
 import { StorageError } from '../domain/types';
 import { createTranslator, currentLocale, setLocale } from '../i18n/instance';
 import type { Locale, Translator } from '../i18n/types';
+import { createBrowserNotifications } from '../integration/notifications';
 import { isIndexedDbAvailable, requestPersistentStorage, type PersistState } from '../integration/storage';
 import { EntryService } from '../services/entry-service';
-import { GoalService } from '../services/goal-service';
+import { GoalService, defaultIdGenerator } from '../services/goal-service';
 import { LocaleService } from '../services/locale-service';
+import type { NotificationPort } from '../services/notification-port';
+import { ReminderService } from '../services/reminder-service';
+import { SettingsService } from '../services/settings-service';
+import { TimerService } from '../services/timer-service';
 import { createUpdateStore, type UpdateStore } from './updates';
 
 export interface LocaleControl {
@@ -27,6 +32,10 @@ export interface AppContainer {
   goalService: GoalService;
   entryService: EntryService;
   localeService: LocaleService;
+  settingsService: SettingsService;
+  timerService: TimerService;
+  reminderService: ReminderService;
+  notifications: NotificationPort;
   locale: LocaleControl;
   /** Result of `navigator.storage.persist()`, requested once at startup. */
   storagePersistence: Promise<PersistState>;
@@ -39,9 +48,19 @@ export interface ContainerOptions {
   dbName: string;
   storage?: Parameters<typeof requestPersistentStorage>[0];
   indexedDbAvailable?: boolean;
+  notifications?: NotificationPort;
+  /** URL of the 192 px icon used in notifications. */
+  notificationIconUrl?: string;
 }
 
-export async function createContainer({ i18n, dbName, storage, indexedDbAvailable = isIndexedDbAvailable() }: ContainerOptions): Promise<AppContainer> {
+export async function createContainer({
+  i18n,
+  dbName,
+  storage,
+  indexedDbAvailable = isIndexedDbAvailable(),
+  notifications = createBrowserNotifications(),
+  notificationIconUrl,
+}: ContainerOptions): Promise<AppContainer> {
   if (!indexedDbAvailable) throw new StorageError('IndexedDB is not available in this browser');
 
   const db = createDatabase(dbName);
@@ -53,14 +72,20 @@ export async function createContainer({ i18n, dbName, storage, indexedDbAvailabl
 
   const localeService = new LocaleService(kvRepo);
   const translator = createTranslator(i18n);
+  const entryService = new EntryService(entryRepo, goalRepo);
+  const settingsService = new SettingsService(kvRepo);
 
   return {
     i18n,
     translator,
     db,
-    goalService: new GoalService(goalRepo, entryRepo),
-    entryService: new EntryService(entryRepo, goalRepo),
+    goalService: new GoalService(goalRepo, entryRepo, defaultIdGenerator, kvRepo),
+    entryService,
     localeService,
+    settingsService,
+    timerService: new TimerService(kvRepo, goalRepo, entryService),
+    reminderService: new ReminderService(settingsService, goalRepo, entryRepo, notifications, translator, notificationIconUrl),
+    notifications,
     locale: {
       current: () => currentLocale(i18n),
       async change(locale) {

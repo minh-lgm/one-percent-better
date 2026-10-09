@@ -46,7 +46,8 @@
     "dateRange": "{{start}} – {{end}}",
     "goalsCount_other": "{{count}} mục tiêu",
     "entriesCount_other": "{{count}} lần ghi",
-    "daysCount_other": "{{count}} ngày"
+    "daysCount_other": "{{count}} ngày",
+    "minSec": "{{m}} phút {{s}} giây"
   },
   "toast": {
     "goalCreated": "Đã tạo mục tiêu",
@@ -55,7 +56,10 @@
     "entrySaved": "Đã lưu lần ghi",
     "entryUpdated": "Đã cập nhật lần ghi",
     "entryDeleted": "Đã xóa lần ghi",
-    "languageChanged": "Đã đổi ngôn ngữ"
+    "languageChanged": "Đã đổi ngôn ngữ",
+    "timerDiscarded": "Đã bỏ phiên đếm giờ",
+    "reminderTime": "Đã lưu giờ nhắc",
+    "icsDownloaded": "Đã tải tệp lịch"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Hãy nhập tên cho mục tiêu của bạn.",
@@ -77,7 +81,12 @@
     "DATE_IN_FUTURE": "Bạn không thể ghi thời gian cho một ngày trong tương lai.",
     "DATE_OUTSIDE_GOAL_PERIOD": "Ngày đó nằm ngoài thời gian của mục tiêu này ({{start}} – {{end}}).",
     "WRITE_FAILED": "Không lưu được. Thay đổi của bạn vẫn còn trong biểu mẫu — hãy thử lại.",
-    "UNKNOWN": "Đã xảy ra lỗi. Hãy thử lại."
+    "UNKNOWN": "Đã xảy ra lỗi. Hãy thử lại.",
+    "GOAL_NOT_ACTIVE": "Chỉ có thể đếm giờ cho mục tiêu đang chạy.",
+    "TIMER_ALREADY_RUNNING": "Đang có một bộ đếm giờ chạy. Hãy dừng nó trước khi bắt đầu bộ khác.",
+    "TIMER_NOT_RUNNING": "Hiện không có bộ đếm giờ nào đang chạy.",
+    "NOTIFICATIONS_UNSUPPORTED": "Trình duyệt này không hỗ trợ thông báo. Bạn vẫn sẽ thấy lời nhắc ngay trong app.",
+    "NOTIFICATIONS_DENIED": "Thông báo đang bị chặn cho trang này. Hãy cho phép trong cài đặt trang web của trình duyệt rồi quay lại. Bạn vẫn sẽ thấy lời nhắc ngay trong app."
   },
   "empty": {
     "today": {
@@ -108,7 +117,10 @@
     "plusOneSrToday": "Hôm nay đã đạt chỉ tiêu",
     "progressLabel": "{{goal}} hôm nay",
     "progressValue": "{{current}} trên {{target}} phút",
-    "logTime": "Ghi thời gian"
+    "logTime": "Ghi thời gian",
+    "startTimer": "Đếm giờ",
+    "timerDisabled": "Hãy dừng bộ đếm giờ đang chạy trước.",
+    "timerRunningBadge": "Đang đếm giờ"
   },
   "entry": {
     "listTitle": "Các lần ghi hôm nay",
@@ -153,7 +165,8 @@
       "title": "Xóa mục tiêu \"{{name}}\"?",
       "bodyNoEntries": "Thao tác này xóa vĩnh viễn mục tiêu. Mục tiêu chưa có lần ghi nào. Bạn không thể hoàn tác.",
       "body_other": "Thao tác này xóa vĩnh viễn mục tiêu và {{count}} lần ghi của nó. Bạn không thể hoàn tác.",
-      "confirm": "Xóa mục tiêu"
+      "confirm": "Xóa mục tiêu",
+      "timerNote": "Bộ đếm giờ đang chạy của mục tiêu này sẽ bị bỏ."
     },
     "form": {
       "titleNew": "Mục tiêu mới",
@@ -194,6 +207,28 @@
       "browserNote": "Ô chọn ngày, giờ và hộp xin quyền do trình duyệt hiển thị nên theo ngôn ngữ của trình duyệt.",
       "saveFailed": "Đã đổi ngôn ngữ, nhưng không lưu được trên thiết bị này. Ngôn ngữ có thể trở về mặc định khi bạn tải lại trang."
     },
+    "reminders": {
+      "title": "Nhắc nhở",
+      "switch": "Nhắc nhở hằng ngày",
+      "switchDesc": "Nhận lời nhắc khi hôm nay bạn chưa đạt chỉ tiêu.",
+      "on": "Bật",
+      "off": "Tắt",
+      "time": "Giờ nhắc",
+      "permission": "Quyền thông báo",
+      "allow": "Cho phép thông báo",
+      "limit": "Lưu ý: lời nhắc chỉ được gửi khi 1% Better đang mở (trong một tab hoặc cửa sổ đã cài, kể cả khi chạy nền). Để được nhắc khi đã đóng app, hãy thêm một sự kiện hằng ngày vào lịch của bạn.",
+      "ios": "Trên iPhone hoặc iPad, thông báo chỉ hoạt động sau khi bạn thêm app vào Màn hình chính (iOS 16.4 trở lên).",
+      "ics": "Thêm lời nhắc vào lịch (.ics)",
+      "icsHint": "Thêm một sự kiện lặp lại hằng ngày lúc {{time}}."
+    },
+    "permission": {
+      "default": "Chưa hỏi",
+      "granted": "Đã cho phép",
+      "denied": "Bị chặn",
+      "unsupported": "Không hỗ trợ",
+      "defaultDesc": "Bật nhắc nhở và trình duyệt sẽ xin quyền thông báo của bạn.",
+      "grantedDesc": "Bạn sẽ nhận một thông báo mỗi ngày khi 1% Better đang mở."
+    },
     "storage": {
       "title": "Bộ nhớ",
       "label": "Bảo vệ khỏi bị xóa tự động",
@@ -222,5 +257,33 @@
     "step1": "Mở app trong cửa sổ thường (không phải riêng tư).",
     "step2": "Cho phép dữ liệu trang web và cookie cho trang này trong cài đặt trình duyệt.",
     "step3": "Tải lại trang."
+  },
+  "timer": {
+    "cardTitle": "Đang đếm giờ · {{goal}}",
+    "badge": "Đang chạy",
+    "elapsedLabel": "Thời gian đã trôi qua",
+    "startedAt": "Bắt đầu lúc {{time}}",
+    "stop": "Dừng",
+    "stopAria": "Dừng đếm giờ cho {{goal}}, đã chạy {{elapsed}}",
+    "dialogTitle": "Lưu phiên này?",
+    "dialogSummary": "{{goal}} · đã đếm {{elapsed}}",
+    "roundedHint": "Làm tròn từ {{raw}}. Bạn có thể sửa lại.",
+    "savedTo": "Sẽ lưu vào {{date}} (ngày bạn bắt đầu).",
+    "keepRunning": "Tiếp tục đếm",
+    "discard": "Bỏ phiên này"
+  },
+  "reminder": {
+    "banner_other": "Đã quá {{time}} — còn {{count}} mục tiêu chưa đạt chỉ tiêu.",
+    "bannerLabel": "Nhắc nhở"
+  },
+  "notification": {
+    "title": "1% Better",
+    "body_other": "Hôm nay còn {{count}} mục tiêu: {{list}}",
+    "item": "{{goal}} {{current}}/{{target}} phút",
+    "more": "{{items}} và {{k}} mục tiêu nữa"
+  },
+  "ics": {
+    "summary": "1% Better — ghi thời gian hôm nay",
+    "alarm": "Hãy ghi thời gian hôm nay trong 1% Better."
   }
 }
