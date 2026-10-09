@@ -51,7 +51,9 @@ npm run test:e2e      # Playwright (Chromium) against a fresh build served on po
 npm run check         # lint + typecheck + test + build
 ```
 
-E2E tests run with a fixed clock (`2026-10-09 10:00 Asia/Ho_Chi_Minh`) and a fresh browser context per test. QC tests live in `tests/qc/` and are picked up by both Vitest (`*.test.ts(x)`) and Playwright (`*.spec.ts`). Sample data for E2E lives in `e2e/fixtures/` (`sample-backup.json` is dataset S1: 5 goals, 23 entries; the `invalid-*.json`, `unsupported-version.json` and `xss-note.json` files exercise the import validation) and is loaded through the real Import flow (`importBackup(page)` in `e2e/helpers/app.ts`). `e2e/m2-reminder.spec.ts` runs on the full Chromium build (`channel: 'chromium'`, installed by `npm run e2e:install`) because the default headless shell always reports notification permission as blocked.
+E2E tests run with a fixed clock (`2026-10-09 10:00 Asia/Ho_Chi_Minh`) and a fresh browser context per test. QC tests live in `tests/qc/` and are picked up by both Vitest (`*.test.ts(x)`) and Playwright (`*.spec.ts`). Sample data for E2E lives in `e2e/fixtures/` (`sample-backup.json` is dataset S1: 5 goals, 23 entries; `large-backup.json` is the NFR-03 performance dataset: 5 goals × 3 years, 5,449 entries, regenerate with `npm run fixtures:large`; the `invalid-*.json`, `unsupported-version.json` and `xss-note.json` files exercise the import validation) and is loaded through the real Import flow (`importBackup(page)` in `e2e/helpers/app.ts`). The statistics benchmark (`src/services/stats-service.test.ts`) prints its timings as `[bench] …` lines; the Review perf E2E prints `[perf] …`.
+
+Bundle budget (NFR-03): the entry chunk must stay ≤ 250 kB gzip. `npm run build` prints the sizes; Recharts is only in the lazily loaded `BarChart-*.js` chunk (requested the first time the Review screen renders its charts). `e2e/m2-reminder.spec.ts` runs on the full Chromium build (`channel: 'chromium'`, installed by `npm run e2e:install`) because the default headless shell always reports notification permission as blocked.
 
 ## Language
 
@@ -69,6 +71,16 @@ On **Today**, press **Start timer** on an active goal. Only one timer runs at a 
 
 - **Today → "Missed a day? Log time for a past day"** opens the **Day** screen (`#/day/YYYY-MM-DD`, defaults to yesterday). Use *Previous day* / *Next day* or the date picker; every goal whose period contains that day is listed (including ended ones) and entries can be added, edited or deleted there. Future dates cannot be logged (*Next day* is disabled on today); an invalid date in the URL shows a message with a link back to Today.
 - **Goals → goal name** opens the **goal detail** page: period, target, Edit/Delete and the **History** of entries (newest first, with the Manual/Timer source). Dates in the history link to the Day screen.
+
+## Review (heatmap, streaks, charts)
+
+The **Review** tab (`#/review?goal=<id|all>&year=<YYYY>`) looks back over a calendar year:
+
+- **Goal / Year** selectors (synced to the URL; unknown values fall back to *All goals* and the current year). Years run from the earliest goal or entry to the current year.
+- **Stat cards**: time logged in the year, days on target, current and longest streak. A single goal adds **Progress** (minutes logged over the whole goal period ÷ total target) and **Pace** (minutes ahead of or behind `daily target × days elapsed up to today`). A streak counts consecutive days on target; a day that is not on target *yet* (today) does not break it. "All goals" counts a day when at least one goal hit its target.
+- **Heatmap**: one cell per day, Monday to Sunday rows, one column per week. Colour levels: one goal → share of the daily target (0, < 50 %, < 100 %, < 200 %, ≥ 200 %); all goals → total minutes (0, 1–29, 30–59, 60–119, ≥ 120). Every cell has a text label (date, minutes, target met/not met), shown as a tooltip on hover/focus. Keyboard: Tab reaches today's cell, ←/→ move a week, ↑/↓ a day, Home/End to the first/last day, Enter/Space opens that day on the **Day** screen (past days only). On narrow screens the heatmap scrolls horizontally inside its box and starts at the current week.
+- **Last 12 weeks** and **Months of the year** bar charts (hours), each with a text summary and a screen-reader data table.
+- **Today** shows the overall current streak as a chip next to the title.
 
 ## Backup and restore
 
@@ -93,14 +105,15 @@ The app has no server, so the daily reminder is **best effort and only works whi
 src/
   app/          composition root, bootstrap, router, App
   config/       env (zod-validated), business constants
-  domain/       pure logic: dates, goal, entry, timer, reminder, ics, backup, settings (no React, no Dexie, no i18n)
+  domain/       pure logic: dates, goal, entry, timer, reminder, ics, backup, settings, stats, heatmap (no React, no Dexie, no i18n)
   data/         repository interfaces + Dexie (IndexedDB) implementation (goal, entry, kv, timer, backup)
-  services/     use cases: GoalService, EntryService, LocaleService, SettingsService, TimerService, ReminderService, BackupService
+  services/     use cases: GoalService, EntryService, LocaleService, SettingsService, TimerService, ReminderService, BackupService, StatsService
   integration/  browser APIs: storage persistence, service-worker registration, notifications, file download
   i18n/         i18next instance, locale detection, Intl formatters, resources
-  ui/           screens, components, hooks, styles
+  ui/           screens (Review is lazy-loaded), components (Heatmap, StatCard, BarChart = Recharts in its own chunk), hooks, styles
   sw.ts         service worker (Workbox precache, notification click → Today)
-e2e/            Playwright specs, helpers and fixtures (sample backup = dataset S1)
+e2e/            Playwright specs, helpers and fixtures (sample backup = dataset S1, large backup = NFR-03 dataset)
+scripts/        icon generation, large fixture generation
 tests/qc/       QC-owned tests
 ```
 

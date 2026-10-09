@@ -2,6 +2,7 @@
 const PATHS = {
   today: <><circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.7 2.7L16 9.5" /></>,
   goals: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.5" /><path d="M12 12h.01" /></>,
+  review: <path d="M5 20v-8M12 20V5M19 20v-12" />,
   settings: <><path d="M4 7h9M17 7h3M4 17h3M11 17h9" /><circle cx="15" cy="7" r="2" /><circle cx="9" cy="17" r="2" /></>,
   play: <path d="M8 5l11 7-11 7z" fill="currentColor" />,
   stop: <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />,

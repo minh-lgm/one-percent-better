@@ -6,9 +6,10 @@ import { OfflineChip } from './OfflineChip';
 import { ToastRegion } from './Toast';
 import { UpdateToast } from './UpdateToast';
 
-const TABS: Array<{ to: string; icon: IconName; key: 'nav.today' | 'nav.goals' | 'nav.settings' }> = [
+const TABS: Array<{ to: string; icon: IconName; key: 'nav.today' | 'nav.goals' | 'nav.review' | 'nav.settings' }> = [
   { to: '/today', icon: 'today', key: 'nav.today' },
   { to: '/goals', icon: 'goals', key: 'nav.goals' },
+  { to: '/review', icon: 'review', key: 'nav.review' },
   { to: '/settings', icon: 'settings', key: 'nav.settings' },
 ];
 

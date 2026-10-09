@@ -145,7 +145,7 @@ export function Settings() {
     try {
       const r = await backupService.import(importing.preview);
       if (r.ok) {
-        toast.show('toast.backupImported', { goals: t('format.goalsCount', { count: r.value.goals }), entries: t('format.entriesCount', { count: r.value.entries }) });
+        toast.show('toast.backupImported', { goals: f.count('format.goalsCount', r.value.goals), entries: f.count('format.entriesCount', r.value.entries) });
         setImportError(null);
       }
     } catch {
@@ -172,7 +172,7 @@ export function Settings() {
 
   const lastBackupAt = settings.data?.lastBackupAt ?? null;
   const backupNag = settings.data && goals.data ? backupReminder(lastBackupAt, goals.data.length, now) : null;
-  const count = (key: 'format.goalsCount' | 'format.entriesCount', n: number) => t(key, { count: n });
+  const count = (key: 'format.goalsCount' | 'format.entriesCount', n: number) => f.count(key, n);
   const importBody = importing
     ? t('import.body', {
         goals: count('format.goalsCount', importing.preview.goals),

@@ -7,8 +7,9 @@ import { Goals } from '../ui/screens/Goals';
 import { NotFound } from '../ui/screens/NotFound';
 import { Settings } from '../ui/screens/Settings';
 import { Today } from '../ui/screens/Today';
+import { ViewError } from '../ui/screens/ViewError';
 
-/** Routes (ARCHITECTURE §5.1). M4 adds review. */
+/** Routes (ARCHITECTURE §5.1). Review is lazy-loaded (ADR-10). */
 export const routes: RouteObject[] = [
   {
     path: '/',
@@ -21,6 +22,14 @@ export const routes: RouteObject[] = [
       { path: 'goals/:id/edit', element: <GoalForm /> },
       { path: 'goals/:id', element: <GoalDetail /> },
       { path: 'day/:date', element: <Day /> },
+      {
+        path: 'review',
+        lazy: async () => {
+          const { Review } = await import('../ui/screens/Review');
+          return { Component: Review };
+        },
+        errorElement: <ViewError />,
+      },
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },
     ],

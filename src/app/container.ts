@@ -19,6 +19,7 @@ import { LocaleService } from '../services/locale-service';
 import type { NotificationPort } from '../services/notification-port';
 import { ReminderService } from '../services/reminder-service';
 import { SettingsService } from '../services/settings-service';
+import { StatsService } from '../services/stats-service';
 import { TimerService } from '../services/timer-service';
 import { createUpdateStore, type UpdateStore } from './updates';
 
@@ -39,6 +40,7 @@ export interface AppContainer {
   timerService: TimerService;
   reminderService: ReminderService;
   backupService: BackupService;
+  statsService: StatsService;
   notifications: NotificationPort;
   locale: LocaleControl;
   /** Result of `navigator.storage.persist()`, requested once at startup. */
@@ -91,6 +93,7 @@ export async function createContainer({
     timerService: new TimerService(kvRepo, goalRepo, entryService, timerRepo),
     reminderService: new ReminderService(settingsService, goalRepo, entryRepo, notifications, translator, notificationIconUrl),
     backupService: new BackupService(new DexieBackupRepository(db), settingsService),
+    statsService: new StatsService(goalRepo, entryRepo),
     notifications,
     locale: {
       current: () => currentLocale(i18n),

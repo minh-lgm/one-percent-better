@@ -53,3 +53,29 @@ export function endOfYearOf(date: ISODate): ISODate {
 export function yearOf(date: ISODate): number {
   return Number(date.slice(0, 4));
 }
+
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Days since 1970-01-01 for a `YYYY-MM-DD` string (pure arithmetic, no parsing
+ * library). Used by the statistics hot paths (NFR-03); assumes a valid ISO date.
+ */
+export function dayNumber(date: ISODate): number {
+  const y = Number(date.slice(0, 4));
+  const m = Number(date.slice(5, 7));
+  const d = Number(date.slice(8, 10));
+  return Math.floor(Date.UTC(y, m - 1, d) / MS_PER_DAY);
+}
+
+/** Inverse of `dayNumber`. */
+export function isoFromDayNumber(n: number): ISODate {
+  const d = new Date(n * MS_PER_DAY);
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${m}-${day}`;
+}
+
+/** Weekday row with Monday = 0 … Sunday = 6 (1970-01-01 was a Thursday). */
+export function weekdayIndex(date: ISODate): number {
+  return (((dayNumber(date) + 3) % 7) + 7) % 7;
+}

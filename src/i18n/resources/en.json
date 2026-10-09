@@ -12,7 +12,8 @@
     "label": "Main",
     "today": "Today",
     "goals": "Goals",
-    "settings": "Settings"
+    "settings": "Settings",
+    "review": "Review"
   },
   "a11y": {
     "skip": "Skip to content",
@@ -34,7 +35,8 @@
     "keep": "Keep",
     "tryAgain": "Try again",
     "working": "Working…",
-    "emptyValue": "—"
+    "emptyValue": "—",
+    "retry": "Retry"
   },
   "unit": {
     "min": "min",
@@ -52,7 +54,8 @@
     "entriesCount_other": "{{count}} entries",
     "daysCount_one": "{{count}} day",
     "daysCount_other": "{{count}} days",
-    "minSec": "{{m}} min {{s}} s"
+    "minSec": "{{m}} min {{s}} s",
+    "hours": "{{n}} h"
   },
   "toast": {
     "goalCreated": "Goal created",
@@ -98,7 +101,9 @@
     "IMPORT_INVALID_JSON": "This file isn't valid JSON. Choose a backup exported from 1% Better. Nothing was changed.",
     "IMPORT_INVALID_SCHEMA": "This file doesn't look like a 1% Better backup. Choose a file exported from this app. Nothing was changed.",
     "IMPORT_UNSUPPORTED_VERSION": "This backup uses a format version ({{v}}) this app can't read. Export it again from an up-to-date copy of the app. Nothing was changed.",
-    "IMPORT_INTEGRITY": "This backup is inconsistent (for example, entries that don't belong to any goal). Nothing was changed."
+    "IMPORT_INTEGRITY": "This backup is inconsistent (for example, entries that don't belong to any goal). Nothing was changed.",
+    "loadViewTitle": "Couldn't load this view",
+    "loadViewBody": "Check your connection if you just updated the app, then try again."
   },
   "empty": {
     "today": {
@@ -121,7 +126,11 @@
       "noGoalsBody": "Goals show up here on the days they're active.",
       "noGoalsAction": "View goals",
       "noEntries": "No time logged for this goal on this day."
-    }
+    },
+    "review": "Nothing to review yet",
+    "reviewBody": "Create a goal and log some time. Your year will show up here.",
+    "reviewAction": "Create a goal",
+    "reviewYear": "No time logged in {{year}} yet."
   },
   "today": {
     "title": "Today",
@@ -130,7 +139,8 @@
     "allOnTarget_one": "Goal on target — a little better than yesterday.",
     "allOnTarget_other": "All {{count}} goals on target — a little better than yesterday.",
     "goalsLabel": "Goals for today",
-    "pastDayLink": "Missed a day? Log time for a past day"
+    "pastDayLink": "Missed a day? Log time for a past day",
+    "streak": "{{n}}-day streak"
   },
   "goalCard": {
     "amount": "{{current}}/{{target}}",
@@ -362,5 +372,65 @@
     "title": "Replace all data?",
     "body": "This backup has {{goals}}, {{entries}}, exported {{date}}. Importing replaces everything currently on this device ({{curGoals}}, {{curEntries}}). This can't be undone.",
     "confirm": "Replace all data"
+  },
+  "heatmap": {
+    "cell": {
+      "goalMet": "{{date}}: {{minutes}}, target met",
+      "goalNotMet": "{{date}}: {{minutes}}, target not met",
+      "all": "{{date}}: {{minutes}}, target met",
+      "allNotMet": "{{date}}: {{minutes}}, target not met",
+      "none": "{{date}}: no time logged",
+      "future": "{{date}}: upcoming",
+      "outside": "{{date}}: outside this goal's dates"
+    },
+    "aria": "Activity heatmap for {{year}}, {{goal}}",
+    "legendLess": "Less",
+    "legendMore": "More",
+    "legendAll": "Colors show total minutes per day.",
+    "legendGoal": "Colors show the share of your daily target.",
+    "summary": "In {{year}} you logged time on {{logged}} and hit your target on {{met}}. Longest streak: {{streak}}."
+  },
+  "chart": {
+    "bar": {
+      "weeklySummary": "Last 12 weeks: {{total}} logged, busiest week starting {{date}} with {{max}}.",
+      "monthlySummary": "{{year}}: {{total}} logged, busiest month {{month}} with {{max}}.",
+      "colWeek": "Week starting",
+      "colMonth": "Month",
+      "colTime": "Time logged",
+      "tooltip": "{{label}}: {{value}}",
+      "empty": "No time logged in this range."
+    }
+  },
+  "stat": {
+    "timeLogged": "Time logged",
+    "timeLoggedYear": "In {{year}}",
+    "timeLoggedWhole": "Whole goal: {{hours}}",
+    "daysOnTarget": "Days on target",
+    "daysOnTargetSub": "Days you hit your daily target",
+    "anyGoal": "Any goal on target",
+    "currentStreak": "Current streak",
+    "longestStreak": "Longest streak",
+    "progress": "Progress",
+    "progressSub": "{{current}} of {{total}} min",
+    "pace": "Pace",
+    "paceAhead": "{{value}} ahead",
+    "paceBehind": "{{value}} behind",
+    "paceOnTrack": "On pace",
+    "paceExpected": "Expected {{n}} min by today"
+  },
+  "review": {
+    "title": "Review",
+    "goalLabel": "Goal",
+    "goalAll": "All goals",
+    "goalArchived": "{{name}} (archived)",
+    "yearLabel": "Year",
+    "pickGoal": "Pick a goal to see progress and pace.",
+    "progressNote": "Progress and pace cover the whole goal period.",
+    "heatmapTitle": "Activity in {{year}}",
+    "weeklyTitle": "Last 12 weeks",
+    "weeklySub": "Hours logged per week",
+    "monthlyTitle": "Months of {{year}}",
+    "monthlySub": "Hours logged per month",
+    "outsideYear": "This goal doesn't run in {{year}}."
   }
 }

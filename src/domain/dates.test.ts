@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, compareISODate, daysInclusive, endOfYearOf, isValidISODate, isWithin, parseISODate, toISODate, yearOf } from './dates';
+import { addDays, compareISODate, dayNumber, daysInclusive, endOfYearOf, isoFromDayNumber, isValidISODate, isWithin, parseISODate, toISODate, weekdayIndex, yearOf } from './dates';
 
 describe('dates', () => {
   it('toISODate uses the local calendar day', () => {
@@ -40,5 +40,26 @@ describe('dates', () => {
     expect(isWithin('2026-11-01', '2026-10-01', '2026-10-31')).toBe(false);
     expect(endOfYearOf('2026-03-05')).toBe('2026-12-31');
     expect(yearOf('2028-02-29')).toBe(2028);
+  });
+});
+
+describe('dayNumber / isoFromDayNumber / weekdayIndex (M4, NFR-03 hot paths)', () => {
+  it('round-trips and matches addDays across month, year and leap boundaries', () => {
+    for (const d of ['1970-01-01', '2026-01-01', '2026-10-09', '2026-12-31', '2027-01-01', '2028-02-28', '2028-02-29', '2028-03-01', '2100-02-28']) {
+      expect(isoFromDayNumber(dayNumber(d))).toBe(d);
+      expect(isoFromDayNumber(dayNumber(d) + 1)).toBe(addDays(d, 1));
+      expect(isoFromDayNumber(dayNumber(d) - 1)).toBe(addDays(d, -1));
+    }
+    expect(dayNumber('1970-01-01')).toBe(0);
+    expect(dayNumber('2026-10-09') - dayNumber('2026-10-01')).toBe(8);
+  });
+
+  it('weekdayIndex: Monday = 0 … Sunday = 6', () => {
+    expect(weekdayIndex('2026-10-05')).toBe(0); // Monday
+    expect(weekdayIndex('2026-10-09')).toBe(4); // Friday
+    expect(weekdayIndex('2026-10-11')).toBe(6); // Sunday
+    expect(weekdayIndex('2026-01-01')).toBe(3); // Thursday
+    expect(weekdayIndex('2028-01-01')).toBe(5); // Saturday
+    expect(weekdayIndex('1970-01-01')).toBe(3); // Thursday
   });
 });

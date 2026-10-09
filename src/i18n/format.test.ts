@@ -51,6 +51,30 @@ describe('format.ts (ARCH §5.8, M1-AC18)', () => {
     expect(en.duration(45)).toBe('45 min');
   });
 
+  it('M4: hours, monthLong, monthYear, dateMonthDay', () => {
+    expect(en.hours(240)).toBe('4.0 h');
+    expect(vi.hours(240)).toBe('4,0 giờ');
+    expect(en.hours(565)).toBe('9.4 h');
+    expect(en.monthLong('2026-10-01')).toBe('October');
+    expect(en.monthYear('2026-10-01')).toBe('October 2026');
+    expect(en.dateMonthDay('2026-10-09')).toBe('Oct 9');
+    expect(vi.monthLong('2026-10-01')).toBe(new Intl.DateTimeFormat('vi-VN', { month: 'long' }).format(new Date(2026, 9, 1)));
+    expect(vi.monthYear('2026-10-01')).toBe(new Intl.DateTimeFormat('vi-VN', { month: 'long', year: 'numeric' }).format(new Date(2026, 9, 1)));
+    expect(vi.dateMonthDay('2026-10-09')).toBe(new Intl.DateTimeFormat('vi-VN', { month: 'short', day: 'numeric' }).format(new Date(2026, 9, 9)));
+    expect(normalize(vi.dateMonthDay('2026-10-09'))).toContain('9');
+  });
+
+  it('count: plural phrase with thousands separators (M3-D2)', () => {
+    expect(en.count('format.goalsCount', 1)).toBe('1 goal');
+    expect(en.count('format.goalsCount', 2)).toBe('2 goals');
+    expect(en.count('format.entriesCount', 16000)).toBe('16,000 entries');
+    expect(en.count('format.entriesCount', 1)).toBe('1 entry');
+    expect(en.count('format.daysCount', 0)).toBe('0 days');
+    expect(vi.count('format.goalsCount', 1)).toBe('1 mục tiêu');
+    expect(vi.count('format.entriesCount', 16000)).toBe('16.000 lần ghi');
+    expect(vi.count('format.daysCount', 8)).toBe('8 ngày');
+  });
+
   it('hhmmss is identical in both locales', () => {
     expect(en.hhmmss(25 * 60_000 + 31_000)).toBe('00:25:31');
     expect(vi.hhmmss(25 * 60_000 + 31_000)).toBe('00:25:31');

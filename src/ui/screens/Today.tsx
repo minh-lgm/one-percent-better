@@ -7,6 +7,7 @@ import { activeGoals, dailyTarget } from '../../domain/goal';
 import { reminderData, shouldShowBanner, type GoalProgress } from '../../domain/reminder';
 import type { TimerPreview } from '../../domain/timer';
 import type { ActiveTimer, DomainError, LogEntry } from '../../domain/types';
+import { StatsService } from '../../services/stats-service';
 import { BackupBanner } from '../components/BackupBanner';
 import { EmptyState } from '../components/EmptyState';
 import type { EntryFormValues, EntrySubmitResult } from '../components/EntryForm';
@@ -35,11 +36,13 @@ export function Today() {
   const { t } = useT();
   const f = useFormat();
   const toast = useToast();
-  const { goalService, entryService, timerService, settingsService } = useServices();
+  const { goalService, entryService, timerService, settingsService, statsService } = useServices();
   const now = useNow();
   const today = toISODate(now);
 
   const goals = useSubscribable(() => goalService.watchAll(), [goalService]);
+  const stats = useSubscribable(() => statsService.watch(), [statsService]);
+  const streak = stats.data ? StatsService.currentStreak(stats.data, today) : 0;
   const entries = useSubscribable(() => entryService.watchByDateRange(today, today), [entryService, today]);
   const timer = useSubscribable(() => timerService.watch(), [timerService]);
   const settings = useSubscribable(() => settingsService.watch(), [settingsService]);
@@ -144,7 +147,17 @@ export function Today() {
 
   return (
     <>
-      <PageHeader title={t('today.title')} subtitle={f.dateLong(today)} />
+      <PageHeader
+        title={t('today.title')}
+        subtitle={f.dateLong(today)}
+        actions={
+          streak > 0 ? (
+            <span className="chip num" data-testid="streak-chip">
+              {t('today.streak', { n: f.number(streak) })}
+            </span>
+          ) : undefined
+        }
+      />
       {loading ? (
         showSkeleton ? <Skeleton /> : null
       ) : allGoals.length === 0 ? (

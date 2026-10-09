@@ -1,5 +1,7 @@
 import { INTL_TAG, type Locale, type Translator } from './types';
 
+export type CountKey = 'format.goalsCount' | 'format.entriesCount' | 'format.daysCount';
+
 export interface Formatters {
   readonly locale: Locale;
   /** `Friday, October 9` (en) / `Thứ Sáu, 9 tháng 10` (vi). */
@@ -10,6 +12,20 @@ export interface Formatters {
   dateRange(start: string | Date, end: string | Date): string;
   weekdayShort(date: string | Date): string;
   monthShort(date: string | Date): string;
+  /** `October` / `tháng 10` (chart summaries, M4). */
+  monthLong(date: string | Date): string;
+  /** `October 2026` / `tháng 10 năm 2026` (chart tooltips, M4). */
+  monthYear(date: string | Date): string;
+  /** Short date without year: `Oct 9` / `9 thg 10` (chart axis/tooltips, DESIGN §7.1). */
+  dateMonthDay(date: string | Date): string;
+  /** Hours with one decimal: `4.0 h` / `4,0 giờ` (stats, M4). */
+  hours(minutes: number): string;
+  /**
+   * Plural phrase with a locale-formatted number: `1 goal`, `16,000 entries` / `16.000 lần ghi`.
+   * The plural form is chosen with `Intl.PluralRules` and passed as i18next `context`
+   * (`_one` / `_other`), so `count` can be the already formatted string (M3-D2).
+   */
+  count(key: CountKey, n: number): string;
   /** `1,440` / `1.440`. */
   number(n: number): string;
   /** `15.5` / `15,5`. */
@@ -25,6 +41,16 @@ export interface Formatters {
 }
 
 const cache = new Map<string, Intl.DateTimeFormat | Intl.NumberFormat>();
+const pluralRules = new Map<string, Intl.PluralRules>();
+
+function plural(tag: string): Intl.PluralRules {
+  let r = pluralRules.get(tag);
+  if (!r) {
+    r = new Intl.PluralRules(tag);
+    pluralRules.set(tag, r);
+  }
+  return r;
+}
 
 function dtf(tag: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   const key = `d:${tag}:${JSON.stringify(options)}`;
@@ -98,6 +124,22 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
     },
     monthShort(date) {
       return dtf(tag, { month: 'short' }).format(isoToLocalDate(date));
+    },
+    monthLong(date) {
+      return dtf(tag, { month: 'long' }).format(isoToLocalDate(date));
+    },
+    monthYear(date) {
+      return dtf(tag, { month: 'long', year: 'numeric' }).format(isoToLocalDate(date));
+    },
+    dateMonthDay(date) {
+      return dtf(tag, { month: 'short', day: 'numeric' }).format(isoToLocalDate(date));
+    },
+    hours(minutes) {
+      return t('format.hours', { n: decimal1(minutes / 60) });
+    },
+    count(key, n) {
+      // A string `count` disables i18next's own plural lookup; `context` picks the suffix instead.
+      return t(key, { count: number(n), context: plural(tag).select(n) });
     },
     number,
     decimal1,
