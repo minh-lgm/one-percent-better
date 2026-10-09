@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M3 PASS r1; M4 bắt đầu)
-**Next step:** developer M4 mode build → qc M4 round 1
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M4 dev DONE; QC M4 r1)
+**Next step:** qc M4 round 1 (report docs/qc/report-M4-r1.md)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -32,7 +32,7 @@
 | M1 | PASS (round 2) | docs/qc/report-M1-r2.md | AC10/AC11 phần thủ công NOT VERIFIED (user tự kiểm, mục 8 report) | Dev tự kiểm: lint/typecheck/Vitest 128/build/Playwright 20 xanh trên bản sao sạch; AC10/AC11 phần thủ công NOT VERIFIED |
 | M2 | PASS (round 3) | docs/qc/report-M2-r3.md | AC8/9/11 phần thủ công NOT VERIFIED (notification thật, import .ics, popup quyền) | AC8/9/11 phần thủ công NOT VERIFIED |
 | M3 | PASS (round 1) | docs/qc/report-M3-r1.md | 4 Minor → backlog; dispute test QC đã re-target; dialog file thật NOT VERIFIED |
-| M4 | DOING — developer build | | |
+| M4 | DOING — dev DONE (commit 786a82f), chờ QC r1 | docs/handoff/dev-M4.md | bundle 218,8 kB gzip; Recharts lazy |
 | M5 | TODO | | |
 | Final QC | TODO | | |
 
@@ -43,8 +43,8 @@
 | M1-P2 | (→ plan v1.3: M3-T7/AC14) getById cho EntryRepository | dev handoff M1, QC r1 §9 |
 | M2-P1 | (→ plan v1.3: M3-T7/AC15) TimerService.save nguyên tử | dev handoff M2, QC r3 |
 | M2-P2 | (→ plan v1.3: M5-T6/AC13) aria-describedby Reminder time; goal.delete.timerNote; pendingTimer lưu lại khi tab khác xoá timer | QC r3 |
-| M3-D1 | CSS `content` ngoặc kép quanh why ở Goal detail hỏng mã hoá (app.css ~1125) — hiện ô vuông + C/D | QC M3 r1 |
-| M3-D2 | Số ≥ 1000 trong dialog D3 và toast import thiếu dấu phân cách hàng nghìn | QC M3 r1 |
+| M3-D1 | (FIXED trong M4, commit 786a82f) CSS `content` ngoặc kép quanh why ở Goal detail hỏng mã hoá (app.css ~1125) — hiện ô vuông + C/D | QC M3 r1 |
+| M3-D2 | (FIXED trong M4, commit 786a82f) Số ≥ 1000 trong dialog D3 và toast import thiếu dấu phân cách hàng nghìn | QC M3 r1 |
 | M3-D3 | Import chấp nhận goal targetMinutes 600000, khoảng 100 năm, entry tương lai (app từ chối khi tạo tay) | QC M3 r1 |
 | M3-D4 | Tab thua cuộc đua Save hai tab: dialog Stop còn mở, tóm tắt thiếu tên goal | QC M3 r1 |
 | M3-P1 | `exportBackup` thiếu catch; thêm assertion E2E cho dòng why | QC M3 r1 |
