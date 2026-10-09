@@ -242,8 +242,8 @@ describe('M2-AC13 ReminderService text', () => {
     expect(tc.notifications.shown).toHaveLength(0);
     await tc.dispose();
   });
-  // M2-D3 (Minor): known defect, `it.fails` keeps the suite green; remove `.fails` once the services are atomic.
-  it.fails('M2-D3: two concurrent check() calls (two tabs) send once', async () => {
+  // M2-D3 (fixed in r2): regression tests for service atomicity.
+  it('M2-D3: two concurrent check() calls (two tabs) send once', async () => {
     const { tc, mk, settingsService, reminderService } = await setup();
     await mk('Read');
     await settingsService.update({ reminderEnabled: true });
@@ -255,7 +255,7 @@ describe('M2-AC13 ReminderService text', () => {
 });
 
 describe('M2 TimerService probes', () => {
-  it.fails('M2-D3: two concurrent start() for different goals leave exactly one timer', async () => {
+  it('M2-D3: two concurrent start() for different goals leave exactly one timer', async () => {
     const { tc, mk, timerService, now } = await setup();
     const a = await mk('A');
     const b = await mk('B');
@@ -264,7 +264,7 @@ describe('M2 TimerService probes', () => {
     expect(okCount).toBe(1);
     await tc.dispose();
   });
-  it.fails('M2-D3: two concurrent save() create exactly one entry', async () => {
+  it('M2-D3: two concurrent save() create exactly one entry', async () => {
     const { tc, mk, timerService, now } = await setup();
     const a = await mk('A');
     await timerService.start(a.id, now);

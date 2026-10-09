@@ -177,7 +177,8 @@ test.describe('M2 QC — AC1..AC5 independent', () => {
     await page.getByRole('listitem').filter({ hasText: 'Read' }).getByRole('button', { name: 'Delete' }).click();
     await expect(page.getByRole('dialog')).toContainText(EN.goal.delete.timerNote);
     await page.getByRole('dialog').getByRole('button', { name: EN.goal.delete.confirm }).click();
-    expect(await kvGet(page, 'activeTimer')).toBeNull();
+    await expect(page.getByRole('dialog')).toHaveCount(0); // deletion is async: wait for it before reading storage
+    await expect.poll(() => kvGet(page, 'activeTimer')).toBeNull();
     expect(await dbAll(page, 'goals')).toHaveLength(0);
     expect(problems).toEqual([]);
   });
@@ -358,9 +359,7 @@ test.describe('M2 QC — layout and a11y', () => {
     }
   });
 
-  // Minor defect M2-D2: expected to fail until fixed (Playwright reports an error once it starts passing).
   test('M2-D2: a 60-char goal name without spaces must not widen the page while its timer runs', async ({ page }) => {
-    test.fail();
     const long = 'W'.repeat(60);
     await createGoal(page, { name: long, targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' });
     await gotoHash(page, '/today');
