@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 (Gate 2: user đang review Figma; planner revise song ngữ)
-**Next step:** planner revise (song ngữ vi/en) → designer revise → user duyệt Gate 2 → developer M1
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 (plan v1.2 + design v1.1 song ngữ xong; chờ user review Figma, Gate 2)
+**Next step:** Gate 2 — user review Figma và duyệt design (hoặc feedback) → developer M1
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -25,8 +25,8 @@
 | Bước | Trạng thái | Output | Ghi chú |
 | :- | :- | :- | :- |
 | Intake | DONE | docs/STATUS.md | |
-| Plan | DONE (duyệt 2026-10-09) | docs/plan/PRD.md, ARCHITECTURE.md, TASKS.md | 5 milestone, 34 task, 59 AC; lần gọi planner đầu bị ngắt, lần 2 hoàn tất |
-| Design | DONE — chờ user duyệt (Gate 2) | docs/design/DESIGN.md, docs/design/mockups/*.html | Figma: https://www.figma.com/design/DrO15cZxPcb9hp1lGSUddd (orchestrator đẩy từ mockup; 8 màn mobile 360 + 3 dialog + Dark mode, variables Light/Dark, components Button/Badge/PlusPill/TabBar) |
+| Plan | DONE v1.2 (duyệt 2026-10-09; revise song ngữ en/vi) | docs/plan/PRD.md, ARCHITECTURE.md, TASKS.md | 5 milestone, 34 task, 59 AC; lần gọi planner đầu bị ngắt, lần 2 hoàn tất |
+| Design | DONE v1.1 (song ngữ, card Language) — chờ user duyệt (Gate 2) | docs/design/DESIGN.md, docs/design/mockups/*.html | Figma: https://www.figma.com/design/DrO15cZxPcb9hp1lGSUddd (orchestrator đẩy từ mockup; 8 màn mobile 360 + 3 dialog + Dark mode + Today tiếng Việt + card Language, variables Light/Dark, components Button/Badge/PlusPill/TabBar) |
 | Final QC | TODO | | |
 
 ## Backlog (defect Minor, đề xuất chưa làm)
