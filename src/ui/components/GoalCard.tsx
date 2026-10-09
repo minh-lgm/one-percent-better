@@ -21,6 +21,10 @@ export interface GoalCardProps {
   target: number;
   minutes: number;
   entries: LogEntry[];
+  /** `today` (default) or `day` (M3: past-day card, `date` required, no timer, source badges). */
+  variant?: 'today' | 'day';
+  /** ISO date of the day shown (Day variant). */
+  date?: string;
   timer?: GoalTimerState;
   onAdd: (values: EntryFormValues) => Promise<EntrySubmitResult>;
   onUpdate: (entry: LogEntry, values: EntryFormValues) => Promise<EntrySubmitResult>;
@@ -28,8 +32,8 @@ export interface GoalCardProps {
   onStartTimer?: () => Promise<StartTimerResult>;
 }
 
-/** Today card for one active goal (DESIGN S1): amount, progress, +1%, inline entry form, entries, timer start. */
-export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd, onUpdate, onDelete, onStartTimer }: GoalCardProps) {
+/** Today/Day card for one goal (DESIGN S1, S5): amount, progress, +1%, inline entry form, entries, timer start. */
+export function GoalCard({ goal, target, minutes, entries, variant = 'today', date = '', timer = 'none', onAdd, onUpdate, onDelete, onStartTimer }: GoalCardProps) {
   const { t } = useT();
   const f = useFormat();
   const id = useId();
@@ -44,6 +48,8 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
   }, [timer]);
   const logButtonRef = useRef<HTMLButtonElement>(null);
   const met = minutes >= target;
+  const isDay = variant === 'day';
+  const dateText = isDay ? f.dateShort(date) : '';
   const hours = goal.targetType === 'total' ? f.number(goal.targetMinutes / 60) : null;
 
   const focusLogButton = () => requestAnimationFrame(() => logButtonRef.current?.focus());
@@ -52,7 +58,9 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
     ? minutes > target
       ? t('goalCard.reachedExtra', { n: f.number(minutes - target) })
       : t('goalCard.reached')
-    : t('goalCard.toGo', { n: f.number(target - minutes) });
+    : isDay && minutes === 0
+      ? t('empty.day.noEntries')
+      : t('goalCard.toGo', { n: f.number(target - minutes) });
 
   async function startTimer() {
     if (timer !== 'none' || !onStartTimer || starting.current) return;
@@ -77,7 +85,7 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
       <article className="card goal" aria-labelledby={`${id}-name`}>
         <div className="row">
           <h2 id={`${id}-name`}>{goal.name}</h2>
-          {met ? <PlusOnePill /> : null}
+          {met ? <PlusOnePill srKey={isDay ? 'goalCard.plusOneSrDay' : 'goalCard.plusOneSrToday'} /> : null}
         </div>
         {goal.targetType === 'total' && hours ? (
           <p className="muted small">{t('goalCard.subtitleTotal', { daily: f.number(target), hours })}</p>
@@ -88,7 +96,7 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
         <ProgressBar
           value={minutes}
           max={target}
-          label={t('goalCard.progressLabel', { goal: goal.name })}
+          label={isDay ? t('goalCard.progressLabelDay', { goal: goal.name, date: dateText }) : t('goalCard.progressLabel', { goal: goal.name })}
           valueText={t('goalCard.progressValue', { current: f.number(minutes), target: f.number(target) })}
         />
         <p className="muted small status">{status}</p>
@@ -96,6 +104,7 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
           <Button
             ref={logButtonRef}
             variant={met ? 'secondary' : 'primary'}
+            icon={isDay ? 'plus' : undefined}
             aria-expanded={formOpen}
             aria-controls={`${id}-form`}
             onClick={() => {
@@ -103,7 +112,7 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
               setFormOpen((v) => !v);
             }}
           >
-            {t('goalCard.logTime')}
+            {isDay ? t('goalCard.addEntry') : t('goalCard.logTime')}
           </Button>
           {onStartTimer ? (
             timer === 'running' ? (
@@ -131,7 +140,7 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
           <div id={`${id}-form`}>
             <EntryForm
               mode="add"
-              label={t('entry.form.labelAdd', { goal: goal.name })}
+              label={isDay ? t('entry.form.labelAddDay', { goal: goal.name, date: dateText }) : t('entry.form.labelAdd', { goal: goal.name })}
               onSubmit={async (values) => {
                 const result = await onAdd(values);
                 if (result.ok) {
@@ -149,7 +158,7 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
         ) : null}
         {entries.length > 0 ? (
           <>
-            <h3 className="entries-title">{t('entry.listTitle')}</h3>
+            {isDay ? null : <h3 className="entries-title">{t('entry.listTitle')}</h3>}
             <ul className="entries">
               {entries.map((entry) =>
                 editingId === entry.id ? (
@@ -182,6 +191,7 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
                     }}
                     onDelete={() => onDelete(entry)}
                     onDeleted={focusLogButton}
+                    showSource={isDay}
                   />
                 ),
               )}

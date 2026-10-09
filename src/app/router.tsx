@@ -1,12 +1,14 @@
 import { createHashRouter, createMemoryRouter, Navigate, type RouteObject } from 'react-router';
 import { AppShell } from '../ui/components/AppShell';
+import { Day } from '../ui/screens/Day';
+import { GoalDetail } from '../ui/screens/GoalDetail';
 import { GoalForm } from '../ui/screens/GoalForm';
 import { Goals } from '../ui/screens/Goals';
 import { NotFound } from '../ui/screens/NotFound';
 import { Settings } from '../ui/screens/Settings';
 import { Today } from '../ui/screens/Today';
 
-/** Routes (ARCHITECTURE §5.1). M3–M5 add goal detail, day and review. */
+/** Routes (ARCHITECTURE §5.1). M4 adds review. */
 export const routes: RouteObject[] = [
   {
     path: '/',
@@ -17,6 +19,8 @@ export const routes: RouteObject[] = [
       { path: 'goals', element: <Goals /> },
       { path: 'goals/new', element: <GoalForm /> },
       { path: 'goals/:id/edit', element: <GoalForm /> },
+      { path: 'goals/:id', element: <GoalDetail /> },
+      { path: 'day/:date', element: <Day /> },
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },
     ],

@@ -2,14 +2,17 @@
 // implementations (Dexie repositories, Intl, workbox, Notification API) to services and UI.
 import type { i18n } from 'i18next';
 import { createDatabase, openDatabase, type AppDatabase } from '../data/dexie/db';
+import { DexieBackupRepository } from '../data/dexie/backup-repo';
 import { DexieEntryRepository } from '../data/dexie/entry-repo';
 import { DexieGoalRepository } from '../data/dexie/goal-repo';
 import { DexieKvRepository } from '../data/dexie/kv-repo';
+import { DexieTimerRepository } from '../data/dexie/timer-repo';
 import { StorageError } from '../domain/types';
 import { createTranslator, currentLocale, setLocale } from '../i18n/instance';
 import type { Locale, Translator } from '../i18n/types';
 import { createBrowserNotifications } from '../integration/notifications';
 import { isIndexedDbAvailable, requestPersistentStorage, type PersistState } from '../integration/storage';
+import { BackupService } from '../services/backup-service';
 import { EntryService } from '../services/entry-service';
 import { GoalService, defaultIdGenerator } from '../services/goal-service';
 import { LocaleService } from '../services/locale-service';
@@ -35,6 +38,7 @@ export interface AppContainer {
   settingsService: SettingsService;
   timerService: TimerService;
   reminderService: ReminderService;
+  backupService: BackupService;
   notifications: NotificationPort;
   locale: LocaleControl;
   /** Result of `navigator.storage.persist()`, requested once at startup. */
@@ -69,6 +73,7 @@ export async function createContainer({
   const goalRepo = new DexieGoalRepository(db);
   const entryRepo = new DexieEntryRepository(db);
   const kvRepo = new DexieKvRepository(db);
+  const timerRepo = new DexieTimerRepository(db);
 
   const localeService = new LocaleService(kvRepo);
   const translator = createTranslator(i18n);
@@ -83,8 +88,9 @@ export async function createContainer({
     entryService,
     localeService,
     settingsService,
-    timerService: new TimerService(kvRepo, goalRepo, entryService),
+    timerService: new TimerService(kvRepo, goalRepo, entryService, timerRepo),
     reminderService: new ReminderService(settingsService, goalRepo, entryRepo, notifications, translator, notificationIconUrl),
+    backupService: new BackupService(new DexieBackupRepository(db), settingsService),
     notifications,
     locale: {
       current: () => currentLocale(i18n),

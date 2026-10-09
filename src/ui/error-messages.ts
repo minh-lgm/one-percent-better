@@ -27,6 +27,8 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
       if (remaining <= 0) return { key: 'errors.ENTRY_DAY_LIMIT_EXCEEDED_full' };
       return { key: 'errors.ENTRY_DAY_LIMIT_EXCEEDED', params: { remaining: f.number(remaining) } };
     }
+    case 'IMPORT_UNSUPPORTED_VERSION':
+      return { key: 'errors.IMPORT_UNSUPPORTED_VERSION', params: { v: String(error.params?.v ?? '?') } };
     case 'DATE_OUTSIDE_GOAL_PERIOD':
       return {
         key: 'errors.DATE_OUTSIDE_GOAL_PERIOD',
@@ -46,6 +48,10 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
     case 'TIMER_NOT_RUNNING':
     case 'NOTIFICATIONS_UNSUPPORTED':
     case 'NOTIFICATIONS_DENIED':
+    case 'IMPORT_FILE_TOO_LARGE':
+    case 'IMPORT_INVALID_JSON':
+    case 'IMPORT_INVALID_SCHEMA':
+    case 'IMPORT_INTEGRITY':
       return { key: `errors.${error.code}` };
     default:
       return { key: 'errors.UNKNOWN' };

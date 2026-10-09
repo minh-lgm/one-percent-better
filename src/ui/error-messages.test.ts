@@ -45,13 +45,22 @@ describe('errorMessage (DESIGN §7.3)', () => {
       'TIMER_NOT_RUNNING',
       'NOTIFICATIONS_UNSUPPORTED',
       'NOTIFICATIONS_DENIED',
+      // M3
+      'IMPORT_FILE_TOO_LARGE',
+      'IMPORT_INVALID_JSON',
+      'IMPORT_INVALID_SCHEMA',
+      'IMPORT_INTEGRITY',
     ] as const;
     for (const code of codes) {
       const m = errorMessage({ code, message: '' }, f);
       expect(m.key).toBe(`errors.${code}`);
       expect(() => i18n.t(m.key)).not.toThrow();
     }
-    // Codes without a key yet (M3) fall back to the generic message.
-    expect(errorMessage({ code: 'IMPORT_INVALID_JSON', message: '' }, f).key).toBe('errors.UNKNOWN');
+    // IMPORT_UNSUPPORTED_VERSION carries the version read from the file (M3).
+    const v = errorMessage({ code: 'IMPORT_UNSUPPORTED_VERSION', message: '', params: { v: '2' } }, f);
+    expect(v).toEqual({ key: 'errors.IMPORT_UNSUPPORTED_VERSION', params: { v: '2' } });
+    expect(i18n.t(v.key, v.params)).toContain('(2)');
+    // Codes without a key (M5) fall back to the generic message.
+    expect(errorMessage({ code: 'GOAL_TIMER_RUNNING', message: '' }, f).key).toBe('errors.UNKNOWN');
   });
 });

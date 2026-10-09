@@ -1,18 +1,9 @@
 import type { KvRepository, Subscribable } from '../data/repositories';
 import { isValidReminderTime } from '../domain/reminder';
-import { DEFAULT_SETTINGS, type Settings } from '../domain/types';
+import { normalizeSettings } from '../domain/settings';
+import type { Settings } from '../domain/types';
 
-/** Normalise whatever is stored under kv `settings` into a complete, valid `Settings`. */
-export function normalizeSettings(raw: unknown): Settings {
-  const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Record<keyof Settings, unknown>>;
-  return {
-    reminderEnabled: r.reminderEnabled === true,
-    reminderTime: isValidReminderTime(r.reminderTime) ? r.reminderTime : DEFAULT_SETTINGS.reminderTime,
-    lastReminderDate: typeof r.lastReminderDate === 'string' ? r.lastReminderDate : null,
-    lastBackupAt: typeof r.lastBackupAt === 'string' ? r.lastBackupAt : null,
-    plusOneShown: r.plusOneShown && typeof r.plusOneShown === 'object' ? (r.plusOneShown as Record<string, string>) : {},
-  };
-}
+export { normalizeSettings };
 
 /** Settings stored under kv key `settings` (ARCHITECTURE §4). Missing fields fall back to defaults. */
 export class SettingsService {

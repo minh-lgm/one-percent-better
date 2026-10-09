@@ -5,6 +5,10 @@ import { fromLiveQuery, type AppDatabase } from './db';
 export class DexieEntryRepository implements EntryRepository {
   constructor(private readonly db: AppDatabase) {}
 
+  getById(id: string): Promise<LogEntry | undefined> {
+    return this.db.entries.get(id);
+  }
+
   getByGoal(goalId: string): Promise<LogEntry[]> {
     return this.db.entries.where('goalId').equals(goalId).toArray();
   }

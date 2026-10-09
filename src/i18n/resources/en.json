@@ -32,7 +32,9 @@
     "edit": "Edit",
     "delete": "Delete",
     "keep": "Keep",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "working": "Working…",
+    "emptyValue": "—"
   },
   "unit": {
     "min": "min",
@@ -62,7 +64,9 @@
     "languageChanged": "Language changed",
     "timerDiscarded": "Timer discarded",
     "reminderTime": "Reminder time saved",
-    "icsDownloaded": "Calendar file downloaded"
+    "icsDownloaded": "Calendar file downloaded",
+    "backupExported": "Backup exported",
+    "backupImported": "Backup imported: {{goals}}, {{entries}}"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Enter a name for your goal.",
@@ -89,7 +93,12 @@
     "TIMER_ALREADY_RUNNING": "A timer is already running. Stop it before starting another.",
     "TIMER_NOT_RUNNING": "There's no timer running.",
     "NOTIFICATIONS_UNSUPPORTED": "This browser doesn't support notifications. You'll still see a reminder banner in the app.",
-    "NOTIFICATIONS_DENIED": "Notifications are blocked for this site. Allow them in your browser's site settings, then come back. You'll still see a reminder banner in the app."
+    "NOTIFICATIONS_DENIED": "Notifications are blocked for this site. Allow them in your browser's site settings, then come back. You'll still see a reminder banner in the app.",
+    "IMPORT_FILE_TOO_LARGE": "This file is larger than 5 MB, so it can't be a 1% Better backup. Choose a different file. Nothing was changed.",
+    "IMPORT_INVALID_JSON": "This file isn't valid JSON. Choose a backup exported from 1% Better. Nothing was changed.",
+    "IMPORT_INVALID_SCHEMA": "This file doesn't look like a 1% Better backup. Choose a file exported from this app. Nothing was changed.",
+    "IMPORT_UNSUPPORTED_VERSION": "This backup uses a format version ({{v}}) this app can't read. Export it again from an up-to-date copy of the app. Nothing was changed.",
+    "IMPORT_INTEGRITY": "This backup is inconsistent (for example, entries that don't belong to any goal). Nothing was changed."
   },
   "empty": {
     "today": {
@@ -102,7 +111,17 @@
     },
     "goals": "No goals yet",
     "goalsBody": "Pick something you want to do a little every day. Log your time and watch it add up.",
-    "goalsAction": "Create your first goal"
+    "goalsAction": "Create your first goal",
+    "detail": {
+      "history": "No entries yet",
+      "historyBody": "Time you log for this goal will show up here."
+    },
+    "day": {
+      "noGoals": "No goals were running on this day",
+      "noGoalsBody": "Goals show up here on the days they're active.",
+      "noGoalsAction": "View goals",
+      "noEntries": "No time logged for this goal on this day."
+    }
   },
   "today": {
     "title": "Today",
@@ -110,7 +129,8 @@
     "summary_other": "{{n}} of {{count}} goals on target",
     "allOnTarget_one": "Goal on target — a little better than yesterday.",
     "allOnTarget_other": "All {{count}} goals on target — a little better than yesterday.",
-    "goalsLabel": "Goals for today"
+    "goalsLabel": "Goals for today",
+    "pastDayLink": "Missed a day? Log time for a past day"
   },
   "goalCard": {
     "amount": "{{current}}/{{target}}",
@@ -125,7 +145,10 @@
     "logTime": "Log time",
     "startTimer": "Start timer",
     "timerDisabled": "Stop the running timer first.",
-    "timerRunningBadge": "Timer running"
+    "timerRunningBadge": "Timer running",
+    "plusOneSrDay": "Target reached",
+    "progressLabelDay": "{{goal}} on {{date}}",
+    "addEntry": "Add entry"
   },
   "entry": {
     "listTitle": "Today's entries",
@@ -138,7 +161,8 @@
       "save": "Save entry",
       "saveChanges": "Save changes",
       "labelAdd": "Log time for {{goal}}",
-      "labelEdit": "Edit entry for {{goal}}"
+      "labelEdit": "Edit entry for {{goal}}",
+      "labelAddDay": "Add entry for {{goal}} on {{date}}"
     },
     "row": {
       "summary": "{{minutes}}, {{note}}",
@@ -147,6 +171,10 @@
       "deleteAria": "Delete entry: {{summary}}",
       "confirmTitle": "Delete this entry?",
       "confirmAria": "Confirm delete: {{summary}}"
+    },
+    "source": {
+      "manual": "Manual",
+      "timer": "Timer"
     }
   },
   "goals": {
@@ -200,6 +228,13 @@
       "endLabel": "End date",
       "save": "Save goal",
       "saveChanges": "Save changes"
+    },
+    "detail": {
+      "historyTitle": "History",
+      "colDate": "Date",
+      "colMinutes": "Minutes",
+      "colNote": "Note",
+      "colSource": "Source"
     }
   },
   "settings": {
@@ -235,6 +270,15 @@
       "unsupported": "Not supported",
       "defaultDesc": "Turn on the reminder and your browser will ask for permission.",
       "grantedDesc": "You'll get one notification a day while 1% Better is open."
+    },
+    "backup": {
+      "title": "Backup",
+      "desc": "Your data lives only on this device. Export a backup now and then, or to move to another device.",
+      "last": "Last backup: {{date}}",
+      "lastNever": "Last backup: Never",
+      "export": "Export backup (JSON)",
+      "import": "Import backup…",
+      "importHint": "Importing replaces everything currently on this device."
     },
     "storage": {
       "title": "Storage",
@@ -294,5 +338,29 @@
   "ics": {
     "summary": "1% Better — log today's time",
     "alarm": "Log today's time in 1% Better."
+  },
+  "day": {
+    "title": "Day",
+    "goToToday": "Go to today",
+    "navLabel": "Choose a day",
+    "prev": "Previous day",
+    "next": "Next day",
+    "dateLabel": "Date",
+    "onlyRunning": "Only goals running on this day are shown.",
+    "goalsLabel": "Goals on this day",
+    "invalid": "That date isn't valid.",
+    "invalidAction": "Go to Today"
+  },
+  "backup": {
+    "banner": {
+      "never": "You haven't backed up yet. Export a backup so your data is safe if this browser clears it.",
+      "old": "It's been {{n}} days since your last backup.",
+      "action": "Back up now"
+    }
+  },
+  "import": {
+    "title": "Replace all data?",
+    "body": "This backup has {{goals}}, {{entries}}, exported {{date}}. Importing replaces everything currently on this device ({{curGoals}}, {{curEntries}}). This can't be undone.",
+    "confirm": "Replace all data"
   }
 }

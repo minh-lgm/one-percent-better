@@ -1,16 +1,26 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
+import { IMPORT_MAX_BYTES } from '../../config/constants';
+import { BACKUP_MIME_TYPE, backupReminder } from '../../domain/backup';
 import { toISODate } from '../../domain/dates';
 import { buildReminderIcs, ICS_FILE_NAME } from '../../domain/ics';
 import type { NotificationPermissionState } from '../../domain/reminder';
+import type { DomainError } from '../../domain/types';
 import type { MessageKey } from '../../i18n/types';
-import { downloadTextFile, ICS_MIME_TYPE } from '../../integration/file-io';
+import { downloadTextFile, ICS_MIME_TYPE, readTextFile } from '../../integration/file-io';
 import type { PersistState } from '../../integration/storage';
+import type { BackupCounts, BackupPreview } from '../../services/backup-service';
+import { Alert } from '../components/Alert';
+import { BackupBanner } from '../components/BackupBanner';
 import { Badge, type BadgeTone } from '../components/Badge';
 import { Button } from '../components/Button';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/PageHeader';
 import { ReminderTimeField } from '../components/ReminderTimeField';
 import { Switch } from '../components/Switch';
+import { errorMessage, WRITE_FAILED_KEY } from '../error-messages';
+import { useFormat } from '../hooks/useFormat';
+import { useNow } from '../hooks/useNow';
 import { useServices } from '../hooks/useServices';
 import { useSubscribable } from '../hooks/useSubscribable';
 import { useT } from '../hooks/useT';
@@ -29,15 +39,31 @@ const PERMISSION_VIEW: Record<NotificationPermissionState, { chip: MessageKey; d
   unsupported: { chip: 'settings.permission.unsupported', desc: 'errors.NOTIFICATIONS_UNSUPPORTED', tone: 'neutral' },
 };
 
-/** Settings (DESIGN S7). Cards: Language, Reminders (M2), Storage, About. */
+interface ImportState {
+  preview: BackupPreview;
+  counts: BackupCounts;
+  opener: HTMLElement | null;
+}
+
+/** Settings (DESIGN S7). Cards: Language, Reminders (M2), Backup (M3), Storage, About. */
 export function Settings() {
   const { t } = useT();
+  const f = useFormat();
   const toast = useToast();
   const id = useId();
-  const { storagePersistence, settingsService, notifications } = useServices();
+  const now = useNow();
+  const { storagePersistence, settingsService, notifications, backupService, goalService } = useServices();
   const [persist, setPersist] = useState<PersistState | null>(null);
   const [permission, setPermission] = useState<NotificationPermissionState>(() => notifications.permission());
   const settings = useSubscribable(() => settingsService.watch(), [settingsService]);
+  const goals = useSubscribable(() => goalService.watchAll(), [goalService]);
+
+  // Backup card state (M3)
+  const fileInput = useRef<HTMLInputElement>(null);
+  const importButton = useRef<HTMLButtonElement>(null);
+  const [busy, setBusy] = useState<'export' | 'import' | null>(null);
+  const [importError, setImportError] = useState<DomainError | 'read' | 'write' | null>(null);
+  const [importing, setImporting] = useState<ImportState | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -77,6 +103,85 @@ export function Settings() {
   async function changeTime(value: string) {
     await settingsService.setReminderTime(value);
   }
+
+  async function exportBackup() {
+    if (busy) return;
+    setBusy('export');
+    try {
+      const { fileName, json } = await backupService.export(new Date());
+      downloadTextFile(fileName, json, BACKUP_MIME_TYPE);
+      toast.show('toast.backupExported');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onImportFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || busy) return;
+    setBusy('import');
+    setImportError(null);
+    try {
+      // `parse` rejects by size before looking at the text; do not even read huge files.
+      const text = file.size > IMPORT_MAX_BYTES ? '' : await readTextFile(file);
+      const parsed = backupService.parse(text, file.size);
+      if (!parsed.ok) {
+        setImportError(parsed.errors[0] ?? 'read');
+        return;
+      }
+      const counts = await backupService.counts();
+      setImporting({ preview: parsed.value, counts, opener: importButton.current });
+    } catch {
+      setImportError('read');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function confirmImport() {
+    if (!importing || busy) return;
+    setBusy('import');
+    try {
+      const r = await backupService.import(importing.preview);
+      if (r.ok) {
+        toast.show('toast.backupImported', { goals: t('format.goalsCount', { count: r.value.goals }), entries: t('format.entriesCount', { count: r.value.entries }) });
+        setImportError(null);
+      }
+    } catch {
+      setImportError('write');
+    } finally {
+      setBusy(null);
+      closeImport();
+    }
+  }
+
+  function closeImport() {
+    const opener = importing?.opener;
+    setImporting(null);
+    requestAnimationFrame(() => opener?.focus());
+  }
+
+  let importErrorText: string | null = null;
+  if (importError === 'read') importErrorText = t('errors.UNKNOWN');
+  else if (importError === 'write') importErrorText = t(WRITE_FAILED_KEY);
+  else if (importError) {
+    const m = errorMessage(importError, f);
+    importErrorText = t(m.key, m.params);
+  }
+
+  const lastBackupAt = settings.data?.lastBackupAt ?? null;
+  const backupNag = settings.data && goals.data ? backupReminder(lastBackupAt, goals.data.length, now) : null;
+  const count = (key: 'format.goalsCount' | 'format.entriesCount', n: number) => t(key, { count: n });
+  const importBody = importing
+    ? t('import.body', {
+        goals: count('format.goalsCount', importing.preview.goals),
+        entries: count('format.entriesCount', importing.preview.entries),
+        date: f.dateShort(new Date(importing.preview.exportedAt)),
+        curGoals: count('format.goalsCount', importing.counts.goals),
+        curEntries: count('format.entriesCount', importing.counts.entries),
+      })
+    : '';
 
   function downloadIcs() {
     const now = new Date();
@@ -151,6 +256,35 @@ export function Settings() {
           <p className="hint">{t('settings.reminders.icsHint', { time: reminderTime })}</p>
         </section>
 
+        <section className="card" aria-labelledby="h-backup">
+          <h2 id="h-backup">{t('settings.backup.title')}</h2>
+          <p className="desc">{t('settings.backup.desc')}</p>
+          {backupNag ? <BackupBanner reminder={backupNag} /> : null}
+          <p className="backup-last num" data-testid="last-backup">
+            {lastBackupAt ? t('settings.backup.last', { date: f.dateShort(new Date(lastBackupAt)) }) : t('settings.backup.lastNever')}
+          </p>
+          <div className="btn-row">
+            <Button variant="primary" icon="download" disabled={busy !== null} aria-busy={busy === 'export' || undefined} onClick={() => void exportBackup()}>
+              {busy === 'export' ? t('common.working') : t('settings.backup.export')}
+            </Button>
+            <Button ref={importButton} variant="secondary" icon="upload" disabled={busy !== null} aria-busy={busy === 'import' || undefined} onClick={() => fileInput.current?.click()}>
+              {busy === 'import' ? t('common.working') : t('settings.backup.import')}
+            </Button>
+            <input
+              ref={fileInput}
+              className="file-input"
+              type="file"
+              accept=".json,application/json"
+              tabIndex={-1}
+              aria-hidden="true"
+              data-testid="import-file"
+              onChange={(e) => void onImportFile(e)}
+            />
+          </div>
+          <p className="hint">{t('settings.backup.importHint')}</p>
+          {importErrorText ? <Alert>{importErrorText}</Alert> : null}
+        </section>
+
         <section className="card" aria-labelledby="h-storage">
           <h2 id="h-storage">{t('settings.storage.title')}</h2>
           <div className="perm">
@@ -172,6 +306,15 @@ export function Settings() {
           <p className="desc">{t('settings.about.desc')}</p>
         </section>
       </div>
+      <ConfirmDialog
+        open={importing !== null}
+        title={t('import.title')}
+        body={importBody}
+        confirmLabel={t('import.confirm')}
+        busy={busy === 'import'}
+        onConfirm={() => void confirmImport()}
+        onCancel={closeImport}
+      />
     </>
   );
 }

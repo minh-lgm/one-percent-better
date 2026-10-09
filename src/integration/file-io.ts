@@ -32,3 +32,15 @@ export function downloadTextFile(fileName: string, content: string, mimeType: st
 }
 
 export const ICS_MIME_TYPE = 'text/calendar;charset=utf-8';
+export const JSON_MIME_TYPE = 'application/json;charset=utf-8';
+
+/** Read a user-selected file as UTF-8 text (`Blob.text()` where available, `FileReader` otherwise). */
+export function readTextFile(file: Blob): Promise<string> {
+  if (typeof file.text === 'function') return file.text();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = () => reject(reader.error ?? new Error('read failed'));
+    reader.readAsText(file);
+  });
+}

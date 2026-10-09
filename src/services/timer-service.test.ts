@@ -3,6 +3,7 @@ import { openDatabase, type AppDatabase } from '../data/dexie/db';
 import { DexieEntryRepository } from '../data/dexie/entry-repo';
 import { DexieGoalRepository } from '../data/dexie/goal-repo';
 import { DexieKvRepository } from '../data/dexie/kv-repo';
+import { DexieTimerRepository } from '../data/dexie/timer-repo';
 import { buildGoal, datasetS1, FIXED_NOW } from '../test/builders';
 import { createTestDatabase } from '../test/db';
 import { EntryService } from './entry-service';
@@ -22,7 +23,7 @@ beforeEach(async () => {
   const goals = new DexieGoalRepository(db);
   const entries = new DexieEntryRepository(db);
   kv = new DexieKvRepository(db);
-  timers = new TimerService(kv, goals, new EntryService(entries, goals));
+  timers = new TimerService(kv, goals, new EntryService(entries, goals), new DexieTimerRepository(db));
   goalService = new GoalService(goals, entries, undefined, kv);
   const s1 = datasetS1();
   await db.goals.bulkPut(s1.goals);

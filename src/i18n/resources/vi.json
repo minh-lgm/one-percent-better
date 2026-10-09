@@ -32,7 +32,9 @@
     "edit": "Sửa",
     "delete": "Xóa",
     "keep": "Giữ lại",
-    "tryAgain": "Thử lại"
+    "tryAgain": "Thử lại",
+    "working": "Đang xử lý…",
+    "emptyValue": "—"
   },
   "unit": {
     "min": "phút",
@@ -59,7 +61,9 @@
     "languageChanged": "Đã đổi ngôn ngữ",
     "timerDiscarded": "Đã bỏ phiên đếm giờ",
     "reminderTime": "Đã lưu giờ nhắc",
-    "icsDownloaded": "Đã tải tệp lịch"
+    "icsDownloaded": "Đã tải tệp lịch",
+    "backupExported": "Đã xuất bản sao lưu",
+    "backupImported": "Đã nhập bản sao lưu: {{goals}}, {{entries}}"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Hãy nhập tên cho mục tiêu của bạn.",
@@ -86,7 +90,12 @@
     "TIMER_ALREADY_RUNNING": "Đang có một bộ đếm giờ chạy. Hãy dừng nó trước khi bắt đầu bộ khác.",
     "TIMER_NOT_RUNNING": "Hiện không có bộ đếm giờ nào đang chạy.",
     "NOTIFICATIONS_UNSUPPORTED": "Trình duyệt này không hỗ trợ thông báo. Bạn vẫn sẽ thấy lời nhắc ngay trong app.",
-    "NOTIFICATIONS_DENIED": "Thông báo đang bị chặn cho trang này. Hãy cho phép trong cài đặt trang web của trình duyệt rồi quay lại. Bạn vẫn sẽ thấy lời nhắc ngay trong app."
+    "NOTIFICATIONS_DENIED": "Thông báo đang bị chặn cho trang này. Hãy cho phép trong cài đặt trang web của trình duyệt rồi quay lại. Bạn vẫn sẽ thấy lời nhắc ngay trong app.",
+    "IMPORT_FILE_TOO_LARGE": "Tệp này lớn hơn 5 MB nên không thể là bản sao lưu của 1% Better. Hãy chọn tệp khác. Chưa có gì bị thay đổi.",
+    "IMPORT_INVALID_JSON": "Tệp này không phải JSON hợp lệ. Hãy chọn bản sao lưu đã xuất từ 1% Better. Chưa có gì bị thay đổi.",
+    "IMPORT_INVALID_SCHEMA": "Tệp này không giống bản sao lưu của 1% Better. Hãy chọn tệp đã xuất từ app này. Chưa có gì bị thay đổi.",
+    "IMPORT_UNSUPPORTED_VERSION": "Bản sao lưu này dùng phiên bản định dạng ({{v}}) mà app không đọc được. Hãy xuất lại từ bản app mới nhất. Chưa có gì bị thay đổi.",
+    "IMPORT_INTEGRITY": "Bản sao lưu này không nhất quán (ví dụ: có lần ghi không thuộc mục tiêu nào). Chưa có gì bị thay đổi."
   },
   "empty": {
     "today": {
@@ -99,13 +108,24 @@
     },
     "goals": "Chưa có mục tiêu nào",
     "goalsBody": "Chọn một việc bạn muốn làm một chút mỗi ngày. Ghi lại thời gian và xem nó dày lên theo ngày.",
-    "goalsAction": "Tạo mục tiêu đầu tiên"
+    "goalsAction": "Tạo mục tiêu đầu tiên",
+    "detail": {
+      "history": "Chưa có lần ghi nào",
+      "historyBody": "Thời gian bạn ghi cho mục tiêu này sẽ hiện ở đây."
+    },
+    "day": {
+      "noGoals": "Không có mục tiêu nào đang chạy trong ngày này",
+      "noGoalsBody": "Mục tiêu sẽ hiện ở đây vào những ngày chúng đang chạy.",
+      "noGoalsAction": "Xem mục tiêu",
+      "noEntries": "Chưa ghi thời gian nào cho mục tiêu này trong ngày này."
+    }
   },
   "today": {
     "title": "Hôm nay",
     "summary_other": "Đã đạt {{n}}/{{count}} mục tiêu",
     "allOnTarget_other": "Đạt cả {{count}} mục tiêu — tốt hơn hôm qua một chút.",
-    "goalsLabel": "Mục tiêu hôm nay"
+    "goalsLabel": "Mục tiêu hôm nay",
+    "pastDayLink": "Quên ghi một ngày? Ghi bù cho ngày đã qua"
   },
   "goalCard": {
     "amount": "{{current}}/{{target}}",
@@ -120,7 +140,10 @@
     "logTime": "Ghi thời gian",
     "startTimer": "Đếm giờ",
     "timerDisabled": "Hãy dừng bộ đếm giờ đang chạy trước.",
-    "timerRunningBadge": "Đang đếm giờ"
+    "timerRunningBadge": "Đang đếm giờ",
+    "plusOneSrDay": "Đã đạt chỉ tiêu",
+    "progressLabelDay": "{{goal}} ngày {{date}}",
+    "addEntry": "Thêm lần ghi"
   },
   "entry": {
     "listTitle": "Các lần ghi hôm nay",
@@ -133,7 +156,8 @@
       "save": "Lưu lần ghi",
       "saveChanges": "Lưu thay đổi",
       "labelAdd": "Ghi thời gian cho {{goal}}",
-      "labelEdit": "Sửa lần ghi của {{goal}}"
+      "labelEdit": "Sửa lần ghi của {{goal}}",
+      "labelAddDay": "Thêm lần ghi cho {{goal}} ngày {{date}}"
     },
     "row": {
       "summary": "{{minutes}}, {{note}}",
@@ -142,6 +166,10 @@
       "deleteAria": "Xóa lần ghi: {{summary}}",
       "confirmTitle": "Xóa lần ghi này?",
       "confirmAria": "Xác nhận xóa: {{summary}}"
+    },
+    "source": {
+      "manual": "Thủ công",
+      "timer": "Đếm giờ"
     }
   },
   "goals": {
@@ -193,6 +221,13 @@
       "endLabel": "Ngày kết thúc",
       "save": "Lưu mục tiêu",
       "saveChanges": "Lưu thay đổi"
+    },
+    "detail": {
+      "historyTitle": "Lịch sử",
+      "colDate": "Ngày",
+      "colMinutes": "Số phút",
+      "colNote": "Ghi chú",
+      "colSource": "Nguồn"
     }
   },
   "settings": {
@@ -228,6 +263,15 @@
       "unsupported": "Không hỗ trợ",
       "defaultDesc": "Bật nhắc nhở và trình duyệt sẽ xin quyền thông báo của bạn.",
       "grantedDesc": "Bạn sẽ nhận một thông báo mỗi ngày khi 1% Better đang mở."
+    },
+    "backup": {
+      "title": "Sao lưu",
+      "desc": "Dữ liệu của bạn chỉ nằm trên thiết bị này. Hãy thỉnh thoảng xuất bản sao lưu, hoặc khi cần chuyển sang thiết bị khác.",
+      "last": "Lần sao lưu gần nhất: {{date}}",
+      "lastNever": "Lần sao lưu gần nhất: Chưa có",
+      "export": "Xuất sao lưu (JSON)",
+      "import": "Nhập sao lưu…",
+      "importHint": "Nhập sao lưu sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này."
     },
     "storage": {
       "title": "Bộ nhớ",
@@ -285,5 +329,29 @@
   "ics": {
     "summary": "1% Better — ghi thời gian hôm nay",
     "alarm": "Hãy ghi thời gian hôm nay trong 1% Better."
+  },
+  "day": {
+    "title": "Ngày",
+    "goToToday": "Về hôm nay",
+    "navLabel": "Chọn ngày",
+    "prev": "Ngày trước",
+    "next": "Ngày sau",
+    "dateLabel": "Ngày",
+    "onlyRunning": "Chỉ hiển thị các mục tiêu đang chạy trong ngày này.",
+    "goalsLabel": "Mục tiêu trong ngày này",
+    "invalid": "Ngày này không hợp lệ.",
+    "invalidAction": "Về trang Hôm nay"
+  },
+  "backup": {
+    "banner": {
+      "never": "Bạn chưa sao lưu lần nào. Hãy xuất một bản sao lưu để dữ liệu vẫn an toàn nếu trình duyệt xóa dữ liệu.",
+      "old": "Đã {{n}} ngày kể từ lần sao lưu gần nhất.",
+      "action": "Sao lưu ngay"
+    }
+  },
+  "import": {
+    "title": "Thay thế toàn bộ dữ liệu?",
+    "body": "Bản sao lưu này có {{goals}}, {{entries}}, xuất ngày {{date}}. Nhập sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này ({{curGoals}}, {{curEntries}}). Bạn không thể hoàn tác.",
+    "confirm": "Thay thế toàn bộ dữ liệu"
   }
 }

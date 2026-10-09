@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { LogEntry } from '../../domain/types';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../hooks/useT';
+import { Badge } from './Badge';
 import { Button, IconButton } from './Button';
 
 export interface EntryRowProps {
@@ -10,6 +11,8 @@ export interface EntryRowProps {
   onDelete: () => Promise<void>;
   /** Called after a delete so the parent can move focus (DESIGN §8). */
   onDeleted?: () => void;
+  /** Show the Manual/Timer badge (Day screen, M3). */
+  showSource?: boolean;
 }
 
 export function entrySummary(entry: Pick<LogEntry, 'minutes' | 'note'>, t: ReturnType<typeof useT>['t'], f: ReturnType<typeof useFormat>): string {
@@ -18,7 +21,7 @@ export function entrySummary(entry: Pick<LogEntry, 'minutes' | 'note'>, t: Retur
 }
 
 /** One entry with Edit/Delete and inline delete confirmation (A-D5). */
-export function EntryRow({ entry, onEdit, onDelete, onDeleted }: EntryRowProps) {
+export function EntryRow({ entry, onEdit, onDelete, onDeleted, showSource = false }: EntryRowProps) {
   const { t } = useT();
   const f = useFormat();
   const [confirming, setConfirming] = useState(false);
@@ -70,7 +73,15 @@ export function EntryRow({ entry, onEdit, onDelete, onDeleted }: EntryRowProps) 
   return (
     <li>
       <span className="em num">{f.minutes(entry.minutes)}</span>
-      <span className="en">{entry.note}</span>
+      <span className="en">
+        {entry.note}
+        {showSource ? (
+          <>
+            {' '}
+            <Badge>{t(`entry.source.${entry.source}`)}</Badge>
+          </>
+        ) : null}
+      </span>
       <IconButton icon="edit" label={t('entry.row.editAria', { summary })} onClick={onEdit} />
       <IconButton icon="trash" label={t('entry.row.deleteAria', { summary })} onClick={() => setConfirming(true)} ref={deleteBtnRef} />
     </li>

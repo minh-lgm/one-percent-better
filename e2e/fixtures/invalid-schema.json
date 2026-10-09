@@ -1,0 +1,24 @@
+{
+  "app": "one-percent-better",
+  "schemaVersion": 1,
+  "exportedAt": "2026-10-09T03:00:00.000Z",
+  "entries": [
+    {
+      "id": "e-g1-1",
+      "goalId": "g1",
+      "date": "2026-10-01",
+      "minutes": "30",
+      "note": "",
+      "source": "manual",
+      "createdAt": "2026-10-01T03:00:00.000Z",
+      "updatedAt": "2026-10-01T03:00:00.000Z"
+    }
+  ],
+  "settings": {
+    "reminderEnabled": false,
+    "reminderTime": "20:00",
+    "lastReminderDate": null,
+    "lastBackupAt": null,
+    "plusOneShown": {}
+  }
+}

@@ -1028,6 +1028,201 @@ input.switch:disabled {
   font-weight: 600;
 }
 
+/* ---- Day (S5) ---- */
+.datenav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.datenav .input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.datenav .lbl {
+  display: none;
+}
+@media (min-width: 640px) {
+  .datenav .lbl {
+    display: inline;
+  }
+  .datenav .input {
+    flex: 0 1 200px;
+  }
+  .datenav .spacer {
+    flex: 1;
+  }
+}
+.date-title {
+  margin: 16px 0 4px;
+  font-size: var(--text-lg);
+  line-height: 26px;
+  font-weight: 600;
+}
+.day-note {
+  margin-bottom: 16px;
+}
+.past-day {
+  margin-top: 24px;
+  text-align: center;
+}
+.past-day a {
+  display: inline-block;
+  min-height: var(--tap);
+  line-height: 24px;
+  padding: 10px 8px;
+  font-weight: 600;
+}
+.banner.neutral {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.banner.neutral p {
+  flex: 1 1 200px;
+}
+.banner.backup {
+  margin-bottom: 16px;
+}
+.card .banner.backup {
+  margin: 12px 0 0;
+}
+.entries .en .badge {
+  vertical-align: middle;
+}
+
+/* ---- Goal detail (S4) ---- */
+.gd-head {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 16px;
+}
+@media (min-width: 640px) {
+  .gd-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+}
+.gd-head > div {
+  min-width: 0;
+}
+.gd-head .top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.gd-head h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.gd-head .why {
+  margin-top: 4px;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+.gd-head .why::before {
+  content: 'C';
+}
+.gd-head .why::after {
+  content: 'D';
+}
+.gd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.section {
+  margin-bottom: 16px;
+}
+.empty.compact {
+  padding: 16px 8px 8px;
+}
+.empty.compact h3 {
+  font-size: var(--text-base);
+  line-height: 24px;
+}
+.empty.compact .ic {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 6px;
+}
+table.hist {
+  border-collapse: collapse;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  margin-top: 8px;
+}
+.hist th,
+.hist td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+  line-height: 20px;
+  vertical-align: top;
+}
+.hist th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.hist td a {
+  color: var(--primary);
+  font-weight: 600;
+}
+.hist td.note {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 639px) {
+  .hist thead {
+    position: absolute;
+    left: -9999px;
+  }
+  .hist tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .hist td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+  .hist td.note {
+    grid-column: 1;
+    color: var(--text-muted);
+  }
+  .hist td.src {
+    grid-column: 2;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+}
+.goal-row h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.goal-row h3 a:hover {
+  text-decoration: underline;
+}
+
+/* ---- Settings: Backup (S7) ---- */
+.backup-last {
+  margin-top: 12px;
+  font-weight: 600;
+}
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

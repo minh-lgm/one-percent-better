@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { Link } from 'react-router';
 import { toISODate } from '../../domain/dates';
 import { dailyTarget, goalStatus, groupGoals } from '../../domain/goal';
 import type { Goal, GoalStatus } from '../../domain/types';
@@ -109,7 +110,9 @@ export function Goals() {
                   <li key={goal.id} className="card goal-row" data-testid="goal-row">
                     <div className="goal-info">
                       <div className="top">
-                        <h3>{goal.name}</h3>
+                        <h3>
+                          <Link to={`/goals/${goal.id}`}>{goal.name}</Link>
+                        </h3>
                         <Badge tone={TONES[status]}>{t(`goal.status.${status === 'archived' ? 'ended' : status}`)}</Badge>
                       </div>
                       <p className="muted small num">{rowLine(goal)}</p>

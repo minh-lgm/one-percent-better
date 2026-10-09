@@ -39,9 +39,9 @@ describe('Settings — Reminders card (M2-AC6, M2-AC11, M2-AC13)', () => {
     expect(screen.getByText(en.settings.reminders.limit)).toBeInTheDocument();
     expect(screen.getByText(en.settings.reminders.ios)).toBeInTheDocument();
     expect(screen.getByText('Adds a repeating daily event at 20:00.')).toBeInTheDocument();
-    // Card order: Language → Reminders → Storage → About (DESIGN S7).
+    // Card order: Language → Reminders → Backup → Storage → About (DESIGN S7).
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(headings).toEqual(['Language / Ngôn ngữ', en.settings.reminders.title, en.settings.storage.title, en.settings.about.title]);
+    expect(headings).toEqual(['Language / Ngôn ngữ', en.settings.reminders.title, en.settings.backup.title, en.settings.storage.title, en.settings.about.title]);
   });
 
   it('turning the switch on saves the setting and asks for permission exactly once', async () => {

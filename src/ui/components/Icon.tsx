@@ -15,6 +15,9 @@ const PATHS = {
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5h.01" /></>,
   plus: <path d="M12 5v14M5 12h14" />,
   left: <path d="M15 5l-7 7 7 7" />,
+  right: <path d="M9 5l7 7-7 7" />,
+  download: <><path d="M12 4v11M7 10l5 5 5-5" /><path d="M4 19h16" /></>,
+  upload: <><path d="M12 15V4M7 9l5-5 5 5" /><path d="M4 19h16" /></>,
   offline: <><path d="M5 12a9 9 0 0114-7M19 12a9 9 0 01-14 7" /><path d="M4 4l16 16" /></>,
   sparkle: <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6" />,
 } as const;

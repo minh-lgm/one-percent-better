@@ -24,7 +24,13 @@ export class EntryService {
     private readonly newId: IdGenerator = defaultIdGenerator,
   ) {}
 
-  async add(input: AddEntryInput, now: Date): Promise<Result<LogEntry>> {
+  /**
+   * Validate `input` (goal exists, fields, date rules) and build the `LogEntry`
+   * without writing anything (M3-T7 b). The per-day limit is NOT checked here:
+   * `add` checks it against the repository, `TimerService.save` re-checks it
+   * inside the save transaction (ADR-16).
+   */
+  async prepareAdd(input: AddEntryInput, now: Date): Promise<Result<LogEntry>> {
     const goal = await this.goals.getById(input.goalId);
     if (!goal) return fail({ code: 'GOAL_NOT_FOUND', message: `goal ${input.goalId} not found` });
 
@@ -34,12 +40,8 @@ export class EntryService {
     const dateError = validateEntryDate(input.date, goal, toISODate(now));
     if (dateError) return fail(dateError);
 
-    const existing = await this.entries.sumMinutes(input.goalId, input.date);
-    const limitError = checkDayLimit(existing, fields.value.minutes);
-    if (limitError) return fail(limitError);
-
     const stamp = now.toISOString();
-    const entry: LogEntry = {
+    return ok({
       id: this.newId(),
       goalId: input.goalId,
       date: input.date,
@@ -48,13 +50,24 @@ export class EntryService {
       source: input.source,
       createdAt: stamp,
       updatedAt: stamp,
-    };
+    });
+  }
+
+  async add(input: AddEntryInput, now: Date): Promise<Result<LogEntry>> {
+    const prepared = await this.prepareAdd(input, now);
+    if (!prepared.ok) return prepared;
+    const entry = prepared.value;
+
+    const existing = await this.entries.sumMinutes(entry.goalId, entry.date);
+    const limitError = checkDayLimit(existing, entry.minutes);
+    if (limitError) return fail(limitError);
+
     await this.entries.put(entry);
     return ok(entry);
   }
 
   async update(id: string, input: UpdateEntryInput, now: Date): Promise<Result<LogEntry>> {
-    const existing = await this.findById(id);
+    const existing = await this.entries.getById(id);
     if (!existing) return fail({ code: 'ENTRY_NOT_FOUND', message: `entry ${id} not found` });
 
     const fields = validateEntryFields(input);
@@ -70,7 +83,7 @@ export class EntryService {
   }
 
   async remove(id: string): Promise<Result<void>> {
-    const existing = await this.findById(id);
+    const existing = await this.entries.getById(id);
     if (!existing) return fail({ code: 'ENTRY_NOT_FOUND', message: `entry ${id} not found` });
     await this.entries.delete(id);
     return ok(undefined);
@@ -80,9 +93,8 @@ export class EntryService {
     return this.entries.watchByDateRange(from, to);
   }
 
-  private async findById(id: string): Promise<LogEntry | undefined> {
-    // Repository has no getById by design (not needed elsewhere); entries are few per day.
-    const all = await this.entries.getByDateRange('0000-01-01', '9999-12-31');
-    return all.find((e) => e.id === id);
+  /** Live entries of one goal (Goal detail history, M3). */
+  watchByGoal(goalId: string) {
+    return this.entries.watchByGoal(goalId);
   }
 }

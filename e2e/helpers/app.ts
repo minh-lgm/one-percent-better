@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { flattenMessages } from '../../src/i18n/parity';
 import en from '../../src/i18n/resources/en.json' with { type: 'json' };
@@ -209,4 +210,27 @@ export function plusOne(page: Page, name: string): Locator {
 
 export function toast(page: Page): Locator {
   return page.getByTestId('toast');
+}
+
+// ---- M3 ----
+
+/** Absolute path of a file in `e2e/fixtures/`. */
+export function fixturePath(name: string): string {
+  return fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url));
+}
+
+/** Pick a backup file on the Settings screen (opens D3 for a valid file, shows an Alert otherwise). */
+export async function chooseBackupFile(page: Page, fixture: string): Promise<void> {
+  if (!page.url().includes('#/settings')) await gotoHash(page, '/settings');
+  await page.getByTestId('import-file').setInputFiles(fixturePath(fixture));
+}
+
+/** Import a fixture through the real UI: Settings → file → D3 → confirm (TASKS §0: data for M3+ specs). */
+export async function importBackup(page: Page, fixture = 'sample-backup.json', copy: Copy = en): Promise<void> {
+  await chooseBackupFile(page, fixture);
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: copy.import.confirm }).click();
+  await expect(dialog).toBeHidden();
+  await expect(toast(page)).toContainText(copy.toast.backupImported.split(':')[0]);
 }

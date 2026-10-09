@@ -1,5 +1,7 @@
-import type { GoalRepository, KvRepository, Subscribable } from '../data/repositories';
+import { DAY_MINUTES_LIMIT } from '../config/constants';
+import type { GoalRepository, KvRepository, Subscribable, TimerRepository } from '../data/repositories';
 import { toISODate } from '../domain/dates';
+import { checkDayLimit } from '../domain/entry';
 import { goalStatus } from '../domain/goal';
 import { previewTimer, type TimerPreview } from '../domain/timer';
 import { fail, ok, type ActiveTimer, type LogEntry, type Result } from '../domain/types';
@@ -20,6 +22,8 @@ export class TimerService {
     private readonly kv: KvRepository,
     private readonly goals: GoalRepository,
     private readonly entries: EntryService,
+    /** M3 (ADR-16): entry write + timer removal in one transaction, atomic across tabs. */
+    private readonly timers: TimerRepository,
   ) {}
 
   /** start/save/discard are check-then-write sequences: run one at a time (M2-D3). */
@@ -57,7 +61,12 @@ export class TimerService {
     return ok(previewTimer(timer, now));
   }
 
-  /** Create the entry on the day the timer started; the timer is cleared only when the entry is saved. */
+  /**
+   * Create the entry on the day the timer started and clear the timer, atomically
+   * (ADR-16). Field/date validation runs first (`EntryService.prepareAdd`); the
+   * conditions another tab could change meanwhile (same timer still stored, goal
+   * still exists, day limit) are re-checked inside the repository transaction.
+   */
   save(input: SaveTimerInput, now: Date): Promise<Result<LogEntry>> {
     return this.lock.run(() => this.doSave(input, now));
   }
@@ -66,10 +75,23 @@ export class TimerService {
     const timer = await this.current();
     if (!timer) return fail({ code: 'TIMER_NOT_RUNNING', message: 'no active timer' });
     const preview = previewTimer(timer, now);
-    const result = await this.entries.add({ goalId: timer.goalId, date: preview.date, minutes: input.minutes, note: input.note, source: 'timer' }, now);
-    if (!result.ok) return result;
-    await this.kv.delete('activeTimer');
-    return result;
+    const prepared = await this.entries.prepareAdd({ goalId: timer.goalId, date: preview.date, minutes: input.minutes, note: input.note, source: 'timer' }, now);
+    if (!prepared.ok) return prepared;
+    const entry = prepared.value;
+
+    const outcome = await this.timers.saveTimerEntry(timer, entry, DAY_MINUTES_LIMIT);
+    switch (outcome.status) {
+      case 'saved':
+        return ok(entry);
+      case 'timer-changed':
+        return fail({ code: 'TIMER_NOT_RUNNING', message: 'the timer was saved, discarded or replaced meanwhile' });
+      case 'goal-missing':
+        return fail({ code: 'GOAL_NOT_FOUND', message: `goal ${entry.goalId} was deleted meanwhile` });
+      case 'day-limit': {
+        const limitError = checkDayLimit(outcome.existingMinutes, entry.minutes);
+        return fail(limitError ?? { code: 'ENTRY_DAY_LIMIT_EXCEEDED', field: 'minutes', message: 'day limit exceeded', params: { remaining: 0 } });
+      }
+    }
   }
 
   discard(): Promise<Result<void>> {

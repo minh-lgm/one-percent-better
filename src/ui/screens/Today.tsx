@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { toISODate } from '../../domain/dates';
+import { Link } from 'react-router';
+import { backupReminder } from '../../domain/backup';
+import { addDays, toISODate } from '../../domain/dates';
 import { minutesByGoal } from '../../domain/entry';
 import { activeGoals, dailyTarget } from '../../domain/goal';
 import { reminderData, shouldShowBanner, type GoalProgress } from '../../domain/reminder';
 import type { TimerPreview } from '../../domain/timer';
 import type { ActiveTimer, DomainError, LogEntry } from '../../domain/types';
+import { BackupBanner } from '../components/BackupBanner';
 import { EmptyState } from '../components/EmptyState';
 import type { EntryFormValues, EntrySubmitResult } from '../components/EntryForm';
 import { GoalCard, type GoalTimerState, type StartTimerResult } from '../components/GoalCard';
@@ -61,6 +64,12 @@ export function Today() {
 
   const progress: GoalProgress[] = active.map((g) => ({ id: g.id, name: g.name, current: byGoal.get(g.id) ?? 0, target: dailyTarget(g) }));
   const banner = settings.data && shouldShowBanner(now, settings.data, progress) ? reminderData(progress) : null;
+  const backup = settings.data ? backupReminder(settings.data.lastBackupAt, allGoals.length, now) : null;
+  const pastDayLink = (
+    <p className="past-day">
+      <Link to={`/day/${addDays(today, -1)}`}>{t('today.pastDayLink')}</Link>
+    </p>
+  );
 
   const summary =
     active.length === 0 ? null : onTarget === active.length ? t('today.allOnTarget', { count: active.length }) : t('today.summary', { n: onTarget, count: active.length });
@@ -141,7 +150,11 @@ export function Today() {
       ) : allGoals.length === 0 ? (
         <EmptyState title={t('empty.today.noGoals')} body={t('empty.today.noGoalsBody')} actionLabel={t('empty.today.noGoalsAction')} actionTo="/goals/new" />
       ) : active.length === 0 && !timerRunning ? (
-        <EmptyState title={t('empty.today.noActive')} body={t('empty.today.noActiveBody')} actionLabel={t('empty.today.noActiveAction')} actionTo="/goals" />
+        <>
+          {backup ? <BackupBanner reminder={backup} withAction /> : null}
+          <EmptyState title={t('empty.today.noActive')} body={t('empty.today.noActiveBody')} actionLabel={t('empty.today.noActiveAction')} actionTo="/goals" />
+          {pastDayLink}
+        </>
       ) : (
         <>
           {summary ? (
@@ -150,6 +163,7 @@ export function Today() {
             </p>
           ) : null}
           {banner ? <ReminderBanner count={banner.count} time={settings.data?.reminderTime ?? ''} /> : null}
+          {backup ? <BackupBanner reminder={backup} withAction /> : null}
           {activeTimer && timerGoal ? <TimerCard goal={timerGoal} startedAt={activeTimer.startedAt} onStop={(opener) => void openStop(opener)} /> : null}
           <ul className="stack" aria-label={t('today.goalsLabel')}>
             {active.map((goal) => (
@@ -167,6 +181,7 @@ export function Today() {
               />
             ))}
           </ul>
+          {pastDayLink}
         </>
       )}
       {stop ? (
