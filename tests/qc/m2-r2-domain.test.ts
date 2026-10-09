@@ -66,12 +66,16 @@ async function setup() {
 }
 
 describe('M2-D3 services after a failure in the middle of a locked section', () => {
-  it('TimerService.save: entries.add throwing once rejects that call, keeps the timer, and later start/save/discard still work', async () => {
-    const { tc, mk, now, timerService, entryService } = await setup();
+  it('TimerService.save: the atomic save (entries.put inside saveTimerEntry) throwing once rejects that call, keeps the timer, and later start/save/discard still work', async () => {
+    // QC M3 r1: since plan v1.3 (M3-T7 d, ADR-16) `save` no longer goes through `EntryService.add`;
+    // it is `prepareAdd` + one Dexie transaction (`TimerRepository.saveTimerEntry`). The intent is
+    // unchanged (failure in the middle of the locked section), so the fault is now injected at the
+    // Dexie write that happens inside that transaction.
+    const { tc, mk, now, timerService } = await setup();
     const a = await mk('A');
     await timerService.start(a.id, now);
     const later = new Date(now.getTime() + 25 * 60_000);
-    const spy = vi.spyOn(entryService, 'add').mockRejectedValueOnce(new Error('disk full'));
+    const spy = vi.spyOn(tc.container.db.entries, 'put').mockRejectedValueOnce(new Error('disk full'));
     const [failing, queued] = await Promise.allSettled([timerService.save({ minutes: 25, note: '' }, later), timerService.save({ minutes: 25, note: 'second' }, later)]);
     expect(failing.status).toBe('rejected');
     expect(queued.status).toBe('fulfilled'); // the queued call is not stuck behind the failure
