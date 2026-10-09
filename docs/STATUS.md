@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 (developer M1 DONE; chờ user đổi tên thư mục rồi QC)
-**Next step:** user đổi tên thư mục (bỏ `%`) và mở lại session → `/build-app resume` → qc M1 round 1 (report docs/qc/report-M1-r1.md)
+**Next step:** user đổi tên thư mục thành `one-percent-better` → mở session mới → `/build-app resume` → qc M1 round 1 (report docs/qc/report-M1-r1.md)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -12,7 +12,7 @@
 - 2026-10-09 — Gate 2: có duyệt design không? → Có, trình design trước khi code
 - 2026-10-09 — Gate 2: duyệt design? → Chưa, user muốn tự review Figma trước; đồng thời yêu cầu thêm ngôn ngữ tiếng Việt (đổi giả định OQ-04: UI song ngữ vi/en, mặc định theo ngôn ngữ trình duyệt, đổi trong Settings)
 - 2026-10-09 — Gate 2 (lần 2): duyệt design song ngữ? → Duyệt, bắt đầu build M1
-- 2026-10-09 — Thư mục `1%better` làm npx lỗi "URI malformed"? → User tự đổi tên thư mục (bỏ ký tự %), mở lại session ở thư mục mới
+- 2026-10-09 — Thư mục `1%better` làm npx lỗi "URI malformed"? → User chọn đổi tên nhưng chưa làm; 2026-10-10 user nói "triển khai tiếp", orchestrator tạm tạo `subst Z:` nhưng user yêu cầu bỏ; đã gỡ Z:. Chốt: đổi tên thư mục thành `one-percent-better`.
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
