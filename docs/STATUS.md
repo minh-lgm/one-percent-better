@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M1 PASS r2; M2 bắt đầu)
-**Next step:** developer M2 mode fix (docs/qc/report-M2-r1.md) → qc M2 round 2
+**Next step:** qc M2 round 2 (report docs/qc/report-M2-r2.md)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -30,7 +30,7 @@
 | Plan | DONE v1.2 (duyệt 2026-10-09; revise song ngữ en/vi) | docs/plan/PRD.md, ARCHITECTURE.md, TASKS.md | 5 milestone, 34 task, 59 AC; lần gọi planner đầu bị ngắt, lần 2 hoàn tất |
 | Design | DONE v1.1 (song ngữ, card Language) (duyệt 2026-10-09) | docs/design/DESIGN.md, docs/design/mockups/*.html | Figma: https://www.figma.com/design/DrO15cZxPcb9hp1lGSUddd (orchestrator đẩy từ mockup; 8 màn mobile 360 + 3 dialog + Dark mode + Today tiếng Việt + card Language, variables Light/Dark, components Button/Badge/PlusPill/TabBar) |
 | M1 | PASS (round 2) | docs/qc/report-M1-r2.md | AC10/AC11 phần thủ công NOT VERIFIED (user tự kiểm, mục 8 report) | Dev tự kiểm: lint/typecheck/Vitest 128/build/Playwright 20 xanh trên bản sao sạch; AC10/AC11 phần thủ công NOT VERIFIED |
-| M2 | DOING — QC r1 FAIL (D1 Major, D2/D3 Minor), developer fix | docs/qc/report-M2-r1.md | AC8/9/11 phần thủ công NOT VERIFIED |
+| M2 | DOING — fix r1 DONE (commit ab008e6), chờ QC r2 | docs/qc/report-M2-r1.md | AC8/9/11 phần thủ công NOT VERIFIED |
 | M3 | TODO | | |
 | M4 | TODO | | |
 | M5 | TODO | | |
