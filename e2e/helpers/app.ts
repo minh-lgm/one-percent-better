@@ -53,7 +53,43 @@ export async function kvGet(page: Page, key: string): Promise<unknown> {
   );
 }
 
-/** Notifications currently shown by the app's service worker (tag `daily-reminder`). */
+export interface ShownNotification {
+  title: string;
+  body: string;
+  lang: string;
+  tag: string;
+  data: unknown;
+  icon?: string;
+}
+
+const SHOWN_KEY = '__shownNotifications';
+
+/**
+ * Record every `ServiceWorkerRegistration.showNotification` call of this tab in
+ * sessionStorage (survives reloads). Call before the first navigation. Counting calls
+ * is reliable; `registration.getNotifications()` intermittently returns an empty list
+ * under CPU load even though the notification was shown (observed in Chromium).
+ */
+export async function trackNotifications(page: Page): Promise<void> {
+  await page.addInitScript((key) => {
+    const proto = ServiceWorkerRegistration.prototype;
+    const original = proto.showNotification;
+    proto.showNotification = async function (this: ServiceWorkerRegistration, title: string, options?: NotificationOptions) {
+      const result = await original.call(this, title, options);
+      const list = JSON.parse(sessionStorage.getItem(key) ?? '[]') as unknown[];
+      list.push({ title, body: options?.body, lang: options?.lang, tag: options?.tag, data: options?.data, icon: options?.icon });
+      sessionStorage.setItem(key, JSON.stringify(list));
+      return result;
+    };
+  }, SHOWN_KEY);
+}
+
+/** `showNotification` calls this tab has made so far (see `trackNotifications`). */
+export async function recordedNotifications(page: Page): Promise<ShownNotification[]> {
+  return page.evaluate((key) => JSON.parse(sessionStorage.getItem(key) ?? '[]') as ShownNotification[], SHOWN_KEY);
+}
+
+/** Notifications currently listed by the app's service worker (tag `daily-reminder`). May be empty under load even after a show. */
 export async function shownNotifications(page: Page): Promise<Array<{ title: string; body: string; lang: string; tag: string; data: unknown }>> {
   return page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;

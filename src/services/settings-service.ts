@@ -39,6 +39,26 @@ export class SettingsService {
     return this.update({ reminderTime: time });
   }
 
+  /**
+   * Mark `date` as "reminder sent" unless it already is — atomically across tabs
+   * (M2-D3 cross-tab). Returns true when this caller won the claim.
+   */
+  async claimReminderDay(date: string): Promise<boolean> {
+    const { written } = await this.kv.update<unknown>('settings', (raw) => {
+      const current = normalizeSettings(raw);
+      return current.lastReminderDate === date ? undefined : { ...current, lastReminderDate: date };
+    });
+    return written;
+  }
+
+  /** Undo `claimReminderDay` when the notification could not be shown, so a later check retries. */
+  async releaseReminderDay(date: string, previous: string | null): Promise<void> {
+    await this.kv.update<unknown>('settings', (raw) => {
+      const current = normalizeSettings(raw);
+      return current.lastReminderDate === date ? { ...current, lastReminderDate: previous } : undefined;
+    });
+  }
+
   watch(): Subscribable<Settings> {
     const source = this.kv.watch<unknown>('settings');
     return {

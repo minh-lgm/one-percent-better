@@ -53,6 +53,18 @@ describe('SettingsService (FR-13)', () => {
     });
   });
 
+  it('claimReminderDay is atomic: concurrent claims yield exactly one winner; release restores the previous value', async () => {
+    const results = await Promise.all(Array.from({ length: 10 }, () => service.claimReminderDay('2026-10-09')));
+    expect(results.filter(Boolean)).toHaveLength(1);
+    expect((await service.get()).lastReminderDate).toBe('2026-10-09');
+    await service.releaseReminderDay('2026-10-09', null);
+    expect((await service.get()).lastReminderDate).toBeNull();
+    // Releasing a day that is not the current claim is a no-op.
+    expect(await service.claimReminderDay('2026-10-10')).toBe(true);
+    await service.releaseReminderDay('2026-10-09', null);
+    expect((await service.get()).lastReminderDate).toBe('2026-10-10');
+  });
+
   it('watch emits normalised settings on every change', async () => {
     const seen: unknown[] = [];
     const unsubscribe = service.watch().subscribe((s) => seen.push(s));

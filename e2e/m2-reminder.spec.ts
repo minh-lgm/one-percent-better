@@ -12,8 +12,9 @@ import {
   gotoHash,
   kvGet,
   logTime,
-  shownNotifications,
+  recordedNotifications,
   toast,
+  trackNotifications,
 } from './helpers/app';
 
 const reminderSwitch = (page: Parameters<typeof gotoHash>[0]) => page.getByRole('switch', { name: EN.settings.reminders.switch });
@@ -86,6 +87,7 @@ test.describe('M2 reminders — settings', () => {
   });
 
   test('M2-AC8: at most one notification per day while the app is open; click target is #/today', async ({ page }) => {
+    await trackNotifications(page);
     await freezeClock(page, at('2026-10-09T19:50:00'));
     await createGoal(page, { name: 'Read', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' });
     await gotoHash(page, '/settings');
@@ -99,35 +101,35 @@ test.describe('M2 reminders — settings', () => {
     await expect(goalCard(page, 'Read')).toBeVisible();
 
     await advanceTo(page, at('2026-10-09T19:59:00'));
-    expect(await shownNotifications(page)).toEqual([]);
+    expect(await recordedNotifications(page)).toEqual([]);
     await expect(page.getByTestId('reminder-banner')).toHaveCount(0);
 
     await advanceTo(page, at('2026-10-09T20:01:00'));
-    await expect.poll(() => shownNotifications(page).then((n) => n.length)).toBe(1);
-    const [n] = await shownNotifications(page);
+    // Under CPU load the startup check may still be in flight when the tab-visible trigger
+    // arrives; the scheduler re-runs afterwards, so wait on the condition with a generous timeout.
+    await expect.poll(() => recordedNotifications(page).then((n) => n.length), { timeout: 20_000 }).toBe(1);
+    const [n] = await recordedNotifications(page);
     expect(n.title).toBe('1% Better');
     expect(n.body).toBe('1 goal left today: Read 0/30 min');
     expect(n.lang).toBe('en');
     expect(n.tag).toBe('daily-reminder');
     expect(n.data).toEqual({ url: '#/today' });
+    expect(n.icon).toBe('/icons/pwa-192.png');
     await expect(page.getByTestId('reminder-banner')).toHaveText("It's past 20:00 — 1 goal is not on target yet.");
     await expect.poll(() => kvGet(page, 'settings')).toMatchObject({ lastReminderDate: '2026-10-09' });
 
-    // Three more checks (visibility changes) and a restart: still exactly one.
+    // Three more checks (visibility changes) and a restart (startup check): still exactly one call.
     for (const t of ['2026-10-09T20:02:00', '2026-10-09T20:03:00', '2026-10-09T20:04:00']) await advanceTo(page, at(t));
     await page.reload();
     await expect(goalCard(page, 'Read')).toBeVisible();
-    await page.waitForTimeout(300);
-    expect((await shownNotifications(page)).length).toBe(1);
+    await advanceTo(page, at('2026-10-09T22:00:00'));
+    await expect(page.getByTestId('reminder-banner')).toHaveText("It's past 20:00 — 1 goal is not on target yet.");
+    expect((await recordedNotifications(page)).length).toBe(1);
     expect(await kvGet(page, 'settings')).toMatchObject({ lastReminderDate: '2026-10-09' });
 
     // Next day: a new notification is allowed again.
-    await page.evaluate(async () => {
-      const registration = await navigator.serviceWorker.ready;
-      for (const n of await registration.getNotifications()) n.close();
-    });
     await advanceTo(page, at('2026-10-10T20:00:30'));
-    await expect.poll(() => shownNotifications(page).then((n) => n.length)).toBe(1);
+    await expect.poll(() => recordedNotifications(page).then((n) => n.length), { timeout: 20_000 }).toBe(2);
     expect(await kvGet(page, 'settings')).toMatchObject({ lastReminderDate: '2026-10-10' });
   });
 });

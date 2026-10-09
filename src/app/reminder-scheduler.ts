@@ -23,13 +23,22 @@ export function startReminderScheduler({ check, intervalMs, deps = {} }: Reminde
     now: deps.now ?? (() => new Date()),
   };
   let running = false;
+  let rerun = false;
   const run = () => {
-    if (running) return;
+    if (running) {
+      // Remember the trigger (e.g. tab became visible) and check again once the current run ends.
+      rerun = true;
+      return;
+    }
     running = true;
     void check(d.now())
       .catch(() => undefined)
       .finally(() => {
         running = false;
+        if (rerun) {
+          rerun = false;
+          run();
+        }
       });
   };
   const onVisibility = () => {

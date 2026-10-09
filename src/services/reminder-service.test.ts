@@ -62,6 +62,34 @@ describe('ReminderService.check (M2-AC7, M2-AC8)', () => {
     expect((await settings.get()).lastReminderDate).toBe('2026-10-09');
   });
 
+  it('two services on the same database (two tabs) checking at once send exactly once (cross-tab claim)', async () => {
+    const a = makeService('en');
+    const shownA = notifications;
+    const b = makeService('en');
+    const shownB = notifications;
+    const results = await Promise.all([a.check(at('20:00:30')), b.check(at('20:00:30')), a.check(at('20:00:31')), b.check(at('20:00:31'))]);
+    expect(results.filter(Boolean)).toHaveLength(1);
+    expect(shownA.shown.length + shownB.shown.length).toBe(1);
+    expect((await settings.get()).lastReminderDate).toBe('2026-10-09');
+  });
+
+  it('gives the claim back when the notification could not be shown or throws, so a later check retries', async () => {
+    const service = makeService('en');
+    notifications.canShow = false;
+    expect(await service.check(at('20:00:30'))).toBe(false);
+    expect((await settings.get()).lastReminderDate).toBeNull();
+    notifications.canShow = true;
+    const original = notifications.show;
+    notifications.show = async () => {
+      throw new Error('boom');
+    };
+    await expect(service.check(at('20:00:40'))).rejects.toThrow('boom');
+    expect((await settings.get()).lastReminderDate).toBeNull();
+    notifications.show = original;
+    expect(await service.check(at('20:00:50'))).toBe(true);
+    expect(notifications.shown).toHaveLength(1);
+  });
+
   it('sends again the next day', async () => {
     const service = makeService('en');
     await service.check(at('20:00:30'));

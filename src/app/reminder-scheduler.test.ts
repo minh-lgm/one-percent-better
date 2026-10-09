@@ -52,6 +52,23 @@ describe('startReminderScheduler (ARCH §5.6)', () => {
     expect(doc.size()).toBe(0);
   });
 
+  it('a trigger that arrives while a check is in flight runs one more check afterwards (M2 AC8 flake root cause)', async () => {
+    const resolvers: Array<() => void> = [];
+    const check = vi.fn(() => new Promise<void>((r) => resolvers.push(r)));
+    const doc = fakeDocument();
+    startReminderScheduler({ check, intervalMs: 1000, deps: { setInterval: () => 1, clearInterval: () => {}, document: doc } });
+    expect(check).toHaveBeenCalledTimes(1);
+    doc.fire(); // tab became visible while the startup check is still running
+    doc.fire();
+    expect(check).toHaveBeenCalledTimes(1);
+    resolvers[0]();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(check).toHaveBeenCalledTimes(2); // exactly one extra run, not one per lost trigger
+    resolvers[1]();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(check).toHaveBeenCalledTimes(2);
+  });
+
   it('does not overlap checks and survives a failing check', async () => {
     let resolve: (() => void) | undefined;
     const check = vi.fn(() => new Promise<void>((r) => (resolve = r)));

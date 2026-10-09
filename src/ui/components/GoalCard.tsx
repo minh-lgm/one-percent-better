@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { DomainError, Goal, LogEntry } from '../../domain/types';
 import { errorMessage } from '../error-messages';
 import { useFormat } from '../hooks/useFormat';
@@ -36,7 +36,12 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [timerError, setTimerError] = useState<DomainError | null>(null);
+  // Set on the first Start click; released only once `timer` reflects a running
+  // timer (or the start failed). A second click in between is a no-op (M2-D4).
   const starting = useRef(false);
+  useEffect(() => {
+    if (timer !== 'none') starting.current = false;
+  }, [timer]);
   const logButtonRef = useRef<HTMLButtonElement>(null);
   const met = minutes >= target;
   const hours = goal.targetType === 'total' ? f.number(goal.targetMinutes / 60) : null;
@@ -50,15 +55,18 @@ export function GoalCard({ goal, target, minutes, entries, timer = 'none', onAdd
     : t('goalCard.toGo', { n: f.number(target - minutes) });
 
   async function startTimer() {
-    // A double-click must not start twice (the second call would report TIMER_ALREADY_RUNNING).
     if (timer !== 'none' || !onStartTimer || starting.current) return;
     starting.current = true;
     setTimerError(null);
+    let ok = false;
     try {
       const r = await onStartTimer();
+      ok = r.ok;
       if (!r.ok) setTimerError(r.errors[0] ?? null);
     } finally {
-      starting.current = false;
+      // On success the guard is released by the effect above, when the parent re-renders
+      // this card as `running` (Today does that right away via its optimistic timer state).
+      if (!ok) starting.current = false;
     }
   }
 

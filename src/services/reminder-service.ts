@@ -55,18 +55,25 @@ export class ReminderService {
     const progress = await this.progress(now);
     if (!shouldNotify(now, settings, permission, progress)) return false;
 
+    // Claim today atomically (one rw transaction on kv, serialised across tabs) before
+    // showing, so two open tabs cannot both send; on failure give the claim back.
+    const today = toISODate(now);
+    if (!(await this.settings.claimReminderDay(today))) return false;
     const data = reminderData(progress);
-    const shown = await this.notifications.show({
-      title: this.translator.t('notification.title'),
-      body: this.body(data),
-      lang: this.translator.locale,
-      tag: REMINDER_TAG,
-      url: REMINDER_URL,
-      icon: this.iconUrl,
-    });
-    if (!shown) return false;
-    await this.settings.update({ lastReminderDate: toISODate(now) });
-    return true;
+    let shown = false;
+    try {
+      shown = await this.notifications.show({
+        title: this.translator.t('notification.title'),
+        body: this.body(data),
+        lang: this.translator.locale,
+        tag: REMINDER_TAG,
+        url: REMINDER_URL,
+        icon: this.iconUrl,
+      });
+    } finally {
+      if (!shown) await this.settings.releaseReminderDay(today, settings.lastReminderDate);
+    }
+    return shown;
   }
 
   async getBannerState(now: Date): Promise<BannerState> {

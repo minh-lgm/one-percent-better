@@ -193,6 +193,29 @@ describe('Today timer (M2-AC1, AC2, AC3, AC4, AC5)', () => {
     expect((await tc!.container.db.kv.get('activeTimer'))?.value).toMatchObject({ goalId: 'g1' });
   });
 
+  it('with a live query that never echoes the new timer, a double-click still starts once and the UI is optimistic (M2-D4, deterministic)', async () => {
+    const u = userEvent.setup();
+    await seededS1();
+    // Simulate an arbitrarily delayed live query: emit the initial (empty) state only.
+    vitest.spyOn(tc!.container.timerService, 'watch').mockReturnValue({
+      subscribe: (onNext) => {
+        onNext(undefined);
+        return () => {};
+      },
+    });
+    const start = vitest.spyOn(tc!.container.timerService, 'start');
+    await renderApp({ route: '/today', container: tc });
+    const read = await screen.findByRole('article', { name: 'Read' });
+    await u.dblClick(within(read).getByRole('button', { name: en.goalCard.startTimer }));
+    // Optimistic state from the start result: TimerCard, badge and disabled Start on the other goals.
+    await screen.findByTestId('timer-card');
+    expect(within(read).getByText(en.goalCard.timerRunningBadge)).toBeInTheDocument();
+    expect(within(screen.getByRole('article', { name: 'Guitar' })).getByRole('button', { name: en.goalCard.startTimer })).toHaveAttribute('aria-disabled', 'true');
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect((await tc!.container.db.kv.get('activeTimer'))?.value).toMatchObject({ goalId: 'g1' });
+  });
+
   it('shows the start error inline when the service refuses', async () => {
     const u = userEvent.setup();
     await seededS1();

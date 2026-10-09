@@ -112,3 +112,21 @@ describe('DexieKvRepository', () => {
     unsubscribe();
   });
 });
+
+describe('DexieKvRepository.update (atomic read-modify-write)', () => {
+  it('applies fn inside one transaction; concurrent updates do not lose increments; undefined leaves the row untouched', async () => {
+    const db = createTestDatabase();
+    await openDatabase(db);
+    const kv = new DexieKvRepository(db);
+    await Promise.all(Array.from({ length: 20 }, () => kv.update<number>('settings', (n) => (n ?? 0) + 1)));
+    expect(await kv.get('settings')).toBe(20);
+    const r = await kv.update<number>('settings', () => undefined);
+    expect(r).toEqual({ previous: 20, written: false });
+    expect(await kv.get('settings')).toBe(20);
+    const first = await kv.update<string>('activeTimer', (cur) => (cur === undefined ? 'claimed' : undefined));
+    const second = await kv.update<string>('activeTimer', (cur) => (cur === undefined ? 'claimed' : undefined));
+    expect(first.written).toBe(true);
+    expect(second).toEqual({ previous: 'claimed', written: false });
+    await db.delete();
+  });
+});

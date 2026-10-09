@@ -28,6 +28,12 @@ export type KvKey = 'settings' | 'activeTimer' | 'locale';
 export interface KvRepository {
   get<T>(key: KvKey): Promise<T | undefined>;
   set<T>(key: KvKey, value: T): Promise<void>;
+  /**
+   * Atomic read-modify-write inside one readwrite transaction (serialised across
+   * tabs by IndexedDB). `fn` returns the new value, or `undefined` to leave the row
+   * untouched. Resolves `{ previous, written }`.
+   */
+  update<T>(key: KvKey, fn: (current: T | undefined) => T | undefined): Promise<{ previous: T | undefined; written: boolean }>;
   delete(key: KvKey): Promise<void>;
   watch<T>(key: KvKey): Subscribable<T | undefined>;
 }

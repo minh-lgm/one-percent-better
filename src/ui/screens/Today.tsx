@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toISODate } from '../../domain/dates';
 import { minutesByGoal } from '../../domain/entry';
 import { activeGoals, dailyTarget } from '../../domain/goal';
 import { reminderData, shouldShowBanner, type GoalProgress } from '../../domain/reminder';
 import type { TimerPreview } from '../../domain/timer';
-import type { DomainError, LogEntry } from '../../domain/types';
+import type { ActiveTimer, DomainError, LogEntry } from '../../domain/types';
 import { EmptyState } from '../components/EmptyState';
 import type { EntryFormValues, EntrySubmitResult } from '../components/EntryForm';
 import { GoalCard, type GoalTimerState, type StartTimerResult } from '../components/GoalCard';
@@ -43,6 +43,11 @@ export function Today() {
   const loading = goals.loading || entries.loading || timer.loading || settings.loading;
   const showSkeleton = useDelayed(loading);
   const [stop, setStop] = useState<StopState | null>(null);
+  // Timer returned by a successful `start`, shown until the live query catches up (M2-D4).
+  const [pendingTimer, setPendingTimer] = useState<ActiveTimer | null>(null);
+  useEffect(() => {
+    setPendingTimer(null);
+  }, [timer.data]);
 
   const allGoals = goals.data ?? [];
   const active = activeGoals(allGoals, today);
@@ -50,7 +55,7 @@ export function Today() {
   const byGoal = minutesByGoal(todayEntries);
   const onTarget = active.filter((g) => (byGoal.get(g.id) ?? 0) >= dailyTarget(g)).length;
 
-  const activeTimer = timer.data;
+  const activeTimer = timer.data ?? pendingTimer ?? undefined;
   const timerGoal = activeTimer ? allGoals.find((g) => g.id === activeTimer.goalId) : undefined;
   const timerRunning = Boolean(activeTimer && timerGoal);
 
@@ -90,6 +95,7 @@ export function Today() {
 
   async function startTimer(goalId: string): Promise<StartTimerResult> {
     const r = await timerService.start(goalId, new Date());
+    if (r.ok) setPendingTimer(r.value);
     return r.ok ? { ok: true } : { ok: false, errors: r.errors };
   }
 
