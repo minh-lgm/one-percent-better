@@ -30,6 +30,7 @@
 - Nhắc nhở hằng ngày bằng web notification (best-effort, xem giới hạn ở mục 6 và 10) + banner trong app.
 - Lưu cục bộ (IndexedDB), export/import JSON để backup và chuyển thiết bị.
 - PWA: cài được như app trên điện thoại và máy tính, chạy offline.
+- Giao diện song ngữ Anh/Việt (`en`, `vi`): mặc định theo ngôn ngữ trình duyệt, đổi trong Settings, ngày/giờ/số định dạng theo ngôn ngữ đang chọn.
 
 ### Non-goals
 
@@ -39,7 +40,7 @@
 - Theo dõi hoạt động tự động (tích hợp Google Fit, Apple Health, lịch…).
 - Chỉ tiêu theo tuần hoặc theo ngày trong tuần (vd. chỉ T2–T6); chỉ tiêu dạng số lần/đơn vị khác ngoài thời gian.
 - Gamification ngoài "+1%" (huy hiệu, điểm, cấp độ).
-- Đa ngôn ngữ trong MVP (UI tiếng Anh).
+- Ngôn ngữ khác ngoài `en` và `vi`; ngôn ngữ viết từ phải sang trái (RTL); dịch nội dung do người dùng nhập (tên goal, why, ghi chú); dịch tự động hoặc dịch vụ dịch bên ngoài.
 - Deploy lên hosting (ngoài phạm vi của đội build; xem Open questions).
 
 ## 4. User stories
@@ -59,6 +60,7 @@
 | US-11 | người dùng | cài app lên màn hình chính và dùng offline | mở nhanh như app thật, không cần mạng | Must |
 | US-12 | người dùng | lưu trữ (archive) goal đã xong | Today gọn mà vẫn giữ lịch sử | Should |
 | US-13 | người dùng | thêm lời nhắc hằng ngày vào lịch của tôi | vẫn được nhắc kể cả khi app đóng hẳn | Should |
+| US-14 | người dùng nói tiếng Việt | dùng app bằng tiếng Việt (hoặc tiếng Anh nếu tôi muốn), với ngày tháng và số viết theo kiểu quen thuộc | hiểu ngay mọi màn hình, thông báo và lời nhắc mà không phải dịch trong đầu | Must |
 
 ## 5. Yêu cầu chức năng
 
@@ -95,6 +97,11 @@
 | FR-29 | Phản hồi "+1%" trên Today đúng một lần khi một entry làm goal vừa đạt chỉ tiêu hôm nay. | Should | M5 |
 | FR-30 | Archive/unarchive goal: goal archived ẩn khỏi Today và không tính vào nhắc nhở, dữ liệu giữ nguyên. | Should | M5 |
 | FR-31 | Trạng thái rỗng và lỗi cho mọi màn hình chính; màn hình lỗi riêng khi IndexedDB không dùng được (vd. chế độ riêng tư chặn storage). | Must | M5 |
+| FR-32 | **Chọn ngôn ngữ:** app hỗ trợ đúng hai ngôn ngữ `en` (English) và `vi` (Tiếng Việt). Settings có control chọn ngôn ngữ, mỗi lựa chọn hiển thị bằng chính ngôn ngữ đó ("English", "Tiếng Việt"). Đổi ngôn ngữ có hiệu lực ngay trên toàn app (màn hình đang mở, tab bar, toast, `document.title`, `<html lang>`), không cần reload, không mất dữ liệu đang hiển thị. | Must | M1 |
+| FR-33 | **Ngôn ngữ mặc định:** khi người dùng chưa từng chọn, ngôn ngữ = `vi` nếu `navigator.language` (không phân biệt hoa thường) bắt đầu bằng `vi`, còn lại (kể cả không đọc được) = `en`. Quy tắc này cũng áp dụng cho màn hình lỗi IndexedDB (khi không đọc được lựa chọn đã lưu). | Must | M1 |
+| FR-34 | **Lưu lựa chọn ngôn ngữ:** lựa chọn của người dùng lưu cục bộ trong kv store (IndexedDB), còn nguyên sau reload, đóng tab, khởi động lại trình duyệt và ưu tiên hơn ngôn ngữ trình duyệt. Lựa chọn ngôn ngữ là thiết lập của thiết bị: không nằm trong file export và không bị import ghi đè. | Must | M1 |
+| FR-35 | **Phạm vi dịch:** mọi chuỗi giao diện đều có bản `en` và `vi`: tiêu đề, label, placeholder, nút, tab, badge, hint, lỗi validate và lỗi import, toast, banner, dialog, trạng thái rỗng/lỗi, tooltip và nhãn của heatmap/biểu đồ, text chỉ dành cho screen reader và `aria-label`, `document.title`, nội dung notification nhắc nhở, nội dung sự kiện trong file `.ics` (SUMMARY, mô tả nhắc). **Không dịch:** tên goal, why, ghi chú của người dùng; tên thương hiệu "1% Better per Day" / "1% Better" (gồm web manifest); tên file export/`.ics`; mã lỗi nội bộ. Mọi chuỗi nằm trong code của app, không gọi dịch vụ dịch bên ngoài. Hạ tầng và chuỗi của M1 làm ở M1; mỗi milestone sau dịch đủ chuỗi mới của mình. | Must | M1 (M2–M5 cho chuỗi mới) |
+| FR-36 | **Định dạng theo locale:** ngày, giờ và số hiển thị theo ngôn ngữ đang chọn (`en` → `en-US`, `vi` → `vi-VN`) qua `Intl`: ngày dạng dài (thứ, ngày, tháng, năm), tên thứ/tháng trên heatmap và trục biểu đồ, số thập phân và hàng nghìn, phần trăm, số nhiều theo quy tắc ngôn ngữ. Ngày dạng ngắn (khoảng thời gian goal, lịch sử, "Last backup"): `en` giữ `YYYY-MM-DD` như DESIGN.md, `vi` dùng `dd/MM/yyyy`. Giờ nhắc 24h `HH:MM` và timer `hh:mm:ss` giống nhau ở cả hai ngôn ngữ. Tuần luôn bắt đầu thứ Hai (A-01). Đổi ngôn ngữ thì mọi giá trị đã định dạng cập nhật ngay. | Must | M1 (M2–M5 cho màn hình mới) |
 
 ## 6. Yêu cầu phi chức năng
 
@@ -102,14 +109,15 @@
 | :- | :- | :- |
 | NFR-01 | **Local-first, riêng tư:** không có request mạng nào tới origin khác ngoài origin của app; không analytics, không font/CDN ngoài. | Playwright ghi lại mọi request trong luồng e2e: 0 request ngoài origin. |
 | NFR-02 | **Offline:** sau lần tải đầu, mọi tính năng hoạt động khi mất mạng. | Playwright `context.setOffline(true)` + reload: app render và ghi entry được. |
-| NFR-03 | **Hiệu năng:** tính toàn bộ thống kê Review cho 5 goal × 3 năm (≈ 5.500 entry) < 200 ms; Review hiển thị heatmap < 1,5 s sau khi điều hướng với dữ liệu đó (máy dev); JS tải ban đầu ≤ 250 KB gzip, thư viện biểu đồ chỉ tải khi vào Review/Goal detail. | Unit benchmark; Playwright đo thời gian; output `vite build`. |
+| NFR-03 | **Hiệu năng:** tính toàn bộ thống kê Review cho 5 goal × 3 năm (≈ 5.500 entry) < 200 ms; Review hiển thị heatmap < 1,5 s sau khi điều hướng với dữ liệu đó (máy dev); JS tải ban đầu ≤ 250 KB gzip (đã gồm thư viện i18n và cả hai file dịch `en`, `vi`), thư viện biểu đồ chỉ tải khi vào Review/Goal detail. | Unit benchmark; Playwright đo thời gian; output `vite build`. |
 | NFR-04 | **Toàn vẹn dữ liệu:** mọi ghi đa bảng (xoá goal kèm entry, import) là một transaction; dữ liệu có `schemaVersion`; import lỗi không làm thay đổi dữ liệu. | Integration test với fake-indexeddb. |
 | NFR-05 | **Bảo mật:** validate mọi input ở biên (form, file import ≤ 5 MB); không dùng `dangerouslySetInnerHTML`; ghi chú hiển thị dạng text. | Unit test, grep source. |
 | NFR-06 | **Tương thích:** Chrome/Edge bản mới nhất (desktop, Android), Safari iOS ≥ 16.4 (notification chỉ khi đã "Add to Home Screen"), Firefox desktop bản mới nhất (không có cài app). Màn hình 360–1440 px không có thanh cuộn ngang. | Playwright Chromium (tự động); các trình duyệt khác kiểm thủ công. |
 | NFR-07 | **Giới hạn nhắc nhở (chấp nhận trong MVP):** không có server nên notification chỉ được đảm bảo khi app đang mở (kể cả tab/cửa sổ ở nền). Khi app đóng hẳn, nhắc dựa vào file `.ics` (FR-16). | Ghi rõ trong README và màn hình Settings. |
-| NFR-08 | **Accessibility:** WCAG 2.1 AA cơ bản: mọi control có nhãn, dùng được bằng bàn phím, heatmap có nhãn text cho từng ô. | `@axe-core/playwright`: 0 vi phạm mức serious/critical. |
+| NFR-08 | **Accessibility:** WCAG 2.1 AA cơ bản: mọi control có nhãn, dùng được bằng bàn phím, heatmap có nhãn text cho từng ô; `<html lang>` luôn khớp ngôn ngữ đang hiển thị (`en` / `vi`). | `@axe-core/playwright`: 0 vi phạm mức serious/critical. |
 | NFR-09 | **Vận hành:** cài đặt, build, lint, test bằng các lệnh npm trong README; không cần cài gì global; không cần biến môi trường bắt buộc. | QC chạy theo README trên máy sạch. |
 | NFR-10 | **Sẵn sàng sync sau này:** mọi bản ghi có `id` UUID, `createdAt`, `updatedAt`; UI và logic chỉ truy cập dữ liệu qua repository interface. | Review code + lint rule chặn import chéo lớp. |
+| NFR-11 | **Chất lượng bản dịch và không hardcode chuỗi:** (a) `en` và `vi` có cùng tập key, cùng biến nội suy, không có giá trị rỗng; (b) không có chuỗi chữ hiển thị viết thẳng trong JSX của `src/ui`, `src/app`; (c) ở chế độ `vi`, DOM của mọi màn hình không chứa chuỗi tiếng Anh nào lấy từ bản `en` (trừ chuỗi giống nhau ở hai bản như tên thương hiệu, `+1%`) và không lộ key dịch thô; (d) file dịch đóng gói cùng app, hoạt động offline, 0 request ngoài origin (NFR-01 giữ nguyên); (e) giao diện `vi` (chuỗi thường dài hơn) không gây thanh cuộn ngang ở 360 px. | (a) unit test so sánh hai file; (b) ESLint `--max-warnings 0`; (c) test quét DOM (component + E2E) ở `vi-VN`; (d) Playwright đếm request; (e) Playwright viewport 360 px ở `vi-VN`. |
 
 ## 7. Loại app và bề mặt người dùng
 
@@ -121,7 +129,7 @@
   - **Review** — heatmap năm, streak, tổng giờ, % tiến độ, biểu đồ tuần/tháng.
   - **Day** — ghi bù/sửa entry cho một ngày bất kỳ đã qua.
   - **Settings** — nhắc nhở, file `.ics`, export/import, thông tin lưu trữ.
-- Ngôn ngữ UI: tiếng Anh.
+- Ngôn ngữ UI: song ngữ **English / Tiếng Việt** (FR-32 … FR-36). Mặc định theo ngôn ngữ trình duyệt, đổi trong Settings. Copy tiếng Việt do designer chốt trong `DESIGN.md` cạnh copy tiếng Anh.
 
 ## 8. Chỉ số thành công
 
@@ -146,16 +154,22 @@
 - A-12: Nhắc backup (FR-21) hiện khi có ít nhất 1 goal và chưa từng export hoặc lần export gần nhất cách hơn 30 ngày.
 - A-13: Không cho archive goal đang có timer chạy (phải Stop hoặc Discard trước). Xoá goal đang có timer chạy thì timer bị huỷ cùng goal.
 - A-14: Timer chạy dưới 30 giây vẫn điền sẵn 1 phút; chạy quá 1440 phút thì điền sẵn 1440 (người dùng sửa được trước khi lưu).
+- A-15: Tên thương hiệu "1% Better per Day" / "1% Better" và chuỗi `+1%` giống nhau ở cả hai ngôn ngữ. Web manifest là file tĩnh nên giữ một bản (tên thương hiệu, `lang: "en"`); tên app cài trên màn hình chính không đổi theo ngôn ngữ.
+- A-16: Khi người dùng chưa chọn ngôn ngữ, app không ghi gì vào kv: mỗi lần khởi động lại áp dụng FR-33 (đổi ngôn ngữ trình duyệt thì app đổi theo). Chỉ khi người dùng chọn trong Settings mới lưu key `locale`.
+- A-17: Các control do trình duyệt vẽ (`<input type="date">`, `<input type="time">`, hộp xin quyền notification, hộp chọn file) hiển thị theo ngôn ngữ của trình duyệt/hệ điều hành, không theo lựa chọn trong app. Label và lỗi quanh các control này vẫn được dịch.
+- A-18: Copy tiếng Việt (giọng điệu, xưng hô) do designer chốt trong `DESIGN.md`; developer dùng nguyên văn. Mã lỗi, dữ liệu file backup và tên file giữ tiếng Anh/ASCII.
+- A-19: Nội dung notification và file `.ics` dùng ngôn ngữ đang chọn tại thời điểm gửi/tải. Sự kiện lịch đã thêm trước đó không tự đổi ngôn ngữ (người dùng tải lại file nếu muốn).
 
 ## 10. Open questions
 
 - OQ-01: Chấp nhận giới hạn nhắc nhở của MVP (chỉ đảm bảo khi app đang mở + phương án file `.ics`) hay muốn nhắc tin cậy khi app đóng? Phương án sau cần một push server nhỏ (Web Push + VAPID) — trái với quyết định "không server". **Giả định hiện tại:** chấp nhận giới hạn.
 - OQ-02: Hosting: để dùng trên điện thoại và cài PWA cần HTTPS (localhost chỉ dùng được trên máy dev). User muốn host ở đâu (GitHub Pages, Netlify, Cloudflare Pages…) và có cần hướng dẫn deploy trong README không? Kiến trúc đã hỗ trợ đặt `BASE_PATH` cho subpath.
 - OQ-03: Đường cong thực tế có muốn chế độ "khắt khe" (ngày lỡ nhân 0.99, minh hoạ 0.99^365 ≈ 0.03) không? **Giả định:** không trong MVP, đưa vào Later.
-- OQ-04: Có cần UI song ngữ Anh/Việt không? **Giả định:** chỉ tiếng Anh trong MVP; i18n đưa vào Later.
+- OQ-04: **Đã quyết (2026-10-09, Gate 2, user yêu cầu):** UI song ngữ Anh/Việt trong MVP. Hai ngôn ngữ `en`, `vi`; mặc định lần đầu theo `navigator.language` (bắt đầu bằng "vi" → `vi`, còn lại `en`); đổi trong Settings, lưu cục bộ trong kv store, còn sau reload; mọi chuỗi UI (label, nút, lỗi, thông báo, notification, nội dung `.ics`, aria-label) đều dịch; ngày/giờ/số định dạng theo locale; tên goal và ghi chú của người dùng không dịch; không dùng dịch vụ dịch ngoài, mọi chuỗi nằm trong code. Xem FR-32 … FR-36, NFR-11, A-15 … A-19.
 - OQ-05: Có cần chỉ tiêu theo tuần (vd. 3 giờ/tuần) hoặc chọn ngày trong tuần không? **Giả định:** không trong MVP.
 
 ## Changelog
 
 - 2026-10-09 — v1, tạo mới (mode `new`).
 - 2026-10-09 — v1.1 (khi viết TASKS.md): thêm Assumptions A-12 (điều kiện nhắc backup), A-13 (archive/xoá goal khi timer đang chạy), A-14 (giới hạn số phút điền sẵn của timer). Không đổi FR/NFR.
+- 2026-10-09 — v1.2 (mode `revise`, feedback Gate 2: thêm tiếng Việt): OQ-04 chuyển thành quyết định (song ngữ en/vi). Thêm Goal song ngữ, US-14, FR-32 … FR-36 (chọn ngôn ngữ, mặc định theo trình duyệt, lưu kv, phạm vi dịch, định dạng theo locale), NFR-11 (chất lượng bản dịch, cấm hardcode chuỗi), A-15 … A-19. Sửa Non-goals (bỏ "chỉ tiếng Anh"), §7 (ngôn ngữ UI), NFR-03 (ngân sách bundle gồm i18n), NFR-08 (`<html lang>`). Không đổi FR-01 … FR-31.

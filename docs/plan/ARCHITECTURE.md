@@ -11,6 +11,7 @@ User (phone / desktop browser, installed PWA)
 ┌──────────────────────── Browser ─────────────────────────────────────────┐
 │  UI layer (React, src/ui)  ── hash routes: #/today #/goals #/review ...   │
 │        │  dùng hooks + services qua AppContext (DI)                       │
+│        │  mọi chuỗi qua t() / format*() của src/i18n (en.json, vi.json)   │
 │        ▼                                                                  │
 │  Services (src/services)  ── orchestrate use case, validate ở biên        │
 │        │                 │                                                │
@@ -27,10 +28,12 @@ User (phone / desktop browser, installed PWA)
 │  Service Worker (src/sw.ts) ── precache app shell (offline),              │
 │        notificationclick → focus/open #/today                             │
 └───────────────────────────────────────────────────────────────────────────┘
-External: không có (không server, không CDN, không analytics).
+External: không có (không server, không CDN, không analytics, không dịch vụ dịch).
 ```
 
 Luồng chính: UI gọi service → service dùng domain để validate/tính toán → service gọi repository để đọc/ghi → UI nhận dữ liệu mới qua subscription (live query) và render lại.
+
+Ngôn ngữ (i18n): domain không chứa chữ hiển thị (chỉ trả mã lỗi và dữ liệu có cấu trúc). UI dịch qua `react-i18next`; service nào phải tự sinh chữ ngoài React (notification, `.ics`) nhận một `Translator` qua constructor. Lựa chọn ngôn ngữ lưu ở kv key `locale` (chi tiết §5.8, ADR-11 … ADR-13).
 
 ## 2. Stack và lý do
 
@@ -47,6 +50,8 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | Lưu trữ | IndexedDB qua `dexie` | 4.4.6 | API transaction rõ ràng, `liveQuery` để UI tự cập nhật, test được với fake-indexeddb | localStorage (đồng bộ, giới hạn ~5 MB, không transaction), `idb` (ít tiện ích, phải tự viết live query) |
 | Validate | `zod` | 4.6.5 | Schema cho form và file import, message rõ | Tự viết validate (dễ sót), yup |
 | Ngày tháng | `date-fns` | 4.4.0 | Hàm thuần, tree-shake, xử lý ngày cục bộ an toàn (DST) | dayjs (plugin), tự tính bằng ms (lỗi DST) |
+| i18n (chuỗi) | `i18next` + `react-i18next` | 26.4.2 / 17.0.16 | Phổ biến nhất cho React; nội suy, số nhiều qua `Intl.PluralRules` (hậu tố `_one`/`_other`; `vi` chỉ có `_other`), `changeLanguage` re-render toàn app ngay; key có kiểu (TS `CustomTypeOptions`) để bắt key sai lúc typecheck; peer `typescript ^5 \|\| ^6 \|\| ^7` hợp TS 6.0; ≈ 20 KB gzip, vừa ngân sách NFR-03. Resource import tĩnh từ JSON (không backend plugin, không request) | `i18next-browser-languagedetector` 8.2.1 (cache sẵn chỉ localStorage/cookie, trong khi quyết định là lưu ở kv IndexedDB; quy tắc FR-33 chỉ một dòng, tự viết dễ test hơn); tự viết `t()` (rẻ nhưng phải tự lo nội suy, số nhiều, re-render, kiểu key); `react-intl`/FormatJS (ICU message nặng hơn, cần polyfill/compile để gọn); Lingui (cần macro/compile step, thêm biến số cho toolchain) |
+| i18n (định dạng) | `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.PluralRules` (có sẵn trong trình duyệt và Node 22 full-icu) | — | Không thêm dependency; đúng quy ước `en-US`/`vi-VN` | Định dạng tay bằng date-fns locale (thêm bundle, trùng với Intl) |
 | Biểu đồ | `recharts` (lazy-load) | 3.10.1 | Phổ biến, khai báo bằng component, đủ cho line + bar | Chart.js (imperative), nivo (nặng). Heatmap tự vẽ bằng SVG/CSS grid (đơn giản, dễ test, dễ a11y) |
 | Lint | ESLint + `@eslint/js` + `typescript-eslint` + `eslint-plugin-react-hooks` + `globals` | 10.12.0 / 10.0.1 / 8.71.1 / 7.1.1 / mới nhất lúc cài | Flat config; `no-restricted-imports` để cưỡng chế tách lớp. ESLint 10 cần Node ≥ 22.13 (máy có 22.14) | Biome (chưa có rule chặn import theo thư mục tương đương) |
 | Unit/integration test | Vitest + `@vitest/coverage-v8` | 4.1.11 | Dùng chung config Vite; dòng 4.x đã trưởng thành | Vitest 5.0 (major mới ra), Jest (cấu hình ESM/TS phức tạp hơn) |
@@ -69,9 +74,15 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `domain/heatmap.ts` | logic | Lưới năm (cột tuần, hàng thứ Hai→Chủ nhật), mức màu 0–4 | dates, stats |
 | `domain/curve.ts` | logic | Chuỗi điểm 1.01^k lý tưởng và 1.01^n thực tế, headline "+X%" | dates, stats |
 | `domain/timer.ts` | logic | Thời gian đã chạy, làm tròn phút, ngày quy về | dates |
-| `domain/reminder.ts` | logic | `shouldNotify`, `shouldShowBanner`, nội dung nhắc | stats |
+| `domain/reminder.ts` | logic | `shouldNotify`, `shouldShowBanner`, dữ liệu nhắc có cấu trúc (`{ pendingCount, items: [{ goalName, minutes, target }] }`) — không sinh chữ; chữ do `ReminderService` dịch | stats |
 | `domain/backup.ts` | logic | Schema file backup (zod), kiểm tra version và toàn vẹn tham chiếu | zod, entry |
-| `domain/ics.ts` | logic | Sinh nội dung `.ics` (VEVENT lặp hằng ngày) | — |
+| `domain/ics.ts` | logic | Sinh nội dung `.ics` (VEVENT lặp hằng ngày); nhận `summary` và `alarmDescription` đã dịch làm tham số, tự escape theo RFC 5545 | — |
+| `i18n/types.ts` | config | Kiểu `Locale = 'en' \| 'vi'`, `MessageKey`, interface `Translator { locale: Locale; t(key, params?): string }` | — |
+| `i18n/resources/en.json`, `vi.json` | config | Toàn bộ chuỗi UI theo key; nguồn sự thật cho copy (nguyên văn từ DESIGN.md) | — |
+| `i18n/detect.ts` | config | `detectLocale(navigatorLanguage: string \| undefined): Locale` (FR-33), hàm thuần | — |
+| `i18n/format.ts` | config | `createFormatters(locale)`: `dateLong`, `dateShort`, `weekdayShort`, `monthShort`, `number`, `decimal1`, `percent1`, `minutes`, `duration`, `hhmmss`; cache `Intl.*` theo locale | Intl |
+| `i18n/instance.ts` | config | Khởi tạo i18next (resources tĩnh, `lng`, `fallbackLng: 'en'`, `returnNull: false`, `missingKeyHandler` ném lỗi ở test), `setLocale()` cập nhật i18next + `<html lang>`; `createTranslator(i18n)` → `Translator` | i18next |
+| `services/locale-service.ts` | logic (application) | `resolve(navigatorLanguage)` (kv `locale` nếu có, ngược lại `detectLocale`), `set(locale)`, `watch()` | `KvRepository`, i18n/detect |
 | `data/repositories.ts` | data | Interface `GoalRepository`, `EntryRepository`, `KvRepository`, `BackupRepository`, `Subscribable<T>` | domain/types |
 | `data/dexie/*` | data | DB schema Dexie v1 và implementation các repository, cascade delete, replaceAll trong transaction | dexie |
 | `services/*` | logic (application) | Use case: goal, entry, timer, reminder, backup, stats; nhận repository qua constructor | domain, data interfaces |
@@ -79,17 +90,30 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `integration/sw-register.ts` | integration | Đăng ký SW (chỉ bản build), cập nhật SW | workbox-window |
 | `integration/file-io.ts` | integration | Tải file (Blob + `<a download>`), đọc file người dùng chọn | File API |
 | `integration/storage.ts` | integration | `navigator.storage.persist()`/`persisted()`, phát hiện IndexedDB không dùng được | StorageManager |
-| `app/container.ts` | config (composition root) | Khởi tạo repository + service, cung cấp qua `AppContext` | data/dexie, services, integration |
+| `app/container.ts` | config (composition root) | Khởi tạo repository + service (truyền `Translator` cho service cần sinh chữ), cung cấp qua `AppContext` | data/dexie, services, integration, i18n |
+| `app/bootstrap.ts` | config | Thứ tự khởi động: init i18n với `detectLocale` → mở DB (lỗi → `StorageError` đã dịch theo ngôn ngữ phát hiện) → `LocaleService.resolve` → `setLocale` → render router | i18n, container |
 | `app/router.tsx` | UI | Khai báo route, lazy-load Review và Goal detail | react-router |
-| `ui/screens/*`, `ui/components/*`, `ui/hooks/*` | UI | Màn hình, component, hook `useSubscribable`, `useNow` | services (qua context) |
+| `ui/screens/*`, `ui/components/*`, `ui/hooks/*` | UI | Màn hình, component, hook `useSubscribable`, `useNow`, `useT` (bọc `useTranslation`), `useFormat` (formatter theo locale hiện tại), `useDocumentTitle` | services (qua context), i18n |
+| `ui/error-messages.ts` | UI | Ánh xạ `DomainError` (code + biến thể + tham số) → key i18n `errors.*` (thay cho `src/ui/copy.ts` nêu trong DESIGN.md) | i18n/types |
 | `sw.ts` | integration | Precache (workbox), `notificationclick` → focus client hoặc mở `#/today` | workbox-precaching |
 
 **Quy tắc phụ thuộc (bắt buộc, cưỡng chế bằng ESLint `no-restricted-imports`):**
 
-- `src/domain/**` không import `react`, `react-dom`, `dexie`, `recharts`, hay bất kỳ file nào trong `src/data`, `src/services`, `src/integration`, `src/ui`, `src/app`.
-- `src/services/**` không import `dexie`, `react`, `src/data/dexie/**`, `src/ui/**` (chỉ dùng interface trong `src/data/repositories.ts`; integration được truyền vào qua constructor).
-- `src/ui/**` không import `dexie` hay `src/data/dexie/**`.
-- Chỉ `src/app/container.ts` được ghép implementation cụ thể.
+- `src/domain/**` không import `react`, `react-dom`, `dexie`, `recharts`, `i18next`, `react-i18next`, hay bất kỳ file nào trong `src/data`, `src/services`, `src/integration`, `src/ui`, `src/app`, `src/i18n` (domain không biết ngôn ngữ).
+- `src/services/**` không import `dexie`, `react`, `i18next`, `react-i18next`, `src/data/dexie/**`, `src/ui/**`, `src/i18n/instance*`, `src/i18n/resources/**` (chỉ dùng interface trong `src/data/repositories.ts` và `src/i18n/types.ts`, `src/i18n/detect.ts`, `src/i18n/format.ts`; integration và `Translator` được truyền vào qua constructor).
+- `src/ui/**` không import `dexie` hay `src/data/dexie/**`; không import `i18next` trực tiếp (dùng hook `useT`/`useFormat`).
+- `src/i18n/**` không import `react`, `src/ui/**`, `src/services/**`, `src/data/**`.
+- Chỉ `src/app/container.ts` (và `bootstrap.ts`) được ghép implementation cụ thể.
+
+**Quy tắc chuỗi hiển thị (bắt buộc, cưỡng chế bằng ESLint + test, NFR-11):**
+
+- Mọi chữ người dùng thấy hoặc screen reader đọc phải đến từ `t()` (key trong `en.json`/`vi.json`) hoặc từ formatter `format.ts`, hoặc là dữ liệu người dùng (tên goal, why, note).
+- ESLint core `no-restricted-syntax` cho `src/ui/**/*.tsx`, `src/app/**/*.tsx`, trừ `**/*.test.tsx` (gộp cùng selector cấm `dangerouslySetInnerHTML` trong **một** khai báo rule, vì flat config ghi đè cả mảng selector):
+  - `JSXText[value=/[A-Za-z]/]` → "Hardcoded UI text: use t()".
+  - `JSXAttribute[name.name=/^(aria-label|aria-description|aria-valuetext|placeholder|title|alt|label)$/][value.type='Literal']` → "Hardcoded accessible text: use t()".
+  - `JSXElement > JSXExpressionContainer > Literal[value=/[A-Za-z]/]` (chặn `{'Save'}`).
+  - Ngoại lệ chỉ bằng `// eslint-disable-next-line no-restricted-syntax -- <lý do>` và phải liệt kê trong handoff.
+- Chuỗi trong code không phải JSX (toast, `document.title`, nội dung notification) không bị lint bắt: được bảo vệ bằng test quét DOM ở chế độ `vi` (§8).
 
 ## 4. Data model
 
@@ -132,6 +156,10 @@ interface Settings {                                                // kv key 's
   lastBackupAt: ISODateTime | null;
   plusOneShown: Record<string, ISODate>; // goalId → ngày đã hiện phản hồi +1% (M5)
 }
+
+type Locale = 'en' | 'vi';                                          // kv key 'locale' (src/i18n/types.ts)
+// Chỉ ghi khi người dùng chọn trong Settings (A-16). Không thuộc Settings,
+// không có trong file backup, import không đọc/không xoá key này (FR-34).
 ```
 
 **Dexie schema v1** (DB name lấy từ `VITE_DB_NAME`, mặc định `one-percent-better`):
@@ -140,7 +168,7 @@ interface Settings {                                                // kv key 's
 | :- | :- | :- |
 | `goals` | `id` | Không index trường boolean (IndexedDB không index được boolean) |
 | `entries` | `id, goalId, date, [goalId+date]` | Truy vấn theo goal, theo ngày, theo khoảng ngày |
-| `kv` | `key` | `{ key: 'settings' \| 'activeTimer', value }` |
+| `kv` | `key` | `{ key: 'settings' \| 'activeTimer' \| 'locale', value }` (thêm key không cần tăng version schema Dexie) |
 
 Thay đổi schema sau này: tăng `db.version(n)` kèm `upgrade()`; tăng `schemaVersion` của file backup khi định dạng export đổi.
 
@@ -198,15 +226,16 @@ interface EntryRepository {
   watchByDateRange(from: ISODate, to: ISODate): Subscribable<LogEntry[]>;
   watchByGoal(goalId: string): Subscribable<LogEntry[]>;
 }
+type KvKey = 'settings' | 'activeTimer' | 'locale';
 interface KvRepository {
-  get<T>(key: 'settings' | 'activeTimer'): Promise<T | undefined>;
-  set<T>(key: 'settings' | 'activeTimer', value: T): Promise<void>;
-  delete(key: 'settings' | 'activeTimer'): Promise<void>;
-  watch<T>(key: 'settings' | 'activeTimer'): Subscribable<T | undefined>;
+  get<T>(key: KvKey): Promise<T | undefined>;
+  set<T>(key: KvKey, value: T): Promise<void>;
+  delete(key: KvKey): Promise<void>;
+  watch<T>(key: KvKey): Subscribable<T | undefined>;
 }
 interface BackupRepository {
   exportAll(): Promise<{ goals: Goal[]; entries: LogEntry[]; settings: Settings }>;
-  replaceAll(data: { goals: Goal[]; entries: LogEntry[]; settings: Settings }): Promise<void>; // một transaction, lỗi thì rollback
+  replaceAll(data: { goals: Goal[]; entries: LogEntry[]; settings: Settings }): Promise<void>; // một transaction, lỗi thì rollback; giữ nguyên kv 'locale'
 }
 ```
 
@@ -219,7 +248,8 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 | `GoalService` | `create(input, now)`, `update(id, input, now)`, `remove(id)`, `setArchived(id, archived, now)` | M1 (archive M5) |
 | `EntryService` | `add({goalId, date, minutes, note, source}, now)`, `update(id, {minutes, note}, now)`, `remove(id)` | M1 (UI chọn ngày ≠ today từ M3; domain validate mọi ngày ngay từ M1 vì timer qua nửa đêm ở M2 ghi vào ngày hôm trước) |
 | `TimerService` | `start(goalId, now)`, `stop(now) → {goalId, date, minutes}`, `save({minutes, note}, now)`, `discard()`, `watch()`. `GoalService.remove` xoá luôn `activeTimer` nếu timer thuộc goal bị xoá | M2 |
-| `ReminderService` | `check(now)` → gửi notification nếu `shouldNotify`; `getBannerState(now)` | M2 |
+| `LocaleService` | `resolve(navigatorLanguage) → Locale`, `set(locale)`, `watch()` | M1 |
+| `ReminderService` | `check(now)` → gửi notification nếu `shouldNotify` (title/body dịch bằng `Translator` nhận qua constructor, theo locale hiện tại); `getBannerState(now)` trả dữ liệu, UI tự dịch | M2 |
 | `BackupService` | `export(now) → {fileName, json}`, `parse(text, sizeBytes) → Result<BackupPreview>`, `import(parsed, now)` | M3 |
 | `StatsService` | `goalStats(goalId, year, today)`, `overallStats(year, today)`, `curve(goalId, today)` | M4/M5 |
 
@@ -249,7 +279,7 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 | `STORAGE_UNAVAILABLE` | Không mở được IndexedDB |
 | `NOTIFICATIONS_UNSUPPORTED` / `NOTIFICATIONS_DENIED` | Trình duyệt không hỗ trợ / quyền bị chặn |
 
-Message hiển thị (tiếng Anh) do designer chốt trong `DESIGN.md`; code ở trên là cố định để test bám vào.
+Message hiển thị (tiếng Anh và tiếng Việt) do designer chốt trong `DESIGN.md`; code ở trên là cố định để test bám vào. UI ánh xạ code → key `errors.<CODE>` (biến thể thêm hậu tố, vd. `errors.GOAL_TARGET_INVALID_daily`, `errors.GOAL_PERIOD_INVALID_tooLong`) trong `src/ui/error-messages.ts`; tham số (`remaining`, `start`, `end`, `v`) truyền vào `t()` sau khi đã qua formatter của locale. `DomainError.message` chỉ để log, không bao giờ hiển thị.
 
 ### 5.5 Định dạng file backup (schemaVersion 1)
 
@@ -270,19 +300,44 @@ Tên file: `1percent-better-backup-YYYY-MM-DD.json` (ngày export, giờ cục b
 }
 ```
 
-Import: thay thế toàn bộ `goals`, `entries`, `settings`; xoá `activeTimer`; đặt `lastReminderDate = null`. Field `plusOneShown` (thêm ở M5) là optional khi import, mặc định `{}`.
+Import: thay thế toàn bộ `goals`, `entries`, `settings`; xoá `activeTimer`; đặt `lastReminderDate = null`; giữ nguyên kv `locale` (ngôn ngữ là thiết lập của thiết bị, không có trong file backup). Field `plusOneShown` (thêm ở M5) là optional khi import, mặc định `{}`.
 
 ### 5.6 Notification và Service Worker
 
 - Hiển thị qua `(await navigator.serviceWorker.ready).showNotification(title, options)` (bắt buộc trên Android Chrome; `new Notification()` không dùng).
-- `title`: `"1% Better"`; `body`: số goal chưa đạt và tiến độ, ví dụ `"2 goals left today: Read 10/30 min, Guitar 0/20 min"`; `tag`: `"daily-reminder"`; `data.url`: `"#/today"`; `icon`: icon 192 px.
+- `title`: `"1% Better"` (thương hiệu, giống nhau ở hai ngôn ngữ); `body`: số goal chưa đạt và tiến độ, dịch theo locale đang chọn lúc gửi (key `notification.body`, số nhiều qua `_one`/`_other`), ví dụ `en`: `"2 goals left today: Read 10/30 min, Guitar 0/20 min"`; `vi`: theo copy trong DESIGN.md, tên goal giữ nguyên; `lang`: `"en"` hoặc `"vi"`; `tag`: `"daily-reminder"`; `data.url`: `"#/today"`; `icon`: icon 192 px.
 - `sw.ts` xử lý `notificationclick`: đóng notification, focus client đang mở cùng scope và điều hướng tới `#/today`, nếu không có thì `clients.openWindow(scope + '#/today')`.
 - Lịch kiểm tra nhắc (khi app đang mở): ngay khi app khởi động, mỗi `VITE_REMINDER_CHECK_INTERVAL_MS` (mặc định 60000 ms), và khi `visibilitychange`. Gửi xong ghi `lastReminderDate = today`.
 - `shouldNotify(now, settings, permission, activeGoalsProgress)` = `reminderEnabled && permission === 'granted' && hh:mm(now) ≥ reminderTime && lastReminderDate !== today && có ≥ 1 goal active chưa đạt`. `shouldShowBanner` = như trên nhưng không cần quyền và không xét `lastReminderDate`.
 
 ### 5.7 File `.ics` (FR-16)
 
-Tên `1percent-better-reminder.ics`; nội dung tối thiểu: `BEGIN:VCALENDAR`, `VERSION:2.0`, `PRODID:-//1% Better//EN`, một `VEVENT` có `UID`, `DTSTAMP`, `DTSTART` (ngày mai, giờ nhắc, giờ "floating" cục bộ dạng `YYYYMMDDTHHMMSS`), `DURATION:PT15M`, `RRULE:FREQ=DAILY`, `SUMMARY:1% Better — log today's time`, `BEGIN:VALARM` với `TRIGGER:PT0M`, `ACTION:DISPLAY`. Dòng kết thúc CRLF.
+Tên `1percent-better-reminder.ics`; nội dung tối thiểu: `BEGIN:VCALENDAR`, `VERSION:2.0`, `PRODID:-//1% Better//EN`, một `VEVENT` có `UID`, `DTSTAMP`, `DTSTART` (ngày mai, giờ nhắc, giờ "floating" cục bộ dạng `YYYYMMDDTHHMMSS`), `DURATION:PT15M`, `RRULE:FREQ=DAILY`, `SUMMARY:<key ics.summary theo locale>` (`en`: `1% Better — log today's time`; `vi`: theo DESIGN.md), `BEGIN:VALARM` với `TRIGGER:PT0M`, `ACTION:DISPLAY`, `DESCRIPTION:<key ics.alarm theo locale>`. Nội dung UTF-8 (tiếng Việt có dấu), escape `\`, `;`, `,`, xuống dòng theo RFC 5545, dòng dài hơn 75 octet được gập (folding) không cắt giữa ký tự UTF-8. `PRODID` giữ `-//1% Better//EN` ở cả hai ngôn ngữ (định danh sản phẩm, không phải chữ hiển thị). Dòng kết thúc CRLF. Tên file không đổi theo ngôn ngữ.
+
+### 5.8 i18n contract
+
+- **Locale:** `'en' | 'vi'`; tag cho `Intl`: `en` → `en-US`, `vi` → `vi-VN`.
+- **Phát hiện (FR-33):** `detectLocale(lang) = lang?.toLowerCase().startsWith('vi') ? 'vi' : 'en'`, với `lang = navigator.language`.
+- **Thứ tự quyết định:** kv `locale` (nếu hợp lệ) → `detectLocale(navigator.language)`. Giá trị kv không hợp lệ (vd. `'fr'`) bị bỏ qua (coi như chưa chọn), không crash.
+- **Đổi ngôn ngữ (FR-32):** `LocaleService.set(locale)` ghi kv → `setLocale(locale)` gọi `i18next.changeLanguage` (đồng bộ vì resource đóng gói sẵn) + `document.documentElement.lang = locale` + cập nhật `document.title`. Mọi component dùng `useT`/`useFormat` re-render ngay; không reload.
+- **Khởi động không nháy ngôn ngữ:** bootstrap đọc kv `locale` trước khi render router (lần đọc này nằm trong bước mở DB vốn đã có; DESIGN quy định 150 ms đầu không hiển thị nội dung). Màn `StorageError` dùng ngôn ngữ phát hiện từ trình duyệt.
+- **Key:** phân cấp theo key đã có trong DESIGN.md §7 (`app.*`, `nav.*`, `toast.*`, `errors.*`, `empty.*`, `form.*`, `reminder.*`, `notification.*`, `heatmap.*`, `chart.*`, `ics.*`, `settings.language.*`, `screen.<tên>.*`). Nội suy `{{name}}`; số nhiều theo chuẩn i18next JSON v4 (`key_one`, `key_other`; `vi.json` chỉ cần `key_other`). Không ghép chuỗi bằng `+` trong UI (thứ tự từ khác nhau giữa hai ngôn ngữ): dùng một key có biến.
+- **Tên ngôn ngữ trong Settings:** key `settings.language.option.en` = `English` và `settings.language.option.vi` = `Tiếng Việt` ở **cả hai** file (endonym), có `lang` attribute tương ứng trên từng lựa chọn.
+- **Formatter (`src/i18n/format.ts`, mọi hàm nhận `locale`):**
+
+| Hàm | `en` | `vi` | Cài đặt |
+| :- | :- | :- | :- |
+| `dateLong(d, {withYear})` | `Friday, October 9` / `Thursday, October 8, 2026` | kết quả `Intl.DateTimeFormat('vi-VN', {weekday:'long', day:'numeric', month:'long'[, year:'numeric']})`, vd. `Thứ Sáu, 9 tháng 10` | `Intl.DateTimeFormat` |
+| `dateShort(d)` | `2026-10-01` (ISO, như DESIGN.md) | `01/10/2026` | `en`: chuỗi ISO; `vi`: `Intl.DateTimeFormat('vi-VN', {day:'2-digit', month:'2-digit', year:'numeric'})` |
+| `dateRange(a, b)` | `2026-10-01 – 2026-10-31` | `01/10/2026 – 31/10/2026` | hai `dateShort` + en dash |
+| `weekdayShort`, `monthShort` | `Mon`, `Oct` | theo `Intl` `vi-VN` | dùng cho nhãn heatmap/trục biểu đồ |
+| `number(n)` | `1,440` | `1.440` | `Intl.NumberFormat` |
+| `decimal1(n)` | `4.0` | `4,0` | `minimumFractionDigits: 1, maximumFractionDigits: 1` |
+| `percent1(n)` | `25.8%` | `25,8%` | như trên + key `format.percent` (`{{value}}%`) để không phụ thuộc khoảng trắng của ICU |
+| `minutes(n)`, `duration(min)` | `20 min`, `2 h 40 min` | theo key `format.minutes`, `format.duration` trong `vi.json` | key i18n + `number()` |
+| `hhmmss(ms)`, giờ nhắc `HH:MM` | `00:25:31`, `20:00` | giống `en` | không qua Intl |
+
+- Ngày lưu trữ (`ISODate`), dữ liệu file backup, tên file, mã lỗi luôn không phụ thuộc locale.
 
 ## 6. Cấu trúc thư mục
 
@@ -304,21 +359,25 @@ Tên `1percent-better-reminder.ics`; nội dung tối thiểu: `BEGIN:VCALENDAR`
 ├── src/
 │   ├── main.tsx
 │   ├── sw.ts
-│   ├── app/                   # container.ts, AppContext.tsx, router.tsx, ErrorBoundary.tsx
+│   ├── app/                   # container.ts, bootstrap.ts, AppContext.tsx, router.tsx, ErrorBoundary.tsx
 │   ├── config/                # env.ts, constants.ts
+│   ├── i18n/                  # types.ts, detect.ts, format.ts, instance.ts, i18next.d.ts (kiểu key) (+ *.test.ts)
+│   │   └── resources/         # en.json, vi.json (cùng tập key; nguyên văn copy từ DESIGN.md)
 │   ├── domain/                # types, dates, goal, entry, stats, heatmap, curve, timer, reminder, backup, ics (+ *.test.ts)
 │   ├── data/
 │   │   ├── repositories.ts
 │   │   └── dexie/             # db.ts, goal-repo.ts, entry-repo.ts, kv-repo.ts, backup-repo.ts (+ *.test.ts)
-│   ├── services/              # goal-, entry-, timer-, reminder-, backup-, stats-service.ts (+ *.test.ts)
+│   ├── services/              # goal-, entry-, timer-, reminder-, backup-, stats-, locale-service.ts (+ *.test.ts)
 │   ├── integration/           # notifications.ts, sw-register.ts, file-io.ts, storage.ts (+ *.test.ts)
 │   ├── ui/
 │   │   ├── screens/           # Today, Goals, GoalForm, GoalDetail, Day, Review, Settings, NotFound, StorageError
 │   │   ├── components/        # Heatmap, TimerCard, EntryForm, StatCard, CurveChart, BarChart, …
-│   │   ├── hooks/             # useSubscribable, useNow, useServices
+│   │   ├── hooks/             # useSubscribable, useNow, useServices, useT, useFormat, useDocumentTitle
+│   │   ├── error-messages.ts  # DomainError → key errors.*
 │   │   └── styles/
-│   └── test/                  # setup.ts (jest-dom, fake-indexeddb/auto), helpers, builders
-├── e2e/                       # Playwright spec của developer
+│   └── test/                  # setup.ts (jest-dom, fake-indexeddb/auto, i18n ở chế độ test), helpers, builders,
+│                              # render-with-locale.tsx, i18n-scan.ts (quét DOM tìm chuỗi tiếng Anh/key thô)
+├── e2e/                       # Playwright spec của developer; helpers/i18n-scan.ts (bản chạy trong page)
 │   └── fixtures/              # sample-backup.json (M3), large-backup.json (M4)
 └── tests/qc/                  # của QC: *.test.ts (Vitest) và *.spec.ts (Playwright)
 ```
@@ -344,10 +403,13 @@ Biến dùng trong script npm (đặt sẵn bằng `cross-env`, không cần `.e
 | Unit | Vitest (env `node`) | Toàn bộ `src/domain` (validate, dailyTarget, streak, heatmap, curve, timer, reminder, backup schema, ics). Coverage dòng `src/domain` ≥ 90% | `npm test`, `npm run test:coverage` |
 | Integration | Vitest + `fake-indexeddb` | Repository Dexie (cascade, transaction, rollback), service với repository thật | `npm test` |
 | Component | Vitest (env `jsdom`) + Testing Library | Form validate, Today, TimerCard (fake timers), Settings | `npm test` |
-| E2E | Playwright Chromium, chạy trên bản build qua `vite preview` port 4173, `timezoneId: 'Asia/Ho_Chi_Minh'`, `locale: 'en-US'` | Luồng chính mỗi milestone; `page.clock` cho timer/nhắc; `context.setOffline` cho offline; `grantPermissions(['notifications'])`; tải/nạp file backup; axe a11y | `npm run test:e2e` |
+| E2E | Playwright Chromium, chạy trên bản build qua `vite preview` port 4173, `timezoneId: 'Asia/Ho_Chi_Minh'`, `locale: 'en-US'` mặc định (spec song ngữ dùng `test.use({ locale: 'vi-VN' })`) | Luồng chính mỗi milestone; `page.clock` cho timer/nhắc; `context.setOffline` cho offline; `grantPermissions(['notifications'])`; tải/nạp file backup; axe a11y; luồng chính chạy lại ở `vi-VN` + quét DOM | `npm run test:e2e` |
+| i18n | Vitest + Testing Library + Playwright | (1) **Parity**: `en.json` và `vi.json` cùng tập key (sau khi gộp hậu tố số nhiều), cùng tập biến `{{…}}` theo từng key, không giá trị rỗng, không giá trị `vi` trùng `en` ngoài allowlist (`app.name`, `app.shortName`, `plusone.pill`, `settings.language.option.*`, chuỗi chỉ gồm số/ký hiệu; allowlist nằm trong file test, mục thêm mới phải nêu trong handoff). (2) **Unit** `detectLocale`, formatter cho cả hai locale. (3) **Missing key**: ở môi trường test, `missingKeyHandler` ném lỗi → mọi component test fail nếu dùng key không tồn tại. (4) **Quét DOM** (`src/test/i18n-scan.ts`, bản E2E `e2e/helpers/i18n-scan.ts`): render ở `vi`, thu mọi text node + thuộc tính `aria-label`, `aria-description`, `aria-valuetext`, `placeholder`, `title`, `alt` + `document.title`; fail nếu một chuỗi khớp **toàn bộ** một giá trị `en` (đã thay `{{biến}}` bằng wildcard) mà khác giá trị `vi` cùng key, hoặc trông như key thô (`/^[a-z]+(\.[A-Za-z0-9_]+)+$/`). Dữ liệu người dùng trong fixture không bị coi là lỗi vì so khớp toàn chuỗi | `npm test`, `npm run test:e2e` |
 | QC | Như trên | `tests/qc/**/*.test.ts(x)` được Vitest include; `tests/qc/**/*.spec.ts` được Playwright include | (cùng lệnh) |
 
 Quy ước test: mỗi test e2e dùng browser context mới (IndexedDB sạch); dữ liệu mẫu nạp qua màn hình Import (từ M3) hoặc qua UI. Thời gian trong test luôn cố định (`vi.setSystemTime` / `page.clock.setFixedTime` hoặc `install`), ví dụ `2026-10-09T10:00:00+07:00`.
+
+Quy ước test song ngữ: component test mặc định render ở `en` (helper `renderWithLocale(ui, 'en' | 'vi')`). Test khẳng định chữ nên lấy chuỗi mong đợi từ resource (`t('toast.entrySaved')`) hoặc ghi literal `en` khi AC ghi literal; giá trị định dạng `vi` so với kết quả `Intl` tính trong test hoặc literal sau khi chuẩn hoá khoảng trắng (U+00A0, U+202F → space), vì chi tiết ICU có thể khác nhẹ giữa Node và Chromium.
 
 ## 9. Lệnh chuẩn
 
@@ -381,6 +443,11 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | SW cache cũ làm người dùng kẹt ở bản cũ | Trung bình | Thấp | `registerType: 'prompt'` hoặc `autoUpdate` + thông báo "New version available — Reload" |
 | Toolchain mới (Vite 8, ESLint 10) có bug | Thấp | Trung bình | Pin exact version; đã chọn dòng ổn định hơn cho Vitest (4.1) và TS (6.0) |
 | `page.clock`/`getNotifications()` không quan sát được notification trong headless | Trung bình | Thấp | Unit/integration test scheduler với adapter giả; e2e kiểm qua `registration.getNotifications()`; nếu không được thì QC kiểm thủ công theo bước trong handoff |
+| Chuỗi bị hardcode hoặc thiếu bản dịch lọt vào bản build (nhất là chuỗi ngoài JSX: toast, title, notification) | Trung bình | Trung bình | Lint `no-restricted-syntax` cho JSX; parity test; `missingKeyHandler` ném lỗi khi test; quét DOM ở `vi` trong component test và E2E mỗi milestone; key có kiểu (typecheck bắt key sai) |
+| Chuỗi tiếng Việt dài hơn gây tràn/xuống dòng xấu ở 360 px (nút, tab bar, stat card) | Trung bình | Thấp | Kiểm viewport 360 px ở `vi-VN` trong E2E (không cuộn ngang); designer chốt copy `vi` ngắn cho tab/nút; layout dùng wrap, không chiều rộng cố định cho chữ |
+| Kết quả `Intl` khác nhau giữa Node (Vitest) và trình duyệt, hoặc giữa phiên bản ICU (khoảng trắng hẹp, viết hoa thứ) | Trung bình | Thấp | Test so với `Intl` tính tại chỗ hoặc chuẩn hoá khoảng trắng; phần trăm/phút dùng key i18n thay vì `style: 'percent'`/`unit` |
+| Nháy ngôn ngữ khi khởi động (hiện `en` rồi đổi `vi`) | Thấp | Thấp | Đọc kv `locale` trước khi render router (§5.8); màn đầu tiên có 150 ms không hiển thị nội dung |
+| Mã lỗi/notification sinh chữ trong service làm lẫn lớp | Thấp | Thấp | Domain chỉ trả dữ liệu; service chỉ dùng interface `Translator`; lint chặn import `i18next` ngoài `src/i18n` và `src/ui` (qua `react-i18next`) |
 
 ## 11. Quyết định kiến trúc
 
@@ -414,7 +481,17 @@ Bối cảnh: một số bản mới nhất yêu cầu Node ≥ 22.22 hoặc ch�
 **ADR-10 — Biểu đồ lazy-load, heatmap tự vẽ.**
 Bối cảnh: NFR-03 giới hạn bundle ban đầu. Lựa chọn: Recharts chỉ import trong route lazy (Review, Goal detail); heatmap là component SVG/CSS grid riêng. Hệ quả: Today mở nhanh; heatmap kiểm soát hoàn toàn a11y và test.
 
+**ADR-11 — i18n bằng `i18next` + `react-i18next`, resource đóng gói tĩnh, không language detector plugin.**
+Bối cảnh: Gate 2 yêu cầu song ngữ `en`/`vi`, đổi ngay không reload, không request ngoài, cần số nhiều và nội suy, key kiểm tra được bằng typecheck. Lựa chọn: `i18next` 26.4.2 + `react-i18next` 17.0.16; `en.json`, `vi.json` import tĩnh trong `src/i18n/instance.ts` (cả hai vào bundle chính, mỗi file vài KB gzip, có sẵn offline qua precache); phát hiện ngôn ngữ bằng hàm thuần `detectLocale` (không dùng `i18next-browser-languagedetector`); định dạng bằng `Intl` qua `src/i18n/format.ts`. Hệ quả: thêm ≈ 20 KB gzip vào bundle ban đầu (vẫn trong 250 KB); thêm ngôn ngữ sau này = thêm một file JSON + mở rộng `Locale`; nếu bundle chật có thể chuyển sang lazy-load resource của ngôn ngữ không dùng.
+
+**ADR-12 — Lựa chọn ngôn ngữ là thiết lập thiết bị, lưu ở kv key `locale`.**
+Bối cảnh: quyết định của user là lưu cục bộ trong kv store; import thay thế toàn bộ dữ liệu (ADR-08) không nên đổi ngôn ngữ của máy đích. Lựa chọn: key riêng `locale` trong store `kv`, không nằm trong `Settings`, không export, `replaceAll` không chạm tới; chỉ ghi khi người dùng chọn. Hệ quả: định dạng file backup giữ `schemaVersion: 1`; không cần migration Dexie; chuyển máy thì người dùng chọn lại ngôn ngữ (hoặc theo trình duyệt).
+
+**ADR-13 — Domain không biết ngôn ngữ; chữ chỉ sinh ở UI hoặc qua `Translator`.**
+Bối cảnh: notification và `.ics` sinh ngoài React; mã lỗi đã tách khỏi message (§5.4). Lựa chọn: domain trả mã lỗi + dữ liệu có cấu trúc; `ReminderService` (và nơi sinh `.ics`) nhận `Translator` từ composition root; UI dịch bằng hook. Hệ quả: domain test không phụ thuộc copy; đổi copy không làm vỡ test domain; service test dùng `Translator` giả hoặc instance i18n thật.
+
 ## Changelog
 
 - 2026-10-09 — v1, tạo mới (mode `new`).
 - 2026-10-09 — v1.1 (khi viết TASKS.md): làm rõ `pace` tính cả hôm nay; thêm quy tắc số phút điền sẵn của timer (1–1440); ghi rõ EntryService validate mọi ngày từ M1 (timer qua nửa đêm ở M2) và xoá goal thì xoá `activeTimer` liên quan; thêm mã lỗi `GOAL_TIMER_RUNNING` (M5); thay `react/no-danger` (plugin không có trong stack) bằng `no-restricted-syntax`.
+- 2026-10-09 — v1.2 (mode `revise`, feedback Gate 2: song ngữ en/vi): §1 thêm luồng i18n; §2 thêm `i18next` 26.4.2 + `react-i18next` 17.0.16 và `Intl` (loại language detector plugin, tự viết, FormatJS, Lingui); §3 thêm component `src/i18n/*`, `LocaleService`, `bootstrap.ts`, `useT`/`useFormat`, `error-messages.ts`, sửa `domain/reminder.ts` (trả dữ liệu, không sinh chữ) và `domain/ics.ts` (nhận chuỗi đã dịch), mở rộng quy tắc phụ thuộc và thêm quy tắc chuỗi hiển thị (lint + test); §4 kv key `locale`; §5.2 `KvKey`; §5.3 `LocaleService`, `ReminderService` nhận `Translator`; §5.4 ánh xạ mã lỗi → key `errors.*`; §5.5 import giữ `locale`; §5.6 body notification theo locale; §5.7 `.ics` UTF-8, SUMMARY/DESCRIPTION theo locale; thêm §5.8 i18n contract; §6 thư mục `src/i18n/`, helper test; §8 chiến lược test i18n; §10 thêm 5 rủi ro; §11 thêm ADR-11 … ADR-13.
