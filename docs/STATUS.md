@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M4 dev DONE; QC M4 r1)
-**Next step:** qc M4 round 1 (report docs/qc/report-M4-r1.md)
+**Next step:** developer M4 mode fix (docs/qc/report-M4-r1.md) → qc M4 round 2
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -13,6 +13,7 @@
 - 2026-10-09 — Gate 2: duyệt design? → Chưa, user muốn tự review Figma trước; đồng thời yêu cầu thêm ngôn ngữ tiếng Việt (đổi giả định OQ-04: UI song ngữ vi/en, mặc định theo ngôn ngữ trình duyệt, đổi trong Settings)
 - 2026-10-09 — Gate 2 (lần 2): duyệt design song ngữ? → Duyệt, bắt đầu build M1
 - 2026-10-09 — Thư mục `1%better` làm npx lỗi "URI malformed"? → User chọn đổi tên nhưng chưa làm; 2026-10-10 user nói "triển khai tiếp", orchestrator tạm tạo `subst Z:` nhưng user yêu cầu bỏ; đã gỡ Z:. Chốt: đổi tên thư mục thành `one-percent-better` — đã đổi 2026-10-10, npx chạy bình thường.
+- 2026-10-10 — (orchestrator, QC M4 OQ1) SW precache sẵn chunk Recharts/Review (~101 kB) sau khi cài, dù trang chưa vào Review → chấp nhận: NFR-03 nói về tải trang ban đầu, precache phục vụ offline-first; planner ghi nhận ở lần revise sau
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
@@ -32,7 +33,7 @@
 | M1 | PASS (round 2) | docs/qc/report-M1-r2.md | AC10/AC11 phần thủ công NOT VERIFIED (user tự kiểm, mục 8 report) | Dev tự kiểm: lint/typecheck/Vitest 128/build/Playwright 20 xanh trên bản sao sạch; AC10/AC11 phần thủ công NOT VERIFIED |
 | M2 | PASS (round 3) | docs/qc/report-M2-r3.md | AC8/9/11 phần thủ công NOT VERIFIED (notification thật, import .ics, popup quyền) | AC8/9/11 phần thủ công NOT VERIFIED |
 | M3 | PASS (round 1) | docs/qc/report-M3-r1.md | 4 Minor → backlog; dispute test QC đã re-target; dialog file thật NOT VERIFIED |
-| M4 | DOING — dev DONE (commit 786a82f), chờ QC r1 | docs/handoff/dev-M4.md | bundle 218,8 kB gzip; Recharts lazy |
+| M4 | DOING — QC r1 FAIL (D3 Major: test flaky; D1/D2/D4 Minor), developer fix | docs/qc/report-M4-r1.md | bundle 218,8 kB gzip; Recharts lazy |
 | M5 | TODO | | |
 | Final QC | TODO | | |
 
