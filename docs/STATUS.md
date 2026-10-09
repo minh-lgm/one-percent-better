@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; QC M1 r1 FAIL, developer fix)
-**Next step:** qc M1 round 2 (report docs/qc/report-M1-r2.md)
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M1 PASS r2; M2 bắt đầu)
+**Next step:** developer M2 mode build → qc M2 round 1
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -29,8 +29,8 @@
 | Intake | DONE | docs/STATUS.md | |
 | Plan | DONE v1.2 (duyệt 2026-10-09; revise song ngữ en/vi) | docs/plan/PRD.md, ARCHITECTURE.md, TASKS.md | 5 milestone, 34 task, 59 AC; lần gọi planner đầu bị ngắt, lần 2 hoàn tất |
 | Design | DONE v1.1 (song ngữ, card Language) (duyệt 2026-10-09) | docs/design/DESIGN.md, docs/design/mockups/*.html | Figma: https://www.figma.com/design/DrO15cZxPcb9hp1lGSUddd (orchestrator đẩy từ mockup; 8 màn mobile 360 + 3 dialog + Dark mode + Today tiếng Việt + card Language, variables Light/Dark, components Button/Badge/PlusPill/TabBar) |
-| M1 | DOING — fix r1 DONE (commit 77c35c3), chờ QC r2 | docs/qc/report-M1-r1.md | Dev tự kiểm: lint/typecheck/Vitest 128/build/Playwright 20 xanh trên bản sao sạch; AC10/AC11 phần thủ công NOT VERIFIED |
-| M2 | TODO | | |
+| M1 | PASS (round 2) | docs/qc/report-M1-r2.md | AC10/AC11 phần thủ công NOT VERIFIED (user tự kiểm, mục 8 report) | Dev tự kiểm: lint/typecheck/Vitest 128/build/Playwright 20 xanh trên bản sao sạch; AC10/AC11 phần thủ công NOT VERIFIED |
+| M2 | DOING — developer build | | |
 | M3 | TODO | | |
 | M4 | TODO | | |
 | M5 | TODO | | |
@@ -39,6 +39,9 @@
 ## Backlog (defect Minor, đề xuất chưa làm)
 | ID | Mô tả | Nguồn |
 | :- | :- | :- |
+| M1-P1 | Today sort theo createdAt, chưa tie-break theo id/name khi trùng timestamp | QC r1 §9 |
+| M1-P2 | Thêm `getById` vào EntryRepository (EntryService.update/remove đang quét theo khoảng ngày) — làm ở M3 | dev handoff M1, QC r1 §9 |
+| M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
 ## Ghi chú vận hành
 - 2026-10-10 — Write tool của subagent `qc` bị harness từ chối ghi file report ("Subagents should return findings as text"). Orchestrator chép nguyên văn text QC trả về vào docs/qc/report-M1-r1.md, có ghi chú đầu file. Áp dụng tương tự cho các report sau nếu còn bị chặn.
