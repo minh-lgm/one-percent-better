@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M5 PASS r2; Final QC)
-**Next step:** developer fix F-D1 (docs/qc/report-final.md) → qc final round 2 → tổng kết
+**Next step:** qc final round 2 (report docs/qc/report-final-r2.md) → tổng kết
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -35,7 +35,7 @@
 | M3 | PASS (round 1) | docs/qc/report-M3-r1.md | 4 Minor → backlog; dispute test QC đã re-target; dialog file thật NOT VERIFIED |
 | M4 | PASS (round 2) | docs/qc/report-M4-r2.md | Firefox/Safari/iOS, screen reader, bản dịch vi NOT VERIFIED | bundle 218,8 kB gzip; Recharts lazy |
 | M5 | PASS (round 2) | docs/qc/report-M5-r2.md | AC9 Firefox/Safari/iOS, screen reader NOT VERIFIED | Dispute M3-D3: orchestrator chọn giữ fix, QC re-target tests/qc/m3-r1.spec.ts:638 |
-| Final QC | DOING — r1 FAIL (F-D1 Major: Vitest cache lạnh timeout chunk Recharts), developer fix | docs/qc/report-final.md | |
+| Final QC | DOING — fix F-D1 DONE (commit 5a73e18), chờ final r2 | docs/qc/report-final.md | |
 
 ## Backlog (defect Minor, đề xuất chưa làm)
 | ID | Mô tả | Nguồn |
