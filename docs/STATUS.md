@@ -54,5 +54,9 @@
 | M5-P1 | Trục Y curve hiện `+0.0%` (mockup `+0%`); focusHeading dùng requestAnimationFrame; lỗi import vượt giới hạn dùng chung IMPORT_INVALID_SCHEMA (nên có câu riêng) | QC M5 r1/r2 |
 | M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
+## Tổng kết (2026-10-10)
+- 5 milestone + Final QC đều PASS. Unit 686, e2e 347, bundle 214,9 kB gzip (≤ 250). Chạy: `npm ci && npm run e2e:install && npm run check && npm run test:e2e`; dùng: `npm run build && npm run preview` → http://localhost:4173.
+- Chưa push, chưa deploy (user quyết định). NOT VERIFIED: docs/qc/report-final-r2.md §8. Backlog Minor: §9 + bảng Backlog ở trên.
+
 ## Ghi chú vận hành
 - 2026-10-10 — Write tool của subagent `qc` bị harness từ chối ghi file report ("Subagents should return findings as text"). Orchestrator chép nguyên văn text QC trả về vào docs/qc/report-M1-r1.md, có ghi chú đầu file. Áp dụng tương tự cho các report sau nếu còn bị chặn.
