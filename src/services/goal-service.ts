@@ -53,6 +53,23 @@ export class GoalService {
     return ok(undefined);
   }
 
+  /**
+   * Archive / restore (FR-30, A-13). Archiving a goal whose timer is running is
+   * refused with `GOAL_TIMER_RUNNING`; the goal is left untouched.
+   */
+  async setArchived(id: string, archived: boolean, now: Date): Promise<Result<Goal>> {
+    const existing = await this.goals.getById(id);
+    if (!existing) return fail({ code: 'GOAL_NOT_FOUND', message: `goal ${id} not found` });
+    if (archived && this.kv) {
+      const timer = await this.kv.get<ActiveTimer>('activeTimer');
+      if (timer && timer.goalId === id) return fail({ code: 'GOAL_TIMER_RUNNING', message: `goal ${id} has a running timer` });
+    }
+    if (existing.archived === archived) return ok(existing);
+    const goal: Goal = { ...existing, archived, updatedAt: now.toISOString() };
+    await this.goals.put(goal);
+    return ok(goal);
+  }
+
   getById(id: string): Promise<Goal | undefined> {
     return this.goals.getById(id);
   }

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openDatabase, type AppDatabase } from '../data/dexie/db';
 import { DexieEntryRepository } from '../data/dexie/entry-repo';
 import { DexieGoalRepository } from '../data/dexie/goal-repo';
+import { DexieKvRepository } from '../data/dexie/kv-repo';
 import { buildEntry, FIXED_NOW } from '../test/builders';
 import { createTestDatabase } from '../test/db';
 import { GoalService } from './goal-service';
@@ -120,5 +121,39 @@ describe('GoalService.remove (M1-AC9)', () => {
     const r = await s.create(input, FIXED_NOW);
     if (r.ok) expect(r.value.id).toBe('fixed-id');
     vi.restoreAllMocks();
+  });
+});
+
+describe('GoalService.setArchived (FR-30, M5-AC4)', () => {
+  const later = new Date('2026-10-09T11:00:00+07:00');
+
+  it('archives and restores, bumping updatedAt; unknown id → GOAL_NOT_FOUND', async () => {
+    const created = await service.create(input, FIXED_NOW);
+    if (!created.ok) throw new Error('setup');
+    const archived = await service.setArchived(created.value.id, true, later);
+    expect(archived.ok).toBe(true);
+    const stored = await db.goals.get(created.value.id);
+    expect(stored).toMatchObject({ archived: true, updatedAt: later.toISOString(), createdAt: FIXED_NOW.toISOString() });
+    const restored = await service.setArchived(created.value.id, false, new Date('2026-10-09T12:00:00+07:00'));
+    expect(restored.ok && restored.value.archived).toBe(false);
+    expect((await db.goals.get(created.value.id))?.updatedAt).toBe('2026-10-09T05:00:00.000Z');
+    const missing = await service.setArchived('nope', true, later);
+    expect(!missing.ok && missing.errors[0].code).toBe('GOAL_NOT_FOUND');
+  });
+
+  it('refuses to archive the goal whose timer is running (GOAL_TIMER_RUNNING) and leaves it unchanged', async () => {
+    const kv = new DexieKvRepository(db);
+    const withKv = new GoalService(new DexieGoalRepository(db), entryRepo, undefined, kv);
+    const created = await withKv.create(input, FIXED_NOW);
+    if (!created.ok) throw new Error('setup');
+    await kv.set('activeTimer', { goalId: created.value.id, startedAt: FIXED_NOW.toISOString() });
+    const r = await withKv.setArchived(created.value.id, true, later);
+    expect(!r.ok && r.errors[0].code).toBe('GOAL_TIMER_RUNNING');
+    expect(await db.goals.get(created.value.id)).toEqual(created.value);
+    // A timer on another goal does not block, and restoring never checks the timer.
+    await kv.set('activeTimer', { goalId: 'other', startedAt: FIXED_NOW.toISOString() });
+    expect((await withKv.setArchived(created.value.id, true, later)).ok).toBe(true);
+    await kv.set('activeTimer', { goalId: created.value.id, startedAt: FIXED_NOW.toISOString() });
+    expect((await withKv.setArchived(created.value.id, false, later)).ok).toBe(true);
   });
 });

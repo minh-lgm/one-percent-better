@@ -60,7 +60,9 @@ describe('errorMessage (DESIGN §7.3)', () => {
     const v = errorMessage({ code: 'IMPORT_UNSUPPORTED_VERSION', message: '', params: { v: '2' } }, f);
     expect(v).toEqual({ key: 'errors.IMPORT_UNSUPPORTED_VERSION', params: { v: '2' } });
     expect(i18n.t(v.key, v.params)).toContain('(2)');
-    // Codes without a key (M5) fall back to the generic message.
-    expect(errorMessage({ code: 'GOAL_TIMER_RUNNING', message: '' }, f).key).toBe('errors.UNKNOWN');
+    // M5: archiving a goal with a running timer has its own message.
+    const timer = errorMessage({ code: 'GOAL_TIMER_RUNNING', message: '' }, f);
+    expect(timer.key).toBe('errors.GOAL_TIMER_RUNNING');
+    expect(() => i18n.t(timer.key)).not.toThrow();
   });
 });

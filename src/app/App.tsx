@@ -3,6 +3,7 @@ import { RouterProvider, type createHashRouter } from 'react-router';
 import { ToastProvider } from '../ui/components/Toast';
 import { ServicesProvider } from './AppContext';
 import type { AppContainer } from './container';
+import { ErrorBoundary } from './ErrorBoundary';
 
 export interface AppProps {
   container: AppContainer;
@@ -12,11 +13,13 @@ export interface AppProps {
 export function App({ container, router }: AppProps) {
   return (
     <I18nextProvider i18n={container.i18n}>
-      <ServicesProvider container={container}>
-        <ToastProvider>
-          <RouterProvider router={router} />
-        </ToastProvider>
-      </ServicesProvider>
+      <ErrorBoundary>
+        <ServicesProvider container={container}>
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
+        </ServicesProvider>
+      </ErrorBoundary>
     </I18nextProvider>
   );
 }

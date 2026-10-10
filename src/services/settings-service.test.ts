@@ -76,3 +76,24 @@ describe('SettingsService (FR-13)', () => {
     expect(seen[seen.length - 1]).toEqual({ ...DEFAULT_SETTINGS, reminderEnabled: true });
   });
 });
+
+describe('SettingsService.claimPlusOne (FR-29, M5-AC3)', () => {
+  it('first claim wins and persists plusOneShown; a second claim for the same day loses; another day wins again', async () => {
+    expect(await service.claimPlusOne('g1', '2026-10-09')).toBe(true);
+    expect((await service.get()).plusOneShown).toEqual({ g1: '2026-10-09' });
+    expect(await service.claimPlusOne('g1', '2026-10-09')).toBe(false);
+    expect(await service.claimPlusOne('g2', '2026-10-09')).toBe(true);
+    expect((await service.get()).plusOneShown).toEqual({ g1: '2026-10-09', g2: '2026-10-09' });
+    expect(await service.claimPlusOne('g1', '2026-10-10')).toBe(true);
+    // Stale days are dropped; other settings survive.
+    await service.setReminderTime('07:30');
+    expect(await service.claimPlusOne('g3', '2026-10-10')).toBe(true);
+    expect((await service.get()).plusOneShown).toEqual({ g1: '2026-10-10', g3: '2026-10-10' });
+    expect((await service.get()).reminderTime).toBe('07:30');
+  });
+
+  it('20 concurrent claims for the same goal/day: exactly one wins', async () => {
+    const results = await Promise.all(Array.from({ length: 20 }, () => service.claimPlusOne('g1', '2026-10-09')));
+    expect(results.filter(Boolean)).toHaveLength(1);
+  });
+});

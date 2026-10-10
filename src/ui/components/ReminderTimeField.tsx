@@ -12,6 +12,8 @@ export interface ReminderTimeFieldProps {
   /** Called once the value has settled (debounced) or the field loses focus, for a single toast. */
   onSettled?: () => void;
   settleMs?: number;
+  /** id(s) of the description (the ".ics" hint, DESIGN S7 / M5-AC13). */
+  describedBy?: string;
 }
 
 /**
@@ -21,7 +23,7 @@ export interface ReminderTimeFieldProps {
  * back mid-edit, so the browser's segment editing state is not reset. Valid values
  * are saved immediately; the stored value is only shown again when not editing.
  */
-export function ReminderTimeField({ id, label, value, disabled = false, onCommit, onSettled, settleMs = 700 }: ReminderTimeFieldProps) {
+export function ReminderTimeField({ id, label, value, disabled = false, onCommit, onSettled, settleMs = 700, describedBy }: ReminderTimeFieldProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const lastCommitted = useRef(value);
   const pendingToast = useRef(false);
@@ -67,6 +69,7 @@ export function ReminderTimeField({ id, label, value, disabled = false, onCommit
         step={60}
         value={draft ?? value}
         disabled={disabled}
+        aria-describedby={describedBy}
         onFocus={() => setDraft(value)}
         onBlur={() => {
           setDraft(null);

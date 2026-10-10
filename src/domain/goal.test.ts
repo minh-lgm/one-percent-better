@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildGoal, datasetS1 } from '../test/builders';
-import { activeGoals, dailyTarget, entriesOutsidePeriod, goalStatus, groupGoals, periodDays, totalTarget, validateGoalInput, type GoalInput } from './goal';
+import { activeGoals, byCreatedAt, byId, dailyTarget, entriesOutsidePeriod, goalStatus, groupGoals, periodDays, totalTarget, validateGoalInput, type GoalInput } from './goal';
+import type { Goal } from './types';
 
 const valid: GoalInput = {
   name: 'Read',
@@ -124,5 +125,42 @@ describe('entriesOutsidePeriod (FR-03)', () => {
   it('returns the dates that would be excluded', () => {
     expect(entriesOutsidePeriod(['2026-10-01', '2026-10-05'], '2026-10-02', '2026-10-31')).toEqual(['2026-10-01']);
     expect(entriesOutsidePeriod(['2026-10-01', '2026-10-05'], '2026-10-01', '2026-10-31')).toEqual([]);
+  });
+});
+
+describe('stable ordering with id tie-break (M1-P1, M5-AC13)', () => {
+  const today = '2026-10-09';
+  const stamp = '2026-09-30T01:00:00.000Z';
+  const pair = (overrides: Partial<Goal>): [Goal, Goal] => [buildGoal({ id: 'b', ...overrides }), buildGoal({ id: 'a', ...overrides })];
+
+  it('active: same createdAt → [a, b] whatever the input order', () => {
+    const [b, a] = pair({ createdAt: stamp, startDate: '2026-10-01', endDate: '2026-10-31' });
+    expect(activeGoals([b, a], today).map((g) => g.id)).toEqual(['a', 'b']);
+    expect(activeGoals([a, b], today).map((g) => g.id)).toEqual(['a', 'b']);
+    expect(groupGoals([b, a], today).active.map((g) => g.id)).toEqual(['a', 'b']);
+    expect(groupGoals([a, b], today).active.map((g) => g.id)).toEqual(['a', 'b']);
+  });
+
+  it('upcoming (same startDate), ended (same endDate), archived (same updatedAt) → [a, b]', () => {
+    const [ub, ua] = pair({ startDate: '2026-11-01', endDate: '2026-11-30' });
+    const [eb, ea] = pair({ startDate: '2026-01-01', endDate: '2026-06-30' });
+    const [ab, aa] = pair({ archived: true, updatedAt: stamp });
+    for (const order of [
+      [ub, ua, eb, ea, ab, aa],
+      [ua, ub, ea, eb, aa, ab],
+    ]) {
+      const groups = groupGoals(order, today);
+      expect(groups.upcoming.map((g) => g.id)).toEqual(['a', 'b']);
+      expect(groups.ended.map((g) => g.id)).toEqual(['a', 'b']);
+      expect(groups.archived.map((g) => g.id)).toEqual(['a', 'b']);
+    }
+  });
+
+  it('the primary key still wins over the id', () => {
+    const early = buildGoal({ id: 'z', createdAt: '2026-09-01T00:00:00.000Z' });
+    const late = buildGoal({ id: 'a', createdAt: '2026-09-02T00:00:00.000Z' });
+    expect(activeGoals([late, early], today).map((g) => g.id)).toEqual(['z', 'a']);
+    expect([{ id: 'b', createdAt: stamp }, { id: 'a', createdAt: stamp }].sort(byCreatedAt).map((x) => x.id)).toEqual(['a', 'b']);
+    expect(byId({ id: 'a' }, { id: 'a' })).toBe(0);
   });
 });

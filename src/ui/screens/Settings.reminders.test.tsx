@@ -157,3 +157,21 @@ describe('Settings — Reminders card (M2-AC6, M2-AC11, M2-AC13)', () => {
     expect(scanVi()).toEqual([]);
   });
 });
+
+describe('Reminder time field description (M2-P2, M5-AC13)', () => {
+  it('en: the time input is described by the .ics hint interpolated with the current time', async () => {
+    const app = await renderApp({ route: '/settings' });
+    tc = app.tc;
+    const time = screen.getByLabelText(en.settings.reminders.time);
+    await waitFor(() => expect(time).toHaveAccessibleDescription(en.settings.reminders.icsHint.replace('{{time}}', '20:00')));
+    await tc.container.settingsService.setReminderTime('07:30');
+    await waitFor(() => expect(time).toHaveAccessibleDescription(en.settings.reminders.icsHint.replace('{{time}}', '07:30')));
+  });
+
+  it('vi: same with the vi string', async () => {
+    const app = await renderApp({ route: '/settings', locale: 'vi' });
+    tc = app.tc;
+    const time = screen.getByLabelText(vi.settings.reminders.time);
+    await waitFor(() => expect(time).toHaveAccessibleDescription(vi.settings.reminders.icsHint.replace('{{time}}', '20:00')));
+  });
+});

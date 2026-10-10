@@ -117,3 +117,42 @@ describe('backupReminder (M3-AC10, A-12)', () => {
     expect(backupReminder('not-a-date', 2, FIXED_NOW)).toEqual({ kind: 'never' });
   });
 });
+
+describe('M3-D3: import applies the goal/entry limits of the app (IMPORT_INVALID_SCHEMA / IMPORT_INTEGRITY)', () => {
+  const withGoal = (overrides: Partial<ReturnType<typeof buildGoal>>, entries: ReturnType<typeof buildEntry>[] = []) => {
+    const file = sampleFile();
+    return text({ ...file, goals: [{ ...file.goals[0], ...overrides }, ...file.goals.slice(1)], entries: [...file.entries, ...entries] });
+  };
+
+  it('daily goal with targetMinutes 600,000 or 1,441 → IMPORT_INVALID_SCHEMA; 1,440 ok', () => {
+    expect(codeOf(withGoal({ targetType: 'daily', targetMinutes: 600_000 }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(codeOf(withGoal({ targetType: 'daily', targetMinutes: 1441 }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(codeOf(withGoal({ targetType: 'daily', targetMinutes: 1440 }))).toBe('ok');
+  });
+
+  it('total goal outside 1–10,000 hours or with a derived daily target above 1,440 → IMPORT_INVALID_SCHEMA', () => {
+    expect(codeOf(withGoal({ targetType: 'total', targetMinutes: 30 }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(codeOf(withGoal({ targetType: 'total', targetMinutes: 600_060 }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(codeOf(withGoal({ targetType: 'total', targetMinutes: 600_000, startDate: '2026-10-01', endDate: '2026-10-31' }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(codeOf(withGoal({ targetType: 'total', targetMinutes: 6000, startDate: '2026-01-01', endDate: '2026-12-31' }))).toBe('ok');
+  });
+
+  it('period longer than 1,827 days → IMPORT_INVALID_SCHEMA; 1,827 ok; end before start stays IMPORT_INTEGRITY', () => {
+    const only = (overrides: Partial<ReturnType<typeof buildGoal>>) => text({ ...sampleFile(), goals: [{ ...sampleFile().goals[0], ...overrides }], entries: [] });
+    expect(codeOf(only({ startDate: '2000-01-01', endDate: '2099-12-31' }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(codeOf(only({ startDate: '2022-01-01', endDate: '2027-01-01' }))).toBe('ok');
+    expect(codeOf(only({ startDate: '2026-10-31', endDate: '2026-10-01' }))).toBe('IMPORT_INTEGRITY');
+  });
+
+  it('an entry dated after today → IMPORT_INTEGRITY when today is given; today itself is fine', () => {
+    const future = buildEntry({ id: 'future', goalId: 'g1', date: '2026-10-31', minutes: 10 });
+    const todayEntry = buildEntry({ id: 'today', goalId: 'g1', date: '2026-10-09', minutes: 10 });
+    const r = parseBackup(withGoal({}, [future]), 1000, '2026-10-09');
+    expect(r.ok ? 'ok' : r.errors[0].code).toBe('IMPORT_INTEGRITY');
+    expect(parseBackup(withGoal({}, [todayEntry]), 1000, '2026-10-09').ok).toBe(true);
+    // Without `today` (pure format checks) the date rule is not applied.
+    expect(parseBackup(withGoal({}, [future]), 1000).ok).toBe(true);
+    expect(checkIntegrity(sampleFile().goals, [future], '2026-10-09')?.code).toBe('IMPORT_INTEGRITY');
+    expect(checkIntegrity(sampleFile().goals, [future])).toBeNull();
+  });
+});

@@ -144,14 +144,24 @@ export interface GroupedGoals {
 export function groupGoals(goals: readonly Goal[], today: ISODate): GroupedGoals {
   const groups: GroupedGoals = { active: [], upcoming: [], ended: [], archived: [] };
   for (const g of goals) groups[goalStatus(g, today)].push(g);
-  groups.active.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  groups.upcoming.sort((a, b) => a.startDate.localeCompare(b.startDate));
-  groups.ended.sort((a, b) => b.endDate.localeCompare(a.endDate));
-  groups.archived.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  groups.active.sort(byCreatedAt);
+  groups.upcoming.sort((a, b) => a.startDate.localeCompare(b.startDate) || byId(a, b));
+  groups.ended.sort((a, b) => b.endDate.localeCompare(a.endDate) || byId(a, b));
+  groups.archived.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || byId(a, b));
   return groups;
 }
 
-/** Goals shown on Today: active and not archived, by createdAt ascending. */
+/** Stable tie-break for every goal/entry ordering: id ascending (M1-P1, M5-AC13). */
+export function byId(a: { id: string }, b: { id: string }): number {
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/** `createdAt` ascending, then id (Today cards, entries of a day). */
+export function byCreatedAt(a: { id: string; createdAt: string }, b: { id: string; createdAt: string }): number {
+  return a.createdAt.localeCompare(b.createdAt) || byId(a, b);
+}
+
+/** Goals shown on Today: active and not archived, by createdAt ascending (then id). */
 export function activeGoals(goals: readonly Goal[], today: ISODate): Goal[] {
-  return goals.filter((g) => goalStatus(g, today) === 'active').sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  return goals.filter((g) => goalStatus(g, today) === 'active').sort(byCreatedAt);
 }

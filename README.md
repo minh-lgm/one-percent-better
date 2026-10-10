@@ -2,7 +2,7 @@
 
 A local-first PWA for tracking the time you put into your goals every day. Set a goal with a daily (or total) time target, log minutes each day, and watch the "+1%" days add up. Everything is stored in your browser (IndexedDB); there is no account, no server and no tracking.
 
-Current milestone: **M3 — past days, history and JSON backup** (on top of M1: goals, manual time entries for today, offline PWA, English/Vietnamese UI; M2: timer and daily reminders). Review charts and the 1% curve arrive in later milestones.
+Current milestone: **M5 — the 1% curve, full goal detail, archive, empty/error states (MVP complete)**, on top of M1 (goals, manual time entries for today, offline PWA, English/Vietnamese UI), M2 (timer and daily reminders), M3 (past days, history, JSON backup) and M4 (Review: heatmap, streaks, charts).
 
 ## Requirements
 
@@ -40,6 +40,16 @@ npm run preview  # serve dist/ at http://localhost:4173 with the service worker 
 
 Open `http://localhost:4173` after `npm run preview` to install the app (Chrome/Edge: address-bar install icon or browser menu → Install).
 
+### Install on a phone (PWA)
+
+Service workers and "Add to Home Screen" require a **secure context**: `localhost` works for the desktop, but a real phone needs the app served over **HTTPS** (a local tunnel such as `npx localtunnel`/`ngrok`, or any static host — the build is plain static files in `dist/`; set `BASE_PATH` when hosting under a sub-path; hosting itself is out of scope for the MVP, see `docs/plan/PRD.md` OQ-02). Then:
+
+- **Android (Chrome/Edge)**: open the URL → browser menu → *Install app* (or the install banner). The app opens in its own window and works offline after the first visit.
+- **iPhone/iPad (Safari, iOS 16.4+)**: open the URL → Share → *Add to Home Screen*. Notifications only work from the Home Screen app.
+- **Desktop Firefox**: no install prompt; the app works as a normal web app, including offline.
+
+Nothing is installed globally at any point (`npm ci` + `npm run e2e:install` keep everything inside `node_modules`).
+
 ## Test
 
 ```bash
@@ -53,7 +63,7 @@ npm run check         # lint + typecheck + test + build
 
 E2E tests run with a fixed clock (`2026-10-09 10:00 Asia/Ho_Chi_Minh`) and a fresh browser context per test. QC tests live in `tests/qc/` and are picked up by both Vitest (`*.test.ts(x)`) and Playwright (`*.spec.ts`). Sample data for E2E lives in `e2e/fixtures/` (`sample-backup.json` is dataset S1: 5 goals, 23 entries; `large-backup.json` is the NFR-03 performance dataset: 5 goals × 3 years, 5,449 entries, regenerate with `npm run fixtures:large`; the `invalid-*.json`, `unsupported-version.json` and `xss-note.json` files exercise the import validation) and is loaded through the real Import flow (`importBackup(page)` in `e2e/helpers/app.ts`). The statistics benchmark (`src/services/stats-service.test.ts`) prints its timings as `[bench] …` lines; the Review perf E2E prints `[perf] …`.
 
-Bundle budget (NFR-03): the entry chunk must stay ≤ 250 kB gzip. `npm run build` prints the sizes; Recharts is only in the lazily loaded `BarChart-*.js` chunk (requested the first time the Review screen renders its charts). `e2e/m2-reminder.spec.ts` runs on the full Chromium build (`channel: 'chromium'`, installed by `npm run e2e:install`) because the default headless shell always reports notification permission as blocked.
+Bundle budget (NFR-03): the entry chunk (plus the small chunks it preloads) must stay ≤ 250 kB gzip; `npm run build` prints the sizes (M5: `index-*.js` 214.9 kB + `useFormat-*.js` 6.7 kB gzip). Recharts is never in the entry: the bundler puts it in one shared chunk named after the helper both chart wrappers import (`useRechartsWidth-*.js`, ≈ 97 kB gzip), loaded together with `BarChart-*.js` the first time Review renders its charts or with `CurveChart-*.js` the first time a goal detail page renders its curve; the Goal detail screen itself is lazy too (`GoalDetail-*.js`). All chunks are precached by the service worker, so every screen opens offline after the first visit. `e2e/m2-reminder.spec.ts` runs on the full Chromium build (`channel: 'chromium'`, installed by `npm run e2e:install`) because the default headless shell always reports notification permission as blocked.
 
 ## Language
 
@@ -62,6 +72,7 @@ The UI is available in **English** and **Tiếng Việt**.
 - First launch: the language follows the browser (`navigator.language` starting with `vi` → Vietnamese, otherwise English).
 - Change it any time in **Settings → Language / Ngôn ngữ**. The choice is stored on the device (IndexedDB) and takes effect immediately, including dates and numbers (`2026-10-01 – 2026-10-31` vs `01/10/2026 – 31/10/2026`, `1,440` vs `1.440`).
 - All strings live in `src/i18n/resources/en.json` and `vi.json`. Both files must contain the same keys (a parity test enforces this), and UI code must use `t()` instead of literal text (enforced by ESLint).
+- To add or change a string: add the key to **both** files (same `{{variables}}`; plural forms use `_one`/`_other` in `en.json` and only `_other` in `vi.json`), then use it with `t('key', params)` (keys are typed from `en.json`). Check parity and the "no English leaks" DOM scan with `npx vitest run src/i18n` (or the whole suite with `npm test`); ESLint rejects literal UI text in JSX. Dates and numbers go through `useFormat()` (Intl, `en-US`/`vi-VN`), never through string concatenation.
 
 ## Timer
 
@@ -70,7 +81,15 @@ On **Today**, press **Start timer** on an active goal. Only one timer runs at a 
 ## Past days and history
 
 - **Today → "Missed a day? Log time for a past day"** opens the **Day** screen (`#/day/YYYY-MM-DD`, defaults to yesterday). Use *Previous day* / *Next day* or the date picker; every goal whose period contains that day is listed (including ended ones) and entries can be added, edited or deleted there. Future dates cannot be logged (*Next day* is disabled on today); an invalid date in the URL shows a message with a link back to Today.
-- **Goals → goal name** opens the **goal detail** page: period, target, Edit/Delete and the **History** of entries (newest first, with the Manual/Timer source). Dates in the history link to the Day screen.
+- **Goals → goal name** opens the **goal detail** page (see below): period, target, the 1% curve, stats, Edit/Archive/Delete and the **History** of entries (newest first, with the Manual/Timer source). Dates in the history link to the Day screen.
+
+## Goal detail and the 1% curve
+
+Each goal page shows its **1% curve**: the ideal line is `1.01^k` for day *k* of the period (one percent better every day), your line is `1.01^n` where *n* is the number of days you hit the daily target so far (it rises as a step on every day on target and never goes down on a missed day). The headline is `+X% better` with `X = (1.01^n − 1) × 100`, e.g. 8 days on target → `+8.3% better`. The chart (Recharts, loaded lazily) has a hover tooltip, a keyboard mode (focus the chart, then ←/→ move the reading day by day, Home/End jump to the first/last day, Esc clears) and a *Show data as table* fallback; the *Range* control shows the whole period or only the days so far (default: whole period for goals up to 120 days). Below the chart: Progress, Pace, Current streak, Longest streak (same rules as Review) and the History.
+
+- **+1% feedback**: the first time an entry (manual or timer) makes a goal reach its daily target, Today plays a short effect on the "+1%" pill and announces it to screen readers — once per goal and day (stored in settings as `plusOneShown`, so a reload or re-logging the same day does not repeat it).
+- **Archive**: *Archive* on Goals or on the goal page hides a goal from Today, reminders and the timer (its data stays; Review and the goal page still show it; it has its own *Archived* group on Goals). *Restore* brings it back. A goal whose timer is running cannot be archived until the timer is stopped or discarded.
+- **Empty and error states**: every screen has an empty state with a way forward; a failed read shows *Couldn't load this view* with *Retry*; a failed write keeps your input in the form with *Couldn't save…*; if the browser blocks IndexedDB (private window, blocked site data) the app shows a full-page explanation with steps and *Try again*; any unexpected render error shows *Something went wrong* with *Reload app* / *Go to Today* instead of a blank page.
 
 ## Review (heatmap, streaks, charts)
 
@@ -87,7 +106,7 @@ The **Review** tab (`#/review?goal=<id|all>&year=<YYYY>`) looks back over a cale
 Your data only lives in this browser's IndexedDB. **Settings → Backup**:
 
 - **Export backup (JSON)** downloads `1percent-better-backup-YYYY-MM-DD.json` (`"app": "one-percent-better"`, `"schemaVersion": 1`, all goals, entries and settings; the UI language is a device setting and is not included). "Last backup" is updated, and a banner on Today/Settings nags when you have goals but never exported or the last export is more than 30 days old.
-- **Import backup…** validates the file first (max 5 MB, JSON, schema, version, referential integrity: every entry belongs to a goal, dates inside the goal period, at most 1,440 minutes per goal and day, unique ids). You then see a preview (*"5 goals, 23 entries"*) and must confirm **Replace all data**: the import replaces everything in one transaction (goals, entries, settings; the running timer is dropped and the reminder day counter reset). An invalid file shows an error and changes nothing. The language you chose stays as it is.
+- **Import backup…** validates the file first (max 5 MB, JSON, schema, version, the same goal limits as the form — daily 1–1,440 min, total 1–10,000 h, period ≤ 1,827 days — and referential integrity: every entry belongs to a goal, dates inside the goal period and not after today, at most 1,440 minutes per goal and day, unique ids). You then see a preview (*"5 goals, 23 entries"*) and must confirm **Replace all data**: the import replaces everything in one transaction (goals, entries, settings; the running timer is dropped and the reminder day counter reset). An invalid file shows an error and changes nothing. The language you chose stays as it is.
 - Recommendation: **install the app** (Chrome/Edge: address-bar install icon or browser menu → Install; iOS: Share → Add to Home Screen). Browsers are far less likely to evict storage of installed apps, and the app also asks for persistent storage (see Settings → Storage). Export a backup before changing devices or clearing browser data.
 
 ## Reminders: limitations
@@ -103,14 +122,14 @@ The app has no server, so the daily reminder is **best effort and only works whi
 
 ```
 src/
-  app/          composition root, bootstrap, router, App
+  app/          composition root, bootstrap, router, App, ErrorBoundary
   config/       env (zod-validated), business constants
-  domain/       pure logic: dates, goal, entry, timer, reminder, ics, backup, settings, stats, heatmap (no React, no Dexie, no i18n)
+  domain/       pure logic: dates, goal, entry, timer, reminder, ics, backup, settings, stats, heatmap, curve, plusone (no React, no Dexie, no i18n)
   data/         repository interfaces + Dexie (IndexedDB) implementation (goal, entry, kv, timer, backup)
   services/     use cases: GoalService, EntryService, LocaleService, SettingsService, TimerService, ReminderService, BackupService, StatsService
   integration/  browser APIs: storage persistence, service-worker registration, notifications, file download
   i18n/         i18next instance, locale detection, Intl formatters, resources
-  ui/           screens (Review is lazy-loaded), components (Heatmap, StatCard, BarChart = Recharts in its own chunk), hooks, styles
+  ui/           screens (Review and Goal detail are lazy-loaded), components (Heatmap, StatCard, BarChart + CurveChart = Recharts in a shared lazy chunk), hooks, styles
   sw.ts         service worker (Workbox precache, notification click → Today)
 e2e/            Playwright specs, helpers and fixtures (sample backup = dataset S1, large backup = NFR-03 dataset)
 scripts/        icon generation, large fixture generation

@@ -2,7 +2,7 @@ import type { BackupRepository } from '../data/repositories';
 import { backupFileName, buildBackup, parseBackup, type BackupFile } from '../domain/backup';
 import { toISODate } from '../domain/dates';
 import { normalizeSettings } from '../domain/settings';
-import { ok, type ISODateTime, type Result } from '../domain/types';
+import { ok, type ISODate, type ISODateTime, type Result } from '../domain/types';
 import type { SettingsService } from './settings-service';
 
 export interface BackupExport {
@@ -39,9 +39,12 @@ export class BackupService {
     return { fileName: backupFileName(toISODate(now)), json: JSON.stringify(file, null, 2) };
   }
 
-  /** Validate an uploaded file (size, JSON, schema, version, integrity) without touching the database. */
-  parse(text: string, sizeBytes: number): Result<BackupPreview> {
-    const parsed = parseBackup(text, sizeBytes);
+  /**
+   * Validate an uploaded file (size, JSON, schema, version, integrity) without
+   * touching the database. `today` rejects entries dated in the future (M3-D3).
+   */
+  parse(text: string, sizeBytes: number, today?: ISODate): Result<BackupPreview> {
+    const parsed = parseBackup(text, sizeBytes, today);
     if (!parsed.ok) return parsed;
     return ok({ goals: parsed.value.goals.length, entries: parsed.value.entries.length, exportedAt: parsed.value.exportedAt, file: parsed.value });
   }

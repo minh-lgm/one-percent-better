@@ -69,7 +69,9 @@
     "reminderTime": "Reminder time saved",
     "icsDownloaded": "Calendar file downloaded",
     "backupExported": "Backup exported",
-    "backupImported": "Backup imported: {{goals}}, {{entries}}"
+    "backupImported": "Backup imported: {{goals}}, {{entries}}",
+    "goalArchived": "Goal archived",
+    "goalRestored": "Goal restored"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Enter a name for your goal.",
@@ -103,7 +105,8 @@
     "IMPORT_UNSUPPORTED_VERSION": "This backup uses a format version ({{v}}) this app can't read. Export it again from an up-to-date copy of the app. Nothing was changed.",
     "IMPORT_INTEGRITY": "This backup is inconsistent (for example, entries that don't belong to any goal). Nothing was changed.",
     "loadViewTitle": "Couldn't load this view",
-    "loadViewBody": "Check your connection if you just updated the app, then try again."
+    "loadViewBody": "Check your connection if you just updated the app, then try again.",
+    "GOAL_TIMER_RUNNING": "Stop or discard the running timer before archiving this goal."
   },
   "empty": {
     "today": {
@@ -119,7 +122,8 @@
     "goalsAction": "Create your first goal",
     "detail": {
       "history": "No entries yet",
-      "historyBody": "Time you log for this goal will show up here."
+      "historyBody": "Time you log for this goal will show up here.",
+      "curve": "Your line starts rising on the first day you hit your target."
     },
     "day": {
       "noGoals": "No goals were running on this day",
@@ -196,13 +200,17 @@
     "startsOn": "Starts {{date}}",
     "endedOn": "Ended {{date}}",
     "rowDaily": "{{n}} min/day · {{range}}",
-    "rowTotal": "{{daily}} min/day ({{hours}} h total) · {{range}}"
+    "rowTotal": "{{daily}} min/day ({{hours}} h total) · {{range}}",
+    "groupArchived": "Archived ({{n}})",
+    "archive": "Archive",
+    "restore": "Restore"
   },
   "goal": {
     "status": {
       "active": "Active",
       "upcoming": "Upcoming",
-      "ended": "Ended"
+      "ended": "Ended",
+      "archived": "Archived"
     },
     "delete": {
       "title": "Delete \"{{name}}\"?",
@@ -244,7 +252,29 @@
       "colDate": "Date",
       "colMinutes": "Minutes",
       "colNote": "Note",
-      "colSource": "Source"
+      "colSource": "Source",
+      "eyebrow": "Your 1% curve",
+      "headline": "+{{value}}% better",
+      "headlineSub_one": "Day {{k}} of {{total}} · {{count}} day on target · 1.01^{{count}} = {{value}}",
+      "headlineSub_other": "Day {{k}} of {{total}} · {{count}} days on target · 1.01^{{count}} = {{value}}",
+      "chartTitle": "Ideal vs. you",
+      "rangeLegend": "Range",
+      "rangeWhole": "Whole period",
+      "rangeSoFar": "So far",
+      "chartCaption": "Line chart comparing the ideal 1% a day curve with your progress",
+      "legendIdeal": "Ideal (+1% every day)",
+      "legendYou": "You (+1% on days you hit your target)",
+      "chartSummary": "Day {{k}} of {{total}}: you are +{{x}}% better. The ideal line is +{{y}}%. You hit your target on {{n}} of {{k}} days.",
+      "chartNote": "Each day on target multiplies your line by 1.01. Days you miss never take anything away.",
+      "tooltip": "{{date}} · Ideal +{{ideal}}% · You +{{you}}%",
+      "tooltipIdeal": "{{date}} · Ideal +{{ideal}}%",
+      "labelIdeal": "Ideal +{{value}}%",
+      "labelYou": "You +{{value}}%",
+      "showTable": "Show data as table",
+      "tableDate": "Date",
+      "tableIdeal": "Ideal",
+      "tableYou": "You",
+      "upcoming": "Starts {{date}}. Your line will appear once the goal begins."
     }
   },
   "settings": {
@@ -432,5 +462,13 @@
     "monthlyTitle": "Months of {{year}}",
     "monthlySub": "Hours logged per month",
     "outsideYear": "This goal doesn't run in {{year}}."
+  },
+  "plusone": {
+    "live": "+1% for {{goal}} today."
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "body": "The app ran into an unexpected problem. Your data is still stored on this device.",
+    "reload": "Reload app"
   }
 }

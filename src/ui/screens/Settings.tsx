@@ -125,7 +125,7 @@ export function Settings() {
     try {
       // `parse` rejects by size before looking at the text; do not even read huge files.
       const text = file.size > IMPORT_MAX_BYTES ? '' : await readTextFile(file);
-      const parsed = backupService.parse(text, file.size);
+      const parsed = backupService.parse(text, file.size, toISODate(new Date()));
       if (!parsed.ok) {
         setImportError(parsed.errors[0] ?? 'read');
         return;
@@ -227,6 +227,7 @@ export function Settings() {
             disabled={!reminderEnabled}
             onCommit={changeTime}
             onSettled={() => toast.show('toast.reminderTime')}
+            describedBy={`${id}-ics-hint`}
           />
           <div className="perm">
             <strong id={`${id}-perm-label`}>{t('settings.reminders.permission')}</strong>
@@ -253,7 +254,9 @@ export function Settings() {
               {t('settings.reminders.ics')}
             </Button>
           </div>
-          <p className="hint">{t('settings.reminders.icsHint', { time: reminderTime })}</p>
+          <p className="hint" id={`${id}-ics-hint`}>
+            {t('settings.reminders.icsHint', { time: reminderTime })}
+          </p>
         </section>
 
         <section className="card" aria-labelledby="h-backup">

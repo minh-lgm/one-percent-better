@@ -167,3 +167,21 @@ describe('ReminderService.getBannerState / progress', () => {
     ]);
   });
 });
+
+describe('archived goals are left out of reminders (FR-30, M5-AC4)', () => {
+  it('progress(), the notification body and the banner ignore an archived goal; all archived → nothing sent', async () => {
+    await db.goals.update('g1', { archived: true });
+    const service = makeService('en');
+    expect((await service.progress(at('20:00:30'))).map((g) => g.name)).toEqual(['Guitar', 'Spanish']);
+    expect(await service.check(at('20:00:30'))).toBe(true);
+    expect(notifications.shown[0].body).toBe('2 goals left today: Guitar 0/20 min, Spanish 0/17 min');
+    expect(notifications.shown[0].body).not.toContain('Read');
+    expect((await service.getBannerState(at('20:00:30'))).count).toBe(2);
+
+    await db.goals.update('g2', { archived: true });
+    await db.goals.update('g3', { archived: true });
+    expect((await service.getBannerState(at('20:00:30', '2026-10-10'))).show).toBe(false);
+    expect(await service.check(at('20:00:30', '2026-10-10'))).toBe(false);
+    expect(notifications.shown).toHaveLength(1);
+  });
+});

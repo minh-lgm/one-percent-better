@@ -1,4 +1,5 @@
 import type { EntryRepository, GoalRepository, Subscribable } from '../data/repositories';
+import { curve, type CurveData } from '../domain/curve';
 import { yearOf } from '../domain/dates';
 import { entriesByGoal, goalStats, overallStats, type GoalStats, type OverallStats } from '../domain/stats';
 import type { Goal, ISODate, LogEntry } from '../domain/types';
@@ -104,6 +105,14 @@ export class StatsService {
     if (!goal) return undefined;
     const entries = await this.entries.getByGoal(goalId);
     return goalStats(goal, entries, year, today);
+  }
+
+  /** The 1% curve of one goal (FR-27; undefined when the goal does not exist). */
+  async curve(goalId: string, today: ISODate): Promise<CurveData | undefined> {
+    const goal = await this.goals.getById(goalId);
+    if (!goal) return undefined;
+    const entries = await this.entries.getByGoal(goalId);
+    return curve(goal, entries, today);
   }
 
   async overallStats(year: number, today: ISODate): Promise<OverallStats> {

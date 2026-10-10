@@ -2,8 +2,9 @@
 // Pure: parsing and validation only. The file is untrusted input: size limit,
 // JSON.parse in try/catch, strict zod schema, referential integrity. No eval.
 import { z } from 'zod';
-import { DAY_MINUTES_LIMIT, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX, GOAL_NAME_MAX, GOAL_WHY_MAX, IMPORT_MAX_BYTES } from '../config/constants';
-import { isValidISODate, isWithin } from './dates';
+import { DAILY_MINUTES_MAX, DAILY_MINUTES_MIN, DAY_MINUTES_LIMIT, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX, GOAL_NAME_MAX, GOAL_WHY_MAX, IMPORT_MAX_BYTES, PERIOD_DAYS_MAX, TOTAL_HOURS_MAX, TOTAL_HOURS_MIN } from '../config/constants';
+import { daysInclusive, isValidISODate, isWithin } from './dates';
+import { dailyTarget } from './goal';
 import { isValidReminderTime } from './reminder';
 import { fail, ok, type DomainError, type Goal, type ISODate, type ISODateTime, type LogEntry, type Result, type Settings } from './types';
 
@@ -47,20 +48,38 @@ const isoDate = z.string().refine(isValidISODate, 'YYYY-MM-DD');
 const isoDateTime = z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'ISO date-time');
 const id = z.string().min(1).max(200);
 
+// M3-D3: a backup must obey the same goal limits as the form (ARCH §4): daily
+// 1–1440 min, total 1–10,000 h (stored in minutes), period ≤ 1827 days, derived
+// daily target ≤ 1440. `endDate < startDate` stays an integrity error (M3-AC9).
 const goalSchema = z
   .object({
     id,
     name: z.string().trim().min(1).max(GOAL_NAME_MAX),
     why: z.string().trim().max(GOAL_WHY_MAX),
     targetType: z.enum(['daily', 'total']),
-    targetMinutes: z.number().int().min(1).max(600_000),
+    targetMinutes: z.number().int().min(1).max(TOTAL_HOURS_MAX * 60),
     startDate: isoDate,
     endDate: isoDate,
     archived: z.boolean(),
     createdAt: isoDateTime,
     updatedAt: isoDateTime,
   })
-  .strict();
+  .strict()
+  .superRefine((g, ctx) => {
+    if (g.targetType === 'daily' && (g.targetMinutes < DAILY_MINUTES_MIN || g.targetMinutes > DAILY_MINUTES_MAX)) {
+      ctx.addIssue({ code: 'custom', path: ['targetMinutes'], message: `daily target must be ${DAILY_MINUTES_MIN}-${DAILY_MINUTES_MAX} minutes` });
+    }
+    if (g.targetType === 'total' && (g.targetMinutes < TOTAL_HOURS_MIN * 60 || g.targetMinutes > TOTAL_HOURS_MAX * 60)) {
+      ctx.addIssue({ code: 'custom', path: ['targetMinutes'], message: `total target must be ${TOTAL_HOURS_MIN}-${TOTAL_HOURS_MAX} hours` });
+    }
+    if (g.endDate >= g.startDate) {
+      if (daysInclusive(g.startDate, g.endDate) > PERIOD_DAYS_MAX) {
+        ctx.addIssue({ code: 'custom', path: ['endDate'], message: `period longer than ${PERIOD_DAYS_MAX} days` });
+      } else if (g.targetType === 'total' && dailyTarget(g) > DAILY_MINUTES_MAX) {
+        ctx.addIssue({ code: 'custom', path: ['targetMinutes'], message: 'derived daily target above 1440' });
+      }
+    }
+  });
 
 const entrySchema = z
   .object({
@@ -103,7 +122,7 @@ const integrityError = (message: string): DomainError => ({ code: 'IMPORT_INTEGR
  * `IMPORT_FILE_TOO_LARGE`, `IMPORT_INVALID_JSON`, `IMPORT_INVALID_SCHEMA`,
  * `IMPORT_UNSUPPORTED_VERSION`, `IMPORT_INTEGRITY`.
  */
-export function parseBackup(text: string, sizeBytes: number): Result<BackupFile> {
+export function parseBackup(text: string, sizeBytes: number, today?: ISODate): Result<BackupFile> {
   if (sizeBytes > IMPORT_MAX_BYTES) {
     return fail({ code: 'IMPORT_FILE_TOO_LARGE', message: `file is ${sizeBytes} bytes, limit ${IMPORT_MAX_BYTES}` });
   }
@@ -126,7 +145,7 @@ export function parseBackup(text: string, sizeBytes: number): Result<BackupFile>
     const issue = parsed.error.issues[0];
     return fail(schemaError(`${issue?.path.join('.') ?? ''}: ${issue?.message ?? 'invalid'}`));
   }
-  const integrity = checkIntegrity(parsed.data.goals, parsed.data.entries);
+  const integrity = checkIntegrity(parsed.data.goals, parsed.data.entries, today);
   if (integrity) return fail(integrity);
 
   const s = parsed.data.settings;
@@ -149,9 +168,10 @@ export function parseBackup(text: string, sizeBytes: number): Result<BackupFile>
 
 /**
  * Referential integrity (FR-20): unique ids, every entry points to a goal, entry
- * dates inside the goal period, ≤ 1440 minutes per goal and day, endDate ≥ startDate.
+ * dates inside the goal period, ≤ 1440 minutes per goal and day, endDate ≥ startDate,
+ * and (when `today` is given, M3-D3) no entry dated after today.
  */
-export function checkIntegrity(goals: readonly Goal[], entries: readonly LogEntry[]): DomainError | null {
+export function checkIntegrity(goals: readonly Goal[], entries: readonly LogEntry[], today?: ISODate): DomainError | null {
   const goalById = new Map<string, Goal>();
   for (const g of goals) {
     if (goalById.has(g.id)) return integrityError(`duplicate goal id ${g.id}`);
@@ -166,6 +186,7 @@ export function checkIntegrity(goals: readonly Goal[], entries: readonly LogEntr
     const goal = goalById.get(e.goalId);
     if (!goal) return integrityError(`entry ${e.id} references unknown goal ${e.goalId}`);
     if (!isWithin(e.date, goal.startDate, goal.endDate)) return integrityError(`entry ${e.id} is outside the goal period`);
+    if (today !== undefined && e.date > today) return integrityError(`entry ${e.id} is dated after today (${today})`);
     const key = `${e.goalId}\u0000${e.date}`;
     const total = (perDay.get(key) ?? 0) + e.minutes;
     if (total > DAY_MINUTES_LIMIT) return integrityError(`goal ${e.goalId} has more than ${DAY_MINUTES_LIMIT} minutes on ${e.date}`);

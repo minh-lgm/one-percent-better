@@ -115,3 +115,16 @@ describe('reminderData (ADR-13)', () => {
     expect(data.more).toBe(2);
   });
 });
+
+describe('archived goals (FR-30, M5-AC4)', () => {
+  it('activeGoals filters archived goals out, so shouldNotify/shouldShowBanner never see them', () => {
+    const { goals } = datasetS1();
+    const archivedRead = goals.map((g) => (g.id === 'g1' ? { ...g, archived: true } : g));
+    expect(activeGoals(archivedRead, '2026-10-09').map((g) => g.id)).toEqual(['g2', 'g3']);
+    const onlyRead = goals.filter((g) => g.id === 'g1').map((g) => ({ ...g, archived: true }));
+    const progress = activeGoals(onlyRead, '2026-10-09').map((g) => ({ id: g.id, name: g.name, current: 0, target: 30 }));
+    expect(progress).toEqual([]);
+    expect(shouldShowBanner(new Date('2026-10-09T20:01:00+07:00'), { reminderEnabled: true, reminderTime: '20:00' }, progress)).toBe(false);
+    expect(shouldNotify(new Date('2026-10-09T20:01:00+07:00'), { reminderEnabled: true, reminderTime: '20:00', lastReminderDate: null }, 'granted', progress)).toBe(false);
+  });
+});

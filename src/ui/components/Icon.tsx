@@ -21,6 +21,8 @@ const PATHS = {
   upload: <><path d="M12 15V4M7 9l5-5 5 5" /><path d="M4 19h16" /></>,
   offline: <><path d="M5 12a9 9 0 0114-7M19 12a9 9 0 01-14 7" /><path d="M4 4l16 16" /></>,
   sparkle: <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6" />,
+  archive: <><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8M10 12h4" /></>,
+  restore: <><path d="M4 10a8 8 0 1 1 2.3 5.7" /><path d="M4 4v6h6" /></>,
 } as const;
 
 export type IconName = keyof typeof PATHS;

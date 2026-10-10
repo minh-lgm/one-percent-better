@@ -46,6 +46,7 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
     case 'GOAL_NOT_ACTIVE':
     case 'TIMER_ALREADY_RUNNING':
     case 'TIMER_NOT_RUNNING':
+    case 'GOAL_TIMER_RUNNING':
     case 'NOTIFICATIONS_UNSUPPORTED':
     case 'NOTIFICATIONS_DENIED':
     case 'IMPORT_FILE_TOO_LARGE':

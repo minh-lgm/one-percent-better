@@ -30,6 +30,8 @@ export interface Formatters {
   number(n: number): string;
   /** `15.5` / `15,5`. */
   decimal1(n: number): string;
+  /** `1.083` / `1,083` (curve factor, M5). */
+  decimal3(n: number): string;
   /** `25.8%` / `25,8%`. */
   percent1(n: number): string;
   /** `20 min` / `20 phút`. */
@@ -101,6 +103,7 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
 
   const number = (n: number) => nf(tag, { maximumFractionDigits: 0 }).format(n);
   const decimal1 = (n: number) => nf(tag, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
+  const decimal3 = (n: number) => nf(tag, { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(n);
   const dateShort = (date: string | Date) => {
     const d = isoToLocalDate(date);
     if (locale === 'en') return toIso(d);
@@ -143,6 +146,7 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
     },
     number,
     decimal1,
+    decimal3,
     percent1(n) {
       return t('format.percent', { value: decimal1(n) });
     },

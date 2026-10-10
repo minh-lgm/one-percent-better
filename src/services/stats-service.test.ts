@@ -173,3 +173,19 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
     expect(median(times)).toBeLessThan(200);
   });
 });
+
+describe('StatsService.curve (M5-T1, M5-AC1)', () => {
+  it('returns the S1 "Read" curve: 31 ideal points, 9 actual points, headline 8.3; unknown goal → undefined', async () => {
+    await seedS1();
+    const c = (await service.curve('g1', TODAY))!;
+    expect(c.ideal).toHaveLength(31);
+    expect(c.actual).toHaveLength(9);
+    expect(c.headlinePercent).toBe(8.3);
+    expect(c.idealPercent).toBe(9.4);
+    expect(c.daysOnTarget).toBe(8);
+    expect(await service.curve('nope', TODAY)).toBeUndefined();
+    const g4 = (await service.curve('g4', TODAY))!;
+    expect(g4.actual).toEqual([]);
+    expect(g4.headlinePercent).toBe(0);
+  });
+});

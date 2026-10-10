@@ -30,10 +30,12 @@ export interface GoalCardProps {
   onUpdate: (entry: LogEntry, values: EntryFormValues) => Promise<EntrySubmitResult>;
   onDelete: (entry: LogEntry) => Promise<void>;
   onStartTimer?: () => Promise<StartTimerResult>;
+  /** Play the one-time "+1%" effect (Today, FR-29). */
+  plusOneAnimate?: boolean;
 }
 
 /** Today/Day card for one goal (DESIGN S1, S5): amount, progress, +1%, inline entry form, entries, timer start. */
-export function GoalCard({ goal, target, minutes, entries, variant = 'today', date = '', timer = 'none', onAdd, onUpdate, onDelete, onStartTimer }: GoalCardProps) {
+export function GoalCard({ goal, target, minutes, entries, variant = 'today', date = '', timer = 'none', onAdd, onUpdate, onDelete, onStartTimer, plusOneAnimate = false }: GoalCardProps) {
   const { t } = useT();
   const f = useFormat();
   const id = useId();
@@ -85,7 +87,7 @@ export function GoalCard({ goal, target, minutes, entries, variant = 'today', da
       <article className="card goal" aria-labelledby={`${id}-name`}>
         <div className="row">
           <h2 id={`${id}-name`}>{goal.name}</h2>
-          {met ? <PlusOnePill srKey={isDay ? 'goalCard.plusOneSrDay' : 'goalCard.plusOneSrToday'} /> : null}
+          {met ? <PlusOnePill srKey={isDay ? 'goalCard.plusOneSrDay' : 'goalCard.plusOneSrToday'} animate={plusOneAnimate} /> : null}
         </div>
         {goal.targetType === 'total' && hours ? (
           <p className="muted small">{t('goalCard.subtitleTotal', { daily: f.number(target), hours })}</p>

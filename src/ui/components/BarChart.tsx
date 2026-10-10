@@ -1,8 +1,9 @@
 // Recharts bar chart (DESIGN §5 BarChart, §8). This module is only ever loaded
 // through `lazy(() => import(...))` from the Review screen (ADR-10), so Recharts
 // stays out of the initial bundle (NFR-03).
-import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useRef } from 'react';
 import { Bar, BarChart as RBarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis, type TooltipContentProps } from 'recharts';
+import { useElementWidth } from '../hooks/useRechartsWidth';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../hooks/useT';
 
@@ -29,28 +30,12 @@ export interface BarChartProps {
 }
 
 const HEIGHT = 210;
-const FALLBACK_WIDTH = 320;
-
-function useWidth(ref: RefObject<HTMLDivElement | null>): number {
-  const [width, setWidth] = useState(FALLBACK_WIDTH);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = () => setWidth(el.clientWidth || FALLBACK_WIDTH);
-    measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [ref]);
-  return width;
-}
 
 export default function BarChart({ points, caption, columnHeader, summary, testId }: BarChartProps) {
   const { t } = useT();
   const f = useFormat();
   const wrap = useRef<HTMLDivElement>(null);
-  const width = useWidth(wrap);
+  const width = useElementWidth(wrap);
   const data = points.map((p) => ({ ...p, hours: p.minutes / 60 }));
   const tickFormatter = (v: number) => (Number.isInteger(v) ? f.number(v) : f.decimal1(v));
 

@@ -66,7 +66,9 @@
     "reminderTime": "Đã lưu giờ nhắc",
     "icsDownloaded": "Đã tải tệp lịch",
     "backupExported": "Đã xuất bản sao lưu",
-    "backupImported": "Đã nhập bản sao lưu: {{goals}}, {{entries}}"
+    "backupImported": "Đã nhập bản sao lưu: {{goals}}, {{entries}}",
+    "goalArchived": "Đã lưu trữ mục tiêu",
+    "goalRestored": "Đã khôi phục mục tiêu"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Hãy nhập tên cho mục tiêu của bạn.",
@@ -100,7 +102,8 @@
     "IMPORT_UNSUPPORTED_VERSION": "Bản sao lưu này dùng phiên bản định dạng ({{v}}) mà app không đọc được. Hãy xuất lại từ bản app mới nhất. Chưa có gì bị thay đổi.",
     "IMPORT_INTEGRITY": "Bản sao lưu này không nhất quán (ví dụ: có lần ghi không thuộc mục tiêu nào). Chưa có gì bị thay đổi.",
     "loadViewTitle": "Không tải được màn hình này",
-    "loadViewBody": "Nếu bạn vừa cập nhật app, hãy kiểm tra kết nối mạng rồi thử lại."
+    "loadViewBody": "Nếu bạn vừa cập nhật app, hãy kiểm tra kết nối mạng rồi thử lại.",
+    "GOAL_TIMER_RUNNING": "Hãy dừng hoặc bỏ bộ đếm giờ đang chạy trước khi lưu trữ mục tiêu này."
   },
   "empty": {
     "today": {
@@ -116,7 +119,8 @@
     "goalsAction": "Tạo mục tiêu đầu tiên",
     "detail": {
       "history": "Chưa có lần ghi nào",
-      "historyBody": "Thời gian bạn ghi cho mục tiêu này sẽ hiện ở đây."
+      "historyBody": "Thời gian bạn ghi cho mục tiêu này sẽ hiện ở đây.",
+      "curve": "Đường của bạn bắt đầu đi lên từ ngày đầu tiên bạn đạt chỉ tiêu."
     },
     "day": {
       "noGoals": "Không có mục tiêu nào đang chạy trong ngày này",
@@ -191,13 +195,17 @@
     "startsOn": "Bắt đầu {{date}}",
     "endedOn": "Đã kết thúc {{date}}",
     "rowDaily": "{{n}} phút/ngày · {{range}}",
-    "rowTotal": "{{daily}} phút/ngày (tổng {{hours}} giờ) · {{range}}"
+    "rowTotal": "{{daily}} phút/ngày (tổng {{hours}} giờ) · {{range}}",
+    "groupArchived": "Đã lưu trữ ({{n}})",
+    "archive": "Lưu trữ",
+    "restore": "Khôi phục"
   },
   "goal": {
     "status": {
       "active": "Đang chạy",
       "upcoming": "Sắp tới",
-      "ended": "Đã kết thúc"
+      "ended": "Đã kết thúc",
+      "archived": "Đã lưu trữ"
     },
     "delete": {
       "title": "Xóa mục tiêu \"{{name}}\"?",
@@ -237,7 +245,28 @@
       "colDate": "Ngày",
       "colMinutes": "Số phút",
       "colNote": "Ghi chú",
-      "colSource": "Nguồn"
+      "colSource": "Nguồn",
+      "eyebrow": "Đường cong 1% của bạn",
+      "headline": "Tốt hơn +{{value}}%",
+      "headlineSub_other": "Ngày {{k}}/{{total}} · {{count}} ngày đạt chỉ tiêu · 1,01^{{count}} = {{value}}",
+      "chartTitle": "Lý tưởng và thực tế",
+      "rangeLegend": "Phạm vi",
+      "rangeWhole": "Cả giai đoạn",
+      "rangeSoFar": "Đến nay",
+      "chartCaption": "Biểu đồ đường so sánh đường cong lý tưởng 1% mỗi ngày với tiến độ thực tế của bạn",
+      "legendIdeal": "Lý tưởng (+1% mỗi ngày)",
+      "legendYou": "Bạn (+1% vào ngày đạt chỉ tiêu)",
+      "chartSummary": "Ngày {{k}}/{{total}}: bạn đã tốt hơn +{{x}}%. Đường lý tưởng là +{{y}}%. Bạn đạt chỉ tiêu {{n}}/{{k}} ngày.",
+      "chartNote": "Mỗi ngày đạt chỉ tiêu, đường của bạn được nhân với 1,01. Ngày bỏ lỡ không bao giờ bị trừ đi.",
+      "tooltip": "{{date}} · Lý tưởng +{{ideal}}% · Bạn +{{you}}%",
+      "tooltipIdeal": "{{date}} · Lý tưởng +{{ideal}}%",
+      "labelIdeal": "Lý tưởng +{{value}}%",
+      "labelYou": "Bạn +{{value}}%",
+      "showTable": "Xem dữ liệu dạng bảng",
+      "tableDate": "Ngày",
+      "tableIdeal": "Lý tưởng",
+      "tableYou": "Bạn",
+      "upcoming": "Bắt đầu {{date}}. Đường của bạn sẽ xuất hiện khi mục tiêu bắt đầu."
     }
   },
   "settings": {
@@ -423,5 +452,13 @@
     "monthlyTitle": "Các tháng của năm {{year}}",
     "monthlySub": "Số giờ đã ghi mỗi tháng",
     "outsideYear": "Mục tiêu này không diễn ra trong năm {{year}}."
+  },
+  "plusone": {
+    "live": "+1% cho {{goal}} hôm nay."
+  },
+  "errorBoundary": {
+    "title": "Đã xảy ra lỗi",
+    "body": "App gặp sự cố ngoài dự kiến. Dữ liệu của bạn vẫn được lưu trên thiết bị này.",
+    "reload": "Tải lại app"
   }
 }

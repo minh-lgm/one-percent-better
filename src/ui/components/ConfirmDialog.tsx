@@ -43,10 +43,10 @@ export function ConfirmDialog({ open, title, body, extra, confirmLabel, busy = f
   }, [onCancel]);
 
   return (
-    <dialog ref={ref} className="dialog" aria-labelledby="confirm-title" aria-describedby="confirm-body">
+    <dialog ref={ref} className="dialog" aria-labelledby="confirm-title" aria-describedby={extra ? 'confirm-body confirm-extra' : 'confirm-body'}>
       <h2 id="confirm-title">{title}</h2>
       <p id="confirm-body">{body}</p>
-      {extra ? <p>{extra}</p> : null}
+      {extra ? <p id="confirm-extra">{extra}</p> : null}
       <div className="actions">
         <Button variant="danger" onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>
           {confirmLabel}

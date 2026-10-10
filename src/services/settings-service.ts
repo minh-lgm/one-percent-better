@@ -1,7 +1,8 @@
 import type { KvRepository, Subscribable } from '../data/repositories';
 import { isValidReminderTime } from '../domain/reminder';
+import { markPlusOneShown } from '../domain/plusone';
 import { normalizeSettings } from '../domain/settings';
-import type { Settings } from '../domain/types';
+import type { ISODate, Settings } from '../domain/types';
 
 export { normalizeSettings };
 
@@ -48,6 +49,19 @@ export class SettingsService {
       const current = normalizeSettings(raw);
       return current.lastReminderDate === date ? { ...current, lastReminderDate: previous } : undefined;
     });
+  }
+
+  /**
+   * Record that the "+1%" feedback for `goalId` was shown on `date` (FR-29),
+   * atomically across tabs like `claimReminderDay`. Returns true when this
+   * caller is the first to claim it (and therefore the one that shows it).
+   */
+  async claimPlusOne(goalId: string, date: ISODate): Promise<boolean> {
+    const { written } = await this.kv.update<unknown>('settings', (raw) => {
+      const current = normalizeSettings(raw);
+      return current.plusOneShown[goalId] === date ? undefined : { ...current, plusOneShown: markPlusOneShown(current.plusOneShown, goalId, date) };
+    });
+    return written;
   }
 
   watch(): Subscribable<Settings> {

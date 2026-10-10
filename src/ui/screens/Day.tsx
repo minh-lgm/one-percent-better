@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { isValidISODate, isWithin, toISODate } from '../../domain/dates';
 import { minutesByGoal } from '../../domain/entry';
-import { dailyTarget } from '../../domain/goal';
+import { byCreatedAt, dailyTarget } from '../../domain/goal';
 import type { DomainError, LogEntry } from '../../domain/types';
 import { Alert } from '../components/Alert';
 import { LinkButton } from '../components/Button';
 import { DateNav } from '../components/DateNav';
 import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
 import type { EntryFormValues, EntrySubmitResult } from '../components/EntryForm';
 import { GoalCard } from '../components/GoalCard';
 import { Icon } from '../components/Icon';
@@ -83,13 +85,14 @@ function DayView({ date, today }: { date: string; today: string }) {
   const go = useDayNavigation();
   const { goalService, entryService } = useServices();
 
-  const goals = useSubscribable(() => goalService.watchAll(), [goalService]);
-  const entries = useSubscribable(() => entryService.watchByDateRange(date, date), [entryService, date]);
+  const [attempt, setAttempt] = useState(0);
+  const goals = useSubscribable(() => goalService.watchAll(), [goalService, attempt]);
+  const entries = useSubscribable(() => entryService.watchByDateRange(date, date), [entryService, date, attempt]);
   const loading = goals.loading || entries.loading;
   const showSkeleton = useDelayed(loading);
 
   // Every goal whose period contains the day, whatever its status today (ended/archived included).
-  const running = (goals.data ?? []).filter((g) => isWithin(date, g.startDate, g.endDate)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const running = (goals.data ?? []).filter((g) => isWithin(date, g.startDate, g.endDate)).sort(byCreatedAt);
   const dayEntries = entries.data ?? [];
   const byGoal = minutesByGoal(dayEntries);
 
@@ -127,7 +130,9 @@ function DayView({ date, today }: { date: string; today: string }) {
       <DateNav date={date} today={today} onChange={go} />
       <p className="date-title num">{f.dateLong(date, { withYear: true })}</p>
       <p className="muted small day-note">{t('day.onlyRunning')}</p>
-      {loading ? (
+      {goals.error || entries.error ? (
+        <ErrorState title={t('errors.loadViewTitle')} body={t('errors.loadViewBody')} actionLabel={t('common.retry')} onAction={() => setAttempt((n) => n + 1)} />
+      ) : loading ? (
         showSkeleton ? <Skeleton /> : null
       ) : running.length === 0 ? (
         <EmptyState title={t('empty.day.noGoals')} body={t('empty.day.noGoalsBody')} actionLabel={t('empty.day.noGoalsAction')} actionTo="/goals" />
@@ -141,7 +146,7 @@ function DayView({ date, today }: { date: string; today: string }) {
               goal={goal}
               target={dailyTarget(goal)}
               minutes={byGoal.get(goal.id) ?? 0}
-              entries={dayEntries.filter((e) => e.goalId === goal.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt))}
+              entries={dayEntries.filter((e) => e.goalId === goal.id).sort(byCreatedAt)}
               onAdd={(values) => addEntry(goal.id, values)}
               onUpdate={updateEntry}
               onDelete={deleteEntry}

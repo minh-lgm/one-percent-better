@@ -199,3 +199,12 @@ describe('GoalService.remove discards the timer of the deleted goal (M2-AC5)', (
     expect((await plain.remove('tmp')).ok).toBe(true);
   });
 });
+
+describe('archived goals cannot start a timer (M5-AC4)', () => {
+  it('start on an archived goal → GOAL_NOT_ACTIVE, no timer stored', async () => {
+    await db.goals.update('g1', { archived: true });
+    const r = await timers.start('g1', FIXED_NOW);
+    expect(!r.ok && r.errors[0].code).toBe('GOAL_NOT_ACTIVE');
+    expect(await kv.get('activeTimer')).toBeUndefined();
+  });
+});
