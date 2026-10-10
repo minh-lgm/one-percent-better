@@ -14,6 +14,12 @@ const FIXED_TIME = new Date('2026-10-09T10:00:00+07:00');
 // bound pass their own timeout.
 configure({ asyncUtilTimeout: 8000 });
 
+// F-D1: on a fresh clone the first Vite transform of Recharts (the lazy chart chunk)
+// could take longer than a test's wait. Load it here, during setup, so it is
+// transformed and evaluated before any test in a jsdom file runs. Screen tests
+// additionally mock the chart components (src/test/stubs) and never depend on it.
+if (typeof window !== 'undefined') await import('recharts');
+
 beforeEach(() => {
   // Fake only Date so timers (waitFor, Dexie liveQuery) keep working.
   vi.useFakeTimers({ toFake: ['Date'] });

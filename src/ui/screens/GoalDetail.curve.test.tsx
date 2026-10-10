@@ -1,11 +1,15 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi as vitest } from 'vitest';
 import en from '../../i18n/resources/en.json';
 import vi from '../../i18n/resources/vi.json';
 import { buildGoal, datasetS1 } from '../../test/builders';
 import { createTestContainer, type TestContainer } from '../../test/container';
 import { renderApp, scanVi } from '../../test/render-with-locale';
+
+// The lazy Recharts curve is replaced by a stub (F-D1): this file tests the Goal detail
+// screen (headline, summary, range, table, stats, archive); CurveChart.test.tsx tests the chart.
+vitest.mock('../components/CurveChart', () => import('../../test/stubs/CurveChart'));
 
 let tc: TestContainer | undefined;
 
@@ -22,7 +26,7 @@ async function withS1(locale: 'en' | 'vi' = 'en') {
   return tc;
 }
 
-// The chart arrives through a lazy chunk + Recharts render.
+// Lazy route + live queries: allow more than the default when the suite runs in parallel.
 const SLOW = { timeout: 8000 };
 const norm = (s: string | null) => (s ?? '').replace(/[\u00A0\u202F]/g, ' ');
 
@@ -46,16 +50,13 @@ describe('Goal detail — 1% curve, stats, archive (M5-AC2, M5-AC4, M5-AC5, M5-A
     expect(screen.getByRole('radio', { name: en.goal.detail.rangeWhole })).toBeChecked();
     expect(screen.getByRole('radio', { name: en.goal.detail.rangeSoFar })).not.toBeChecked();
 
-    // Recharts drew both lines (Ideal dashed, You stepped) inside the aria-hidden box of an accessible figure.
+    // The chart gets the whole ideal series (31) and the 9 actual points, with the summary as its name (stub).
     const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
+    expect(chart).toHaveAttribute('data-stub', 'curve-chart');
     expect(chart).toHaveAttribute('role', 'img');
     expect(chart).toHaveAccessibleName('Day 9 of 31: you are +8.3% better. The ideal line is +9.4%. You hit your target on 8 of 9 days.');
-    await waitFor(() => expect(chart.querySelectorAll('.recharts-line')).toHaveLength(2), SLOW);
-    expect(chart.querySelector('.recharts-line-curve[stroke-dasharray]')).not.toBeNull();
-    expect(chart.querySelector('.recharts-reference-line')).not.toBeNull();
-    expect(chart.querySelectorAll('.recharts-reference-dot')).toHaveLength(2);
-    expect(chart.textContent).toContain('Ideal +9.4%');
-    expect(chart.textContent).toContain('You +8.3%');
+    expect(chart).toHaveAttribute('data-ideal', '31');
+    expect(chart).toHaveAttribute('data-actual', '9');
     expect(screen.getByRole('figure', { name: en.goal.detail.chartCaption })).toBeInTheDocument();
 
     // Stats (M4 rules): progress 25.8 %, 30 min behind, streak 8/8.
@@ -95,26 +96,9 @@ describe('Goal detail — 1% curve, stats, archive (M5-AC2, M5-AC4, M5-AC5, M5-A
     await user.click(screen.getByRole('radio', { name: en.goal.detail.rangeSoFar }));
     await waitFor(() => expect(within(screen.getByTestId('curve-table')).getAllByRole('row').slice(1)).toHaveLength(9));
     expect(screen.getByRole('radio', { name: en.goal.detail.rangeSoFar })).toBeChecked();
-  });
-
-  it('keyboard reading on the chart: ArrowRight reads today, ArrowLeft moves back a day, Home/End, Escape clears', async () => {
-    const user = userEvent.setup();
-    await withS1();
-    await renderApp({ route: '/goals/g1', container: tc });
-    const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
-    const reading = screen.getByTestId('curve-reading');
-    expect(reading).toHaveTextContent('');
-    chart.focus();
-    await user.keyboard('{ArrowRight}');
-    expect(reading).toHaveTextContent('Oct 9 · Ideal +9.4% · You +8.3%');
-    await user.keyboard('{ArrowLeft}');
-    expect(reading).toHaveTextContent('Oct 8 · Ideal +8.3% · You +8.3%');
-    await user.keyboard('{End}');
-    expect(reading).toHaveTextContent('Oct 31 · Ideal +36.1%');
-    await user.keyboard('{Home}');
-    expect(reading).toHaveTextContent('Oct 1 · Ideal +1.0% · You +1.0%');
-    await user.keyboard('{Escape}');
-    expect(reading).toHaveTextContent('');
+    // The chart receives the same slice as the table.
+    await waitFor(() => expect(screen.getByTestId('curve-chart')).toHaveAttribute('data-ideal', '9'));
+    expect(screen.getByTestId('curve-chart')).toHaveAttribute('data-actual', '9');
   });
 
   it('a goal without entries: headline +0.0% better, "Your line starts rising…", empty history (M5-AC5)', async () => {
@@ -139,8 +123,8 @@ describe('Goal detail — 1% curve, stats, archive (M5-AC2, M5-AC4, M5-AC5, M5-A
     expect(screen.queryByRole('radio', { name: en.goal.detail.rangeWhole })).toBeNull();
     expect(screen.getByText(en.goal.status.upcoming)).toBeInTheDocument();
     const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
-    await waitFor(() => expect(chart.querySelectorAll('.recharts-line-curve').length).toBeGreaterThanOrEqual(1), SLOW);
-    expect(chart.querySelectorAll('.recharts-reference-dot')).toHaveLength(0);
+    expect(chart).toHaveAttribute('data-ideal', '30');
+    expect(chart).toHaveAttribute('data-actual', '0');
     expect(screen.getByTestId('stat-pace')).toHaveTextContent(en.stat.paceOnTrack);
   });
 
@@ -152,7 +136,8 @@ describe('Goal detail — 1% curve, stats, archive (M5-AC2, M5-AC4, M5-AC5, M5-A
     await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+1.0% better'), SLOW);
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe('Day 181 of 181 · 1 day on target · 1.01^1 = 1.010');
     // 181 days > 120 → "So far" by default (A-D4); for an ended goal both ranges show the whole period.
-    expect(screen.getByRole('radio', { name: en.goal.detail.rangeSoFar })).toBeChecked();
+    await waitFor(() => expect(screen.getByRole('radio', { name: en.goal.detail.rangeSoFar })).toBeChecked());
+    expect(screen.getByTestId('curve-chart')).toHaveAttribute('data-ideal', '181');
     expect(screen.getByTestId('curve-summary')).toHaveTextContent('Day 181 of 181: you are +1.0% better. The ideal line is +505.6%. You hit your target on 1 of 181 days.');
   });
 
@@ -216,11 +201,7 @@ describe('Goal detail — 1% curve, stats, archive (M5-AC2, M5-AC4, M5-AC5, M5-A
     expect(screen.getByTestId('stat-progress')).toHaveTextContent('25,8%');
     expect(screen.getByTestId('stat-pace')).toHaveTextContent('Chậm 30 phút');
     const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
-    await waitFor(() => expect(chart.textContent).toContain('Lý tưởng +9,4%'), SLOW);
-    expect(chart.textContent).toContain('Bạn +8,3%');
-    chart.focus();
-    await user.keyboard('{ArrowRight}');
-    expect(screen.getByTestId('curve-reading')).toHaveTextContent('Lý tưởng +9,4% · Bạn +8,3%');
+    expect(chart).toHaveAccessibleName('Ngày 9/31: bạn đã tốt hơn +8,3%. Đường lý tưởng là +9,4%. Bạn đạt chỉ tiêu 8/9 ngày.');
     await user.click(screen.getByText(vi.goal.detail.showTable));
     const details = screen.getByText(vi.goal.detail.showTable).closest('details')!;
     if (!details.open) {

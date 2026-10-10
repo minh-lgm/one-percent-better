@@ -1,11 +1,15 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi as vitest } from 'vitest';
 import en from '../../i18n/resources/en.json';
 import vi from '../../i18n/resources/vi.json';
 import { buildGoal, datasetS1 } from '../../test/builders';
 import { createTestContainer, type TestContainer } from '../../test/container';
 import { renderApp, scanVi } from '../../test/render-with-locale';
+
+// The lazy Recharts chart is replaced by a stub (F-D1): this file tests the Review
+// screen's data and structure; the real chart has its own test (BarChart.test.tsx).
+vitest.mock('../components/BarChart', () => import('../../test/stubs/BarChart'));
 
 let tc: TestContainer | undefined;
 
@@ -26,7 +30,7 @@ const stat = (id: string) => screen.getByTestId(id);
 const norm = (s: string) => s.replace(/[\u00A0\u202F]/g, ' ');
 const cell = (date: string) => document.querySelector<HTMLElement>(`[data-date="${date}"]`)!;
 
-// The charts arrive through a lazy chunk + Recharts render: allow more than the default 1 s when the suite runs in parallel.
+// Lazy route + live queries: allow more than the default when the suite runs in parallel.
 const SLOW = { timeout: 8000 };
 async function chartsReady() {
   await waitFor(() => expect(screen.getByTestId('chart-weekly')).toBeInTheDocument(), SLOW);
@@ -68,9 +72,10 @@ describe('Review (M4-AC5, AC6, AC7, AC8)', () => {
     expect(within(monthly).getAllByRole('rowheader').map((h) => h.textContent)).toEqual(['January 2026', 'February 2026', 'March 2026', 'April 2026', 'May 2026', 'June 2026', 'July 2026', 'August 2026', 'September 2026', 'October 2026', 'November 2026', 'December 2026']);
     expect(within(monthly).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0 min', '0 min', '1 h', '0 min', '0 min', '15 min', '0 min', '0 min', '3 h 30 min', '4 h 40 min', '0 min', '0 min']);
     expect(screen.getByText('2026: 9 h 25 min logged, busiest month October with 4 h 40 min.')).toBeInTheDocument();
-    // Recharts drew the non-zero bars inside an aria-hidden container.
-    expect(screen.getByTestId('chart-monthly').querySelectorAll('.recharts-bar-rectangle').length).toBeGreaterThanOrEqual(4);
+    // The chart box is aria-hidden and received the 12 points (stub; the real bars are tested in BarChart.test.tsx).
     expect(screen.getByTestId('chart-monthly').querySelector('.chart')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByTestId('chart-monthly').querySelector('.chart')).toHaveAttribute('data-points', '12');
+    expect(screen.getByTestId('chart-monthly')).toHaveAttribute('data-stub', 'bar-chart');
   });
 
   it('selecting Read updates the URL and shows 6 cards: 4.0 h, 25.8 %, 30 min behind (M4-AC5, AC7)', async () => {

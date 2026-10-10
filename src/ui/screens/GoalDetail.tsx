@@ -97,14 +97,10 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
     return { curve: curve(goal, entries.data, today), stats: goalStats(goal, entries.data, yearOf(today), today) };
   }, [goal, entries.data, today]);
 
-  const [range, setRange] = useState<Range>(() => (model ? (model.curve.periodDays <= WHOLE_PERIOD_MAX_DAYS ? 'whole' : 'sofar') : 'whole'));
-  const rangeInitialised = useRef(model !== null);
-  useEffect(() => {
-    if (model && !rangeInitialised.current) {
-      rangeInitialised.current = true;
-      setRange(model.curve.periodDays <= WHOLE_PERIOD_MAX_DAYS ? 'whole' : 'sofar');
-    }
-  }, [model]);
+  // Range: the user's choice, else the A-D4 default derived from the period (no effect, so the
+  // first render with data already shows the right option).
+  const [chosenRange, setRange] = useState<Range | null>(null);
+  const range: Range = chosenRange ?? (model && model.curve.periodDays > WHOLE_PERIOD_MAX_DAYS ? 'sofar' : 'whole');
   const [tableOpen, setTableOpen] = useState(false);
 
   const closeDialog = useCallback(() => {

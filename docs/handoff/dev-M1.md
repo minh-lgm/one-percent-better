@@ -53,7 +53,7 @@ npm run build && npm run preview   # http://localhost:4173 (có SW/PWA, dùng đ
 | :- | :- |
 | `npm run lint` | 0 lỗi, 0 warning (`--max-warnings 0`) |
 | `npm run typecheck` (`tsc -b --noEmit`, 3 project app/sw/node) | 0 lỗi |
-| `npm test` | 22 file, **128 passed / 0 failed** (bản sao sạch). Trong thư mục `1%better`: 127 passed, 1 file `src/config/env.test.ts` không load được vì Vite không decode được `%` trong đường dẫn khi xử lý `import.meta.env` (lỗi môi trường, xem mục 8) |
+| `npm test` | 22 file, **128 passed / 0 failed** (bản sao sạch). Ghi chú lịch sử (M1-P3): lúc đó project còn nằm trong một thư mục có ký tự `%` trong tên — 127 passed, 1 file `src/config/env.test.ts` không load được vì Vite không decode được `%` trong đường dẫn khi xử lý `import.meta.env` (lỗi môi trường, xem mục 8). Thư mục đã được đổi tên thành `one-percent-better` ngày 2026-10-10; không còn áp dụng |
 | `npm run test:coverage` | `src/domain`: 96.15 % statements, 88.17 % branches, 90.9 % functions, 100 % lines (≥ 90 % dòng theo ARCH §8) |
 | `npm run build` | OK; `dist/assets/index-*.js` 647.6 kB raw / **199.2 kB gzip** (NFR-03 ≤ 250 kB), CSS 3.9 kB gzip; precache 15 entry; `dist/sw.js`, `dist/manifest.webmanifest` |
 | `npm run test:e2e` | **20 passed / 0 failed** (14.7 s) chạy từ thư mục project (Playwright + build + preview chạy được từ đường dẫn có `%`); **20 passed / 0 failed** (14.3 s) trên bản sao sạch qua đúng script `npm run test:e2e` |

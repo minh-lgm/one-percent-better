@@ -6,6 +6,7 @@ import { Bar, BarChart as RBarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis,
 import { useElementWidth } from '../hooks/useRechartsWidth';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../hooks/useT';
+import { BarChartTable } from './BarChartTable';
 
 export interface BarPoint {
   key: string;
@@ -63,23 +64,7 @@ export default function BarChart({ points, caption, columnHeader, summary, testI
         </div>
         <figcaption className="muted small chart-sum">{summary}</figcaption>
       </figure>
-      <table className="sr-only">
-        <caption>{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{columnHeader}</th>
-            <th scope="col">{t('chart.bar.colTime')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((p) => (
-            <tr key={p.key}>
-              <th scope="row">{p.label}</th>
-              <td>{f.duration(p.minutes)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <BarChartTable points={points} caption={caption} columnHeader={columnHeader} />
     </>
   );
 }
