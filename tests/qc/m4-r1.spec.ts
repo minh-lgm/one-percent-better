@@ -574,6 +574,7 @@ test.describe('regression smoke M1..M3 with M4 present', () => {
     await gotoHash(page, '/today');
     await expect(goalCard(page, 'Read')).toBeVisible();
     await gotoHash(page, '/goals/g2');
+    await expect(page.locator('.gd-head .why')).toBeVisible(); // QC r2: wait for the lazy route (was a race under load)
     // M3-D1: the why quote marks are curly quotes drawn by CSS, no mojibake
     const pseudo = await page.evaluate(() => {
       const el = document.querySelector('.gd-head .why');

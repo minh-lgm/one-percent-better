@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M5 dev DONE; QC M5 r1)
-**Next step:** qc M5 round 2 (report docs/qc/report-M5-r2.md) → Final QC
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M5 PASS r2; Final QC)
+**Next step:** qc scope final (report docs/qc/report-final.md) → tổng kết
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -34,8 +34,8 @@
 | M2 | PASS (round 3) | docs/qc/report-M2-r3.md | AC8/9/11 phần thủ công NOT VERIFIED (notification thật, import .ics, popup quyền) | AC8/9/11 phần thủ công NOT VERIFIED |
 | M3 | PASS (round 1) | docs/qc/report-M3-r1.md | 4 Minor → backlog; dispute test QC đã re-target; dialog file thật NOT VERIFIED |
 | M4 | PASS (round 2) | docs/qc/report-M4-r2.md | Firefox/Safari/iOS, screen reader, bản dịch vi NOT VERIFIED | bundle 218,8 kB gzip; Recharts lazy |
-| M5 | DOING — fix r1 DONE, chờ QC r2 | docs/qc/report-M5-r1.md | Dispute M3-D3: orchestrator chọn giữ fix, QC re-target tests/qc/m3-r1.spec.ts:638 |
-| Final QC | TODO | | |
+| M5 | PASS (round 2) | docs/qc/report-M5-r2.md | AC9 Firefox/Safari/iOS, screen reader NOT VERIFIED | Dispute M3-D3: orchestrator chọn giữ fix, QC re-target tests/qc/m3-r1.spec.ts:638 |
+| Final QC | DOING | | |
 
 ## Backlog (defect Minor, đề xuất chưa làm)
 | ID | Mô tả | Nguồn |
@@ -51,6 +51,7 @@
 | M3-P1 | `exportBackup` thiếu catch; thêm assertion E2E cho dòng why | QC M3 r1 |
 | M4-D5 | Vitest chạy 2 process song song có test chạm timeout 5 s (Review/Day/Heatmap 2–3 s); chạy tuần tự ổn định | QC M4 r2 |
 | M4-P1 | DESIGN §6 nói heatmap vừa ở ≥1024 px nhưng 1024–1191 px vẫn cuộn trong hộp (sidebar 232 px) — designer sửa câu chữ; nhãn giá trị trên cột chart chưa có | QC M4 r1/r2 |
+| M5-P1 | Trục Y curve hiện `+0.0%` (mockup `+0%`); focusHeading dùng requestAnimationFrame; lỗi import vượt giới hạn dùng chung IMPORT_INVALID_SCHEMA (nên có câu riêng) | QC M5 r1/r2 |
 | M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
 ## Ghi chú vận hành

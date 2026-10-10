@@ -277,9 +277,9 @@ test.describe('Delete from Goal detail', () => {
 });
 
 test.describe('M5-D1 flash of "Goal not found" when deleting from Goal detail', () => {
-  // Open defect M5-D1 (Minor): after Confirm the goal disappears from the live query before the navigation to #/goals is
+  // Fixed in M5 round 2 (was defect M5-D1, Minor): before the fix, after Confirm the goal disappears from the live query before the navigation to #/goals is
   // rendered, so GoalDetail renders NotFound (and steals focus) for a few painted frames. Deterministic with 4x CPU throttling.
-  test.fail('no painted frame shows "Goal not found" between Delete and the Goals list (CPU 4x slower)', async ({ page }) => {
+  test('no painted frame shows "Goal not found" between Delete and the Goals list (CPU 4x slower)', async ({ page }) => {
     await importBackup(page);
     await gotoHash(page, '/goals/g1');
     await expect(page.getByTestId('headline')).toBeVisible();
