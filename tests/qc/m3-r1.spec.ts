@@ -635,25 +635,42 @@ test.describe('Layout / a11y at 360 and 1440', () => {
 });
 
 test.describe('Import of out-of-range but schema-valid data, and the past-day link states', () => {
-  test('goals the app itself would refuse (daily target 600000, 100-year period, archived, future entry) do not crash any screen', async ({ page }) => {
+  // Re-targeted in M5 round 1 (M3-D3 was fixed and the dispute settled by the orchestrator: import validates like the form).
+  // Original intent kept: data the app itself would refuse to create must never reach the screens. Before M5 the import let it
+  // through and the test checked that no screen crashed; now each violation is refused at the import boundary with an
+  // IMPORT_* Alert, the confirm dialog (D3) never opens, and the data already in the database is untouched. A legitimate
+  // archived goal still imports and renders on every screen.
+  test('goals the app itself would refuse (daily target 600000, 100-year period, future entry) are rejected at import with IMPORT_*; an archived goal still imports and renders', async ({ page }) => {
     const problems = watch(page);
+    await importBackup(page);
+    const goalsBefore = await dbAll(page, 'goals');
+    const entriesBefore = await dbAll(page, 'entries');
+    expect(goalsBefore.length).toBe(5);
     const base = await sampleFile();
     const g = base.goals[0] as Record<string, unknown>;
-    const goals = [
-      { ...g, id: 'huge', name: 'Huge', targetMinutes: 600_000 },
-      { ...g, id: 'long', name: 'Long', startDate: '2000-01-01', endDate: '2099-12-31' },
-      { ...g, id: 'arch', name: 'Arch', archived: true },
+    const huge = { ...g, id: 'huge', name: 'Huge', targetMinutes: 600_000 };
+    const long = { ...g, id: 'long', name: 'Long', startDate: '2000-01-01', endDate: '2099-12-31' };
+    const arch = { ...g, id: 'arch', name: 'Arch', archived: true };
+    const fut = { ...(base.entries[0] as Record<string, unknown>), id: 'fut', goalId: 'long', date: '2030-05-05' };
+    const cases: Array<[string, Sample, string]> = [
+      ['daily target 600000', { ...base, goals: [huge], entries: [] }, EN.errors.IMPORT_INVALID_SCHEMA],
+      ['100-year period', { ...base, goals: [long], entries: [] }, EN.errors.IMPORT_INVALID_SCHEMA],
+      ['entry dated after today', { ...base, goals: [{ ...g, id: 'ok', name: 'Ok' }], entries: [{ ...fut, goalId: 'ok', date: '2026-10-10' }] }, EN.errors.IMPORT_INTEGRITY],
     ];
-    const entries = [{ ...(base.entries[0] as Record<string, unknown>), id: 'fut', goalId: 'long', date: '2030-05-05' }];
-    await importContent(page, JSON.stringify({ ...base, goals, entries }));
-    for (const hash of ['/today', '/goals', '/goals/huge', '/goals/long', '/goals/arch', '/day/2026-10-08', '/day/2030-05-05']) {
+    for (const [label, file, message] of cases) {
+      await upload(page, JSON.stringify(file));
+      await expect(page.getByRole('alert'), label).toHaveText(message);
+      await expect(page.getByRole('dialog'), label).toHaveCount(0);
+    }
+    // nothing was replaced
+    expect((await dbAll(page, 'goals')).map((x) => x.id).sort()).toEqual(goalsBefore.map((x) => x.id).sort());
+    expect((await dbAll(page, 'entries')).length).toBe(entriesBefore.length);
+    // a legitimate archived goal imports and every screen renders
+    await importContent(page, JSON.stringify({ ...base, goals: [arch], entries: [] }));
+    for (const hash of ['/today', '/goals', '/goals/arch', '/review', '/day/2026-10-08']) {
       await gotoHash(page, hash);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     }
-    await gotoHash(page, '/today');
-    console.log('M3-QC huge-target Today card:', (await page.getByRole('article', { name: 'Huge' }).innerText().catch(() => 'n/a')).replace(/\n/g, ' | '));
-    await gotoHash(page, '/goals/long');
-    console.log('M3-QC future entry in History:', await page.getByTestId('history-row').count());
     expect(problems).toEqual([]);
   });
 
