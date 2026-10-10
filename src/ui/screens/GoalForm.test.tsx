@@ -32,7 +32,7 @@ describe('GoalForm (M1-AC2, M1-AC3, M1-AC8)', () => {
     expect(screen.getByText("That's 2,520 min (42.0 h) over 84 days.")).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: en.goal.form.save }));
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: en.goals.title })).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(en.toast.goalCreated);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.goalCreated));
     expect(await screen.findByRole('heading', { level: 3, name: 'Read' })).toBeInTheDocument();
     const goals = await tc.container.db.goals.toArray();
     expect(goals).toHaveLength(1);

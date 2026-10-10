@@ -20,7 +20,8 @@
     "e2e:install": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
     "icons": "node scripts/gen-icons.mjs",
-    "fixtures:large": "node scripts/gen-large-backup.mjs"
+    "fixtures:large": "node scripts/gen-large-backup.mjs",
+    "bench": "cross-env BENCH_ASSERT=1 vitest run src/services/stats-service.test.ts --reporter=verbose"
   },
   "dependencies": {
     "date-fns": "4.4.0",

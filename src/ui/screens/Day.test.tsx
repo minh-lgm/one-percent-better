@@ -63,7 +63,7 @@ describe('Day (M3-AC1, AC2, AC3, AC4)', () => {
     await user.type(within(form).getByLabelText(/^Note/), 'Scales');
     await user.click(within(form).getByRole('button', { name: en.entry.form.save }));
     await waitFor(() => expect(within(guitar).getByText('30/20')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(en.toast.entrySaved);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.entrySaved));
     const saved = await tc!.container.db.entries.filter((e) => e.note === 'Scales').toArray();
     expect(saved).toHaveLength(1);
     expect(saved[0]).toMatchObject({ goalId: 'g2', date: '2026-10-05', minutes: 30, source: 'manual' });

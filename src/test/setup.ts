@@ -4,10 +4,15 @@ process.env.TZ = 'Asia/Ho_Chi_Minh';
 
 import 'fake-indexeddb/auto';
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 
 const FIXED_TIME = new Date('2026-10-09T10:00:00+07:00');
+
+// `findBy*` / `waitFor` default to 1 s; with many jsdom workers sharing the CPU a
+// lazy route + Recharts render can take longer (M5-D2). Tests that need a tighter
+// bound pass their own timeout.
+configure({ asyncUtilTimeout: 8000 });
 
 beforeEach(() => {
   // Fake only Date so timers (waitFor, Dexie liveQuery) keep working.

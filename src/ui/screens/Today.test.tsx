@@ -61,7 +61,7 @@ describe('Today (M1-AC2, AC5, AC6, AC7, AC18)', () => {
     await user.type(within(form).getByLabelText(/^Note/), 'Ch. 3');
     await user.click(within(form).getByRole('button', { name: en.entry.form.save }));
     await waitFor(() => expect(within(card).getByText('20/30')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(en.toast.entrySaved);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.entrySaved));
     expect(within(card).getByText('10 min to go')).toBeInTheDocument();
     expect(within(card).queryByTestId('plus-one')).toBeNull();
     expect(within(card).getByRole('button', { name: 'Edit entry: 20 min, Ch. 3' })).toBeInTheDocument();
@@ -85,7 +85,7 @@ describe('Today (M1-AC2, AC5, AC6, AC7, AC18)', () => {
     await user.click(within(editForm).getByRole('button', { name: en.entry.form.saveChanges }));
     await waitFor(() => expect(within(card).getByText('15/30')).toBeInTheDocument());
     expect(within(card).queryByTestId('plus-one')).toBeNull();
-    expect(screen.getByRole('status')).toHaveTextContent(en.toast.entryUpdated);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.entryUpdated));
 
     // Delete the 5-minute entry (confirm inline)
     await user.click(within(card).getByRole('button', { name: 'Delete entry: 5 min, Ch. 3' }));
@@ -93,7 +93,7 @@ describe('Today (M1-AC2, AC5, AC6, AC7, AC18)', () => {
     expect(within(confirm).getByRole('button', { name: en.common.keep })).toHaveFocus();
     await user.click(within(confirm).getByRole('button', { name: en.common.delete }));
     await waitFor(() => expect(within(card).getByText('10/30')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(en.toast.entryDeleted);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.entryDeleted));
     expect(await tc!.container.db.entries.count()).toBe(1);
   });
 
@@ -185,7 +185,7 @@ describe('Today (M1-AC2, AC5, AC6, AC7, AC18)', () => {
     await user.type(within(card).getByLabelText(/^Ghi chú/), 'Ch. 3');
     await user.click(within(card).getByRole('button', { name: vi.entry.form.save }));
     await waitFor(() => expect(within(card).getByTestId('plus-one')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(vi.toast.entrySaved);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(vi.toast.entrySaved));
     expect(within(card).getByText(vi.goalCard.reached)).toBeInTheDocument();
     expect(within(card).getByRole('button', { name: 'Sửa lần ghi: 30 phút, Ch. 3' })).toBeInTheDocument();
     expect(scanVi()).toEqual([]);

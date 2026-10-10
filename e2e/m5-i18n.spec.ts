@@ -59,6 +59,7 @@ test.describe('M5-AC12: full journey, offline and every screen in Vietnamese', (
     await expect(page.getByTestId('curve-summary')).toHaveText('Ngày 9/31: bạn đã tốt hơn +2,0%. Đường lý tưởng là +9,4%. Bạn đạt chỉ tiêu 2/9 ngày.');
     await expect(page.getByTestId('curve-legend')).toContainText(VI.goal.detail.legendIdeal);
     await expect(page.getByRole('radio', { name: VI.goal.detail.rangeWhole })).toBeChecked();
+    for (const seg of await page.locator('.seg.range span').all()) expect(await seg.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     const chart = page.getByTestId('curve-chart');
     await expect(chart.locator('.recharts-line')).toHaveCount(2);
     await expect(chart).toContainText('Lý tưởng +9,4%');

@@ -78,10 +78,19 @@ describe('Goal detail (M3-AC5)', () => {
     await user.click(within(dialog).getByRole('button', { name: en.common.cancel }));
     await waitFor(() => expect(screen.getByRole('button', { name: en.common.delete })).toHaveFocus());
     await user.click(screen.getByRole('button', { name: en.common.delete }));
+    // M5-D1: no "Goal not found" may be rendered between Confirm and the Goals list.
+    const seen: string[] = [];
+    const observer = new MutationObserver(() => {
+      for (const h of document.querySelectorAll('h1')) if (h.textContent === en.notFound.goalTitle) seen.push(h.textContent);
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: en.goal.delete.confirm }));
     await waitFor(() => expect(app.router.state.location.pathname).toBe('/goals'));
+    await screen.findByRole('heading', { level: 1, name: en.goals.title });
+    observer.disconnect();
+    expect(seen).toEqual([]);
     expect(await tc!.container.db.goals.get('g5')).toBeUndefined();
-    expect(screen.getByRole('status')).toHaveTextContent(en.toast.goalDeleted);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.goalDeleted));
   });
 
   it('Goals list links each name to its detail page', async () => {

@@ -127,9 +127,15 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
     return new StatsService(goalRepo, entryRepo);
   }
 
-  // Timing assertions get a retry: the suite runs many files in parallel and a
-  // busy CPU can inflate one measurement (standalone medians are far below 200 ms).
-  it('StatsService.overallStats + goalStats for 5 goals (in-memory repositories) < 200 ms, median of 5 runs', { retry: 2 }, async () => {
+  // Timing is only asserted when `BENCH_ASSERT=1` (`npm run bench`, which runs this
+  // file alone). Inside the full suite dozens of workers share the CPU, so a
+  // wall-clock threshold would be flaky (M5-D2); the numbers are still logged.
+  const assertBench = (medianMs: number) => {
+    if (process.env.BENCH_ASSERT) expect(medianMs).toBeLessThan(200);
+    else expect(medianMs).toBeLessThan(60_000);
+  };
+
+  it('StatsService.overallStats + goalStats for 5 goals (in-memory repositories): median of 5 runs (< 200 ms under npm run bench)', async () => {
     const svc = memoryService();
     const times: number[] = [];
     for (let run = 0; run < 5; run++) {
@@ -139,7 +145,7 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
       times.push(performance.now() - start);
     }
     console.log(`[bench] service overallStats + 5×goalStats (in-memory repos): median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
-    expect(median(times)).toBeLessThan(200);
+    assertBench(median(times));
   });
 
   it('same calls on Dexie + fake-indexeddb (informational: includes structured-clone reads of ≈ 11 000 rows)', async () => {
@@ -156,7 +162,7 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
     expect(times.length).toBe(5);
   });
 
-  it('pure Review computation (stats + heatmap + 2 series, all goals + 5 goals) < 200 ms, median of 5 runs', { retry: 2 }, () => {
+  it('pure Review computation (stats + heatmap + 2 series, all goals + 5 goals): median of 5 runs (< 200 ms under npm run bench)', () => {
     const data: StatsData = { goals, entries };
     const times: number[] = [];
     for (let run = 0; run < 5; run++) {
@@ -170,7 +176,7 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
       times.push(performance.now() - start);
     }
     console.log(`[bench] pure review model (all + 5 goals): median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
-    expect(median(times)).toBeLessThan(200);
+    assertBench(median(times));
   });
 });
 

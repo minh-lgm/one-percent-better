@@ -55,6 +55,11 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
     await expect(page.getByTestId('curve-legend')).toContainText(EN.goal.detail.legendIdeal);
     await expect(page.getByTestId('curve-legend')).toContainText(EN.goal.detail.legendYou);
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeWhole })).toBeChecked();
+    // M5-D3: both Range segments fit their label with padding (no clipped text).
+    for (const seg of await page.locator('.seg.range span').all()) {
+      expect(await seg.evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth, pad: getComputedStyle(el).paddingLeft }))).toMatchObject({ pad: '14px' });
+      expect(await seg.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    }
 
     await expect(page.getByTestId('stat-progress')).toContainText('25.8%');
     await expect(page.getByTestId('stat-progress')).toContainText('240 of 930 min');

@@ -124,12 +124,10 @@ describe('curve edge cases', () => {
     expect(curve(g1, entries, TODAY).actual.map((p) => p.n)).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1]);
   });
 
-  it('1827-day period (maximum): 1827 ideal points, last value 1.01^1827, computed well under 50 ms', () => {
+  it('1827-day period (maximum): 1827 ideal points, last value 1.01^1827 (no wall-clock assertion: see npm run bench)', () => {
     const goal = buildGoal({ id: 'max', startDate: '2022-01-01', endDate: '2026-12-31', targetMinutes: 1 });
     expect(goal.endDate).toBe('2026-12-31');
-    const t0 = performance.now();
     const c = curve(goal, daily('max', '2022-01-01', 1500, 1), TODAY);
-    const ms = performance.now() - t0;
     expect(c.periodDays).toBe(1826);
     const wide = buildGoal({ id: 'w', startDate: '2022-01-01', endDate: '2027-01-01', targetMinutes: 1 });
     const cw = curve(wide, [], TODAY);
@@ -137,7 +135,6 @@ describe('curve edge cases', () => {
     expect(cw.ideal).toHaveLength(1827);
     expect(cw.ideal.at(-1)!.value).toBeCloseTo(Math.pow(1.01, 1827), 0);
     expect(c.daysOnTarget).toBe(1500);
-    expect(ms).toBeLessThan(200);
   });
 });
 

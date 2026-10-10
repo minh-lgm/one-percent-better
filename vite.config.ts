@@ -56,6 +56,12 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       setupFiles: ['./src/test/setup.ts'],
+      // M5-D2: component tests mount lazy routes + Recharts in jsdom; under load (many
+      // workers, cold transform cache, a second Vitest process) 5 s is not enough.
+      testTimeout: 20_000,
+      hookTimeout: 20_000,
+      // Cap the worker count: beyond ~8 jsdom workers the suite only gets slower and timing-sensitive.
+      maxWorkers: 8,
       coverage: {
         provider: 'v8',
         include: ['src/domain/**/*.ts'],

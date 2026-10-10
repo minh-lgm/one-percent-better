@@ -100,7 +100,7 @@ describe('Settings — Reminders card (M2-AC6, M2-AC11, M2-AC13)', () => {
     await waitFor(async () => expect((await tc!.container.settingsService.get()).reminderTime).toBe('07:30'));
     await waitFor(() => expect(screen.getByText('Adds a repeating daily event at 07:30.')).toBeInTheDocument());
     // One toast once the value settles (here: on blur).
-    expect(screen.getByRole('status')).toHaveTextContent('');
+    expect(screen.getByRole('status')).toHaveTextContent(''); // negative check: no toast yet
     fireEvent.blur(time);
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.reminderTime));
     expect(time).toHaveValue('07:30');
@@ -140,7 +140,7 @@ describe('Settings — Reminders card (M2-AC6, M2-AC11, M2-AC13)', () => {
     expect(text).toContain('DTSTART:20261010T073000\r\n');
     expect(text).toContain(`SUMMARY:${en.ics.summary}\r\n`);
     expect(text).toContain('RRULE:FREQ=DAILY\r\n');
-    expect(screen.getByRole('status')).toHaveTextContent(en.toast.icsDownloaded);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.icsDownloaded));
   });
 
   it.each(STATES)('vi: no English leaks in the %s permission state; time stays 20:00', async (state) => {

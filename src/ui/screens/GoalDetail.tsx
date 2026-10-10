@@ -61,14 +61,17 @@ export function GoalDetail() {
   const goals = useSubscribable(() => goalService.watchAll(), [goalService, attempt]);
   const goal = goals.data?.find((g) => g.id === id);
   const showSkeleton = useDelayed(goals.loading);
+  // While this screen deletes its own goal the live query drops it before the navigation
+  // to Goals renders; show nothing instead of a flash of "Goal not found" (M5-D1).
+  const [deleting, setDeleting] = useState(false);
 
   if (goals.error) return <ErrorState title={t('errors.loadViewTitle')} body={t('errors.loadViewBody')} actionLabel={t('common.retry')} onAction={() => setAttempt((n) => n + 1)} />;
   if (goals.loading) return showSkeleton ? <Skeleton /> : null;
-  if (!goal) return <NotFound variant="goal" />;
-  return <GoalDetailView key={goal.id} goal={goal} />;
+  if (!goal) return deleting ? null : <NotFound variant="goal" />;
+  return <GoalDetailView key={goal.id} goal={goal} onDeleting={setDeleting} />;
 }
 
-function GoalDetailView({ goal }: { goal: Goal }) {
+function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deleting: boolean) => void }) {
   const { t } = useT();
   const f = useFormat();
   const toast = useToast();
@@ -118,15 +121,19 @@ function GoalDetailView({ goal }: { goal: Goal }) {
   async function confirmDelete() {
     if (!pending) return;
     setBusy(true);
+    onDeleting(true);
+    let removed = false;
     try {
       const r = await goalService.remove(goal.id);
       if (r.ok) {
+        removed = true;
         toast.show('toast.goalDeleted');
         setPending(null);
-        void navigate('/goals');
+        void navigate('/goals', { replace: true });
       }
     } finally {
       setBusy(false);
+      if (!removed) onDeleting(false);
     }
   }
 

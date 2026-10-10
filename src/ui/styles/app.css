@@ -1524,8 +1524,12 @@ table.hist {
   padding: 0;
   min-width: 0;
 }
+.seg.range label {
+  flex: 1 1 auto;
+}
 .seg.range span {
   white-space: nowrap;
+  padding: 6px 14px;
 }
 .curve-chart {
   border-radius: var(--r-md);

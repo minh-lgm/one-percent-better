@@ -69,7 +69,7 @@ describe('Settings — Backup card (M3-AC6, AC8, AC9, AC10, AC13)', () => {
     expect(file.goals).toHaveLength(1);
     expect(file.entries).toHaveLength(3);
     expect(file.settings).toBeDefined();
-    expect(screen.getByRole('status')).toHaveTextContent(en.toast.backupExported);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.backupExported));
     await waitFor(() => expect(screen.getByTestId('last-backup')).toHaveTextContent('Last backup: 2026-10-09'));
     await waitFor(() => expect(screen.queryByTestId('backup-banner')).toBeNull());
   });
@@ -120,7 +120,7 @@ describe('Settings — Backup card (M3-AC6, AC8, AC9, AC10, AC13)', () => {
     const dialog2 = await screen.findByRole('dialog');
     await user.click(within(dialog2).getByRole('button', { name: en.import.confirm }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(screen.getByRole('status')).toHaveTextContent('Backup imported: 5 goals, 23 entries');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Backup imported: 5 goals, 23 entries'));
     expect(await tc!.container.db.goals.get('temp')).toBeUndefined();
     expect(await tc!.container.db.goals.count()).toBe(5);
     expect(await tc!.container.db.entries.count()).toBe(23);

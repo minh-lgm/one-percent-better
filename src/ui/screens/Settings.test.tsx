@@ -52,7 +52,7 @@ describe('Settings (M1-AC10, M1-AC16, M1-AC17)', () => {
     expect(document.documentElement.lang).toBe('vi');
     await waitFor(() => expect(document.title).toBe('Cài đặt — 1% Better'));
     expect(screen.getByRole('link', { name: vi.nav.today })).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent(vi.toast.languageChanged);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(vi.toast.languageChanged));
     expect(screen.getByRole('radio', { name: 'Tiếng Việt' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'Tiếng Việt' })).toHaveFocus();
     expect(screen.getByRole('radio', { name: 'English' })).toBeInTheDocument();
