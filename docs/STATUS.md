@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** DONE — pipeline hoàn tất 2026-10-10. Còn lại: user tự kiểm các mục NOT VERIFIED (docs/qc/report-final-r2.md §8), quyết định push/deploy, backlog Minor (§9)
+**Next step:** DONE — pipeline hoàn tất, đã deploy. Còn lại: user tự kiểm các mục NOT VERIFIED trên bản deploy (docs/qc/report-final-r2.md §8), backlog Minor (§9)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -17,6 +17,9 @@
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
+- App (GitHub Pages, HTTPS): https://minh-lgm.github.io/one-percent-better/
+- Repo: https://github.com/minh-lgm/one-percent-better (public, nhánh `main`)
+- CI/CD: .github/workflows/pages.yml — push lên `main` → lint, typecheck, test, build (`BASE_PATH=/one-percent-better/`) → deploy Pages; theo dõi tại https://github.com/minh-lgm/one-percent-better/actions
 - Figma: https://www.figma.com/design/DrO15cZxPcb9hp1lGSUddd (team "Minh Lgm's team"); page "Mobile 360" = màn hình, page "Components" = component sets
 
 ## Môi trường
@@ -56,7 +59,7 @@
 
 ## Tổng kết (2026-10-10)
 - 5 milestone + Final QC đều PASS. Unit 686, e2e 347, bundle 214,9 kB gzip (≤ 250). Chạy: `npm ci && npm run e2e:install && npm run check && npm run test:e2e`; dùng: `npm run build && npm run preview` → http://localhost:4173.
-- Chưa push, chưa deploy (user quyết định). NOT VERIFIED: docs/qc/report-final-r2.md §8. Backlog Minor: §9 + bảng Backlog ở trên.
+- 2026-10-11: đã push lên GitHub và deploy GitHub Pages (Settings → Pages → Source: GitHub Actions; repo đổi sang public vì Pages private cần GitHub Pro). Kiểm trên bản deploy: Today render, SW đăng ký, manifest đúng sub-path, 0 lỗi console. NOT VERIFIED: docs/qc/report-final-r2.md §8. Backlog Minor: §9 + bảng Backlog ở trên.
 
 ## Ghi chú vận hành
 - 2026-10-10 — Write tool của subagent `qc` bị harness từ chối ghi file report ("Subagents should return findings as text"). Orchestrator chép nguyên văn text QC trả về vào docs/qc/report-M1-r1.md, có ghi chú đầu file. Áp dụng tương tự cho các report sau nếu còn bị chặn.
