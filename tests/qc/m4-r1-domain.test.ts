@@ -231,8 +231,8 @@ describe('M4 QC exploratory: archived goals', () => {
     createdAt: '2026-09-30T01:00:00.000Z',
     updatedAt: '2026-09-30T01:00:00.000Z',
   };
-  // M4-D1 (open). it.fails keeps the suite green while the defect is open; remove `.fails` once fixed.
-  it.fails('an archived goal that has not started yet has no elapsed days and pace 0 (same as an upcoming one)', () => {
+  // M4-D1 (FIXED in be017d2, verified in round 2).
+  it('an archived goal that has not started yet has no elapsed days and pace 0 (same as an upcoming one)', () => {
     const today = '2026-10-09';
     const upcoming = goalStats({ ...base, archived: false }, [], 2026, today);
     const archived = goalStats(base, [], 2026, today);

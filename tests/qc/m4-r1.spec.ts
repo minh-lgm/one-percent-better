@@ -357,19 +357,20 @@ test.describe('heatmap interaction', () => {
 });
 
 test.describe('layout, a11y, i18n, dark mode', () => {
-  // M4-D2 (open): Review's <main> lacks the `wide` class, so at 1440 px the content is 640 px wide instead of
+  // M4-D2 (FIXED in be017d2, verified in round 2): Review's <main> lacks the `wide` class, so at 1440 px the content is 640 px wide instead of
   // 960 px (DESIGN 3.2 / S6, mockup 06) and about a third of the year heatmap is hidden behind a horizontal scroll.
   test('M4-D2: at 1440 px the Review column is 960 px wide and the heatmap loses at most 60 px to scrolling', async ({ page }) => {
-    test.fail();
     await page.setViewportSize({ width: 1440, height: 900 });
     await importBackup(page);
     await gotoHash(page, '/review');
+    await expect(page.getByTestId('heatmap-scroll')).toBeVisible();
+    await expect(page.getByTestId('chart-monthly').locator('svg.recharts-surface')).toBeVisible();
     const m = await page.evaluate(() => {
       const s = document.querySelector('[data-testid="heatmap-scroll"]')!;
       return { main: document.querySelector('main')!.getBoundingClientRect().width, hidden: s.scrollWidth - s.clientWidth };
     });
     expect(m.main).toBeGreaterThanOrEqual(940);
-    expect(m.hidden).toBeLessThanOrEqual(60);
+    expect(m.hidden).toBeLessThanOrEqual(2); // DESIGN: heatmap fits without scrolling on desktop (round 2: tightened from 60)
   });
 
   for (const width of [360, 768, 1440]) {
@@ -469,10 +470,8 @@ test.describe('security and robustness', () => {
     await expect(stat(page, 'stat-pace')).toContainText('4 h behind'); // 9 days x 30 = 270 expected, 30 logged -> -240
   });
 
-  // M4-D1 (open): an archived goal that starts in the future gets negative elapsed days and a huge positive pace.
-  // test.fail() keeps the suite green while the defect is open and turns red once it is fixed (then drop test.fail).
+  // M4-D1 (FIXED in be017d2, verified in round 2): an archived goal that starts in the future must not get negative elapsed days.
   test('M4-D1: archived goal that has not started yet shows "On pace" like an upcoming one', async ({ page }) => {
-    test.fail();
     const goals = [goal('a2', 'Future thing', 45, '2026-11-01', '2026-11-30', { archived: true }), goal('a3', 'Future thing live', 45, '2026-11-01', '2026-11-30')];
     await importCustom(page, goals, []);
     await gotoHash(page, '/review?goal=a3&year=2026');

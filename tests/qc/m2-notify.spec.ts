@@ -178,11 +178,17 @@ test.describe('M2 QC — notifications (full Chromium)', () => {
     await spy(page);
     await arm(page, ['Read']);
     await advanceTo(page, at('2026-10-09T20:01:00'));
-    await expect.poll(async () => (await shownNotifications(page)).length).toBe(1);
+    // Count real showNotification calls (spy); getNotifications() can return [] under load (flake seen in M4 r1).
+    await expect.poll(async () => (await calls(page)).length).toBe(1);
     await gotoHash(page, '/goals');
     const sw = await swOf(context);
     await sw.evaluate(`(async () => {
-      const [n] = await self.registration.getNotifications({ tag: 'daily-reminder' });
+      let list = [];
+      for (let i = 0; i < 50 && !list.length; i++) {
+        list = await self.registration.getNotifications({ tag: 'daily-reminder' });
+        if (!list.length) await new Promise((r) => setTimeout(r, 100));
+      }
+      const [n] = list;
       try { self.dispatchEvent(new NotificationEvent('notificationclick', { notification: n })); } catch (e) { /* waitUntil on a synthetic event */ }
     })()`);
     await expect.poll(async () => (await shownNotifications(page)).length).toBe(0);

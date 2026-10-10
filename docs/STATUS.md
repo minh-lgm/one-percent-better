@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M4 dev DONE; QC M4 r1)
-**Next step:** qc M4 round 2 (report docs/qc/report-M4-r2.md)
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; M4 PASS r2; M5 bắt đầu)
+**Next step:** developer M5 mode build → qc M5 round 1
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -33,8 +33,8 @@
 | M1 | PASS (round 2) | docs/qc/report-M1-r2.md | AC10/AC11 phần thủ công NOT VERIFIED (user tự kiểm, mục 8 report) | Dev tự kiểm: lint/typecheck/Vitest 128/build/Playwright 20 xanh trên bản sao sạch; AC10/AC11 phần thủ công NOT VERIFIED |
 | M2 | PASS (round 3) | docs/qc/report-M2-r3.md | AC8/9/11 phần thủ công NOT VERIFIED (notification thật, import .ics, popup quyền) | AC8/9/11 phần thủ công NOT VERIFIED |
 | M3 | PASS (round 1) | docs/qc/report-M3-r1.md | 4 Minor → backlog; dispute test QC đã re-target; dialog file thật NOT VERIFIED |
-| M4 | DOING — fix r1 DONE (commit be017d2), chờ QC r2 | docs/qc/report-M4-r1.md | bundle 218,8 kB gzip; Recharts lazy |
-| M5 | TODO | | |
+| M4 | PASS (round 2) | docs/qc/report-M4-r2.md | Firefox/Safari/iOS, screen reader, bản dịch vi NOT VERIFIED | bundle 218,8 kB gzip; Recharts lazy |
+| M5 | DOING — developer build | | |
 | Final QC | TODO | | |
 
 ## Backlog (defect Minor, đề xuất chưa làm)
@@ -49,6 +49,8 @@
 | M3-D3 | Import chấp nhận goal targetMinutes 600000, khoảng 100 năm, entry tương lai (app từ chối khi tạo tay) | QC M3 r1 |
 | M3-D4 | Tab thua cuộc đua Save hai tab: dialog Stop còn mở, tóm tắt thiếu tên goal | QC M3 r1 |
 | M3-P1 | `exportBackup` thiếu catch; thêm assertion E2E cho dòng why | QC M3 r1 |
+| M4-D5 | Vitest chạy 2 process song song có test chạm timeout 5 s (Review/Day/Heatmap 2–3 s); chạy tuần tự ổn định | QC M4 r2 |
+| M4-P1 | DESIGN §6 nói heatmap vừa ở ≥1024 px nhưng 1024–1191 px vẫn cuộn trong hộp (sidebar 232 px) — designer sửa câu chữ; nhãn giá trị trên cột chart chưa có | QC M4 r1/r2 |
 | M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
 ## Ghi chú vận hành
