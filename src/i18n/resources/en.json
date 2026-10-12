@@ -328,7 +328,9 @@
       "syncedInfo": "Synced with this account: goals, entries, reminder settings and language. A running timer stays on the device where you started it.",
       "syncNow": "Sync now",
       "offlineSync": "You're offline. Changes are saved on this device and sync when you're back online.",
-      "nextRetry": "Trying again at {{time}}."
+      "nextRetry": "Trying again at {{time}}.",
+      "localRejected_one": "1 item on this device couldn't be uploaded to your account and stays only here. Export a backup to keep a copy; everything else is synced.",
+      "localRejected_other": "{{count}} items on this device couldn't be uploaded to your account and stay only here. Export a backup to keep a copy; everything else is synced."
     },
     "reminders": {
       "title": "Reminders",
@@ -363,7 +365,8 @@
       "import": "Import backup…",
       "importHint": "Importing replaces everything currently on this device.",
       "descSignedIn": "Your data is saved on this device and synced to your account. A backup file is an extra copy you keep yourself.",
-      "importHintSignedIn": "Importing replaces everything on this device and in your account."
+      "importHintSignedIn": "Importing replaces everything on this device and in your account.",
+      "descSignedOut": "Your data lives on this device. Sign in to keep a copy in your account too, or export a backup file now and then."
     },
     "storage": {
       "title": "Storage",
@@ -373,7 +376,8 @@
       "unknown": "Unknown",
       "protectedDesc": "Your browser won't clear this data automatically.",
       "notProtectedDesc": "Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.",
-      "unknownDesc": "Your browser doesn't report storage protection. Export a backup now and then."
+      "unknownDesc": "Your browser doesn't report storage protection. Export a backup now and then.",
+      "notProtectedSignIn": "Signing in also keeps a copy of your data in your account."
     },
     "about": {
       "title": "About",
@@ -543,7 +547,12 @@
       "unsyncedOffline": "You're offline, so they can't sync right now. If you keep the data on this device, they'll sync when you sign in again with this account.",
       "unsyncedRemove": "If you remove the data from this device, these changes will be lost.",
       "syncFailed": "Couldn't sync your changes. If you remove the data now, they will be lost.",
-      "removeAnyway": "Remove anyway"
+      "removeAnyway": "Remove anyway",
+      "rejected_one": "1 item on this device couldn't be uploaded to your account.",
+      "rejected_other": "{{count}} items on this device couldn't be uploaded to your account.",
+      "rejectedKeep": "It stays on this device if you keep the data here. Export a backup to keep a copy.",
+      "rejectedRemove": "If you remove the data from this device, these items will be lost. Export a backup first to keep them.",
+      "removeDescRejected": "Deletes your goals, entries and reminder settings on this device. Choose this on a shared device. Items that couldn't be uploaded are not in your account."
     },
     "merge": {
       "title": "Add this device's data to your account?",
@@ -576,5 +585,16 @@
       "error": "Sync failed. Your changes are safe on this device and will be retried.",
       "expired": "Your sign-in expired. Sign in again to keep syncing."
     }
+  },
+  "loginPrompt": {
+    "label": "Sign-in suggestion",
+    "title": "Keep your progress safe",
+    "body": "Sign in to back up your goals and entries online and use them on all your devices. It's optional.",
+    "notNow": "Not now",
+    "snoozedToast": "OK. You can sign in any time from Settings."
+  },
+  "exportHint": {
+    "label": "Automatic backup",
+    "text": "Backup downloaded. To keep a copy automatically, sign in with Google: your goals and entries then sync to your account."
   }
 }

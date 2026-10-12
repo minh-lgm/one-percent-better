@@ -243,7 +243,9 @@ test.describe('M7-D1 a row the cloud refuses must not freeze sync (poison pill)'
     await signInAsMinh(page);
     await expectSyncState(page, 'synced', 20_000);
     await expect.poll(() => pendingCount(page)).toBe(0);
-    await expect(page.getByTestId('remote-invalid')).toContainText(EN.errors.SYNC_REMOTE_INVALID);
+    // M8 (M7-P1): rows refused by the cloud get their own wording (goal + its entry = 2 items on this device).
+    await expect(page.getByTestId('remote-invalid')).toContainText(EN.settings.account.localRejected_other.replace('{{count}}', '2'));
+    await expect(page.getByTestId('remote-invalid')).toHaveAttribute('data-reason', 'local');
     await expect(page.getByTestId('sync-error')).toHaveCount(0);
     const live = await mock.liveRows('u1');
     expect(live.goals.map((g) => g.id).sort()).toEqual(['g1', 'g2', 'g3', 'g4', 'g5']);

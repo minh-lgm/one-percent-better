@@ -5,6 +5,7 @@ import { backupReminder } from '../../domain/backup';
 import { addDays, toISODate } from '../../domain/dates';
 import { minutesByGoal } from '../../domain/entry';
 import { activeGoals, byCreatedAt, dailyTarget } from '../../domain/goal';
+import { shouldShowLoginPrompt } from '../../domain/login-prompt';
 import { newlyMetGoals } from '../../domain/plusone';
 import { reminderData, shouldShowBanner, type GoalProgress } from '../../domain/reminder';
 import type { TimerPreview } from '../../domain/timer';
@@ -16,6 +17,7 @@ import { EmptyState } from '../components/EmptyState';
 import type { EntryFormValues, EntrySubmitResult } from '../components/EntryForm';
 import { ErrorState } from '../components/ErrorState';
 import { GoalCard, type GoalTimerState, type StartTimerResult } from '../components/GoalCard';
+import { LoginPromptBanner } from '../components/LoginPromptBanner';
 import { PageHeader } from '../components/PageHeader';
 import { ReminderBanner } from '../components/ReminderBanner';
 import { Skeleton } from '../components/Skeleton';
@@ -24,6 +26,7 @@ import { TimerCard } from '../components/TimerCard';
 import { useDelayed } from '../hooks/useDelayed';
 import { useFormat } from '../hooks/useFormat';
 import { useNow } from '../hooks/useNow';
+import { useOnline } from '../hooks/useOnline';
 import { useServices } from '../hooks/useServices';
 import { useSubscribable } from '../hooks/useSubscribable';
 import { useT } from '../hooks/useT';
@@ -49,9 +52,10 @@ export function Today() {
   const { t } = useT();
   const f = useFormat();
   const toast = useToast();
-  const { goalService, entryService, timerService, settingsService, statsService } = useServices();
+  const { goalService, entryService, timerService, settingsService, statsService, authService, loginPromptService } = useServices();
   const now = useNow();
   const today = toISODate(now);
+  const online = useOnline();
 
   const [attempt, setAttempt] = useState(0);
   const goals = useSubscribable(() => goalService.watchAll(), [goalService, attempt]);
@@ -60,6 +64,12 @@ export function Today() {
   const entries = useSubscribable(() => entryService.watchByDateRange(today, today), [entryService, today, attempt]);
   const timer = useSubscribable(() => timerService.watch(), [timerService, attempt]);
   const settings = useSubscribable(() => settingsService.watch(), [settingsService, attempt]);
+  // Sign-in suggestion (FR-52, M8): account state + data facts + the device-only kv row.
+  const auth = useSubscribable(() => authService.watch(), [authService]);
+  const authKind = (auth.data ?? authService.state()).kind;
+  const promptData = useSubscribable(() => loginPromptService.watchData(), [loginPromptService, attempt]);
+  const promptState = useSubscribable(() => loginPromptService.watchState(), [loginPromptService, attempt]);
+  const [bannerSignIn, setBannerSignIn] = useState(false);
   const loading = goals.loading || entries.loading || timer.loading || settings.loading;
   const loadError = goals.error || entries.error || timer.error || settings.error;
   const showSkeleton = useDelayed(loading);
@@ -130,6 +140,38 @@ export function Today() {
   const progress: GoalProgress[] = active.map((g) => ({ id: g.id, name: g.name, current: byGoal.get(g.id) ?? 0, target: dailyTarget(g) }));
   const banner = settings.data && shouldShowBanner(now, settings.data, progress) ? reminderData(progress) : null;
   const backup = settings.data ? backupReminder(settings.data.lastBackupAt, allGoals.length, now) : null;
+  // LoginPromptBanner wins over BackupBanner (DESIGN S1): never two banners about keeping data.
+  const showLoginPrompt =
+    !!promptData.data &&
+    !!promptState.data &&
+    shouldShowLoginPrompt({ now, auth: authKind, online, firstDataAt: promptData.data.firstDataAt, entryCount: promptData.data.entryCount, state: promptState.data });
+  // After "Sign in with Google" on the banner the state is `signing-in` (no longer `signed-out`): keep the
+  // banner, busy, until the redirect happens instead of letting it vanish under the pointer (DESIGN S1).
+  const signingInFromBanner = authKind === 'signing-in' && bannerSignIn;
+  const keepDataBanner = showLoginPrompt || signingInFromBanner ? (
+    <LoginPromptBanner onSignIn={() => void signInFromBanner()} onNotNow={() => void notNow()} busy={signingInFromBanner} />
+  ) : backup ? (
+    <BackupBanner reminder={backup} withAction />
+  ) : null;
+
+  async function signInFromBanner() {
+    setBannerSignIn(true);
+    const r = await authService.signIn('#/today');
+    if (!r.ok) setBannerSignIn(false);
+  }
+
+  async function notNow() {
+    try {
+      await loginPromptService.dismiss(new Date());
+    } catch {
+      // Storage trouble: the banner simply stays; nothing else to do here.
+      return;
+    }
+    toast.show('loginPrompt.snoozedToast');
+    // The focused "Not now" button is gone with the banner: focus the page heading (DESIGN 8.1).
+    focusHeading();
+  }
+
   const pastDayLink = (
     <p className="past-day">
       <Link to={`/day/${addDays(today, -1)}`}>{t('today.pastDayLink')}</Link>
@@ -243,7 +285,7 @@ export function Today() {
         <EmptyState title={t('empty.today.noGoals')} body={t('empty.today.noGoalsBody')} actionLabel={t('empty.today.noGoalsAction')} actionTo="/goals/new" />
       ) : active.length === 0 && !timerRunning ? (
         <>
-          {backup ? <BackupBanner reminder={backup} withAction /> : null}
+          {keepDataBanner}
           <EmptyState title={t('empty.today.noActive')} body={t('empty.today.noActiveBody')} actionLabel={t('empty.today.noActiveAction')} actionTo="/goals" />
           {pastDayLink}
         </>
@@ -255,7 +297,7 @@ export function Today() {
             </p>
           ) : null}
           {banner ? <ReminderBanner count={banner.count} time={settings.data?.reminderTime ?? ''} /> : null}
-          {backup ? <BackupBanner reminder={backup} withAction /> : null}
+          {keepDataBanner}
           {timerAlert ? <Alert>{t(`errors.${timerAlert}`)}</Alert> : null}
           {activeTimer && timerGoal ? <TimerCard goal={timerGoal} startedAt={activeTimer.startedAt} onStop={(opener) => void openStop(opener)} /> : null}
           <ul className="stack" aria-label={t('today.goalsLabel')}>

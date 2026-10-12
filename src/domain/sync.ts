@@ -13,8 +13,12 @@ export interface SyncStatus {
   lastSyncedAt: ISODateTime | null;
   error?: SyncErrorCode;
   nextRetryAt?: ISODateTime;
-  /** Rows from the account were skipped as invalid during the last cycle (DESIGN A9). */
+  /** Something was skipped during the last cycle: rows from the account that failed validation and/or rows the cloud refused (DESIGN A9). */
   remoteInvalid?: boolean;
+  /** Rows coming from the account failed validation and were skipped (the "couldn't be read" wording). */
+  remoteSkipped?: boolean;
+  /** Rows on this device the cloud refused (`dirty = 2`): kept locally, exported, not in the account (M7-D1/D5). */
+  rejected?: number;
 }
 
 /** Epoch milliseconds of an ISO timestamp; `NaN` when unparsable. */

@@ -1,6 +1,15 @@
 import { INTL_TAG, type Locale, type Translator } from './types';
 
-export type CountKey = 'format.goalsCount' | 'format.entriesCount' | 'format.daysCount' | 'format.changesCount' | 'sync.indicator.waiting' | 'sync.indicator.offline' | 'auth.signOut.unsynced';
+export type CountKey =
+  | 'format.goalsCount'
+  | 'format.entriesCount'
+  | 'format.daysCount'
+  | 'format.changesCount'
+  | 'sync.indicator.waiting'
+  | 'sync.indicator.offline'
+  | 'auth.signOut.unsynced'
+  | 'auth.signOut.rejected'
+  | 'settings.account.localRejected';
 
 export interface Formatters {
   readonly locale: Locale;

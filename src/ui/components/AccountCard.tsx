@@ -111,9 +111,15 @@ export function AccountCard({ auth, online, sync = null, onSignIn, onSignOut, on
           </div>
         </dl>
         {status.remoteInvalid ? (
-          <p className="hint info-line" data-testid="remote-invalid">
+          // One info line (DESIGN A9) whose wording tells the two cases apart (M7-P1): rows the cloud refused
+          // live only on this device (export!), rows from the account that failed validation were skipped.
+          <p className="hint info-line" data-testid="remote-invalid" data-reason={status.rejected ? (status.remoteSkipped ? 'both' : 'local') : 'remote'}>
             <Icon name="info" />
-            <span>{t('errors.SYNC_REMOTE_INVALID')}</span>
+            <span>
+              {status.rejected ? f.count('settings.account.localRejected', status.rejected) : null}
+              {status.rejected && status.remoteSkipped ? ' ' : null}
+              {!status.rejected || status.remoteSkipped ? t('errors.SYNC_REMOTE_INVALID') : null}
+            </span>
           </p>
         ) : null}
         <p className="hint">{t('settings.account.syncedInfo')}</p>

@@ -2052,3 +2052,82 @@ dialog.dialog.merge .merge-body {
 dialog.dialog.merge .hint {
   margin-top: 8px;
 }
+
+/* ---- M8: LoginPromptBanner (tone promo), ExportSignInHint, Storage -> Go to Account ---- */
+.banner.promo {
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+  border: 0;
+  margin-bottom: 16px;
+}
+.banner.promo .stack-t {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.banner.promo .title {
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 22px;
+}
+.banner.promo p {
+  margin: 0;
+  color: inherit;
+}
+.banner.promo .btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 4px;
+}
+.banner.promo .btn.ghost {
+  color: var(--on-primary-soft);
+}
+/* Below 640 px the icon sits inline with the title so the body keeps the full width (DESIGN 3.5). */
+@media (max-width: 639px) {
+  .banner.promo {
+    display: block;
+  }
+  .banner.promo > .ic {
+    float: left;
+    margin: 1px 8px 0 0;
+  }
+  .banner.promo .btn-row {
+    clear: both;
+  }
+}
+.export-hint {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.export-hint .text {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  color: var(--text);
+}
+.export-hint .text .ic {
+  flex: none;
+  margin-top: 2px;
+  color: var(--primary);
+}
+.export-hint .gbtn {
+  align-self: flex-start;
+}
+@media (max-width: 639px) {
+  .export-hint .gbtn {
+    align-self: stretch;
+  }
+}
+.export-hint .hint {
+  margin: 0;
+}

@@ -319,7 +319,8 @@
       "syncedInfo": "Được đồng bộ với tài khoản này: mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ. Bộ đếm giờ đang chạy chỉ nằm trên thiết bị bạn bắt đầu.",
       "syncNow": "Đồng bộ ngay",
       "offlineSync": "Bạn đang ngoại tuyến. Thay đổi được lưu trên thiết bị này và sẽ đồng bộ khi có mạng trở lại.",
-      "nextRetry": "Sẽ thử lại lúc {{time}}."
+      "nextRetry": "Sẽ thử lại lúc {{time}}.",
+      "localRejected_other": "{{count}} mục trên thiết bị này không tải lên được tài khoản của bạn nên chỉ còn ở đây. Hãy xuất bản sao lưu để giữ một bản sao; mọi thứ còn lại đã được đồng bộ."
     },
     "reminders": {
       "title": "Nhắc nhở",
@@ -354,7 +355,8 @@
       "import": "Nhập sao lưu…",
       "importHint": "Nhập sao lưu sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này.",
       "descSignedIn": "Dữ liệu của bạn được lưu trên thiết bị này và đồng bộ vào tài khoản. Tệp sao lưu là một bản sao bạn tự giữ.",
-      "importHintSignedIn": "Nhập sao lưu sẽ thay thế toàn bộ dữ liệu trên thiết bị này và trong tài khoản của bạn."
+      "importHintSignedIn": "Nhập sao lưu sẽ thay thế toàn bộ dữ liệu trên thiết bị này và trong tài khoản của bạn.",
+      "descSignedOut": "Dữ liệu của bạn nằm trên thiết bị này. Hãy đăng nhập để có thêm một bản sao trong tài khoản, hoặc thỉnh thoảng xuất tệp sao lưu."
     },
     "storage": {
       "title": "Bộ nhớ",
@@ -364,7 +366,8 @@
       "unknown": "Không rõ",
       "protectedDesc": "Trình duyệt sẽ không tự động xóa dữ liệu này.",
       "notProtectedDesc": "Trình duyệt có thể xóa dữ liệu này khi thiết bị sắp hết dung lượng. Hãy cài app (menu trình duyệt → Cài đặt ứng dụng, hoặc Thêm vào Màn hình chính) và thỉnh thoảng xuất bản sao lưu.",
-      "unknownDesc": "Trình duyệt không cho biết dữ liệu có được bảo vệ hay không. Hãy thỉnh thoảng xuất bản sao lưu."
+      "unknownDesc": "Trình duyệt không cho biết dữ liệu có được bảo vệ hay không. Hãy thỉnh thoảng xuất bản sao lưu.",
+      "notProtectedSignIn": "Đăng nhập cũng giúp giữ một bản sao dữ liệu trong tài khoản của bạn."
     },
     "about": {
       "title": "Giới thiệu",
@@ -531,7 +534,11 @@
       "unsyncedOffline": "Bạn đang ngoại tuyến nên chưa đồng bộ được. Nếu giữ dữ liệu trên thiết bị này, các thay đổi sẽ được đồng bộ khi bạn đăng nhập lại bằng tài khoản này.",
       "unsyncedRemove": "Nếu xóa dữ liệu khỏi thiết bị này, các thay đổi đó sẽ mất.",
       "syncFailed": "Không đồng bộ được các thay đổi của bạn. Nếu xóa dữ liệu bây giờ, chúng sẽ mất.",
-      "removeAnyway": "Vẫn xóa"
+      "removeAnyway": "Vẫn xóa",
+      "rejected_other": "{{count}} mục trên thiết bị này không tải lên được tài khoản của bạn.",
+      "rejectedKeep": "Chúng vẫn nằm trên thiết bị này nếu bạn giữ dữ liệu ở đây. Hãy xuất bản sao lưu để giữ một bản sao.",
+      "rejectedRemove": "Nếu xóa dữ liệu khỏi thiết bị này, các mục đó sẽ mất. Hãy xuất bản sao lưu trước để giữ chúng.",
+      "removeDescRejected": "Xóa mục tiêu, lần ghi và cài đặt nhắc nhở trên thiết bị này. Hãy chọn khi dùng máy chung. Các mục không tải lên được không có trong tài khoản của bạn."
     },
     "merge": {
       "title": "Thêm dữ liệu trên thiết bị này vào tài khoản của bạn?",
@@ -562,5 +569,16 @@
       "error": "Đồng bộ không thành công. Thay đổi của bạn vẫn an toàn trên thiết bị này và sẽ được thử lại.",
       "expired": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục đồng bộ."
     }
+  },
+  "loginPrompt": {
+    "label": "Gợi ý đăng nhập",
+    "title": "Giữ tiến trình của bạn an toàn",
+    "body": "Đăng nhập để sao lưu mục tiêu và lần ghi lên tài khoản và dùng trên mọi thiết bị. Việc này không bắt buộc.",
+    "notNow": "Để sau",
+    "snoozedToast": "Được rồi. Bạn có thể đăng nhập bất cứ lúc nào trong Cài đặt."
+  },
+  "exportHint": {
+    "label": "Sao lưu tự động",
+    "text": "Đã tải bản sao lưu. Để có thêm một bản sao tự động, hãy đăng nhập bằng Google: mục tiêu và lần ghi của bạn sẽ được đồng bộ vào tài khoản."
   }
 }

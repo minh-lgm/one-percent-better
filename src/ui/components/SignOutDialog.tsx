@@ -19,6 +19,8 @@ export interface SignOutDialogProps {
   writeFailed?: boolean;
   /** M7: changes not yet in the account (FR-41 warning block). */
   pending?: number;
+  /** M7-D5: rows the cloud refused (`dirty = 2`); they exist only on this device, so "Remove" loses them. */
+  rejected?: number;
   online?: boolean;
   /** M7: the final sync could not push everything while "Remove" was selected (OQ-D10). */
   syncFailed?: boolean;
@@ -32,7 +34,7 @@ type Choice = 'keep' | 'remove';
  * D4 — "Sign out?" (DESIGN S7, 8.1). Native `<dialog>` + showModal(); the safe
  * default (Keep) is selected and focused; Esc/Cancel close without doing anything.
  */
-export function SignOutDialog({ open, busy = false, writeFailed = false, pending = 0, online = true, syncFailed = false, onConfirm, onCancel }: SignOutDialogProps) {
+export function SignOutDialog({ open, busy = false, writeFailed = false, pending = 0, rejected = 0, online = true, syncFailed = false, onConfirm, onCancel }: SignOutDialogProps) {
   const { t } = useT();
   const f = useFormat();
   const id = useId();
@@ -64,8 +66,10 @@ export function SignOutDialog({ open, busy = false, writeFailed = false, pending
   }, [onCancel, busy]);
 
   const remove = choice === 'remove';
-  const unsynced = pending > 0;
+  // Anything that is not in the account: changes waiting to sync, and rows the cloud refused (M7-D5).
+  const unsynced = pending > 0 || rejected > 0;
   const removeAnyway = syncFailed && remove;
+  const removeNote = remove && unsynced ? [pending > 0 ? t('auth.signOut.unsyncedRemove') : null, rejected > 0 ? t('auth.signOut.rejectedRemove') : null].filter(Boolean).join(' ') : '';
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -81,11 +85,21 @@ export function SignOutDialog({ open, busy = false, writeFailed = false, pending
           <h2 id={`${id}-title`}>{t('auth.signOut.title')}</h2>
           <p id={`${id}-body`}>{t('auth.signOut.body')}</p>
           {unsynced ? (
-            <div className="alert info unsynced" id={`${id}-unsynced`} data-testid="unsynced-warning">
+            <div className="alert info unsynced" id={`${id}-unsynced`} data-testid="unsynced-warning" data-pending={pending} data-rejected={rejected}>
               <Icon name="info" />
               <div className="stack-t">
-                <p>{f.count('auth.signOut.unsynced', pending)}</p>
-                <p>{online ? t('auth.signOut.unsyncedOnline') : t('auth.signOut.unsyncedOffline')}</p>
+                {pending > 0 ? (
+                  <>
+                    <p>{f.count('auth.signOut.unsynced', pending)}</p>
+                    <p>{online ? t('auth.signOut.unsyncedOnline') : t('auth.signOut.unsyncedOffline')}</p>
+                  </>
+                ) : null}
+                {rejected > 0 ? (
+                  <>
+                    <p data-testid="rejected-warning">{f.count('auth.signOut.rejected', rejected)}</p>
+                    <p>{t('auth.signOut.rejectedKeep')}</p>
+                  </>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -106,14 +120,14 @@ export function SignOutDialog({ open, busy = false, writeFailed = false, pending
               <span className="l">
                 <strong id={`${id}-remove-label`}>{t('auth.signOut.remove')}</strong>
                 <span className="d" id={`${id}-remove-desc`}>
-                  {t('auth.signOut.removeDesc')}
+                  {rejected > 0 ? t('auth.signOut.removeDescRejected') : t('auth.signOut.removeDesc')}
                 </span>
               </span>
             </label>
           </fieldset>
           {/* Always in the DOM (DESIGN 8.1): content appearing inside a live region is announced. */}
-          <div role="status" className={remove && unsynced ? 'remove-note' : 'sr-only'} data-testid="unsynced-remove">
-            {remove && unsynced ? t('auth.signOut.unsyncedRemove') : ''}
+          <div role="status" className={removeNote ? 'remove-note' : 'sr-only'} data-testid="unsynced-remove">
+            {removeNote}
           </div>
           {syncFailed ? <Alert>{t('auth.signOut.syncFailed')}</Alert> : null}
           {writeFailed ? <Alert>{t(WRITE_FAILED_KEY)}</Alert> : null}

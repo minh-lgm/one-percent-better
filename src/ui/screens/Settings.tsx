@@ -16,6 +16,7 @@ import { BackupBanner } from '../components/BackupBanner';
 import { Badge, type BadgeTone } from '../components/Badge';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ExportSignInHint } from '../components/ExportSignInHint';
 import { Icon } from '../components/Icon';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/PageHeader';
@@ -67,7 +68,7 @@ export function Settings() {
   const toast = useToast();
   const id = useId();
   const now = useNow();
-  const { storagePersistence, settingsService, notifications, backupService, goalService, authService, syncService } = useServices();
+  const { storagePersistence, settingsService, notifications, backupService, goalService, authService, syncService, loginPromptService } = useServices();
   const online = useOnline();
   const auth = useSubscribable(() => authService.watch(), [authService]);
   const authState = auth.data ?? authService.state();
@@ -88,6 +89,10 @@ export function Settings() {
   const [signOutBusy, setSignOutBusy] = useState(false);
   const [signOutWriteFailed, setSignOutWriteFailed] = useState(false);
   const [signOutSyncFailed, setSignOutSyncFailed] = useState(false);
+  // Rows the cloud refused (`dirty = 2`), read when D4 opens: they exist only on this device (M7-D5).
+  const [signOutRejected, setSignOutRejected] = useState(0);
+  // ExportSignInHint (FR-53): shown after a successful export when the 30-day slot was claimed.
+  const [exportHint, setExportHint] = useState(false);
   const [persist, setPersist] = useState<PersistState | null>(null);
   const [permission, setPermission] = useState<NotificationPermissionState>(() => notifications.permission());
   const settings = useSubscribable(() => settingsService.watch(), [settingsService]);
@@ -145,9 +150,12 @@ export function Settings() {
     if (busy) return;
     setBusy('export');
     try {
-      const { fileName, json } = await backupService.export(new Date());
+      const now = new Date();
+      const { fileName, json } = await backupService.export(now);
       downloadTextFile(fileName, json, BACKUP_MIME_TYPE);
       toast.show('toast.backupExported');
+      // FR-53: at most one hint per 30 days, claimed atomically, only while signed out and online (OQ-D12).
+      if (await loginPromptService.claimExportHint(now, { auth: authState.kind, online })) setExportHint(true);
     } finally {
       setBusy(null);
     }
@@ -254,7 +262,16 @@ export function Settings() {
   function openSignOut() {
     setSignOutWriteFailed(false);
     setSignOutSyncFailed(false);
+    setSignOutRejected(sync?.rejected ?? 0);
     setSignOutOpen(true);
+    // Fresh count (the status only knows the last cycle); a failed read just keeps the last known value.
+    if (syncService) void syncService.countRejected().then(setSignOutRejected, () => undefined);
+  }
+
+  /** Storage card → "Go to Account": scroll to the card and focus its Google button (DESIGN 8.1; no hash). */
+  function goToAccount() {
+    accountHeading.current?.scrollIntoView?.({ block: 'start' });
+    signInButton.current?.focus();
   }
 
   function cancelSignOut() {
@@ -291,7 +308,10 @@ export function Settings() {
   }
 
   const aboutDesc = signedIn ? t('settings.about.descSignedIn') : cloudOn ? t('settings.about.descCloud') : t('settings.about.desc');
-  const backupDesc = signedIn ? t('settings.backup.descSignedIn') : t('settings.backup.desc');
+  // Copy by account state (DESIGN S7 table; `expired` counts as signed out, A-D27).
+  const backupDesc = signedIn ? t('settings.backup.descSignedIn') : cloudOn ? t('settings.backup.descSignedOut') : t('settings.backup.desc');
+  const showExportHint = exportHint && cloudOn && authState.kind !== 'signed-in';
+  const storageSignIn = cloudOn && !signedIn && persist === 'not-persisted';
 
   function downloadIcs() {
     const now = new Date();
@@ -416,6 +436,7 @@ export function Settings() {
           <p className="hint" data-testid="import-hint">
             {signedIn ? t('settings.backup.importHintSignedIn') : t('settings.backup.importHint')}
           </p>
+          {showExportHint ? <ExportSignInHint onSignIn={signIn} online={online} busy={authState.kind === 'signing-in'} /> : null}
           {importErrorText ? <Alert>{importErrorText}</Alert> : null}
         </section>
 
@@ -429,7 +450,19 @@ export function Settings() {
               </Badge>
             ) : null}
           </div>
-          {storage ? <p className="hint">{t(storage.desc)}</p> : null}
+          {storage ? (
+            <p className="hint" data-testid="storage-desc">
+              {t(storage.desc)}
+              {storageSignIn ? <> {t('settings.storage.notProtectedSignIn')}</> : null}
+            </p>
+          ) : null}
+          {storageSignIn ? (
+            <div className="btn-row">
+              <Button variant="secondary" onClick={goToAccount} data-testid="storage-go-to-account">
+                {t('settings.account.goTo')}
+              </Button>
+            </div>
+          ) : null}
         </section>
 
         <section className="card" aria-labelledby="h-about">
@@ -463,6 +496,7 @@ export function Settings() {
           writeFailed={signOutWriteFailed}
           syncFailed={signOutSyncFailed}
           pending={signedIn ? (sync?.pending ?? 0) : 0}
+          rejected={signedIn ? signOutRejected : 0}
           online={online}
           onConfirm={(c) => void confirmSignOut(c)}
           onCancel={cancelSignOut}

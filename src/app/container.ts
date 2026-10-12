@@ -27,6 +27,7 @@ import { EntryService } from '../services/entry-service';
 import { GoalService, defaultIdGenerator } from '../services/goal-service';
 import { LocaleService } from '../services/locale-service';
 import type { LockPort } from '../services/lock-port';
+import { LoginPromptService } from '../services/login-prompt-service';
 import type { NotificationPort } from '../services/notification-port';
 import { ReminderService } from '../services/reminder-service';
 import type { RemoteStore } from '../services/remote-store';
@@ -58,6 +59,8 @@ export interface AppContainer {
   authService: AuthService;
   /** Background sync (M7). `null` when the build has no cloud configuration. */
   syncService: SyncService | null;
+  /** Login prompts (M8). Always present; its rules return `false` while `authService` is `unavailable`. */
+  loginPromptService: LoginPromptService;
   connectivity: Connectivity;
   notifications: NotificationPort;
   locale: LocaleControl;
@@ -180,6 +183,7 @@ export async function createContainer({
     statsService: new StatsService(goalRepo, entryRepo),
     authService,
     syncService,
+    loginPromptService: new LoginPromptService(kvRepo, goalRepo, entryRepo),
     connectivity,
     notifications,
     locale: {

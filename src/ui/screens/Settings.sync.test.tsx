@@ -50,7 +50,8 @@ describe('Settings — signed-in copy (M7-AC15, DESIGN S7)', () => {
     await renderApp({ route: '/settings', container: tc });
     expect(screen.queryByTestId('language-sync-note')).toBeNull();
     expect(screen.queryByTestId('reminders-sync-note')).toBeNull();
-    expect(screen.getByTestId('backup-desc')).toHaveTextContent(en.settings.backup.desc);
+    // M8 (DESIGN S7 table): cloud on + signed out → `descSignedOut`; the phase-1 `desc` is for cloud off only.
+    expect(screen.getByTestId('backup-desc')).toHaveTextContent(en.settings.backup.descSignedOut);
     expect(screen.getByTestId('import-hint')).toHaveTextContent(en.settings.backup.importHint);
     expect(screen.queryByTestId('status-row')).toBeNull();
     expect(screen.queryByTestId('sync-indicator')).toBeNull();

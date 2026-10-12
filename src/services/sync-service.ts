@@ -91,6 +91,8 @@ export class SyncService {
   private running: Promise<SyncOutcome> | null = null;
   private rerun = false;
   private failures = 0;
+  /** Rows the cloud refused during the current cycle (M7-D5: told apart from rows skipped on pull). */
+  private cycleRejected = 0;
   private retryTimer: unknown = null;
   private started = false;
   private stopPending: (() => void) | null = null;
@@ -281,7 +283,12 @@ export class SyncService {
     if ((await this.deps.kv.get<unknown>('sync')) != null) {
       await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null }));
     }
-    this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined, remoteInvalid: undefined, lastSyncedAt: null });
+    this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined, remoteInvalid: undefined, remoteSkipped: undefined, rejected: undefined, lastSyncedAt: null });
+  }
+
+  /** Rows on this device the cloud refused (`dirty = 2`), read fresh (D4 warns about them, M7-D5). */
+  countRejected(): Promise<number> {
+    return this.deps.local.countRejected();
   }
 
   /** Session expired (FR-40): keep everything, stop retrying. */
@@ -341,7 +348,16 @@ export class SyncService {
         this.failures = 0;
         await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), lastSyncedAt: now, lastError: null }));
         const rejected = await this.deps.local.countRejected();
-        this.set({ kind: 'idle', lastSyncedAt: now, error: undefined, nextRetryAt: undefined, remoteInvalid: skippedInvalid > 0 || rejected > 0 ? true : undefined, pending: await this.deps.local.countDirty() });
+        this.set({
+          kind: 'idle',
+          lastSyncedAt: now,
+          error: undefined,
+          nextRetryAt: undefined,
+          remoteInvalid: skippedInvalid > 0 || rejected > 0 ? true : undefined,
+          remoteSkipped: skippedInvalid - this.cycleRejected > 0 ? true : undefined,
+          rejected: rejected > 0 ? rejected : undefined,
+          pending: await this.deps.local.countDirty(),
+        });
         return { status: 'ran', ok: true } as const;
       } catch (e) {
         if (e instanceof SyncAborted) {
@@ -369,6 +385,7 @@ export class SyncService {
   private async cycle(run: CycleContext): Promise<number> {
     const remote = await this.getRemote();
     let skippedInvalid = 0;
+    this.cycleRejected = 0;
 
     // 1. Push, then read the canonical rows back (ADR-21: the device learns when it lost).
     skippedInvalid += await this.pushPhase(remote, run);
@@ -433,6 +450,7 @@ export class SyncService {
       this.checkpoint(run);
       if (rejectedCount(pushed) > 0) {
         skippedInvalid += rejectedCount(pushed);
+        this.cycleRejected += rejectedCount(pushed);
         await this.deps.local.markRejected(pushed.rejected);
       }
       const rejectedGoals = new Set(pushed.rejected.goals);
@@ -525,7 +543,7 @@ export class SyncService {
   private set(patch: Partial<SyncStatus>): void {
     const next: SyncStatus = { ...this.status, ...patch };
     // Drop undefined optionals so equality checks and tests see a clean object.
-    for (const key of ['error', 'nextRetryAt', 'remoteInvalid'] as const) if (next[key] === undefined) delete next[key];
+    for (const key of ['error', 'nextRetryAt', 'remoteInvalid', 'remoteSkipped', 'rejected'] as const) if (next[key] === undefined) delete next[key];
     this.status = next;
     this.listeners.forEach((l) => l(next));
   }
