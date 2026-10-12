@@ -17,7 +17,7 @@
 - 2026-10-12 — Phase 2: thêm login để lưu target/process trên cloud? → Có. Login TUỲ CHỌN (offline-first, app dùng được không cần tài khoản), có trigger nhắc login để tránh mất dữ liệu; backend: orchestrator chọn Supabase (user chưa có dịch vụ nào); đăng nhập bằng Google (Gmail)
 - 2026-10-12 — Gate 1 phase 2: duyệt plan v2 (M6 Auth, M7 Sync, M8 Nhắc login). OQ-06: ai có Gmail cũng đăng nhập được (không tắt sign-up). OQ-07: CÓ sync giờ nhắc + ngôn ngữ. OQ-08: máy không có Docker Desktop → RLS kiểm tay (U10). OQ-09: không có nút xoá cloud trong app
 - 2026-10-12 — Gate 2 phase 2: duyệt DESIGN v2; giữ câu riêng tư như designer viết (OQ-D11); cập nhật Figma ngay (orchestrator làm)
-- 2026-10-12 — User setup: Google Cloud project `one-percent-better-511408`: Branding đủ + authorized domain minh-lgm.github.io + home page + privacy URL (/privacy.html, trang cần tạo), đã Publish (In production), test user minh.lgm, OAuth client "1% Better web" (origins github.io + localhost:5173, redirect Supabase callback). Supabase project ref `grmcmidzyqwryaangpug` (org Valkyrie, ap-southeast-1). U4 (user dán Client ID/secret, Google provider Enabled) và U5 (Site URL + 3 Redirect URLs) đã xong 2026-10-12. U6 đã chạy 2026-10-12 (orchestrator dán supabase/migrations/20261012000000_cloud_sync.sql qua SQL Editor, "Success. No rows returned"). Còn: .env.local (U7) để user thử đăng nhập thật; privacy.html đã có trong M6
+- 2026-10-12 — User setup: Google Cloud project `one-percent-better-511408`: Branding đủ + authorized domain minh-lgm.github.io + home page + privacy URL (/privacy.html, trang cần tạo), đã Publish (In production), test user minh.lgm, OAuth client "1% Better web" (origins github.io + localhost:5173, redirect Supabase callback). Supabase project ref `grmcmidzyqwryaangpug` (org Valkyrie, ap-southeast-1). U4 (user dán Client ID/secret, Google provider Enabled) và U5 (Site URL + 3 Redirect URLs) đã xong 2026-10-12. U6 đã chạy 2026-10-12 (orchestrator dán supabase/migrations/20261012000000_cloud_sync.sql qua SQL Editor, "Success. No rows returned"). U7 xong 2026-10-12: user tạo .env.local, `npm run dev`, card Account hiện và đăng nhập Google thật thành công (NV-1 PASS theo xác nhận user). Còn U8 (GitHub Secrets) sau Final QC phase 2
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
@@ -46,7 +46,7 @@
 | Plan v2.1 (phase 2) | DONE (duyệt 2026-10-12) | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
 | M8 | TODO | | |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
-| M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập thật, NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
+| M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
 | M7 | DOING — developer build | | |
 | Final QC (phase 2) | TODO | | |
 
