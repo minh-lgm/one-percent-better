@@ -1,7 +1,7 @@
 // M7-AC11 (import/export while signed in) and M7-AC14 (first sync of large-backup.json < 15 s).
 import { readFile } from 'node:fs/promises';
 import { expect, test } from './fixtures';
-import { chooseBackupFile, EN, gotoHash, importBackup, logTime, toast } from '../helpers/app';
+import { chooseBackupFile, EN, freezeClock, gotoHash, importBackup, logTime, toast } from '../helpers/app';
 import { C1, collectErrors, expectSyncState, pendingCount, signInAsMinh } from './helpers';
 
 test.beforeEach(async ({ mock }) => {
@@ -64,6 +64,8 @@ test.describe('M7-AC11 backup while signed in (FR-51)', () => {
 test.describe('M7-AC14 sync performance (NFR-13)', () => {
   test('large-backup.json (5 goals, 5 449 entries) reaches the account in < 15 s with batches ≤ 500; logging stays responsive meanwhile', async ({ page, mock }) => {
     test.setTimeout(120_000);
+    // The fixture's goals end on 2026-10-09 (FIXED_TIME): freeze the page clock so Today lists them.
+    await freezeClock(page);
     await importBackup(page, 'large-backup.json');
     await gotoHash(page, '/settings');
     const started = Date.now();

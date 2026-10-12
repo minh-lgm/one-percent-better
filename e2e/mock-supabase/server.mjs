@@ -179,8 +179,10 @@ export function createMockSupabase() {
     return new Date(t).toISOString();
   }
 
-  function issueSession(state, userKey) {
-    const user = USERS[userKey];
+  /** `identity` (test only): override email/name of the issued session (`name: ''` = no name in metadata). */
+  function issueSession(state, userKey, identity = null) {
+    const base = USERS[userKey];
+    const user = identity ? { ...base, email: identity.email ?? base.email, name: identity.name === undefined ? base.name : identity.name } : base;
     const iat = nowS(state);
     const exp = iat + state.tokenTtlS;
     const sessionId = randomUUID();
@@ -195,7 +197,7 @@ export function createMockSupabase() {
       session_id: sessionId,
       is_anonymous: false,
       app_metadata: { provider: 'google', providers: ['google'] },
-      user_metadata: { email: user.email, email_verified: true, full_name: user.name, name: user.name },
+      user_metadata: metadataOf(user),
     });
     const refresh_token = b64url(randomBytes(24));
     state.refreshTokens.set(refresh_token, userKey);
@@ -207,6 +209,10 @@ export function createMockSupabase() {
       refresh_token,
       user: userJson(state, user),
     };
+  }
+
+  function metadataOf(user) {
+    return user.name === '' ? { email: user.email, email_verified: true } : { email: user.email, email_verified: true, full_name: user.name, name: user.name };
   }
 
   function userJson(state, user) {
@@ -221,7 +227,7 @@ export function createMockSupabase() {
       confirmed_at: t,
       last_sign_in_at: new Date(state.now ?? Date.now()).toISOString(),
       app_metadata: { provider: 'google', providers: ['google'] },
-      user_metadata: { email: user.email, email_verified: true, full_name: user.name, name: user.name },
+      user_metadata: metadataOf(user),
       identities: [],
       created_at: t,
       updated_at: t,
@@ -568,8 +574,11 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
     }
     if (pathname === '/__test/token') {
       // A ready-made session for in-process tests (contract suite): no PKCE round-trip needed.
+      // `email` / `name` override the identity (name '' = no name) while `sub` stays the user's id, so REST
+      // still accepts the token (a hand-forged token is rejected with 401 like on real Supabase).
       const userKey = USERS[q.user] ? q.user : 'u1';
-      return send(res, 200, issueSession(state, userKey));
+      const identity = q.email !== undefined || q.name !== undefined ? { email: q.email, name: q.name } : null;
+      return send(res, 200, issueSession(state, userKey, identity));
     }
     if (pathname === '/__test/seed' && req.method === 'POST') {
       // Rows may be given in domain (camelCase) or cloud (snake_case) shape; they bypass LWW and get a server stamp.

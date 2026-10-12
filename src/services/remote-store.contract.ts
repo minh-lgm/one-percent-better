@@ -12,8 +12,13 @@ export interface ContractHarness {
   as(user: 'u1' | 'u2'): RemoteStore;
   /** Empty every table for every user. */
   reset(): Promise<void>;
-  /** Test seed in the cloud's own row shape (snake_case), bypassing LWW. */
-  seedRaw(user: 'u1' | 'u2', table: 'goals' | 'entries' | 'settings', rows: Record<string, unknown>[]): Promise<void>;
+  /**
+   * Test seed in the cloud's own row shape (snake_case), bypassing LWW and validation. Fake and mock
+   * provide it; real Postgres cannot (triggers stamp `server_updated_at`/`user_id`, check constraints
+   * reject invalid rows), so the contract parts that need it are skipped there and
+   * `tests/db/remote-store.test.ts` asserts the constraints instead.
+   */
+  seedRaw?(user: 'u1' | 'u2', table: 'goals' | 'entries' | 'settings', rows: Record<string, unknown>[]): Promise<void>;
   /** The server's clock, when the harness controls it (lets the window test skip waiting). Optional. */
   now?(): Date;
 }
@@ -143,10 +148,12 @@ export function describeRemoteStoreContract(name: string, setup: () => Promise<C
       const again = await u1.pull('goals', rewindCursor(stored), 500);
       expect(again.rows.map((r) => r.id).sort()).toEqual(['g1', 'g2']);
       // A row older than the window must not come back: seed one 10 minutes before the cursor.
-      const old = new Date(Date.parse(stored.serverUpdatedAt) - 600_000).toISOString();
-      await h.seedRaw('u1', 'goals', [{ ...goalRaw('g0', T0), server_updated_at: old }]);
-      const afterSeed = await u1.pull('goals', rewindCursor(stored), 500);
-      expect(afterSeed.rows.map((r) => r.id)).not.toContain('g0');
+      if (h.seedRaw) {
+        const old = new Date(Date.parse(stored.serverUpdatedAt) - 600_000).toISOString();
+        await h.seedRaw('u1', 'goals', [{ ...goalRaw('g0', T0), server_updated_at: old }]);
+        const afterSeed = await u1.pull('goals', rewindCursor(stored), 500);
+        expect(afterSeed.rows.map((r) => r.id)).not.toContain('g0');
+      }
       // A newer write comes back exactly once, after the cursor.
       await u1.push({ goals: [G('g3', T1)], entries: [] });
       const exact = await u1.pull('goals', stored, 500);
@@ -168,12 +175,17 @@ export function describeRemoteStoreContract(name: string, setup: () => Promise<C
       expect((await u2.fetchByIds({ goals: ['g1'], entries: [] })).goals[0].name).toBe('Mine');
     });
 
-    it('invalid rows on the server are skipped and counted; valid ones still come back', async () => {
+    it('invalid rows on the server are skipped and counted; valid ones still come back', async ({ skip }) => {
       const h = await setup();
+      const seedRaw = h.seedRaw;
+      if (!seedRaw) {
+        skip('raw seeding is impossible on real Postgres (check constraints); tests/db/remote-store.test.ts covers the rejection');
+        return;
+      }
       await h.reset();
       const u1 = h.as('u1');
       await u1.push({ goals: [G('g1', T0)], entries: [E('e-ok', 'g1', T0)] });
-      await h.seedRaw('u1', 'entries', [
+      await seedRaw('u1', 'entries', [
         { ...entryRaw('e-zero', 'g1', T0), minutes: 0 },
         { ...entryRaw('e-note', 'g1', T0), note: 'x'.repeat(281) },
         { ...entryRaw('e-src', 'g1', T0), source: 'x' },
@@ -211,10 +223,12 @@ export function describeRemoteStoreContract(name: string, setup: () => Promise<C
       await u2.pushPrefs(prefs({ locale: { value: 'en', updatedAt: T2 } }));
       expect((await u1.pullPrefs()).prefs?.locale).toEqual({ value: 'vi', updatedAt: T0 });
 
-      await h.seedRaw('u2', 'settings', [{ reminder_enabled: true, reminder_time: '25:00', reminder_updated_at: T1, locale: 'fr', locale_updated_at: T1 }]);
-      const bad = await u2.pullPrefs();
-      expect(bad.prefs).toEqual({ reminder: null, locale: null });
-      expect(bad.skippedInvalid).toBe(2);
+      if (h.seedRaw) {
+        await h.seedRaw('u2', 'settings', [{ reminder_enabled: true, reminder_time: '25:00', reminder_updated_at: T1, locale: 'fr', locale_updated_at: T1 }]);
+        const bad = await u2.pullPrefs();
+        expect(bad.prefs).toEqual({ reminder: null, locale: null });
+        expect(bad.skippedInvalid).toBe(2);
+      }
     });
   });
 }

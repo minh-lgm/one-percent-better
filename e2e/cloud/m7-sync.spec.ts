@@ -26,7 +26,7 @@ test.describe('M7-AC8 triggers and indicator (FR-46, FR-50)', () => {
     await createGoal(page, READ);
     await signInAsMinh(page);
     await expectSyncState(page, 'synced');
-    await expect(syncIndicator(page)).toHaveAccessibleName(/^Synced/);
+    await expect(syncIndicator(page)).toHaveText(/^Synced \d\d:\d\d$/);
     await expect(page.getByTestId('status-row')).toHaveAttribute('role', 'group');
     await expect(page.getByTestId('status-row')).toHaveAttribute('aria-label', EN.sync.indicator.label);
     await expectAxeClean(page);

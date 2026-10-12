@@ -7,9 +7,10 @@ import { useSubscribable } from '../hooks/useSubscribable';
 import { useToast } from '../hooks/useToast';
 import { MergeAccountDialog } from './MergeAccountDialog';
 
-const focusHeading = () => requestAnimationFrame(() => document.querySelector<HTMLElement>('main h1')?.focus());
-const focusAccountOrHeading = () =>
-  requestAnimationFrame(() => (document.getElementById('h-account') ?? document.querySelector<HTMLElement>('main h1'))?.focus());
+type FocusTarget = 'heading' | 'account';
+
+const focusTarget = (target: FocusTarget) =>
+  requestAnimationFrame(() => ((target === 'account' ? document.getElementById('h-account') : null) ?? document.querySelector<HTMLElement>('main h1'))?.focus());
 
 /**
  * Sync side effects for the UI (M7): toasts for `merge-done` (DESIGN F11) and `prefs-applied`
@@ -25,6 +26,14 @@ export function SyncFeedback() {
   latest.current = { toast, f, onSettings };
   const prompt = useSubscribable<MergePrompt | null>(() => (syncService ? syncService.watchMergePrompt() : { subscribe: () => () => {} }), [syncService]);
   const [busy, setBusy] = useState(false);
+  // Focus after D5 has really closed (the dialog's close() effect runs first and restores focus itself).
+  const [pendingFocus, setPendingFocus] = useState<FocusTarget | null>(null);
+  const promptOpen = (prompt.data ?? null) !== null;
+  useEffect(() => {
+    if (!pendingFocus || promptOpen) return;
+    setPendingFocus(null);
+    focusTarget(pendingFocus);
+  }, [pendingFocus, promptOpen]);
 
   useEffect(() => {
     if (!syncService) return;
@@ -43,7 +52,7 @@ export function SyncFeedback() {
     setBusy(true);
     try {
       await syncService.confirmMerge();
-      focusHeading();
+      setPendingFocus('heading');
     } finally {
       setBusy(false);
     }
@@ -56,8 +65,7 @@ export function SyncFeedback() {
       syncService.cancelMerge();
       await authService.signOut({ keepData: true, preserveLastUserId: true });
       latest.current.toast.show('toast.signedOutKept');
-      if (latest.current.onSettings) focusAccountOrHeading();
-      else focusHeading();
+      setPendingFocus(latest.current.onSettings ? 'account' : 'heading');
     } finally {
       setBusy(false);
     }

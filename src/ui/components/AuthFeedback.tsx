@@ -11,7 +11,7 @@ import { useToast } from '../hooks/useToast';
  * (bootstrap runs the callback before the first render). Renders nothing.
  */
 export function AuthFeedback() {
-  const { authService } = useServices();
+  const { authService, syncService } = useServices();
   const toast = useToast();
   const navigate = useNavigate();
   const onSettings = useLocation().pathname === '/settings';
@@ -23,7 +23,11 @@ export function AuthFeedback() {
       authService.onOutcome((outcome) => {
         const { toast: t, navigate: go, onSettings: here } = latest.current;
         if (outcome.kind === 'signed-in') {
-          t.show('toast.signedIn', { email: outcome.email });
+          // M7 (DESIGN F11): when device data is merged into the account, the merge toast
+          // ("Signed in. Your account now has …") is the only one; otherwise the plain "Signed in".
+          void (syncService ? syncService.willAnnounceMerge() : Promise.resolve(false)).then((merges) => {
+            if (!merges) latest.current.toast.show('toast.signedIn', { email: outcome.email });
+          });
           return;
         }
         if (here) return;
@@ -32,7 +36,7 @@ export function AuthFeedback() {
           action: { key: 'settings.account.goTo', onClick: () => void go('/settings') },
         });
       }),
-    [authService],
+    [authService, syncService],
   );
 
   return null;

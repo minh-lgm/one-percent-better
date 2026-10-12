@@ -26,7 +26,8 @@ test.describe('M6-AC6 sign in with Google (PKCE on the GitHub Pages sub-path)', 
     await expect(accountCard(page).getByTestId('account-email')).toHaveText('minh.test@example.com');
     await expect(accountCard(page).getByTestId('account-name')).toHaveText('Minh Test');
     await expect(accountCard(page).getByTestId('avatar')).toHaveText('M');
-    await expect(toast(page)).toHaveText('Signed in as minh.test@example.com');
+    // M7 (DESIGN F11): the device had a goal, so the first sign-in merges it and the merge toast is the one shown.
+    await expect(toast(page)).toHaveText('Signed in. Your account now has 1 goal, 0 entries.');
     await expect(page.getByText(EN.settings.about.descSignedIn)).toBeVisible();
     await expect(page.getByRole('heading', { level: 1, name: EN.settings.title })).toBeVisible();
     await expectAxeClean(page);

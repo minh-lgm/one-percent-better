@@ -29,7 +29,8 @@ test.describe('M6-AC11 Vietnamese, a11y, 360 px, keyboard', () => {
     await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in');
     await expect(accountCard(page).getByTestId('account-email')).toHaveText('minh.test@example.com');
     await expect(accountCard(page)).toContainText(VI.settings.account.provider);
-    await expect(toast(page)).toHaveText('Đã đăng nhập: minh.test@example.com');
+    // M7 (DESIGN F11): the device had a goal, so the first sign-in merges it and the merge toast is the one shown.
+    await expect(toast(page)).toHaveText('Đã đăng nhập. Tài khoản của bạn hiện có 1 mục tiêu, 0 lần ghi.');
     await expect(page.getByText(VI.settings.about.descSignedIn)).toBeVisible();
     await expectNoViLeaks(page);
     await expectAxeClean(page);

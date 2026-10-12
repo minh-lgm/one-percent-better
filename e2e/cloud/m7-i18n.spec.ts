@@ -13,7 +13,8 @@ test.describe('M7-AC15 vi-VN', () => {
   });
 
   test('merge flow (M7-AC7) in vi: toast, indicator, Account details, D5 when switching accounts; no English leaks; axe clean', async ({ page, mock }) => {
-    await mock.seed('u1', C1);
+    // Same dataset as C1 with a Vietnamese goal name: the vi DOM scan flags any user text shaped like an en value ("Cloud goal" ~ "{{count}} goal").
+    await mock.seed('u1', { ...C1, goals: [{ ...C1.goals[0], name: 'Mục tiêu cloud' }] });
     await importBackup(page, 'sample-backup.json', VI);
     await signInViaMock(page, 'Minh Test', VI);
     await expect(toast(page)).toHaveText('Đã đăng nhập. Tài khoản của bạn hiện có 6 mục tiêu, 25 lần ghi.', { timeout: 15_000 });

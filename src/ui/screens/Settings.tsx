@@ -77,6 +77,14 @@ export function Settings() {
   const signInButton = useRef<HTMLButtonElement>(null);
   const signOutButton = useRef<HTMLButtonElement>(null);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  // Focus the Account h2 once D4 has really closed: the dialog's own close() effect (child, runs
+  // first) returns focus to the Sign out button, which is gone after signing out (DESIGN 8.1).
+  const [focusAccountAfterClose, setFocusAccountAfterClose] = useState(false);
+  useEffect(() => {
+    if (!focusAccountAfterClose || signOutOpen) return;
+    setFocusAccountAfterClose(false);
+    requestAnimationFrame(() => accountHeading.current?.focus());
+  }, [focusAccountAfterClose, signOutOpen]);
   const [signOutBusy, setSignOutBusy] = useState(false);
   const [signOutWriteFailed, setSignOutWriteFailed] = useState(false);
   const [signOutSyncFailed, setSignOutSyncFailed] = useState(false);
@@ -229,8 +237,18 @@ export function Settings() {
 
   async function syncNow() {
     if (!syncService) return;
-    const r = await syncService.syncNow('manual');
-    if (r.status === 'ran' && r.ok) toast.show('toast.syncNowDone');
+    // One toast region: when this cycle applied preferences from the account, `toast.prefsFromAccount`
+    // (shown by SyncFeedback) is the useful message and must not be replaced by "Everything is up to date".
+    let prefsApplied = false;
+    const stop = syncService.onEvent((e) => {
+      if (e.type === 'prefs-applied') prefsApplied = true;
+    });
+    try {
+      const r = await syncService.syncNow('manual');
+      if (r.status === 'ran' && r.ok && !prefsApplied) toast.show('toast.syncNowDone');
+    } finally {
+      stop();
+    }
   }
 
   function openSignOut() {
@@ -264,7 +282,7 @@ export function Settings() {
       }
       setSignOutOpen(false);
       toast.show(keepData ? 'toast.signedOutKept' : 'toast.signedOutRemoved');
-      requestAnimationFrame(() => accountHeading.current?.focus());
+      setFocusAccountAfterClose(true);
     } catch {
       setSignOutWriteFailed(true);
     } finally {

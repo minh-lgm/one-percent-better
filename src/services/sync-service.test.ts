@@ -322,6 +322,30 @@ describe('sign-in, merge and sign-out (FR-47, FR-41)', () => {
     expect(a.sync.current()).toMatchObject({ kind: 'paused', lastSyncedAt: null });
   });
 
+  it('willAnnounceMerge: true only for a silent first sign-in with device data; false before any sign-in, for a clean device and after reset', async () => {
+    const a = await device('A');
+    expect(await a.sync.willAnnounceMerge()).toBe(false);
+    await a.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, NOW);
+    const handled = a.sync.handleSignedIn(U1, 'u1@example.com');
+    expect(await a.sync.willAnnounceMerge()).toBe(true);
+    expect(await handled).toBe('merge-silently');
+    await a.sync.reset();
+    expect(await a.sync.willAnnounceMerge()).toBe(false);
+    // Same user again, nothing new on the device: no merge report.
+    await a.sync.handleSignedIn(U1, 'u1@example.com');
+    expect(await a.sync.willAnnounceMerge()).toBe(false);
+  });
+
+  it('reset after Sign out → Remove (kv `sync` deleted by clearUserData) does not recreate the row', async () => {
+    const a = await device('A');
+    await a.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, NOW);
+    await a.sync.syncNow('manual');
+    await a.kv.delete('sync');
+    await a.sync.reset();
+    expect(await a.kv.get('sync')).toBeUndefined();
+    expect(a.sync.current()).toMatchObject({ kind: 'paused', lastSyncedAt: null });
+  });
+
   it('prefs-applied event fires when the cloud changes a preference', async () => {
     const a = await device('A');
     server.seedPrefsRow(U1, { reminder_enabled: true, reminder_time: '07:30', reminder_updated_at: NOW.toISOString(), locale: 'vi', locale_updated_at: NOW.toISOString() });

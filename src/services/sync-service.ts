@@ -69,6 +69,7 @@ export class SyncService {
   private readonly eventListeners = new Set<(e: SyncEvent) => void>();
   private readonly promptListeners = new Set<(p: MergePrompt | null) => void>();
   private mergePrompt: MergePrompt | null = null;
+  private firstSignIn: Promise<boolean> | null = null;
   private running: Promise<SyncOutcome> | null = null;
   private rerun = false;
   private failures = 0;
@@ -170,7 +171,14 @@ export class SyncService {
    * the D5 prompt. Returns the decision.
    */
   async handleSignedIn(userId: string, email: string): Promise<FirstSignInDecision> {
-    const decision = await this.prepareFirstSignIn(userId);
+    // Decided before the first await so `willAnnounceMerge()` can be asked by the UI right away.
+    const decided = (async () => {
+      const decision = await this.prepareFirstSignIn(userId);
+      const merged = decision === 'merge-silently' && (await this.deps.local.countDirty()) > 0;
+      return { decision, merged };
+    })();
+    this.firstSignIn = decided.then((r) => r.merged);
+    const { decision, merged } = await decided;
     if (decision === 'confirm-merge') {
       const live = await this.deps.localData.countLive();
       this.setPrompt({ userId, email, goals: live.goals, entries: live.entries });
@@ -178,13 +186,21 @@ export class SyncService {
       return decision;
     }
     await this.bindUser(userId, decision === 'merge-silently');
-    const merged = decision === 'merge-silently' && (await this.deps.local.countDirty()) > 0;
     const outcome = await this.syncNow('sign-in');
     if (merged && outcome.status === 'ran' && outcome.ok) {
       const live = await this.deps.localData.countLive();
       this.emit({ type: 'merge-done', goals: live.goals, entries: live.entries });
     }
     return decision;
+  }
+
+  /**
+   * `true` when the sign-in being handled merges device data silently, i.e. a `merge-done` event
+   * ("Signed in. Your account now has …") will follow and the plain "Signed in" toast is redundant
+   * (DESIGN F11). `false` when no sign-in is being handled.
+   */
+  willAnnounceMerge(): Promise<boolean> {
+    return this.firstSignIn ?? Promise.resolve(false);
   }
 
   /** D5 "Add to account": every live row and chosen preference group is pushed to the new account. */
@@ -225,12 +241,18 @@ export class SyncService {
     return { pending: await this.deps.local.countDirty() };
   }
 
-  /** After sign-out: forget cursors and bookkeeping (`lastUserId` is kept by AuthService). */
+  /**
+   * After sign-out: forget cursors and bookkeeping (`lastUserId` is kept by AuthService). When the
+   * kv row is already gone (Sign out → Remove ran `clearUserData`), nothing is written back.
+   */
   async reset(): Promise<void> {
     this.clearRetry();
     this.failures = 0;
     this.setPrompt(null);
-    await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null }));
+    this.firstSignIn = null;
+    if ((await this.deps.kv.get<unknown>('sync')) != null) {
+      await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null }));
+    }
     this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined, remoteInvalid: undefined, lastSyncedAt: null });
   }
 

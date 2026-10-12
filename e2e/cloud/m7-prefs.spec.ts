@@ -39,12 +39,18 @@ test('A chooses Tiếng Việt + reminder 07:30 → account row; B (en-US, nothi
   await spyPermissionRequests(b.page);
   await gotoHash(b.page, '/settings');
   await expect(b.page.locator('html')).toHaveAttribute('lang', 'en');
+  // The OAuth round trip is a real navigation (mock chooser → callback), so the "no reload" marker is
+  // planted once the app is back from the callback and must survive until the language has changed.
+  await signInViaMock(b.page, 'Minh Test');
+  await b.page.waitForLoadState('load');
+  let loads = 0;
+  b.page.on('load', () => (loads += 1));
   await b.page.evaluate(() => {
     (window as unknown as { __noReload: boolean }).__noReload = true;
   });
-  await signInViaMock(b.page, 'Minh Test');
   await expect(b.page.locator('html')).toHaveAttribute('lang', 'vi', { timeout: 15_000 });
   expect(await b.page.evaluate(() => (window as unknown as { __noReload?: boolean }).__noReload)).toBe(true);
+  expect(loads).toBe(0);
   await expect(b.page.getByTestId('toast')).toHaveText(VI.toast.prefsFromAccount);
   await expect(b.page.getByRole('switch', { name: VI.settings.reminders.switch })).toBeChecked();
   await expect(b.page.getByLabel(VI.settings.reminders.time)).toHaveValue('07:30');

@@ -1767,6 +1767,7 @@ details.curve-table summary:focus-visible {
 }
 .alert .stack-t {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .alert .stack-t strong {
   display: block;

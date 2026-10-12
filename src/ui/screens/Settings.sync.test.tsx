@@ -105,6 +105,43 @@ describe('Settings — signed-in copy (M7-AC15, DESIGN S7)', () => {
     expect(scanVi()).toEqual([]);
   });
 
+  it('Sync now that applies preferences from the account keeps the prefsFromAccount toast (no "Everything is up to date" over it)', async () => {
+    const user = userEvent.setup();
+    await signedIn();
+    tc!.auth!.server.seedPrefsRow(U1, { reminder_enabled: true, reminder_time: '07:30', reminder_updated_at: '2026-10-09T02:00:00.000Z', locale: 'vi', locale_updated_at: '2026-10-09T02:00:00.000Z' });
+    await renderApp({ route: '/settings', container: tc });
+    await user.click(screen.getByTestId('sync-now'));
+    await waitFor(() => expect(tc!.i18n.language).toBe('vi'));
+    await waitFor(() => expect(screen.getByTestId('sync-indicator')).toHaveAttribute('data-state', 'synced'));
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent(vi.toast.prefsFromAccount));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByTestId('toast')).toHaveTextContent(vi.toast.prefsFromAccount);
+    expect(screen.getByTestId('toast')).not.toHaveTextContent(vi.toast.syncNowDone);
+  });
+
+  it('first sign-in with device data: only the merge toast (no "Signed in as …" under it); clean device: the plain toast', async () => {
+    tc = await createTestContainer({ cloud: true });
+    await tc.container.authService.init();
+    await tc.container.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, new Date());
+    await renderApp({ route: '/settings', container: tc });
+    tc.auth!.port.session = USER1;
+    await tc.container.authService.completeCallback({ code: 'ok' });
+    await sync().handleSignedIn(U1, USER1.email);
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent('Signed in. Your account now has 1 goal, 0 entries.'));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByTestId('toast')).not.toHaveTextContent(`Signed in as ${USER1.email}`);
+    expect(await sync().willAnnounceMerge()).toBe(true);
+    await tc.dispose();
+
+    tc = await createTestContainer({ cloud: true });
+    await tc.container.authService.init();
+    await renderApp({ route: '/settings', container: tc });
+    tc.auth!.port.session = USER1;
+    await tc.container.authService.completeCallback({ code: 'ok' });
+    await sync().handleSignedIn(U1, USER1.email);
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent(`Signed in as ${USER1.email}`));
+  });
+
   it('D3 signed in: title/body variant, offline note when offline; signed out keeps the M3 dialog', async () => {
     await signedIn();
     await tc!.container.db.goals.put(buildGoal({ id: 'temp', name: 'Temp' }));
