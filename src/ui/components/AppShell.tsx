@@ -39,7 +39,7 @@ export function AppShell() {
       <nav className="nav" aria-label={t('nav.label')}>
         <NavLink className="brand" to="/today" aria-label={t('app.name')}>
           <span className="mark" aria-hidden="true">
-            1%
+            <img src={`${import.meta.env.BASE_URL}brand-mark-96.png`} width="28" height="28" alt="" decoding="async" />
           </span>
           <span>{t('app.brandSuffix')}</span>
         </NavLink>

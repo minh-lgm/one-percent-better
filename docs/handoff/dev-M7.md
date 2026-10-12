@@ -171,6 +171,16 @@ Playwright project `chromium` (9 — cùng nguyên nhân, đọc IndexedDB thô 
 
 Test gắn `test.fail(true, …)` nay "Expected to fail, but passed" → QC gỡ marker (report M6 r1 §4 đã dự kiến).
 
+## Brand assets (commit riêng `feat(brand)`, sau commit M7, theo chỉ dẫn orchestrator 2026-10-12)
+
+- Nguồn: bộ icon orchestrator tạo từ logo sản phẩm (logo gốc `logo/`, git-ignored). Copy đè `public/icons/pwa-192.png`, `pwa-512.png` (logo 92 % trên nền trắng), `pwa-maskable-512.png` (72 %, vùng an toàn), `public/apple-touch-icon.png` (180, nền trắng), `public/favicon.svg` (bọc PNG 64 trong suốt); thêm `public/favicon-32.png`, `public/brand-mark-96.png` (trong suốt).
+- `index.html`: thêm `<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">` (Vite viết lại theo `base`, đã kiểm `dist-cloud-e2e/index.html` → `/one-percent-better/favicon-32.png`). `vite.config.ts` `includeAssets` thêm `favicon-32.png`, `brand-mark-96.png`; manifest icons không đổi (192/512/maskable — `e2e/m1-pwa.spec.ts`, `tests/qc/m1-qc.spec.ts` pass); precache 27 → **31 entry, 1 772 KiB** (pwa-512 170 KB, maskable 111 KB; không có test ngưỡng kích thước precache; không hạ chất lượng dưới 512 px).
+- `AppShell` `.mark`: `<img src={BASE_URL + 'brand-mark-96.png'} width=28 height=28 alt="" decoding="async">` trong `<span class="mark" aria-hidden>`; CSS `.mark` 32 × 32, `background: #fff`, `border-radius: 9px`, `padding: 2px` ở **cả hai theme** (chữ logo màu đen), `img` `object-fit: contain`; `aria-label={app.name}` trên NavLink giữ nguyên. Brand chỉ hiện ở sidebar ≥ 1024 px (tab bar mobile không có brand, như cũ) → 360 px không đổi (nav 57 px, không cuộn ngang; ảnh chụp light/dark 360 và 1280 light/dark đã kiểm bằng mắt).
+- `scripts/gen-icons.mjs`: không vẽ nữa — chỉ copy từ `logo/<tên file>` nếu tồn tại, ngược lại in hướng dẫn và thoát 0 (`npm run icons` đã chạy thử: "nothing to do"). README mục "Brand assets" thay mục "Icons".
+- ESLint: rule "Hardcoded accessible text" nay cho phép literal **rỗng** (`alt=""` ảnh trang trí, không có chữ để dịch); probe `alt="Hello"` vẫn báo lỗi (exit 1).
+- Kiểm: lint/typecheck xanh; Vitest SyncIndicator/Settings.sync/i18n 46/46; Playwright cloud `m7-i18n` (360 px vi, axe), `m6-lazy`, QC `m6-r1-ui` "axe light/dark" + privacy → 8/8; chromium `m1-pwa`, QC `m1-qc` (manifest), `m2-notify` (icon `/icons/pwa-192.png`), `m1-today` → 40/40.
+- **Deviation so với DESIGN §5 Brand:** mark là ảnh logo trên ô trắng thay vì ô xanh `--primary` chữ "1%"; designer cập nhật DESIGN sau (orchestrator đã chấp nhận).
+
 ## Fix log
 
 (chưa có)

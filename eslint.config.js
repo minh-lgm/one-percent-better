@@ -53,7 +53,8 @@ const HARDCODED_TEXT_SELECTORS = [
   },
   {
     selector:
-      "JSXAttribute[name.name=/^(aria-label|aria-description|aria-valuetext|placeholder|title|alt|label)$/][value.type='Literal']",
+      // `alt=""` (decorative image) carries no text and is allowed.
+      "JSXAttribute[name.name=/^(aria-label|aria-description|aria-valuetext|placeholder|title|alt|label)$/][value.type='Literal'][value.value!='']",
     message: 'Hardcoded accessible text: use t().',
   },
   {

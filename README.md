@@ -203,6 +203,6 @@ tests/qc/       QC-owned tests; tests/db/ = RLS/trigger tests for Supabase local
 
 Dependency rules between layers are enforced by `eslint.config.js` (`no-restricted-imports`).
 
-## Icons
+## Brand assets
 
-`npm run icons` regenerates the PWA icons in `public/` (plain Node script, no dependencies).
+The PWA icons, favicon and the brand mark in the navigation come from the product logo ("1% Better per Day", black lettering): `public/icons/pwa-192.png`, `pwa-512.png` (logo at 92 % on white), `pwa-maskable-512.png` (72 %, icon safe zone), `public/apple-touch-icon.png` (180 px, white), `public/favicon.svg` (wraps a 64 px transparent PNG) + `public/favicon-32.png`, and `public/brand-mark-96.png` (transparent, shown at 28 px on a white 32 px tile in both colour schemes). The logo source is kept outside the repository (`logo/`, git-ignored). `npm run icons` only re-copies files with the same names from `logo/` when they exist; it never redraws the committed assets.

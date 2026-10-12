@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
         filename: 'sw.ts',
         injectRegister: null, // registration is done in src/integration/sw-register.ts
         registerType: 'prompt',
-        includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+        includeAssets: ['favicon.svg', 'favicon-32.png', 'apple-touch-icon.png', 'brand-mark-96.png'],
         manifest: {
           name: '1% Better per Day',
           short_name: '1% Better',
