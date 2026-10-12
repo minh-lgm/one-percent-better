@@ -36,7 +36,8 @@
     "tryAgain": "Thử lại",
     "working": "Đang xử lý…",
     "emptyValue": "—",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "dismiss": "Đóng"
   },
   "unit": {
     "min": "phút",
@@ -68,7 +69,12 @@
     "backupExported": "Đã xuất bản sao lưu",
     "backupImported": "Đã nhập bản sao lưu: {{goals}}, {{entries}}",
     "goalArchived": "Đã lưu trữ mục tiêu",
-    "goalRestored": "Đã khôi phục mục tiêu"
+    "goalRestored": "Đã khôi phục mục tiêu",
+    "signedIn": "Đã đăng nhập: {{email}}",
+    "signedOutKept": "Đã đăng xuất. Dữ liệu của bạn vẫn còn trên thiết bị này.",
+    "signedOutRemoved": "Đã đăng xuất. Dữ liệu đã được xóa khỏi thiết bị này.",
+    "signInCancelled": "Đã hủy đăng nhập.",
+    "signInFailed": "Không đăng nhập được."
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Hãy nhập tên cho mục tiêu của bạn.",
@@ -103,7 +109,11 @@
     "IMPORT_INTEGRITY": "Bản sao lưu này không nhất quán (ví dụ: có lần ghi không thuộc mục tiêu nào). Chưa có gì bị thay đổi.",
     "loadViewTitle": "Không tải được màn hình này",
     "loadViewBody": "Nếu bạn vừa cập nhật app, hãy kiểm tra kết nối mạng rồi thử lại.",
-    "GOAL_TIMER_RUNNING": "Hãy dừng hoặc bỏ bộ đếm giờ đang chạy trước khi lưu trữ mục tiêu này."
+    "GOAL_TIMER_RUNNING": "Hãy dừng hoặc bỏ bộ đếm giờ đang chạy trước khi lưu trữ mục tiêu này.",
+    "AUTH_OFFLINE": "Bạn đang ngoại tuyến. Hãy kết nối mạng rồi đăng nhập.",
+    "AUTH_CANCELLED": "Bạn đã hủy đăng nhập. Bạn chưa đăng nhập và không có gì trên thiết bị này bị thay đổi.",
+    "AUTH_FAILED": "Không đăng nhập được. Không có gì trên thiết bị này bị thay đổi. Hãy thử lại và hoàn tất đăng nhập trong cùng trình duyệt bạn đã bắt đầu.",
+    "AUTH_SESSION_EXPIRED": "Phiên đăng nhập của bạn đã hết hạn. Hãy đăng nhập lại để tiếp tục đồng bộ. Dữ liệu của bạn, kể cả các thay đổi chưa đồng bộ, vẫn được giữ trên thiết bị này."
   },
   "empty": {
     "today": {
@@ -281,6 +291,19 @@
       "browserNote": "Ô chọn ngày, giờ và hộp xin quyền do trình duyệt hiển thị nên theo ngôn ngữ của trình duyệt.",
       "saveFailed": "Đã đổi ngôn ngữ, nhưng không lưu được trên thiết bị này. Ngôn ngữ có thể trở về mặc định khi bạn tải lại trang."
     },
+    "account": {
+      "title": "Tài khoản",
+      "descSignedOut": "Đăng nhập bằng Google để lưu một bản sao mục tiêu và lần ghi vào tài khoản của bạn và dùng trên mọi thiết bị. Bạn không cần tài khoản để dùng 1% Better.",
+      "privacyNote": "Từ Google, app chỉ nhận tên và email của bạn.",
+      "offlineHint": "Bạn đang ngoại tuyến. Hãy kết nối mạng để đăng nhập.",
+      "signingInStatus": "Đang đăng nhập cho bạn…",
+      "signingInBody": "Sắp xong. Chỉ mất một lát.",
+      "provider": "Đã đăng nhập bằng Google",
+      "signOut": "Đăng xuất",
+      "expiredTitle": "Hãy đăng nhập lại",
+      "expiredAccount": "Tài khoản: {{email}}",
+      "goTo": "Đến mục Tài khoản"
+    },
     "reminders": {
       "title": "Nhắc nhở",
       "switch": "Nhắc nhở hằng ngày",
@@ -324,7 +347,11 @@
     },
     "about": {
       "title": "Giới thiệu",
-      "desc": "Mọi thứ bạn ghi lại đều nằm trên thiết bị này. Không tài khoản, không theo dõi."
+      "desc": "Mọi thứ bạn ghi lại đều nằm trên thiết bị này. Không tài khoản, không theo dõi.",
+      "descCloud": "Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước. Đăng nhập là tùy chọn và không có theo dõi.",
+      "descSignedIn": "Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước, rồi đồng bộ vào tài khoản của bạn. Không có theo dõi.",
+      "privacy": "Nếu bạn đăng nhập, mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ của bạn được lưu trong cơ sở dữ liệu của app (Supabase) dưới tài khoản của bạn. Những người khác dùng app không xem được chúng.",
+      "privacyLink": "Chính sách quyền riêng tư"
     }
   },
   "notFound": {
@@ -460,5 +487,21 @@
     "title": "Đã xảy ra lỗi",
     "body": "App gặp sự cố ngoài dự kiến. Dữ liệu của bạn vẫn được lưu trên thiết bị này.",
     "reload": "Tải lại app"
+  },
+  "auth": {
+    "signInGoogle": "Đăng nhập bằng Google",
+    "signingIn": "Đang đăng nhập…",
+    "signOut": {
+      "title": "Đăng xuất?",
+      "body": "Thiết bị này sẽ ngừng đồng bộ. Dữ liệu trong tài khoản của bạn vẫn được giữ nguyên.",
+      "legend": "Dữ liệu trên thiết bị này sẽ được xử lý thế nào?",
+      "keep": "Giữ dữ liệu trên thiết bị này",
+      "keepDesc": "Nên chọn. Bạn vẫn dùng 1% Better bình thường mà không cần tài khoản.",
+      "remove": "Xóa dữ liệu khỏi thiết bị này",
+      "removeDesc": "Xóa mục tiêu, lần ghi và cài đặt nhắc nhở trên thiết bị này. Hãy chọn khi dùng máy chung. Tài khoản của bạn vẫn giữ mọi thứ.",
+      "confirmKeep": "Đăng xuất",
+      "confirmRemove": "Đăng xuất và xóa dữ liệu",
+      "working": "Đang đăng xuất…"
+    }
   }
 }

@@ -9,6 +9,7 @@ import type { MessageKey } from '../../i18n/types';
 import { downloadTextFile, ICS_MIME_TYPE, readTextFile } from '../../integration/file-io';
 import type { PersistState } from '../../integration/storage';
 import type { BackupCounts, BackupPreview } from '../../services/backup-service';
+import { AccountCard } from '../components/AccountCard';
 import { Alert } from '../components/Alert';
 import { BackupBanner } from '../components/BackupBanner';
 import { Badge, type BadgeTone } from '../components/Badge';
@@ -17,10 +18,12 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/PageHeader';
 import { ReminderTimeField } from '../components/ReminderTimeField';
+import { SignOutDialog } from '../components/SignOutDialog';
 import { Switch } from '../components/Switch';
 import { errorMessage, WRITE_FAILED_KEY } from '../error-messages';
 import { useFormat } from '../hooks/useFormat';
 import { useNow } from '../hooks/useNow';
+import { useOnline } from '../hooks/useOnline';
 import { useServices } from '../hooks/useServices';
 import { useSubscribable } from '../hooks/useSubscribable';
 import { useT } from '../hooks/useT';
@@ -45,14 +48,23 @@ interface ImportState {
   opener: HTMLElement | null;
 }
 
-/** Settings (DESIGN S7). Cards: Language, Reminders (M2), Backup (M3), Storage, About. */
+/** Settings (DESIGN S7). Cards: Language, Account (M6, only with cloud config), Reminders (M2), Backup (M3), Storage, About. */
 export function Settings() {
   const { t } = useT();
   const f = useFormat();
   const toast = useToast();
   const id = useId();
   const now = useNow();
-  const { storagePersistence, settingsService, notifications, backupService, goalService } = useServices();
+  const { storagePersistence, settingsService, notifications, backupService, goalService, authService } = useServices();
+  const online = useOnline();
+  const auth = useSubscribable(() => authService.watch(), [authService]);
+  const authState = auth.data ?? authService.state();
+  const accountHeading = useRef<HTMLHeadingElement>(null);
+  const signInButton = useRef<HTMLButtonElement>(null);
+  const signOutButton = useRef<HTMLButtonElement>(null);
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const [signOutBusy, setSignOutBusy] = useState(false);
+  const [signOutWriteFailed, setSignOutWriteFailed] = useState(false);
   const [persist, setPersist] = useState<PersistState | null>(null);
   const [permission, setPermission] = useState<NotificationPermissionState>(() => notifications.permission());
   const settings = useSubscribable(() => settingsService.watch(), [settingsService]);
@@ -183,6 +195,50 @@ export function Settings() {
       })
     : '';
 
+  // ---- Account (M6, FR-39 … FR-41) ----
+  function signIn() {
+    void authService.signIn('#/settings');
+  }
+
+  function dismissAuthError() {
+    authService.dismissError();
+    requestAnimationFrame(() => signInButton.current?.focus());
+  }
+
+  function openSignOut() {
+    setSignOutWriteFailed(false);
+    setSignOutOpen(true);
+  }
+
+  function cancelSignOut() {
+    setSignOutOpen(false);
+    requestAnimationFrame(() => signOutButton.current?.focus());
+  }
+
+  async function confirmSignOut({ keepData }: { keepData: boolean }) {
+    if (signOutBusy) return;
+    setSignOutBusy(true);
+    setSignOutWriteFailed(false);
+    try {
+      const r = await authService.signOut({ keepData });
+      if (!r.ok) {
+        setSignOutWriteFailed(true);
+        return;
+      }
+      setSignOutOpen(false);
+      toast.show(keepData ? 'toast.signedOutKept' : 'toast.signedOutRemoved');
+      requestAnimationFrame(() => accountHeading.current?.focus());
+    } catch {
+      setSignOutWriteFailed(true);
+    } finally {
+      setSignOutBusy(false);
+    }
+  }
+
+  const cloudOn = authState.kind !== 'unavailable';
+  const signedIn = authState.kind === 'signed-in';
+  const aboutDesc = signedIn ? t('settings.about.descSignedIn') : cloudOn ? t('settings.about.descCloud') : t('settings.about.desc');
+
   function downloadIcs() {
     const now = new Date();
     const ics = buildReminderIcs({
@@ -209,6 +265,10 @@ export function Settings() {
           <LanguageSwitcher describedBy="lang-desc" />
           <p className="hint">{t('settings.language.browserNote')}</p>
         </section>
+
+        {authState.kind !== 'unavailable' ? (
+          <AccountCard auth={authState} online={online} onSignIn={signIn} onSignOut={openSignOut} onDismissError={dismissAuthError} headingRef={accountHeading} signInRef={signInButton} signOutRef={signOutButton} />
+        ) : null}
 
         <section className="card" aria-labelledby="h-reminders">
           <h2 id="h-reminders">{t('settings.reminders.title')}</h2>
@@ -306,7 +366,13 @@ export function Settings() {
           <p>
             <strong>{t('app.name')}</strong>
           </p>
-          <p className="desc">{t('settings.about.desc')}</p>
+          <p className="desc">{aboutDesc}</p>
+          {cloudOn ? <p className="hint">{t('settings.about.privacy')}</p> : null}
+          <p className="hint">
+            <a href={`${import.meta.env.BASE_URL}privacy.html`} data-testid="privacy-link">
+              {t('settings.about.privacyLink')}
+            </a>
+          </p>
         </section>
       </div>
       <ConfirmDialog
@@ -318,6 +384,7 @@ export function Settings() {
         onConfirm={() => void confirmImport()}
         onCancel={closeImport}
       />
+      {cloudOn ? <SignOutDialog open={signOutOpen} busy={signOutBusy} writeFailed={signOutWriteFailed} onConfirm={(c) => void confirmSignOut(c)} onCancel={cancelSignOut} /> : null}
     </>
   );
 }

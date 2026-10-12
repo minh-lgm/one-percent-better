@@ -7,6 +7,7 @@ import { createContainer } from './app/container';
 import { startReminderScheduler } from './app/reminder-scheduler';
 import { createAppRouter } from './app/router';
 import { env } from './config/env';
+import { cleanCallbackUrl, readAuthCallback, sessionReturnTo } from './integration/auth-callback';
 import { listenForNavigation } from './integration/sw-messages';
 import { registerServiceWorker } from './integration/sw-register';
 import { StorageError } from './ui/screens/StorageError';
@@ -15,9 +16,13 @@ import './ui/styles/app.css';
 const root = createRoot(document.getElementById('root') as HTMLElement);
 
 async function start(): Promise<void> {
+  // OAuth callback (`<BASE_URL>?auth=callback&code=…`, ADR-19) is read once, before the hash router exists.
+  const authCallback = readAuthCallback(window.location);
   const result = await bootstrap({
     navigatorLanguage: navigator.language,
-    createContainer: (i18n) => createContainer({ i18n, dbName: env.dbName, notificationIconUrl: `${import.meta.env.BASE_URL}icons/pwa-192.png` }),
+    createContainer: (i18n) => createContainer({ i18n, dbName: env.dbName, cloud: env.cloud, notificationIconUrl: `${import.meta.env.BASE_URL}icons/pwa-192.png` }),
+    authCallback,
+    cleanCallbackUrl: () => cleanCallbackUrl(window.history, import.meta.env.BASE_URL, sessionReturnTo(window.sessionStorage).take()),
   });
 
   if (!result.ok) {

@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig, type PluginOption } from 'vite';
+import { defineConfig, loadEnv, type PluginOption } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -8,6 +8,9 @@ const base = process.env.BASE_PATH ?? '/';
 
 export default defineConfig(({ mode }) => {
   const plugins: PluginOption[] = [react()];
+  // Cloud off at build time (FR-38): the lazy Supabase chunk is still emitted (the dynamic import
+  // exists in loader.ts) but nothing can ever request it, so keep it out of the precache too.
+  const cloudOn = Boolean(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL?.trim());
 
   // The PWA plugin is only needed for real builds/preview; keep it out of Vitest.
   if (mode !== 'test') {
@@ -37,6 +40,7 @@ export default defineConfig(({ mode }) => {
         },
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+          globIgnores: cloudOn ? [] : ['**/supabase-client-*.js'],
         },
         devOptions: { enabled: false },
       }),

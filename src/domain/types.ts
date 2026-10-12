@@ -77,7 +77,15 @@ export type ErrorCode =
   | 'IMPORT_INTEGRITY'
   | 'STORAGE_UNAVAILABLE'
   | 'NOTIFICATIONS_UNSUPPORTED'
-  | 'NOTIFICATIONS_DENIED';
+  | 'NOTIFICATIONS_DENIED'
+  // v2.0 (M6) — account (ARCHITECTURE §5.4)
+  | 'AUTH_OFFLINE'
+  | 'AUTH_CANCELLED'
+  | 'AUTH_FAILED'
+  | 'AUTH_SESSION_EXPIRED';
+
+/** Sign-in error codes surfaced by `AuthService` (subset of `ErrorCode`). */
+export type AuthErrorCode = 'AUTH_OFFLINE' | 'AUTH_CANCELLED' | 'AUTH_FAILED' | 'AUTH_SESSION_EXPIRED';
 
 /**
  * A domain error. `message` is for logs only and never displayed; the UI maps

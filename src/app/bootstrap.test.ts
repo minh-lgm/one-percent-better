@@ -78,3 +78,52 @@ describe('createContainer', () => {
     expect(await tc.container.db.kv.get('locale')).toEqual({ key: 'locale', value: 'vi' });
   });
 });
+
+describe('createContainer + bootstrap — account (M6-AC3, M6-AC5, ARCH §5.9)', () => {
+  it('cloud = null → authService unavailable and no loader is created or called', async () => {
+    const loadAuth = vi.fn();
+    const i18n = createI18n({ locale: 'en' });
+    const container = await createContainer({ i18n, dbName: `boot-cloud-off-${Date.now()}`, storage: undefined, cloud: null, loadAuth, authStorage: null });
+    expect(container.authService.state().kind).toBe('unavailable');
+    expect(container.authService.isAvailable()).toBe(false);
+    await container.authService.init();
+    expect(loadAuth).not.toHaveBeenCalled();
+    await container.db.delete();
+  });
+
+  it('cloud on, no stored session → signed-out after bootstrap, loader not called', async () => {
+    tc = await createTestContainer({ cloud: true });
+    const result = await bootstrap({ navigatorLanguage: 'en', createContainer: async () => tc!.container, i18n: tc.i18n });
+    expect(result.ok).toBe(true);
+    expect(tc.container.authService.state()).toEqual({ kind: 'signed-out' });
+    expect(tc.auth!.state.loads).toBe(0);
+  });
+
+  it('OAuth callback: URL cleaned before render, completeCallback runs in the background → signed-in', async () => {
+    tc = await createTestContainer({ cloud: true });
+    const cleanCallbackUrl = vi.fn();
+    const result = await bootstrap({
+      navigatorLanguage: 'en',
+      createContainer: async () => tc!.container,
+      i18n: tc.i18n,
+      authCallback: { code: 'abc' },
+      cleanCallbackUrl,
+    });
+    expect(result.ok).toBe(true);
+    expect(cleanCallbackUrl).toHaveBeenCalledTimes(1);
+    // Synchronously after bootstrap the card would render "signing-in"; the exchange finishes afterwards.
+    expect(tc.container.authService.state()).toEqual({ kind: 'signing-in' });
+    await tc.container.authService.settled();
+    expect(tc.container.authService.state()).toMatchObject({ kind: 'signed-in', email: 'minh.test@example.com' });
+    expect(tc.auth!.port.lastCode).toBe('abc');
+  });
+
+  it('callback on a build without cloud: URL still cleaned, nothing else happens', async () => {
+    tc = await createTestContainer();
+    const cleanCallbackUrl = vi.fn();
+    const result = await bootstrap({ navigatorLanguage: 'en', createContainer: async () => tc!.container, i18n: tc.i18n, authCallback: { code: 'abc' }, cleanCallbackUrl });
+    expect(result.ok).toBe(true);
+    expect(cleanCallbackUrl).toHaveBeenCalledTimes(1);
+    expect(tc.container.authService.state()).toEqual({ kind: 'unavailable' });
+  });
+});

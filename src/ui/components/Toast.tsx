@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
-import { TOAST_DURATION_MS } from '../../config/constants';
+import { TOAST_DURATION_MS, TOAST_ERROR_DURATION_MS } from '../../config/constants';
 import type { MessageKey, TParams } from '../../i18n/types';
-import { ToastContext, useToast, type ToastMessage } from '../hooks/useToast';
+import { ToastContext, useToast, type ToastMessage, type ToastOptions } from '../hooks/useToast';
 import { useT } from '../hooks/useT';
 import { Icon } from './Icon';
 
@@ -21,10 +21,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [clear]);
 
   const show = useCallback(
-    (key: MessageKey, params?: TParams) => {
+    (key: MessageKey, params?: TParams, options: ToastOptions = {}) => {
       clear();
-      setCurrent({ id: ++counter.current, key, params });
-      timer.current = window.setTimeout(() => setCurrent(null), TOAST_DURATION_MS);
+      const tone = options.tone ?? 'default';
+      setCurrent({ id: ++counter.current, key, params, tone, action: options.action });
+      timer.current = window.setTimeout(() => setCurrent(null), tone === 'error' ? TOAST_ERROR_DURATION_MS : TOAST_DURATION_MS);
     },
     [clear],
   );
@@ -35,15 +36,27 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 /** Renders the single current toast; the text is translated at render time, so language changes apply. */
 export function ToastRegion() {
-  const { current } = useToast();
+  const { current, dismiss } = useToast();
   const { t } = useT();
   return (
     <div className="toast-region">
       <div role="status" aria-live="polite">
         {current ? (
-          <div className="toast" key={current.id} data-testid="toast">
-            <Icon name="check" />
+          <div className={current.tone === 'error' ? 'toast error' : 'toast'} key={current.id} data-testid="toast" data-tone={current.tone}>
+            <Icon name={current.tone === 'error' ? 'alert' : 'check'} />
             <span>{t(current.key, current.params)}</span>
+            {current.action ? (
+              <button
+                type="button"
+                className="act"
+                onClick={() => {
+                  dismiss();
+                  current.action?.onClick();
+                }}
+              >
+                {t(current.action.key)}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>

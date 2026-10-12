@@ -6,12 +6,19 @@ import { DexieBackupRepository } from '../data/dexie/backup-repo';
 import { DexieEntryRepository } from '../data/dexie/entry-repo';
 import { DexieGoalRepository } from '../data/dexie/goal-repo';
 import { DexieKvRepository } from '../data/dexie/kv-repo';
+import { DexieLocalDataRepository } from '../data/dexie/local-data-repo';
 import { DexieTimerRepository } from '../data/dexie/timer-repo';
+import type { CloudConfig } from '../config/env';
 import { StorageError } from '../domain/types';
 import { createTranslator, currentLocale, setLocale } from '../i18n/instance';
 import type { Locale, Translator } from '../i18n/types';
+import { callbackRedirectUrl, sessionReturnTo } from '../integration/auth-callback';
+import { alwaysOnline, createConnectivity, type Connectivity } from '../integration/connectivity';
 import { createBrowserNotifications } from '../integration/notifications';
 import { isIndexedDbAvailable, requestPersistentStorage, type PersistState } from '../integration/storage';
+import { clearStoredSession, createSupabaseLoader, hasStoredSession } from '../integration/supabase/loader';
+import type { AuthPort, ReturnToStore } from '../services/auth-port';
+import { AuthService } from '../services/auth-service';
 import { BackupService } from '../services/backup-service';
 import { EntryService } from '../services/entry-service';
 import { GoalService, defaultIdGenerator } from '../services/goal-service';
@@ -41,6 +48,9 @@ export interface AppContainer {
   reminderService: ReminderService;
   backupService: BackupService;
   statsService: StatsService;
+  /** Optional Google sign-in (M6). `unavailable` when the build has no cloud configuration (FR-38). */
+  authService: AuthService;
+  connectivity: Connectivity;
   notifications: NotificationPort;
   locale: LocaleControl;
   /** Result of `navigator.storage.persist()`, requested once at startup. */
@@ -57,6 +67,16 @@ export interface ContainerOptions {
   notifications?: NotificationPort;
   /** URL of the 192 px icon used in notifications. */
   notificationIconUrl?: string;
+  /** Cloud configuration from `env.cloud`; `null`/omitted = no account feature, no SDK loader created. */
+  cloud?: CloudConfig | null;
+  /** Where the SDK keeps its session (`localStorage`); tests pass a fake. */
+  authStorage?: Storage | null;
+  /** Override the SDK loader (tests inject a FakeAuthPort and count calls). */
+  loadAuth?: () => Promise<AuthPort>;
+  connectivity?: Connectivity;
+  returnTo?: ReturnToStore;
+  /** `<origin><BASE_URL>?auth=callback`; defaults from `location` + `import.meta.env.BASE_URL`. */
+  redirectUrl?: string;
 }
 
 export async function createContainer({
@@ -66,6 +86,12 @@ export async function createContainer({
   indexedDbAvailable = isIndexedDbAvailable(),
   notifications = createBrowserNotifications(),
   notificationIconUrl,
+  cloud = null,
+  authStorage = typeof localStorage === 'undefined' ? null : localStorage,
+  loadAuth,
+  connectivity = typeof window === 'undefined' ? alwaysOnline : createConnectivity(),
+  returnTo = sessionReturnTo(typeof sessionStorage === 'undefined' ? null : sessionStorage),
+  redirectUrl = typeof location === 'undefined' ? '' : callbackRedirectUrl(location.origin, import.meta.env.BASE_URL),
 }: ContainerOptions): Promise<AppContainer> {
   if (!indexedDbAvailable) throw new StorageError('IndexedDB is not available in this browser');
 
@@ -82,6 +108,20 @@ export async function createContainer({
   const entryService = new EntryService(entryRepo, goalRepo);
   const settingsService = new SettingsService(kvRepo);
 
+  // Cloud off → stub; nothing here references the SDK (ADR-18). Cloud on → lazy loader, SDK untouched until needed.
+  const authService = cloud
+    ? new AuthService({
+        loadAuth: loadAuth ?? createSupabaseLoader(cloud, authStorage ?? undefined),
+        storedSession: () => hasStoredSession(authStorage),
+        clearStoredSession: () => clearStoredSession(authStorage),
+        local: new DexieLocalDataRepository(db),
+        kv: kvRepo,
+        connectivity,
+        returnTo,
+        redirectUrl,
+      })
+    : AuthService.unavailable();
+
   return {
     i18n,
     translator,
@@ -94,6 +134,8 @@ export async function createContainer({
     reminderService: new ReminderService(settingsService, goalRepo, entryRepo, notifications, translator, notificationIconUrl),
     backupService: new BackupService(new DexieBackupRepository(db), settingsService),
     statsService: new StatsService(goalRepo, entryRepo),
+    authService,
+    connectivity,
     notifications,
     locale: {
       current: () => currentLocale(i18n),

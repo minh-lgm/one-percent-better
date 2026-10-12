@@ -53,6 +53,10 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
     case 'IMPORT_INVALID_JSON':
     case 'IMPORT_INVALID_SCHEMA':
     case 'IMPORT_INTEGRITY':
+    case 'AUTH_OFFLINE':
+    case 'AUTH_CANCELLED':
+    case 'AUTH_FAILED':
+    case 'AUTH_SESSION_EXPIRED':
       return { key: `errors.${error.code}` };
     default:
       return { key: 'errors.UNKNOWN' };

@@ -126,8 +126,9 @@ export async function startTimer(page: Page, name: string, copy: Copy = en): Pro
   await expect(timerCard(page)).toBeVisible();
 }
 
+/** Navigate to a hash route, relative to the project's baseURL (`http://localhost:4173/` or the cloud sub-path). */
 export async function gotoHash(page: Page, hash: string): Promise<void> {
-  await page.goto(`/#${hash}`);
+  await page.goto(`#${hash}`);
 }
 
 /** Run the vi DOM scan in the page; returns offending strings. */

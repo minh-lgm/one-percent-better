@@ -36,7 +36,8 @@
     "tryAgain": "Try again",
     "working": "Working…",
     "emptyValue": "—",
-    "retry": "Retry"
+    "retry": "Retry",
+    "dismiss": "Dismiss"
   },
   "unit": {
     "min": "min",
@@ -71,7 +72,12 @@
     "backupExported": "Backup exported",
     "backupImported": "Backup imported: {{goals}}, {{entries}}",
     "goalArchived": "Goal archived",
-    "goalRestored": "Goal restored"
+    "goalRestored": "Goal restored",
+    "signedIn": "Signed in as {{email}}",
+    "signedOutKept": "Signed out. Your data is still on this device.",
+    "signedOutRemoved": "Signed out. Data removed from this device.",
+    "signInCancelled": "Sign-in was cancelled.",
+    "signInFailed": "Couldn't sign you in."
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Enter a name for your goal.",
@@ -106,7 +112,11 @@
     "IMPORT_INTEGRITY": "This backup is inconsistent (for example, entries that don't belong to any goal). Nothing was changed.",
     "loadViewTitle": "Couldn't load this view",
     "loadViewBody": "Check your connection if you just updated the app, then try again.",
-    "GOAL_TIMER_RUNNING": "Stop or discard the running timer before archiving this goal."
+    "GOAL_TIMER_RUNNING": "Stop or discard the running timer before archiving this goal.",
+    "AUTH_OFFLINE": "You're offline. Connect to the internet, then sign in.",
+    "AUTH_CANCELLED": "Sign-in was cancelled. You're not signed in, and nothing on this device changed.",
+    "AUTH_FAILED": "Couldn't sign you in. Nothing on this device changed. Try again, and finish signing in in the same browser where you started.",
+    "AUTH_SESSION_EXPIRED": "Your sign-in expired. Sign in again to keep syncing. Your data, including changes that haven't synced yet, is kept on this device."
   },
   "empty": {
     "today": {
@@ -289,6 +299,19 @@
       "browserNote": "The date and time pickers and permission prompts follow your browser's language.",
       "saveFailed": "Language changed, but it couldn't be saved on this device. It may reset when you reload."
     },
+    "account": {
+      "title": "Account",
+      "descSignedOut": "Sign in with Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.",
+      "privacyNote": "From Google, the app only receives your name and email.",
+      "offlineHint": "You're offline. Connect to the internet to sign in.",
+      "signingInStatus": "Signing you in…",
+      "signingInBody": "Finishing up. This only takes a moment.",
+      "provider": "Signed in with Google",
+      "signOut": "Sign out",
+      "expiredTitle": "Sign in again",
+      "expiredAccount": "Account: {{email}}",
+      "goTo": "Go to Account"
+    },
     "reminders": {
       "title": "Reminders",
       "switch": "Daily reminder",
@@ -332,7 +355,11 @@
     },
     "about": {
       "title": "About",
-      "desc": "Everything you log stays on this device. No account, no tracking."
+      "desc": "Everything you log stays on this device. No account, no tracking.",
+      "descCloud": "Everything you log is saved on this device first. Signing in is optional, and there's no tracking.",
+      "descSignedIn": "Everything you log is saved on this device first and synced to your account. There's no tracking.",
+      "privacy": "If you sign in, your goals, entries, reminder settings and language are stored in this app's database (Supabase) under your account. Other people who use the app can't see them.",
+      "privacyLink": "Privacy policy"
     }
   },
   "notFound": {
@@ -470,5 +497,21 @@
     "title": "Something went wrong",
     "body": "The app ran into an unexpected problem. Your data is still stored on this device.",
     "reload": "Reload app"
+  },
+  "auth": {
+    "signInGoogle": "Sign in with Google",
+    "signingIn": "Signing in…",
+    "signOut": {
+      "title": "Sign out?",
+      "body": "You'll stop syncing on this device. Your data in your account stays safe.",
+      "legend": "What should happen to the data on this device?",
+      "keep": "Keep data on this device",
+      "keepDesc": "Recommended. You can keep using 1% Better without an account.",
+      "remove": "Remove data from this device",
+      "removeDesc": "Deletes your goals, entries and reminder settings on this device. Choose this on a shared device. Your account keeps everything.",
+      "confirmKeep": "Sign out",
+      "confirmRemove": "Sign out and remove data",
+      "working": "Signing out…"
+    }
   }
 }

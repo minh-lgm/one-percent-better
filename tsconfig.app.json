@@ -21,6 +21,6 @@
     "noUncheckedSideEffectImports": true,
     "skipLibCheck": true
   },
-  "include": ["src", "tests/qc/**/*.test.ts", "tests/qc/**/*.test.tsx"],
+  "include": ["src", "tests/qc/**/*.test.ts", "tests/qc/**/*.test.tsx", "tests/db/**/*.test.ts"],
   "exclude": ["src/sw.ts"]
 }

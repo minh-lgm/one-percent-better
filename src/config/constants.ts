@@ -18,3 +18,5 @@ export const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 export const LOADING_DELAY_MS = 150;
 /** Toast auto-hide duration (DESIGN §5). */
 export const TOAST_DURATION_MS = 4000;
+/** Error toasts with an action stay longer (DESIGN 5: Toast tone error, 8 s). */
+export const TOAST_ERROR_DURATION_MS = 8000;

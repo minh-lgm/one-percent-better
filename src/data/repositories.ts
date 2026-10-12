@@ -1,4 +1,4 @@
-import type { ActiveTimer, Goal, ISODate, LogEntry, Settings } from '../domain/types';
+import type { ActiveTimer, Goal, ISODate, ISODateTime, LogEntry, Settings } from '../domain/types';
 
 export interface Subscribable<T> {
   subscribe(onNext: (value: T) => void, onError?: (e: unknown) => void): () => void;
@@ -25,7 +25,53 @@ export interface EntryRepository {
   watchByGoal(goalId: string): Subscribable<LogEntry[]>;
 }
 
-export type KvKey = 'settings' | 'activeTimer' | 'locale';
+export type KvKey = 'settings' | 'activeTimer' | 'locale' | 'sync' | 'loginPrompt' | 'prefsSync';
+
+/** Keyset cursor for pulling rows from the cloud (M7). */
+export interface PullCursor {
+  serverUpdatedAt: ISODateTime;
+  id: string;
+}
+
+/** kv key `sync` (ARCHITECTURE §4.1). M6 uses `userId`, `lastUserId`, `account`; the rest is for M7. */
+export interface SyncMeta {
+  /** Account currently signed in on this device (null after sign-out). */
+  userId: string | null;
+  /** Last account that synced on this device (FR-47, kept across sign-outs). */
+  lastUserId: string | null;
+  /** Shown immediately while offline / before the SDK loads (FR-40). */
+  account: { email: string; name: string } | null;
+  cursor: { goals: PullCursor | null; entries: PullCursor | null };
+  lastSyncedAt: ISODateTime | null;
+  lastError: { code: string; at: ISODateTime } | null;
+}
+
+export const EMPTY_SYNC_META: SyncMeta = {
+  userId: null,
+  lastUserId: null,
+  account: null,
+  cursor: { goals: null, entries: null },
+  lastSyncedAt: null,
+  lastError: null,
+};
+
+/** Normalise whatever is stored under kv `sync` into a complete `SyncMeta` (corrupt → defaults). */
+export function normalizeSyncMeta(raw: unknown): SyncMeta {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Record<keyof SyncMeta, unknown>>;
+  const account = r.account && typeof r.account === 'object' ? (r.account as { email?: unknown; name?: unknown }) : null;
+  const cursor = r.cursor && typeof r.cursor === 'object' ? (r.cursor as { goals?: unknown; entries?: unknown }) : null;
+  const isCursor = (c: unknown): c is PullCursor =>
+    !!c && typeof c === 'object' && typeof (c as PullCursor).serverUpdatedAt === 'string' && typeof (c as PullCursor).id === 'string';
+  const lastError = r.lastError && typeof r.lastError === 'object' ? (r.lastError as { code?: unknown; at?: unknown }) : null;
+  return {
+    userId: typeof r.userId === 'string' ? r.userId : null,
+    lastUserId: typeof r.lastUserId === 'string' ? r.lastUserId : null,
+    account: account && typeof account.email === 'string' ? { email: account.email, name: typeof account.name === 'string' ? account.name : '' } : null,
+    cursor: { goals: isCursor(cursor?.goals) ? cursor.goals : null, entries: isCursor(cursor?.entries) ? cursor.entries : null },
+    lastSyncedAt: typeof r.lastSyncedAt === 'string' ? r.lastSyncedAt : null,
+    lastError: lastError && typeof lastError.code === 'string' && typeof lastError.at === 'string' ? { code: lastError.code, at: lastError.at } : null,
+  };
+}
 
 export interface KvRepository {
   get<T>(key: KvKey): Promise<T | undefined>;
@@ -72,4 +118,16 @@ export interface BackupRepository {
   exportAll(): Promise<BackupData>;
   /** One transaction over goals + entries + kv; rolls back on error. Keeps kv `locale` (ADR-12), removes `activeTimer`. */
   replaceAll(data: BackupData): Promise<void>;
+}
+
+/** M6 (ARCHITECTURE §5.2): local user data as a whole, for "sign out and remove data" (FR-41). */
+export interface LocalDataRepository {
+  /**
+   * ONE readwrite transaction over goals + entries + kv: hard-deletes every goal and
+   * entry and the kv rows `settings`, `activeTimer`, `sync`, `prefsSync`. Keeps kv
+   * `locale` (the UI language stays) and `loginPrompt`. Any failure rolls everything back.
+   */
+  clearUserData(): Promise<void>;
+  /** Number of live goals/entries (sign-out / merge dialogs). */
+  countLive(): Promise<{ goals: number; entries: number }>;
 }

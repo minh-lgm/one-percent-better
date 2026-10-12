@@ -23,6 +23,13 @@ const pkg = (names) => `^(${names.join('|')})(/|$)`;
 // Relative/absolute path regexes (match any path segment named like this).
 const dir = (names) => `(^|/)(${names.join('|')})(/|$)`;
 
+// ARCHITECTURE §3 (v2.0): the Supabase SDK is imported statically only in src/integration/supabase/**,
+// and `supabase-client` is only reached through the dynamic `import()` in loader.ts (ADR-18).
+const SUPABASE_RULES = [
+  [pkg(['@supabase']), '@supabase/* may only be imported in src/integration/supabase/** (ARCH §3, ADR-18).'],
+  ['(^|/)supabase-client(\\.[cm]?[jt]sx?)?$', 'Do not import supabase-client statically: use integration/supabase/loader (ADR-18, keeps the SDK out of the entry chunk).'],
+];
+
 const HARDCODED_TEXT_SELECTORS = [
   {
     selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
@@ -47,6 +54,7 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      'dist-cloud-e2e/**',
       'dev-dist/**',
       'node_modules/**',
       'coverage/**',
@@ -80,6 +88,14 @@ export default tseslint.config(
     },
   },
 
+  // ---- Supabase SDK containment (ARCH §3 v2.0, ADR-18): applies to every file, including tests;
+  // the layer configs below restate these rules because flat-config rule options do not merge. ----
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx', 'e2e/**/*.ts', 'tests/**/*.ts', 'tests/**/*.tsx'],
+    ignores: ['src/integration/supabase/**', 'tests/db/**'],
+    rules: restrictImports(SUPABASE_RULES),
+  },
+
   // ---- Layer rules (ARCHITECTURE §3) ----
   {
     // Domain: pure. No React, no Dexie, no i18n, no other app layers.
@@ -89,6 +105,7 @@ export default tseslint.config(
     rules: restrictImports([
       [pkg(['react', 'react-dom', 'dexie', 'recharts', 'i18next', 'react-i18next']), 'Domain must stay pure (ARCH §3).'],
       [dir(['data', 'services', 'integration', 'ui', 'app', 'i18n']), 'Domain must not import other app layers (ARCH §3).'],
+      ...SUPABASE_RULES,
     ]),
   },
   {
@@ -99,7 +116,9 @@ export default tseslint.config(
       [pkg(['dexie', 'react', 'react-dom', 'i18next', 'react-i18next']), 'Services must not depend on Dexie/React/i18next (ARCH §3).'],
       [dir(['dexie']), 'Services use repository interfaces, not the Dexie implementation (ARCH §3).'],
       [dir(['ui', 'app']), 'Services must not import UI (ARCH §3).'],
+      [dir(['integration']), 'Services receive integrations through the constructor/factory; do not import src/integration (ARCH §3).'],
       ['(^|/)i18n/(instance|resources)(/|$|\\.)', 'Services receive a Translator; do not import the i18n instance/resources (ARCH §3).'],
+      ...SUPABASE_RULES,
     ]),
   },
   {
@@ -109,6 +128,7 @@ export default tseslint.config(
     rules: restrictImports([
       [pkg(['dexie', 'i18next']), 'UI must not import Dexie or i18next directly (ARCH §3).'],
       [dir(['dexie']), 'UI must not import the Dexie implementation (ARCH §3).'],
+      ...SUPABASE_RULES,
     ]),
   },
   {
@@ -117,6 +137,7 @@ export default tseslint.config(
     rules: restrictImports([
       [pkg(['react', 'react-dom', 'react-i18next']), 'i18n must not import React (ARCH §3).'],
       [dir(['ui', 'services', 'data', 'app', 'integration']), 'i18n must not import other app layers (ARCH §3).'],
+      ...SUPABASE_RULES,
     ]),
   },
 

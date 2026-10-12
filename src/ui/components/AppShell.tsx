@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
+import { useServices } from '../hooks/useServices';
 import { useT } from '../hooks/useT';
+import { AuthFeedback } from './AuthFeedback';
 import { Icon, type IconName } from './Icon';
 import { OfflineChip } from './OfflineChip';
 import { ToastRegion } from './Toast';
@@ -16,6 +18,7 @@ const TABS: Array<{ to: string; icon: IconName; key: 'nav.today' | 'nav.goals' |
 /** Skip link, tab bar (< 1024 px) / sidebar (≥ 1024 px), main region, toasts. */
 export function AppShell() {
   const { t } = useT();
+  const { authService } = useServices();
   const mainRef = useRef<HTMLElement>(null);
   // Review uses the 960 px column (DESIGN §3.2 / S6, mockup 06 `main.wide`) so the 53-week heatmap fits on desktop.
   const wide = useLocation().pathname.startsWith('/review');
@@ -53,6 +56,7 @@ export function AppShell() {
       </div>
       <ToastRegion />
       <UpdateToast />
+      {authService.isAvailable() ? <AuthFeedback /> : null}
     </>
   );
 }
