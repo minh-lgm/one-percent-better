@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** RESUME M7 — developer mode build tiếp từ docs/handoff/dev-M7.md (WIP checkpoint, commit `wip(M7)`), rồi commit feat(brand) tích hợp logo (icon đã tạo sẵn, xem Quyết định 2026-10-12; nếu scratchpad mất thì tạo lại từ logo/ bằng PowerShell System.Drawing) → qc M7 round 1 → M8 → Final QC phase 2 → U8
+**Next step:** developer M7 (resume, đang chạy) → commit feat(brand) → qc M7 round 1 → M8 → Final QC phase 2 → U8
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -18,7 +18,7 @@
 - 2026-10-12 — Gate 1 phase 2: duyệt plan v2 (M6 Auth, M7 Sync, M8 Nhắc login). OQ-06: ai có Gmail cũng đăng nhập được (không tắt sign-up). OQ-07: CÓ sync giờ nhắc + ngôn ngữ. OQ-08: máy không có Docker Desktop → RLS kiểm tay (U10). OQ-09: không có nút xoá cloud trong app
 - 2026-10-12 — Gate 2 phase 2: duyệt DESIGN v2; giữ câu riêng tư như designer viết (OQ-D11); cập nhật Figma ngay (orchestrator làm)
 - 2026-10-12 — User setup: Google Cloud project `one-percent-better-511408`: Branding đủ + authorized domain minh-lgm.github.io + home page + privacy URL (/privacy.html, trang cần tạo), đã Publish (In production), test user minh.lgm, OAuth client "1% Better web" (origins github.io + localhost:5173, redirect Supabase callback). Supabase project ref `grmcmidzyqwryaangpug` (org Valkyrie, ap-southeast-1). U4 (user dán Client ID/secret, Google provider Enabled) và U5 (Site URL + 3 Redirect URLs) đã xong 2026-10-12. U6 đã chạy 2026-10-12 (orchestrator dán supabase/migrations/20261012000000_cloud_sync.sql qua SQL Editor, "Success. No rows returned"). U7 xong 2026-10-12: user tạo .env.local, `npm run dev`, card Account hiện và đăng nhập Google thật thành công (NV-1 PASS theo xác nhận user). Còn U8 (GitHub Secrets) sau Final QC phase 2
-- 2026-10-12 — User cung cấp logo (logo/1_percent_better_per_day.svg, 1,9 MB bọc PNG, nền trắng) và yêu cầu chèn vào product → orchestrator tạo bộ icon (PWA 192/512/maskable, apple-touch 180, favicon svg/32, brand mark 96) trong scratchpad; developer tích hợp sau M7 (commit feat(brand)); `logo/` đưa vào .gitignore
+- 2026-10-12 — User cung cấp logo (logo/1_percent_better_per_day.svg, 1,9 MB bọc PNG, nền trắng) và yêu cầu chèn vào product → orchestrator tạo bộ icon (PWA 192/512/maskable, apple-touch 180, favicon svg/32, brand mark 96) trong scratchpad; developer tích hợp sau M7 (commit feat(brand)); `logo/` đưa vào .gitignore. 2026-10-13: user thêm bản transparent (logo/1_percent_better_transparent.png 32-bit alpha) → icon tạo lại: PWA/apple-touch nền trắng, favicon + brand mark trong suốt (brand mark đặt trên ô trắng bo góc ở cả 2 theme)
 - 2026-10-12 — (orchestrator, dev-M7 WIP OQ) (1) 3 test QC cũ (m1-domain, m3-r1-domain ×2) assert hard-delete mâu thuẫn xoá mềm ADR-20 → QC M7 round 1 re-target sang xoá mềm (tombstone + deletedAt), không tính là defect. (2) AC7: đăng nhập lại cùng tài khoản ngay sau Sign out Keep → không hỏi D5; sau khi đã gộp sang tài khoản khác thì quay lại hỏi D5 (deviation D7) → chấp nhận, planner ghi nhận ở lần revise sau
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
@@ -49,7 +49,7 @@
 | M8 | TODO | | |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
-| M7 | DOING — WIP checkpoint (user tắt máy 2026-10-12); T1–T4 gần xong, T5 UI đang làm, T6 e2e + handoff chưa | docs/handoff/dev-M7.md (WIP) | Resume: developer mới đọc handoff WIP |
+| M7 | DOING — developer resume từ WIP 68330a6 (2026-10-13) | docs/handoff/dev-M7.md (WIP) | còn: chạy e2e M7, regression, bundle, README, handoff đầy đủ; sau đó commit feat(brand) |
 | Final QC (phase 2) | TODO | | |
 
 ## Backlog (defect Minor, đề xuất chưa làm)
