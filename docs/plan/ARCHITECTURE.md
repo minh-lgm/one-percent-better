@@ -2,7 +2,7 @@
 
 ## 1. Tổng quan
 
-App là SPA tĩnh (PWA), không có backend. Mọi dữ liệu nằm trong IndexedDB của trình duyệt.
+App là SPA tĩnh (PWA), host trên GitHub Pages. Phase 1: không có backend, mọi dữ liệu nằm trong IndexedDB của trình duyệt. **Phase 2 (v2.0):** thêm backend được quản lý **Supabase** (Auth + Postgres + RLS) làm **tuỳ chọn**; IndexedDB vẫn là nguồn chính, cloud là bản sao đồng bộ (sơ đồ phase 2 ở cuối mục này).
 
 ```text
 User (phone / desktop browser, installed PWA)
@@ -28,12 +28,37 @@ User (phone / desktop browser, installed PWA)
 │  Service Worker (src/sw.ts) ── precache app shell (offline),              │
 │        notificationclick → focus/open #/today                             │
 └───────────────────────────────────────────────────────────────────────────┘
-External: không có (không server, không CDN, không analytics, không dịch vụ dịch).
+External (phase 1): không có (không server, không CDN, không analytics, không dịch vụ dịch).
+External (phase 2, chỉ khi cấu hình cloud và người dùng đăng nhập): Supabase project (`VITE_SUPABASE_URL`), Google OAuth (điều hướng toàn trang).
 ```
 
 Luồng chính: UI gọi service → service dùng domain để validate/tính toán → service gọi repository để đọc/ghi → UI nhận dữ liệu mới qua subscription (live query) và render lại.
 
 Ngôn ngữ (i18n): domain không chứa chữ hiển thị (chỉ trả mã lỗi và dữ liệu có cấu trúc). UI dịch qua `react-i18next`; service nào phải tự sinh chữ ngoài React (notification, `.ics`) nhận một `Translator` qua constructor. Lựa chọn ngôn ngữ lưu ở kv key `locale` (chi tiết §5.8, ADR-11 … ADR-13).
+
+**Phase 2 — đăng nhập tuỳ chọn + đồng bộ (v2.0):**
+
+```text
+User ──► UI (Settings › Account, SyncIndicator, LoginPromptBanner)
+           │ useServices()
+           ▼
+   AuthService ───────────► AuthPort (interface, src/services/auth-port.ts)
+   SyncService ──┬────────► RemoteStore (interface, src/services/remote-store.ts)
+   LoginPromptService      │                       ▲
+           │               │                       │ cài đặt (chỉ nạp bằng import() động)
+           ▼               │        src/integration/supabase/ ── @supabase/supabase-js (chunk riêng)
+   LocalSyncStore (interface, src/data/repositories.ts)          │ HTTPS
+           │                                                     ▼
+   Dexie v2 (goals/entries có deletedAt + dirty, kv 'sync') ──  Supabase: Auth (Google OAuth, PKCE)
+           ▼                                                    Postgres goals/entries + RLS + trigger LWW
+       IndexedDB (nguồn chính)                                     │
+                                                                Google accounts (điều hướng toàn trang khi đăng nhập)
+```
+
+- Mọi thao tác của người dùng vẫn đi UI → service → repository Dexie (không đổi so với phase 1); repository đánh dấu `dirty = 1` cho bản ghi vừa ghi.
+- `SyncService` (chạy nền, theo trigger §5.10) đẩy bản ghi `dirty` lên `RemoteStore`, đọc lại bản ghi chuẩn từ server, kéo thay đổi mới theo con trỏ `server_updated_at`, áp vào IndexedDB qua `LocalSyncStore.applyRemote` (last-write-wins, ADR-21).
+- Không có cấu hình Supabase (`VITE_SUPABASE_URL`/key) → `cloud = null` trong container: không tạo `AuthService`/`SyncService` thật, UI ẩn mọi phần tài khoản, không tải SDK (FR-38).
+- SDK Supabase chỉ được nạp bằng `import()` động khi: người dùng bấm đăng nhập, URL là callback OAuth (`?auth=callback`), hoặc `localStorage` có key phiên `opb-auth` (ADR-18).
 
 ## 2. Stack và lý do
 
@@ -59,6 +84,10 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | IndexedDB giả | `fake-indexeddb` | 6.2.5 | Chạy Dexie trong Node | Mock repository (không test được Dexie thật) |
 | E2E | `@playwright/test` (Chromium) + `@axe-core/playwright` | 1.64.0 / 4.13.0 | Có `page.clock` (giả thời gian cho timer/nhắc nhở), `setOffline`, `grantPermissions`, bắt download | Cypress (yếu hơn với SW, nhiều tab, clock) |
 | Script đa nền tảng | `cross-env` | 10.1.0 | Đặt `PLAYWRIGHT_BROWSERS_PATH=0` để browser nằm trong `node_modules` (không cài global) | Đặt env tay (khác nhau giữa PowerShell/Git Bash) |
+| **Backend (v2.0)** | Supabase (dịch vụ quản lý: Auth + Postgres + RLS + PostgREST), gói Free | — | Quyết định của user/orchestrator 2026-10-12; không phải viết/host server; RLS theo `auth.uid()` cho phép client gọi thẳng DB an toàn; có Google OAuth sẵn; free tier đủ cho 1 người (500 MB DB) | Firebase (NoSQL, không RLS kiểu SQL, SDK nặng hơn); Dexie Cloud (trả phí, khoá vào vendor); PocketBase/tự viết API (phải host server); PowerSync/ElectricSQL (thêm dịch vụ đồng bộ riêng) |
+| SDK cloud (v2.0) | `@supabase/supabase-js` (lazy chunk) | 2.117.3 (kiểm npm 2026-10-12; `engines: node >=22`) | SDK chính thức: `signInWithOAuth` + `exchangeCodeForSession` (PKCE), PostgREST query builder (upsert, keyset filter); pin exact | Gọi REST tay bằng `fetch` (phải tự lo PKCE, refresh token, lưu phiên); chỉ `@supabase/auth-js` + `@supabase/postgrest-js` (nhỏ hơn nhưng ít phổ biến, cân nhắc nếu chunk > 60 KB gzip — ghi trong handoff) |
+| Supabase CLI (v2.0, chỉ test DB cục bộ) | `supabase` qua `npx --yes supabase@2.120.0` (không nằm trong `devDependencies`) | 2.120.0 (có binary `@supabase/cli-windows-x64`) | Chạy Supabase local trên Docker để áp migration và test RLS/trigger thật; không làm nặng `npm ci`; cache của npx không phải cài global | Thêm vào devDependencies (tải binary cho mọi máy, kể cả CI không cần); pgTAP (`supabase test db`, viết SQL test khó đọc hơn với đội) |
+| Mock Supabase cho E2E (v2.0) | Server Node `http` thuần trong `e2e/mock-supabase/` | — (không thêm dependency) | Chạy OAuth PKCE + REST cần thiết không cần Docker/tài khoản thật (NFR-17); kiểm được cả luồng redirect trên sub-path | `page.route` chặn request (không mô phỏng được điều hướng toàn trang tới trang authorize); MSW (thêm dependency, chạy trong page) |
 
 ## 3. Component
 
@@ -101,6 +130,33 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `ui/error-messages.ts` | UI | Ánh xạ `DomainError` (code + biến thể + tham số) → key i18n `errors.*` (thay cho `src/ui/copy.ts` nêu trong DESIGN.md) | i18n/types |
 | `sw.ts` | integration | Precache (workbox), `notificationclick` → focus client hoặc mở `#/today` | workbox-precaching |
 
+**Component mới ở phase 2 (v2.0):**
+
+| Component | Lớp | Trách nhiệm | Phụ thuộc | Milestone |
+| :- | :- | :- | :- | :- |
+| `config/env.ts` (mở rộng) | config | Parse `VITE_SUPABASE_URL` (chỉ `https://…`, hoặc `http://localhost`/`http://127.0.0.1` cho test), `VITE_SUPABASE_PUBLISHABLE_KEY` (dự phòng `VITE_SUPABASE_ANON_KEY`), `VITE_SYNC_INTERVAL_MS`; trả `cloud: { url, key } \| null` (thiếu/sai → `null`, không ném lỗi) | zod | M6 |
+| `domain/sync.ts` | logic (domain) | Hàm thuần: `resolveIncoming(local, remote) → 'apply' \| 'keep-local'` (ADR-21), `nextUpdatedAt(now, previous)`, `isNewer(a, b)` so sánh theo thời điểm (không so chuỗi), kiểu `SyncStatus` | — | M7 |
+| `domain/login-prompt.ts` | logic (domain) | `shouldShowLoginPrompt(input) → boolean`, `shouldShowExportHint(input)` theo A-30 | dates | M8 |
+| `services/auth-port.ts` | logic (application) | Interface `AuthPort`, kiểu `AuthSession`, `AuthEvent` (§5.9) | — | M6 |
+| `services/remote-store.ts` | logic (application) | Interface `RemoteStore`, kiểu `RemoteChanges`, `PullCursor`, lỗi `RemoteError` (§5.10) | data/repositories (kiểu) | M7 |
+| `services/auth-service.ts` | logic (application) | Máy trạng thái tài khoản (`unavailable` / `signed-out` / `signing-in` / `signed-in` / `expired`), `signIn(returnTo)`, `completeCallback(params)`, `signOut({ keepData })`, `watch()`; nạp `AuthPort` lười qua factory | `AuthPort` (qua factory), `LocalDataRepository`, `KvRepository` | M6 |
+| `services/sync-service.ts` | logic (application) | Một chu kỳ đồng bộ (push → đọc lại bản ghi chuẩn → pull → dọn entry mồ côi), con trỏ, backoff, single-flight (qua `LockPort`), trạng thái `watchStatus()`, `syncNow()`, `prepareFirstSignIn()` (gộp/xác nhận đổi tài khoản), `finalSyncBeforeSignOut()` | `LocalSyncStore`, `RemoteStore` (qua factory), `KvRepository`, domain/sync | M7 |
+| `services/login-prompt-service.ts` | logic (application) | Đọc/ghi kv `loginPrompt`, `dismiss(now)`, `claimExportHint(now)`, `state(now)` | `KvRepository`, `GoalRepository`, `EntryRepository`, domain/login-prompt | M8 |
+| `services/lock-port.ts` | logic (application) | Interface `LockPort { runExclusive(name, fn) → Promise<'ran' \| 'busy'> }`; cài đặt bằng Web Locks API ở `integration/web-locks.ts` (không hỗ trợ → luôn chạy) | — | M7 |
+| `data/dexie/db.ts` (v2) | data | Schema v2 + `upgrade()` (ADR-20, §4.2) | dexie | M7 |
+| `data/dexie/*-repo.ts` (sửa) | data | Lọc bản ghi đã xoá ở mọi truy vấn; xoá = xoá mềm; ghi = `dirty = 1`; entry của goal đã xoá không trả ra | dexie, domain/sync | M7 |
+| `data/dexie/local-data-repo.ts` | data | `LocalDataRepository.clearUserData()` (một transaction: `goals`, `entries`, kv trừ `locale`, `loginPrompt`), `countLive()` | dexie | M6 |
+| `data/dexie/sync-store.ts` | data | `LocalSyncStore`: `getDirty`, `applyRemote` (một transaction/lô), `markAllDirty`, `watchPendingCount`, `tombstoneOrphanEntries` | dexie, domain/sync | M7 |
+| `integration/supabase/supabase-client.ts` | integration | **Chỉ file này (và cùng thư mục) import `@supabase/supabase-js`.** `createSupabase(cloud)` với `auth: { flowType: 'pkce', detectSessionInUrl: false, persistSession: true, autoRefreshToken: true, storageKey: 'opb-auth' }`; export `SupabaseAuthPort`, `SupabaseRemoteStore` | `@supabase/supabase-js` | M6 (Auth), M7 (Remote) |
+| `integration/supabase/mapper.ts` | integration | Hàng SQL (`snake_case`, `timestamptz`, `date`) ↔ bản ghi app (`camelCase`, ISO `…Z` có ms); validate hàng kéo về bằng zod; hàm thuần | zod, domain | M7 |
+| `integration/supabase/loader.ts` | integration | `loadSupabase(cloud) = () => import('./supabase-client')` (memo một lần); `hasStoredSession(storage)` đọc `localStorage['opb-auth']` **không** nạp SDK | — | M6 |
+| `integration/auth-callback.ts` | integration | `readAuthCallback(location) → { code } \| { error, description } \| null` (nhận diện `?auth=callback`), `cleanCallbackUrl(history, location)` (bỏ query, giữ hash), lưu/đọc `returnTo` trong `sessionStorage` key `opb-auth-return` | — | M6 |
+| `integration/connectivity.ts` | integration | `isOnline()`, sự kiện `online`/`offline`, `visibilitychange` | — | M6/M7 |
+| `app/sync-scheduler.ts` | config (composition) | Gắn trigger FR-46 vào `SyncService.syncNow`: khởi động, `online`, `visibilitychange`, debounce 2 s khi `watchPendingCount` tăng, interval khi đang hiển thị; trả hàm dừng | services (qua callback) | M7 |
+| `ui/components/AccountCard.tsx`, `SignOutDialog.tsx`, `MergeAccountDialog.tsx`, `SyncIndicator.tsx`, `LoginPromptBanner.tsx`, `ExportSignInHint.tsx` | UI | Theo DESIGN.md (designer bổ sung ở lần revise v2) | services qua context, i18n | M6–M8 |
+| `supabase/migrations/20261012000000_cloud_sync.sql`, `supabase/config.toml` | data (hạ tầng cloud) | Schema, trigger LWW, RLS, grant (§4.3); `config.toml` sinh bởi `supabase init` cho Supabase local | — | M6 |
+| `e2e/mock-supabase/server.mjs` | test | Mock Supabase (Auth PKCE + REST tối thiểu + trang chọn tài khoản giả + endpoint `/__test/*`) (§8) | Node `http` | M6 (Auth), M7 (REST) |
+
 **Quy tắc phụ thuộc (bắt buộc, cưỡng chế bằng ESLint `no-restricted-imports`):**
 
 - `src/domain/**` không import `react`, `react-dom`, `dexie`, `recharts`, `i18next`, `react-i18next`, hay bất kỳ file nào trong `src/data`, `src/services`, `src/integration`, `src/ui`, `src/app`, `src/i18n` (domain không biết ngôn ngữ).
@@ -108,6 +164,7 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 - `src/ui/**` không import `dexie` hay `src/data/dexie/**`; không import `i18next` trực tiếp (dùng hook `useT`/`useFormat`).
 - `src/i18n/**` không import `react`, `src/ui/**`, `src/services/**`, `src/data/**`.
 - Chỉ `src/app/container.ts` (và `bootstrap.ts`) được ghép implementation cụ thể.
+- **(v2.0)** `@supabase/*` chỉ được import (tĩnh) trong `src/integration/supabase/**`; mọi file khác import `@supabase/*` → lỗi lint. File ngoài `src/integration/supabase/**` không được import **tĩnh** `integration/supabase/supabase-client` (chỉ `loader.ts` dùng `import()` động; `no-restricted-imports` không xét `import()` nên quy tắc này giữ cho SDK nằm ngoài entry chunk). `src/services/**` thêm cấm `@supabase/*` và `src/integration/**` (integration được truyền qua constructor/factory). `src/domain/**` không đổi (thuần).
 - Rule tách lớp của `src/domain/**`, `src/services/**`, `src/ui/**` bỏ qua file `*.test.ts`/`*.test.tsx` (để test đọc `en.json`/`vi.json` và dựng repository Dexie thật trên fake-indexeddb). Code không phải test vẫn bị chặn (probe M1-AC13, M1-AC17 vẫn exit ≠ 0).
 
 **Quy tắc chuỗi hiển thị (bắt buộc, cưỡng chế bằng ESLint + test, NFR-11):**
@@ -191,6 +248,153 @@ Thay đổi schema sau này: tăng `db.version(n)` kèm `upgrade()`; tăng `sche
 - Mức heatmap một goal: 0 = 0 phút; 1 = >0 và <50% `dailyTarget`; 2 = 50–<100%; 3 = 100–<200%; 4 = ≥200%. "All goals" theo tổng phút: 0 = 0; 1 = 1–29; 2 = 30–59; 3 = 60–119; 4 = ≥120. Ngày ngoài khoảng goal: trạng thái `outside`.
 - Đường cong: với mỗi ngày d trong khoảng goal, `k` = thứ tự ngày (startDate là 1), `ideal = 1.01^k`; với d ≤ today, `n(d)` = số ngày đạt từ startDate tới d, `actual = 1.01^n(d)`. Headline: `(1.01^n(today) − 1) × 100`, 1 chữ số thập phân.
 
+### 4.1 Kiểu domain ở phase 2 (v2.0)
+
+`Goal`, `LogEntry`, `Settings`, `ActiveTimer` **không đổi** (domain, UI, file backup không biết về sync). Thêm:
+
+```ts
+// src/data/repositories.ts — chỉ lớp data/sync thấy
+type SyncFlag = 0 | 1;                                   // IndexedDB không index được boolean
+type GoalRow  = Goal     & { deletedAt: ISODateTime | null; dirty: SyncFlag };
+type EntryRow = LogEntry & { deletedAt: ISODateTime | null; dirty: SyncFlag };
+type SyncRecord<T> = T & { deletedAt: ISODateTime | null };   // dạng trao đổi với RemoteStore (không có dirty)
+
+interface SyncMeta {                                       // kv key 'sync'
+  userId: string | null;            // tài khoản đang đăng nhập (null khi đã đăng xuất)
+  lastUserId: string | null;        // tài khoản gần nhất từng đồng bộ trên thiết bị (FR-47)
+  account: { email: string; name: string } | null; // hiển thị ngay khi offline/trước khi SDK nạp (FR-40)
+  cursor: { goals: PullCursor | null; entries: PullCursor | null };
+  lastSyncedAt: ISODateTime | null;
+  lastError: { code: SyncErrorCode; at: ISODateTime } | null;
+}
+interface PullCursor { serverUpdatedAt: ISODateTime; id: string }
+
+interface LoginPromptState {                               // kv key 'loginPrompt' (M8)
+  dismissCount: number;             // số lần "Not now" (tối đa 3 rồi không hiện trên Today)
+  lastDismissedAt: ISODateTime | null;
+  lastExportHintAt: ISODateTime | null;
+}
+
+type KvKey = 'settings' | 'activeTimer' | 'locale' | 'sync' | 'loginPrompt';
+```
+
+### 4.2 Dexie schema v2 (M7)
+
+| Store | v1 | v2 | Ghi chú |
+| :- | :- | :- | :- |
+| `goals` | `id` | `id, dirty` | Thêm field `deletedAt` (không index), `dirty` (index để lấy bản ghi chờ đẩy) |
+| `entries` | `id, goalId, date, [goalId+date]` | `id, goalId, date, [goalId+date], dirty` | Như trên |
+| `kv` | `key` | `key` | Thêm key `sync`, `loginPrompt` (không cần đổi schema) |
+
+`db.version(2).stores({...}).upgrade(tx => …)`: mọi goal/entry hiện có → `deletedAt = null`, `dirty = 1` (chưa từng lên cloud, nên lần đăng nhập đầu sẽ đẩy hết = gộp, FR-47). kv không đổi. Dexie chạy `upgrade` trong transaction `versionchange`: lỗi giữa chừng → IndexedDB rollback về v1 nguyên vẹn, `openDatabase` ném `StorageError` (NFR-14). Dexie lưu version IndexedDB = version × 10 (v1 = 10, v2 = 20); test dựng DB v1 bằng API thô phải dùng version 10.
+
+**Quy tắc chung cho mọi repository Dexie từ v2 (ADR-20):**
+
+- **Đọc:** mọi `get*`/`watch*`/`sumMinutes`/`exportAll` bỏ qua hàng có `deletedAt != null`; entry chỉ trả ra nếu goal của nó còn sống (lọc theo tập id goal sống, đọc trong cùng truy vấn/transaction). Trả về **kiểu domain** (bỏ `deletedAt`, `dirty`).
+- **Ghi** (`put`, `saveTimerEntry`, `replaceAll`): ghi hàng với `deletedAt = null`, `dirty = 1`.
+- **Xoá** (`EntryRepository.delete`, `GoalRepository.deleteWithEntries`): xoá mềm: `deletedAt = updatedAt = nextUpdatedAt(clock(), hàng.updatedAt)`, `dirty = 1`; goal xoá kèm mọi entry còn sống của nó, cùng một transaction như phase 1. Repository nhận `clock: () => Date` qua constructor (mặc định `() => new Date()`).
+- `replaceAll` (import): xoá mềm mọi goal/entry còn sống không có trong file, `bulkPut` bản ghi trong file (`dirty = 1`, `deletedAt = null`), giữ kv `locale`, `sync`, `loginPrompt`; vẫn một transaction (M3-AC7/AC9 giữ nguyên vì repository trả kiểu domain).
+- **`nextUpdatedAt(now, previous)`** (`domain/sync.ts`): `now ≥ previous` → `now`; ngược lại `previous + 1 ms`. `GoalService.update`/`setArchived`, `EntryService.update` dùng hàm này thay cho `now.toISOString()` (với đồng hồ cố định trong test hiện có, kết quả không đổi).
+
+### 4.3 Schema cloud (Supabase Postgres, M6) — `supabase/migrations/20261012000000_cloud_sync.sql`
+
+```sql
+-- Goals and entries per user. Mirrors the local model + sync columns.
+create table public.goals (
+  user_id           uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  id                text not null check (char_length(id) between 1 and 64),  -- id cục bộ (UUID hoặc id của file backup cũ)
+  name              text not null check (char_length(name) between 1 and 60),
+  why               text not null default '' check (char_length(why) <= 280),
+  target_type       text not null check (target_type in ('daily', 'total')),
+  target_minutes    integer not null check (target_minutes between 1 and 600000),
+  start_date        date not null,
+  end_date          date not null check (end_date >= start_date),
+  archived          boolean not null default false,
+  created_at        timestamptz not null,
+  updated_at        timestamptz not null,
+  deleted_at        timestamptz,
+  server_updated_at timestamptz not null default clock_timestamp(),
+  primary key (user_id, id)
+);
+
+create table public.entries (
+  user_id           uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  id                text not null check (char_length(id) between 1 and 64),
+  goal_id           text not null check (char_length(goal_id) between 1 and 64),  -- không FK (ADR-20)
+  date              date not null,
+  minutes           integer not null check (minutes between 1 and 1440),
+  note              text not null default '' check (char_length(note) <= 280),
+  source            text not null check (source in ('manual', 'timer')),
+  created_at        timestamptz not null,
+  updated_at        timestamptz not null,
+  deleted_at        timestamptz,
+  server_updated_at timestamptz not null default clock_timestamp(),
+  primary key (user_id, id)
+);
+
+create index goals_pull_idx   on public.goals   (user_id, server_updated_at, id);
+create index entries_pull_idx on public.entries (user_id, server_updated_at, id);
+
+-- Last-write-wins + server cursor (ADR-21). Runs for plain INSERT, UPDATE and upsert (ON CONFLICT DO UPDATE).
+create or replace function public.sync_before_write() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if tg_op = 'UPDATE' then
+    if new.updated_at <= old.updated_at then
+      return null;                         -- incoming is older or equal: keep the server row (tie -> server)
+    end if;
+    new.user_id    := old.user_id;         -- owner and creation time never change
+    new.created_at := old.created_at;
+  else
+    new.user_id := auth.uid();             -- never trust client-sent owner on insert
+  end if;
+  new.server_updated_at := clock_timestamp();
+  return new;
+end $$;
+
+create trigger goals_sync_before_write   before insert or update on public.goals
+  for each row execute function public.sync_before_write();
+create trigger entries_sync_before_write before insert or update on public.entries
+  for each row execute function public.sync_before_write();
+
+alter table public.goals   enable row level security;
+alter table public.entries enable row level security;
+
+create policy goals_select_own on public.goals for select to authenticated
+  using ((select auth.uid()) = user_id);
+create policy goals_insert_own on public.goals for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+create policy goals_update_own on public.goals for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy entries_select_own on public.entries for select to authenticated
+  using ((select auth.uid()) = user_id);
+create policy entries_insert_own on public.entries for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+create policy entries_update_own on public.entries for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+-- No DELETE policy: clients only soft-delete (deleted_at). Hard delete = Dashboard (OQ-09).
+
+-- Explicit Data API grants (Supabase no longer auto-exposes new public tables; applied to all projects from 2026-10-30).
+revoke all on public.goals, public.entries from anon, authenticated;
+grant select, insert, update on public.goals, public.entries to authenticated;
+```
+
+Ghi chú: developer được chỉnh cú pháp cho chạy đúng trên Supabase local/hosted nhưng **không** được nới quyền (thêm grant cho `anon`, thêm DELETE, tắt RLS) hay đổi quy tắc LWW mà không cập nhật plan. Client gửi `user_id` = id phiên trong upsert (để `onConflict: 'user_id,id'` khớp khoá); trigger và RLS bảo đảm không ghi được hàng của người khác.
+
+### 4.4 Cái gì được đồng bộ (FR-44, ADR-22)
+
+| Dữ liệu | Nơi lưu | Đồng bộ | Lý do |
+| :- | :- | :- | :- |
+| Goal (mọi field, gồm `archived`), Entry (gồm `source`) | `goals`, `entries` | **Có** | Là "target và process" user muốn giữ |
+| Bản ghi đã xoá (`deletedAt`) | như trên | **Có** (tombstone) | Xoá lan truyền (FR-48) |
+| `locale` | kv | Không | Thiết lập thiết bị (ADR-12) |
+| `settings.reminderEnabled`, `reminderTime` | kv `settings` | Không | Quyền notification theo thiết bị; OQ-07 |
+| `settings.lastReminderDate`, `plusOneShown` | kv `settings` | Không | Trạng thái hiển thị của từng thiết bị (claim nguyên tử cục bộ, ADR-15) |
+| `settings.lastBackupAt` | kv `settings` | Không | Backup là file trên thiết bị đó |
+| `activeTimer` | kv | Không | Timer chạy trên một thiết bị; entry sau Save mới đồng bộ |
+| `sync`, `loginPrompt` | kv | Không | Metadata cục bộ |
+| Phiên Supabase | `localStorage['opb-auth']` (+ `opb-auth-code-verifier` trong lúc đăng nhập) | — | Do SDK quản lý (A-26) |
+
 ## 5. Interface contract
 
 App không có HTTP API. Contract gồm: route, repository interface, service, mã lỗi, định dạng file backup, notification.
@@ -209,6 +413,9 @@ App không có HTTP API. Contract gồm: route, repository interface, service, m
 | `#/review?goal=<id\|all>&year=<YYYY>` | Review (mặc định `goal=all`, `year` = năm hiện tại) | M4 |
 | `#/settings` | Settings (M1 placeholder; M2 nhắc nhở; M3 backup) | M1–M3 |
 | khác | màn hình "Not found" có link về Today | M1 |
+| `<BASE_URL>?auth=callback&code=…` (query, **trước** dấu `#`) | Không phải route: callback OAuth, `bootstrap` xử lý rồi xoá query, điều hướng tới `returnTo` (mặc định `#/settings`) — §5.9 | M6 |
+
+Phase 2 không thêm route mới: card Account nằm trong `#/settings`.
 
 ### 5.2 Repository interface (`src/data/repositories.ts`)
 
@@ -264,6 +471,40 @@ interface BackupRepository {                              // M3
 }
 ```
 
+**Bổ sung v2.0 (M6/M7).** Chữ ký các interface trên **không đổi**; hành vi đổi theo §4.2 (xoá mềm, lọc tombstone, `dirty`). `KvKey` thêm `'sync' | 'loginPrompt'`. Interface mới:
+
+```ts
+// M6
+interface LocalDataRepository {
+  /** Một transaction rw trên goals + entries + kv: xoá cứng mọi goal/entry (kể cả tombstone),
+   *  kv 'settings', 'activeTimer', 'sync'. Giữ kv 'locale', 'loginPrompt'. Lỗi → rollback. */
+  clearUserData(): Promise<void>;
+  /** Số goal/entry còn sống (cho hộp thoại gộp/đăng xuất). */
+  countLive(): Promise<{ goals: number; entries: number }>;
+}
+
+// M7
+interface RemoteChanges { goals: SyncRecord<Goal>[]; entries: SyncRecord<LogEntry>[] }
+interface ApplyResult { applied: number; keptLocal: number; skippedInvalid: number }
+interface LocalSyncStore {
+  /** Tối đa `limit` hàng dirty mỗi bảng, goals trước. Gồm tombstone. */
+  getDirty(limit: number): Promise<RemoteChanges>;
+  /** MỘT transaction rw trên goals + entries: với mỗi hàng remote, `resolveIncoming(local, remote)`;
+   *  'apply' → ghi hàng remote với dirty = 0; 'keep-local' → không đổi (dirty giữ nguyên).
+   *  Hàng có cùng updatedAt và cùng deletedAt với hàng local → chỉ đặt dirty = 0.
+   *  Áp tombstone goal → xoá mềm các entry còn sống của goal đó (dirty = 1). */
+  applyRemote(changes: RemoteChanges): Promise<ApplyResult>;
+  /** Đặt dirty = 1 cho mọi hàng còn sống (gộp vào tài khoản khác, FR-47). */
+  markAllDirty(): Promise<number>;
+  /** Xoá mềm entry còn sống mà goal đã bị xoá mềm (dọn cuối chu kỳ). */
+  tombstoneOrphanEntries(now: Date): Promise<number>;
+  countDirty(): Promise<number>;
+  watchPendingCount(): Subscribable<number>;
+}
+```
+
+Hợp đồng `applyRemote`: nguyên tử theo lô và tuần tự hoá giữa các tab (transaction IndexedDB), giống ràng buộc bên dưới. Không await promise ngoài Dexie bên trong transaction (ADR-16).
+
 **Ràng buộc cho mọi implementation repository (kể cả không phải Dexie, ví dụ adapter sync sau này):** `deleteWithEntries`, `KvRepository.update`, `TimerRepository.saveTimerEntry`, `BackupRepository.replaceAll` phải **nguyên tử và tuần tự hoá giữa các tab/tiến trình** (transaction, compare-and-set, hoặc khoá ngoài JS context). Một implementation chỉ dùng khoá trong bộ nhớ (như `Mutex`) là **không** đạt hợp đồng này. Test hợp đồng (chạy trên Dexie + fake-indexeddb) dùng hai instance repository trên cùng một DB để mô phỏng hai tab.
 
 ### 5.3 Service (chữ ký chính, `src/services/`)
@@ -280,6 +521,14 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 | `ReminderService` | `(settings: SettingsService, goals: GoalRepository, entries: EntryRepository, notifications: NotificationPort, translator: Translator, iconUrl?: string)` | `progress(now) → GoalProgress[]`; `check(now) → boolean` (qua `Mutex` riêng): nếu `shouldNotify` thì **claim ngày trước** (`claimReminderDay(today)`; thua claim → `false`), rồi `notifications.show(...)` với title/body dịch bằng `Translator` theo locale hiện tại; `show` trả `false` hoặc ném lỗi → `releaseReminderDay(today, lastReminderDateCũ)` để lần kiểm sau thử lại (ADR-15); `getBannerState(now)` trả dữ liệu, UI tự dịch; `body(data)` | M2 |
 | `BackupService` | developer chọn (nhận `BackupRepository`, `SettingsService` hoặc `KvRepository`) | `export(now) → {fileName, json}`, `parse(text, sizeBytes) → Result<BackupPreview>`, `import(parsed, now)` | M3 |
 | `StatsService` | developer chọn (repository qua constructor) | `goalStats(goalId, year, today)`, `overallStats(year, today)`, `curve(goalId, today)` | M4/M5 |
+| `AuthService` (v2.0) | `(deps: { loadAuth: () => Promise<AuthPort>; storedSession: () => boolean; local: LocalDataRepository; kv: KvRepository; connectivity: { isOnline(): boolean }; returnTo: ReturnToStore })` | `state()`, `watch() → Subscribable<AuthState>`; `init()` (có phiên lưu sẵn → nạp port, `getSession`; không có → `signed-out`, **không** nạp port); `signIn(returnTo: string) → Result<void>` (offline → `AUTH_OFFLINE`; lưu `returnTo`; `port.signInWithGoogle(redirectUrl)` điều hướng đi); `completeCallback(cb) → Result<AuthSession>` (`error` → `AUTH_CANCELLED` nếu `access_denied`, ngược lại `AUTH_FAILED`; `code` → `port.exchangeCode(code)`); `signOut({ keepData }) → Result<void>` (M7: gọi `SyncService.finalSyncBeforeSignOut` trước); phản ứng `AuthEvent` `session-expired` → `expired`. Ghi `sync.account`, `sync.userId` khi đăng nhập | M6 |
+| `SyncService` (v2.0) | `(deps: { local: LocalSyncStore; loadRemote: () => Promise<RemoteStore>; kv: KvRepository; auth: { currentUserId(): string \| null }; locks: LockPort; clock: () => Date; batchSize?: number /* 500 */ })` | `syncNow(reason) → Promise<SyncOutcome>` (single-flight trong tab + `LockPort` giữa tab); `watchStatus() → Subscribable<SyncStatus>`; `prepareFirstSignIn(userId) → 'merge-silently' \| 'confirm-merge' \| 'same-user'`; `confirmMerge()` (`markAllDirty` + reset cursor); `finalSyncBeforeSignOut() → { pending: number }`; `reset()` (xoá cursor/userId khi đăng xuất). Lỗi mạng/HTTP ánh xạ thành `SyncErrorCode`, không ném ra ngoài | M7 |
+| `LoginPromptService` (v2.0) | `(kv: KvRepository, goals: GoalRepository, entries: EntryRepository)` | `state(now, ctx: { configured; signedIn; online }) → { banner: boolean; exportHint: boolean }`, `dismiss(now)`, `claimExportHint(now) → boolean` (qua `kv.update`, nguyên tử) | M8 |
+| `BackupService` (sửa v2.0) | thêm tham số tuỳ chọn `isSignedIn: () => boolean` | `import(preview, now)`: khi đã đăng nhập, đặt `updatedAt = nextUpdatedAt(now, …)` cho mọi goal/entry trong file trước `replaceAll` (A-29); chưa đăng nhập → như M3 | M7 |
+
+`AuthState = { kind: 'unavailable' } | { kind: 'signed-out'; lastError?: AuthErrorCode } | { kind: 'signing-in' } | { kind: 'signed-in'; userId; email; name } | { kind: 'expired'; email }`.
+
+`SyncStatus = { kind: 'idle' | 'syncing' | 'offline' | 'error' | 'paused'; pending: number; lastSyncedAt: ISODateTime | null; error?: SyncErrorCode; nextRetryAt?: ISODateTime }` (`paused` = chưa đăng nhập hoặc `expired`).
 
 `NotificationPort` (`src/services/notification-port.ts`): `permission() → NotificationPermissionState`, `requestPermission() → Promise<NotificationPermissionState>`, `show({ title, body, lang, tag, url, icon? }) → Promise<boolean>` (`false` khi không có SW registration, ví dụ `npm run dev`, hoặc trình duyệt từ chối hiển thị).
 
@@ -316,6 +565,16 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 | `IMPORT_INTEGRITY` | Entry trỏ tới goal không tồn tại, id trùng, tổng phút/ngày > 1440, entry ngoài khoảng goal |
 | `STORAGE_UNAVAILABLE` | Không mở được IndexedDB |
 | `NOTIFICATIONS_UNSUPPORTED` / `NOTIFICATIONS_DENIED` | Trình duyệt không hỗ trợ / quyền bị chặn |
+| `AUTH_OFFLINE` (v2.0, M6) | Bấm đăng nhập khi offline |
+| `AUTH_CANCELLED` (M6) | Callback có `error=access_denied` (người dùng huỷ ở Google) |
+| `AUTH_FAILED` (M6) | Callback lỗi khác, `exchangeCode` lỗi, code verifier mất (vd. mở callback ở trình duyệt khác) |
+| `AUTH_SESSION_EXPIRED` (M6) | Refresh token không dùng được / server trả 401 cho phiên → trạng thái `expired` |
+| `SYNC_OFFLINE` (M7) | Không có mạng (`navigator.onLine === false` hoặc `fetch` lỗi mạng) |
+| `SYNC_UNREACHABLE` (M7) | Timeout 20 s, DNS/TLS lỗi, project bị tạm dừng (free tier), 5xx, 429 |
+| `SYNC_UNAUTHORIZED` (M7) | 401/403 từ REST → chuyển `AuthService` sang `expired` |
+| `SYNC_REMOTE_INVALID` (M7) | Hàng kéo về không qua zod (bị bỏ qua, đếm trong `ApplyResult.skippedInvalid`; chỉ ghi log + trạng thái, không chặn chu kỳ) |
+
+Mã `AUTH_*`, `SYNC_*` thêm vào `ErrorCode` (domain/types) và có key `errors.<CODE>` ở cả `en.json`/`vi.json` (copy do designer chốt).
 
 Message hiển thị (tiếng Anh và tiếng Việt) do designer chốt trong `DESIGN.md`; code ở trên là cố định để test bám vào. UI ánh xạ code → key `errors.<CODE>` (biến thể thêm hậu tố, vd. `errors.GOAL_TARGET_INVALID_daily`, `errors.GOAL_PERIOD_INVALID_tooLong`) trong `src/ui/error-messages.ts`; tham số (`remaining`, `start`, `end`, `v`) truyền vào `t()` sau khi đã qua formatter của locale. `DomainError.message` chỉ để log, không bao giờ hiển thị.
 
@@ -339,6 +598,8 @@ Tên file: `1percent-better-backup-YYYY-MM-DD.json` (ngày export, giờ cục b
 ```
 
 Import: thay thế toàn bộ `goals`, `entries`, `settings`; xoá `activeTimer`; đặt `lastReminderDate = null`; giữ nguyên kv `locale` (ngôn ngữ là thiết lập của thiết bị, không có trong file backup). Field `plusOneShown` (thêm ở M5) là optional khi import, mặc định `{}`.
+
+**v2.0 (M7):** định dạng file **không đổi** (`schemaVersion: 1`). Export chỉ gồm bản ghi còn sống, không có `deletedAt`, `dirty`, `user_id` hay kv `sync`/`loginPrompt`. Import giữ kv `locale`, `sync`, `loginPrompt`; bản ghi hiện có không nằm trong file bị **xoá mềm** (để việc thay thế lan truyền lên cloud). Khi đã đăng nhập, `BackupService.import` đặt `updatedAt` của mọi bản ghi trong file = thời điểm import (A-29) để thắng LWW; chưa đăng nhập thì giữ nguyên như file.
 
 ### 5.6 Notification và Service Worker
 
@@ -376,6 +637,83 @@ Tên `1percent-better-reminder.ics`; nội dung tối thiểu: `BEGIN:VCALENDAR`
 | `hhmmss(ms)`, giờ nhắc `HH:MM` | `00:25:31`, `20:00` | giống `en` | không qua Intl |
 
 - Ngày lưu trữ (`ISODate`), dữ liệu file backup, tên file, mã lỗi luôn không phụ thuộc locale.
+
+### 5.9 Auth contract (v2.0, M6)
+
+```ts
+// src/services/auth-port.ts
+interface AuthSession { userId: string; email: string; name: string }   // name: user_metadata.full_name ?? name ?? phần trước '@'
+type AuthEvent = { type: 'signed-in'; session: AuthSession } | { type: 'signed-out' } | { type: 'session-expired' };
+interface AuthPort {
+  getSession(): Promise<AuthSession | null>;               // đọc từ storage, không cần mạng
+  signInWithGoogle(redirectTo: string): Promise<void>;      // điều hướng toàn trang; promise có thể không bao giờ resolve
+  exchangeCode(code: string): Promise<AuthSession>;         // PKCE; ném lỗi → AUTH_FAILED
+  signOut(): Promise<void>;                                 // scope 'local'; xoá phiên trong storage kể cả khi offline
+  onEvent(cb: (e: AuthEvent) => void): () => void;
+  accessToken(): Promise<string | null>;                    // cho RemoteStore (cùng client SDK)
+}
+interface ReturnToStore { save(hash: string): void; take(): string | null }  // sessionStorage 'opb-auth-return'
+```
+
+**Luồng đăng nhập (GitHub Pages sub-path + hash routing):**
+
+1. UI gọi `AuthService.signIn(location.hash || '#/settings')` → lưu `returnTo` → nạp SDK (`loader.ts`) → `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })` với `redirectTo = new URL(import.meta.env.BASE_URL + '?auth=callback', location.origin).href`, ví dụ `https://minh-lgm.github.io/one-percent-better/?auth=callback`, local preview `http://localhost:4174/one-percent-better/?auth=callback`, dev `http://localhost:5173/?auth=callback`. **Không** đặt hash trong `redirectTo` (Supabase nối `code` vào query; hash do `returnTo` lo).
+2. SDK lưu code verifier vào `localStorage['opb-auth-code-verifier']`, điều hướng tới `<SUPABASE_URL>/auth/v1/authorize?provider=google&redirect_to=…&code_challenge=…&code_challenge_method=s256` → Google → `<SUPABASE_URL>/auth/v1/callback` → về `…/one-percent-better/?auth=callback&code=<uuid>` (hoặc `&error=access_denied&error_description=…`).
+3. GitHub Pages trả `index.html` cho `/one-percent-better/?…`; service worker không khớp precache vì có query nên lấy từ mạng (đang online). `bootstrap` (trước khi render router) gọi `readAuthCallback(location)`; nếu có → `cleanCallbackUrl` (thay URL bằng `BASE_URL + (returnTo ?? '#/settings')` qua `history.replaceState`, để reload không đổi lại code), render app, rồi chạy nền `AuthService.completeCallback(cb)` (Account card hiện `signing-in`).
+4. Thành công → `signed-in`, ghi kv `sync.account`/`userId`; M7: `SyncService.prepareFirstSignIn` → gộp hoặc hỏi (FR-47) → `syncNow('sign-in')`.
+5. `flowType: 'pkce'` bắt buộc (mặc định của SDK là `implicit`, sẽ đặt token vào `#…` và đụng hash router); `detectSessionInUrl: false` (app tự xử lý callback, test được bằng hàm thuần).
+
+**Lazy-load (ADR-18):** `container` không import SDK; `AuthService.init()` chỉ nạp khi `hasStoredSession()` (có `localStorage['opb-auth']`) hoặc có callback. Trước khi SDK nạp xong, UI hiện `sync.account` đã lưu (không nháy trạng thái). Bản build không có cấu hình cloud: `AuthService` = stub `unavailable`, không có code nào gọi `loader`.
+
+**Đăng xuất:** `AuthService.signOut({ keepData })` → (M7) `finalSyncBeforeSignOut` nếu online, timeout 10 s → `port.signOut()` → `SyncService.reset()` (giữ `lastUserId`) → nếu `!keepData` → `LocalDataRepository.clearUserData()` → `signed-out`. Lỗi mạng khi đăng xuất không chặn việc xoá phiên cục bộ.
+
+**Hết hạn:** SDK phát `SIGNED_OUT` mà app không yêu cầu, hoặc REST trả 401 → `session-expired` → `expired` (giữ dữ liệu, `dirty` giữ nguyên, sync `paused`).
+
+### 5.10 Sync protocol (v2.0, M7)
+
+```ts
+// src/services/remote-store.ts
+interface RemoteStore {
+  /** Upsert theo lô (≤ 500 hàng/bảng), goals trước entries. onConflict 'user_id,id'. Trigger server quyết LWW. */
+  push(changes: RemoteChanges): Promise<void>;
+  /** Đọc bản ghi chuẩn hiện có trên server cho các id vừa đẩy (lô ≤ 100 id/request). */
+  fetchByIds(ids: { goals: string[]; entries: string[] }): Promise<RemoteChanges & { serverUpdatedAt: Record<string, ISODateTime> }>;
+  /** Keyset: server_updated_at > c.serverUpdatedAt − 120 s, hoặc (= và id > c.id) …; order by server_updated_at, id; limit. */
+  pull(table: 'goals' | 'entries', cursor: PullCursor | null, limit: number):
+    Promise<{ rows: SyncRecord<Goal>[] | SyncRecord<LogEntry>[]; next: PullCursor | null; hasMore: boolean; skippedInvalid: number }>;
+}
+// Lỗi: ném RemoteError { code: 'SYNC_OFFLINE' | 'SYNC_UNREACHABLE' | 'SYNC_UNAUTHORIZED' }.
+```
+
+**Một chu kỳ `syncNow`** (chỉ khi `signed-in`, online; giữ `LockPort` tên `opb-sync`; nếu `busy` → trả `skipped`):
+
+1. **Push:** lặp `local.getDirty(500)` → `remote.push` → `remote.fetchByIds(id vừa đẩy)` → `local.applyRemote(bản chuẩn)` (bản của mình được nhận → `dirty = 0`; server giữ bản mới hơn → ghi đè local, `dirty = 0`; local đã sửa tiếp trong lúc đẩy → giữ `dirty = 1`) cho tới khi hết dirty hoặc đã lặp 20 lô (phần còn lại để chu kỳ sau).
+2. **Pull:** `goals` rồi `entries`, mỗi bảng lặp `remote.pull(cursor, 500)` → `local.applyRemote` → ghi `cursor` mới vào kv `sync` **sau** khi áp xong lô (crash giữa chừng thì kéo lại, idempotent).
+3. **Dọn:** `local.tombstoneOrphanEntries(now)` (entry còn sống của goal đã xoá → xoá mềm, `dirty = 1`, đẩy ở chu kỳ sau).
+4. Ghi `lastSyncedAt`, xoá `lastError`; trạng thái `idle`. Lỗi ở bước nào → `lastError`, trạng thái `offline`/`error`, hẹn thử lại theo backoff 30 s, 60 s, 2 phút, 4 phút, 8 phút, 15 phút (trần); `syncNow('manual')` bỏ qua backoff.
+
+**Con trỏ kéo:** theo `server_updated_at` do server đặt (không theo `updatedAt` của client, vì đồng hồ client lệch); lùi 120 s mỗi lần kéo để không sót hàng của transaction commit muộn; áp lại hàng trùng là vô hại (LWW idempotent).
+
+**Trigger** (`app/sync-scheduler.ts`, FR-46): sau `signed-in`; khởi động có phiên; `online`; `visibilitychange` → `visible`; `watchPendingCount` tăng → debounce 2000 ms; interval `VITE_SYNC_INTERVAL_MS` (mặc định 300000, khoảng 60000–3600000) chỉ khi `document.visibilityState === 'visible'`. Trigger đến khi đang chạy được ghi nhớ và chạy thêm một lần (như reminder scheduler).
+
+**Gộp khi đăng nhập (FR-47):** `prepareFirstSignIn(userId)`: `sync.lastUserId` null hoặc bằng `userId` → `merge-silently`/`same-user` (bản ghi tạo khi chưa đăng nhập đã có `dirty = 1` nên chu kỳ đầu tự đẩy lên = gộp); khác `userId` và `countLive() > 0` → `confirm-merge` (UI hiện hộp thoại; "Add to account" → `confirmMerge()` = `markAllDirty()` + reset cursor; "Cancel" → `AuthService.signOut({ keepData: true })`).
+
+**Ánh xạ hàng (`integration/supabase/mapper.ts`):** `snake_case` ↔ `camelCase`; `timestamptz` → `new Date(v).toISOString()` (luôn dạng `YYYY-MM-DDTHH:mm:ss.sssZ`); `date` giữ `YYYY-MM-DD`; zod kiểm từng hàng theo giới hạn domain (độ dài, khoảng phút, enum), hàng sai → bỏ qua và đếm `skippedInvalid` (NFR-05).
+
+### 5.11 Mock Supabase cho E2E (v2.0) — `e2e/mock-supabase/server.mjs`
+
+Server Node `http`, cổng `54321`, dữ liệu trong bộ nhớ, CORS cho mọi origin `http://localhost:*`. Mô phỏng **đúng hành vi cần cho app**, không phải toàn bộ Supabase:
+
+| Endpoint | Hành vi |
+| :- | :- |
+| `GET /auth/v1/authorize` | Kiểm `provider=google`, `code_challenge_method=s256`, `redirect_to` bắt đầu bằng origin được phép; trả trang HTML "chọn tài khoản" giả với nút `Minh Test` (u1), `Other User` (u2), `Cancel`. Chọn → 302 về `redirect_to` + `&code=<code>` (code gắn với `code_challenge`); `Cancel` → `&error=access_denied&error_description=…` |
+| `POST /auth/v1/token?grant_type=pkce` | Kiểm `auth_code` + `code_verifier` (SHA-256 base64url khớp challenge), dùng một lần; trả session (`access_token` JWT ký HS256 bằng secret giả, `refresh_token`, `expires_in`, `expires_at`, `user` có `id`, `email`, `user_metadata.full_name`) |
+| `POST /auth/v1/token?grant_type=refresh_token` | Đổi refresh token; có công tắc test để trả `400 invalid_grant` (mô phỏng phiên bị thu hồi) |
+| `GET /auth/v1/user`, `POST /auth/v1/logout` | Theo session |
+| `GET/POST /rest/v1/goals`, `/rest/v1/entries` | Tập con PostgREST mà `SupabaseRemoteStore` dùng (upsert `Prefer: resolution=merge-duplicates`, `select`, `in`, `gt`/`gte`/`eq`, `or`, `order`, `limit`); **cùng quy tắc với trigger SQL** (LWW, tie → server, `server_updated_at` tăng dần) và lọc theo `sub` của JWT (mô phỏng RLS) |
+| `/__test/reset`, `/__test/rows?user=`, `/__test/seed`, `/__test/fail?status=500&times=n`, `/__test/log` | Chỉ cho test: reset dữ liệu, đọc/ghi hàng, ép lỗi, xem log request (kích thước lô, số lần exchange) |
+
+Người dùng giả: u1 `00000000-0000-4000-8000-000000000001` / `minh.test@example.com` / `Minh Test`; u2 `00000000-0000-4000-8000-000000000002` / `other.user@example.com` / `Other User`. Quy tắc LWW của mock và của `FakeRemoteStore` (Vitest) phải cùng chạy qua **một bộ test hợp đồng** (`src/services/remote-store.contract.ts`) để không lệch nhau; bộ này cũng chạy với Supabase local khi có Docker (`npm run test:db`).
 
 ## 6. Cấu trúc thư mục
 
@@ -423,6 +761,35 @@ Tên `1percent-better-reminder.ics`; nội dung tối thiểu: `BEGIN:VCALENDAR`
 
 Unit/integration test đặt cạnh file nguồn (`*.test.ts(x)`).
 
+**Bổ sung v2.0:**
+
+```text
+/
+├── .env.example               # + VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SYNC_INTERVAL_MS (để trống)
+├── .env.e2e                   # commit: VITE_SUPABASE_URL= (rỗng) → build e2e chuẩn luôn tắt cloud, kể cả máy có .env.local
+├── .env.cloud-e2e             # commit: URL mock http://127.0.0.1:54321 + key giả (không phải secret)
+├── .github/workflows/pages.yml  # build nhận VITE_SUPABASE_* từ GitHub Actions secrets
+├── supabase/
+│   ├── config.toml            # từ `supabase init` (Supabase local)
+│   └── migrations/20261012000000_cloud_sync.sql
+├── src/
+│   ├── domain/                # + sync.ts, login-prompt.ts
+│   ├── data/dexie/            # db.ts (v2), + local-data-repo.ts, sync-store.ts
+│   ├── services/              # + auth-port.ts, remote-store.ts, lock-port.ts, auth-service.ts, sync-service.ts,
+│   │                          #   login-prompt-service.ts, remote-store.contract.ts (bộ test hợp đồng dùng chung)
+│   ├── integration/           # + auth-callback.ts, connectivity.ts, web-locks.ts
+│   │   └── supabase/          # supabase-client.ts, loader.ts, mapper.ts (+ test) — nơi DUY NHẤT import @supabase/*
+│   ├── app/                   # + sync-scheduler.ts
+│   ├── ui/components/         # + AccountCard, SignOutDialog, MergeAccountDialog, SyncIndicator, LoginPromptBanner, ExportSignInHint
+│   └── test/                  # + fake-auth-port.ts, fake-remote-store.ts, two-devices.ts (dựng 2 DB + 1 remote)
+├── e2e/
+│   ├── mock-supabase/server.mjs
+│   └── cloud/                 # spec chạy với project Playwright `cloud` (build cloud-e2e, sub-path)
+└── tests/
+    ├── qc/cloud/              # spec cloud của QC
+    └── db/                    # test SQL/RLS với Supabase local (chỉ `npm run test:db`, không nằm trong `npm test`)
+```
+
 ## 7. Config và biến môi trường
 
 Không có secret. Không biến nào bắt buộc; app chạy với giá trị mặc định khi không có `.env`.
@@ -431,7 +798,16 @@ Không có secret. Không biến nào bắt buộc; app chạy với giá trị 
 | :- | :- | :- | :- |
 | `VITE_DB_NAME` | Tên IndexedDB database | Không (mặc định `one-percent-better`) | `one-percent-better` |
 | `VITE_REMINDER_CHECK_INTERVAL_MS` | Chu kỳ kiểm tra nhắc nhở khi app mở (1000–3600000) | Không (mặc định `60000`) | `60000` |
-| `BASE_PATH` | `base` của Vite khi host dưới subpath (đọc lúc build trong `vite.config.ts`) | Không (mặc định `/`) | `/1percent-better/` |
+| `BASE_PATH` | `base` của Vite khi host dưới subpath (đọc lúc build trong `vite.config.ts`) | Không (mặc định `/`) | `/one-percent-better/` |
+| `VITE_SUPABASE_URL` (v2.0) | Project URL Supabase. Chỉ nhận `https://…` hoặc `http://localhost[:port]`/`http://127.0.0.1[:port]`; sai → cloud tắt | Không (thiếu → cloud tắt, FR-38) | `https://abcdefghijklmnop.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` (v2.0) | Publishable key (`sb_publishable_…`), công khai theo thiết kế, quyền bị giới hạn bởi RLS | Không (cần cùng URL để bật cloud) | `sb_publishable_xxx` |
+| `VITE_SUPABASE_ANON_KEY` (v2.0) | Dự phòng cho project còn dùng anon key JWT cũ; chỉ đọc khi thiếu `…_PUBLISHABLE_KEY` | Không | `eyJhbGciOi…` |
+| `VITE_SYNC_INTERVAL_MS` (v2.0) | Chu kỳ đồng bộ định kỳ khi app hiển thị (60000–3600000) | Không (mặc định `300000`) | `300000` |
+| `SUPABASE_TEST_URL`, `SUPABASE_TEST_PUBLISHABLE_KEY`, `SUPABASE_TEST_SECRET_KEY` (v2.0, chỉ `npm run test:db`) | Kết nối Supabase **local** (giá trị in ra bởi `npx supabase status`); secret key local dùng để tạo user test | Chỉ cho `test:db` | `http://127.0.0.1:54321` |
+
+Không có secret trong bundle: publishable/anon key là public (RLS bảo vệ dữ liệu). **Tuyệt đối không** đặt `service_role`/`sb_secret_…` của project thật vào bất kỳ biến `VITE_*` nào (Vite nhúng mọi `VITE_*` vào JS). `.env`, `.env.local`, `.env.*.local` nằm trong `.gitignore`; `.env.example`, `.env.e2e`, `.env.cloud-e2e` được commit (chỉ chứa giá trị rỗng/giả).
+
+GitHub Actions (`pages.yml`, bước `npm run build`): `env: VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}`, `VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}` cạnh `BASE_PATH`. Secret chưa đặt → biến rỗng → bản deploy không có cloud (an toàn khi push code trước khi user setup xong).
 
 Biến dùng trong script npm (đặt sẵn bằng `cross-env`, không cần `.env`): `PLAYWRIGHT_BROWSERS_PATH=0`.
 
@@ -447,6 +823,22 @@ Biến dùng trong script npm (đặt sẵn bằng `cross-env`, không cần `.e
 | QC | Như trên | `tests/qc/**/*.test.ts(x)` được Vitest include; `tests/qc/**/*.spec.ts` được Playwright include | (cùng lệnh) |
 
 Quy ước test: mỗi test e2e dùng browser context mới (IndexedDB sạch); dữ liệu mẫu nạp qua màn hình Import (từ M3) hoặc qua UI. Thời gian trong test luôn cố định (`vi.setSystemTime` / `page.clock.setFixedTime` hoặc `install`), ví dụ `2026-10-09T10:00:00+07:00`.
+
+**Bổ sung v2.0 (auth + sync):**
+
+| Loại | Công cụ | Phạm vi | Lệnh |
+| :- | :- | :- | :- |
+| Unit | Vitest | `domain/sync.ts` (bảng `resolveIncoming`, `nextUpdatedAt`), `domain/login-prompt.ts`, `config/env.ts` (cloud), `integration/auth-callback.ts`, `integration/supabase/mapper.ts` (round-trip, chuẩn hoá thời gian, hàng sai) | `npm test` |
+| Service | Vitest + `FakeAuthPort`, `FakeRemoteStore` (`src/test/`) + Dexie trên fake-indexeddb | `AuthService` (máy trạng thái, lazy: loader không được gọi khi không có phiên), `SyncService` (chu kỳ, backoff bằng fake timers, lỗi, single-flight), gộp khi đăng nhập | `npm test` |
+| Hai thiết bị | Vitest, helper `src/test/two-devices.ts`: 2 DB fake-indexeddb (tên khác nhau) + 2 bộ repository/`SyncService` + 1 `FakeRemoteStore` | Kịch bản hội tụ, xung đột, xoá, offline, lệch đồng hồ; **test ngẫu nhiên có seed** (PRNG tự viết, không thêm dependency): 20 seed × 200 thao tác ngẫu nhiên (tạo/sửa/xoá goal/entry, archive, sync xen kẽ, offline) → sau khi sync A, B, A: tập bản ghi sống của A = B = remote | `npm test` |
+| Hợp đồng `RemoteStore` | `src/services/remote-store.contract.ts` (hàm `describeRemoteStoreContract(factory)`) | Chạy với `FakeRemoteStore` và `SupabaseRemoteStore` → mock server (khởi động trong `beforeAll`, cổng ngẫu nhiên) trong `npm test`; chạy thêm với Supabase local trong `npm run test:db` | `npm test`, `npm run test:db` |
+| Migration Dexie | Vitest + fake-indexeddb | Dựng DB v1 (schema v1 chép trong test) có S1 + timer + settings + locale → mở bằng `AppDatabase` v2 → dữ liệu domain deep-equal, `dirty = 1`, `deletedAt = null` | `npm test` |
+| SQL/RLS | Vitest (`tests/db/**`, config riêng) + `@supabase/supabase-js` + Supabase local (Docker) | Áp migration, RLS (A không thấy/ghi được hàng B; `anon` bị từ chối), trigger LWW, không DELETE được | `npm run test:db` (thiếu Docker/`SUPABASE_TEST_URL` → in "skipped: Supabase local not running" và exit 0; QC ghi NOT VERIFIED) |
+| Tĩnh (SQL) | Vitest đọc file migration | Có `enable row level security` cho cả hai bảng, không có `grant … to anon`, không có `for delete` policy | `npm test` |
+| E2E chuẩn | Playwright project `chromium` (như cũ) trên build `--mode e2e` (cloud **tắt**) cổng 4173 | Toàn bộ spec M1–M5 + kiểm "không có Account card" | `npm run test:e2e` |
+| E2E cloud | Playwright project `cloud`: build `--mode cloud-e2e` với `BASE_PATH=/one-percent-better/`, `outDir: dist-cloud-e2e`, preview cổng 4174; mock Supabase cổng 54321 (đều là `webServer`) | `e2e/cloud/**`, `tests/qc/cloud/**`: đăng nhập PKCE qua sub-path, lazy-load, phiên bền/offline/hết hạn, đăng xuất, đồng bộ hai thiết bị (hai browser context), xoá lan truyền, offline → online, lỗi 500/401, import khi đã đăng nhập, nhắc đăng nhập, `vi-VN`, axe, 360 px, request chỉ tới {4174, 54321}. Mỗi test gọi `/__test/reset` (hoặc dùng user riêng) | `npm run test:e2e` (chạy cả hai project) |
+
+`page.clock` trong spec cloud: chỉ dùng `install`/`fastForward` cho debounce/backoff; request tới mock vẫn là thật. Spec cloud không dùng Google thật; luồng Google thật, project thật, iOS/Android là kiểm thủ công (TASKS "User setup" U10, "NOT VERIFIED" của M6–M8).
 
 Quy ước test song ngữ: component test mặc định render ở `en` (helper `renderWithLocale(ui, 'en' | 'vi')`). Test khẳng định chữ nên lấy chuỗi mong đợi từ resource (`t('toast.entrySaved')`) hoặc ghi literal `en` khi AC ghi literal; giá trị định dạng `vi` so với kết quả `Intl` tính trong test hoặc literal sau khi chuẩn hoá khoảng trắng (U+00A0, U+202F → space), vì chi tiết ICU có thể khác nhẹ giữa Node và Chromium.
 
@@ -467,6 +859,11 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | Coverage | `npm run test:coverage` |
 | E2E | `npm run test:e2e` → `cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright test` (tự build + chạy preview qua `webServer`) |
 | Kiểm tra tổng | `npm run check` → lint + typecheck + test + build |
+| Build cho E2E chuẩn (v2.0) | `npm run build:e2e` → `tsc -b && vite build --mode e2e` (cloud tắt dù máy có `.env.local`); `webServer` của project `chromium` đổi sang `npm run build:e2e && npm run preview` |
+| Build + preview cloud E2E (v2.0) | `npm run build:cloud-e2e` → `cross-env BASE_PATH=/one-percent-better/ vite build --mode cloud-e2e --outDir dist-cloud-e2e`; `npm run preview:cloud-e2e` → `vite preview --outDir dist-cloud-e2e --port 4174 --strictPort` → http://localhost:4174/one-percent-better/ |
+| Mock Supabase (v2.0) | `npm run mock:supabase` → `node e2e/mock-supabase/server.mjs` (cổng 54321); demo tay: chạy lệnh này + `npm run build:cloud-e2e && npm run preview:cloud-e2e` |
+| Supabase local (v2.0, cần Docker) | `npm run db:start` → `npx --yes supabase@2.120.0 start`; `npm run db:stop`; `npm run db:reset` (áp lại migration) |
+| Test SQL/RLS (v2.0) | `npm run test:db` → `vitest run --config vitest.db.config.ts` (tự bỏ qua có thông báo nếu không có Supabase local) |
 
 ## 10. Bảo mật và rủi ro
 
@@ -488,6 +885,19 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | Nháy ngôn ngữ khi khởi động (hiện `en` rồi đổi `vi`) | Thấp | Thấp | Đọc kv `locale` trước khi render router (§5.8); màn đầu tiên có 150 ms không hiển thị nội dung |
 | Nhiều tab cùng mở ghi đua nhau (bấm Save timer đồng thời → 2 entry; hai tab cùng gửi nhắc) | Thấp | Trung bình (entry trùng làm sai thống kê) | Khoá trong tab bằng `Mutex`; giữa tab dựa vào transaction IndexedDB: `KvRepository.update` (ADR-14), claim-trước-gửi (ADR-15, đã làm M2), `TimerRepository.saveTimerEntry` (ADR-16, M3). Còn lại chấp nhận được: hai tab cùng `add` thủ công cùng goal/ngày có thể vượt 1440 phút một chút (kiểm giới hạn ngoài transaction) — Later nếu cần |
 | Mã lỗi/notification sinh chữ trong service làm lẫn lớp | Thấp | Thấp | Domain chỉ trả dữ liệu; service chỉ dùng interface `Translator`; lint chặn import `i18next` ngoài `src/i18n` và `src/ui` (qua `react-i18next`) |
+| **(v2.0)** Nâng Dexie v1 → v2 làm hỏng/mất dữ liệu thật của user đang dùng bản phase 1 | Thấp | Cao | `upgrade()` chỉ thêm field; transaction `versionchange` rollback khi lỗi; test migration với S1 + E2E dựng DB v1 bằng API thô; khuyến nghị user Export backup trước khi deploy M7 (README, TASKS "User setup" U0) |
+| Callback OAuth hỏng trên GitHub Pages sub-path + hash routing (token rơi vào `#`, mất `code`, reload đổi code lần hai, SW trả bản cache) | Trung bình | Cao | PKCE (code ở query), `redirectTo` không có hash, `returnTo` qua `sessionStorage`, xoá query ngay sau khi đọc; E2E cloud chạy trên `/one-percent-better/` với mock; kiểm thủ công trên bản deploy (U10). Xử lý ở **M6** (rủi ro lớn nhất, làm sớm) |
+| iOS: PWA đã cài (standalone) mở trang Google trong Safari/khung riêng, code verifier ở storage khác → exchange lỗi | Trung bình | Trung bình | Báo `AUTH_FAILED` rõ ràng, dữ liệu không đổi; README khuyên đăng nhập trên Safari thường (cùng origin, phiên dùng chung với PWA trên iOS ≥ 16.4 không được bảo đảm) rồi mở app; `NOT VERIFIED` cho tới khi user thử trên máy thật |
+| Đồng bộ sai: mất thay đổi offline, ghi đè bản mới bằng bản cũ, xoá không lan truyền, entry mồ côi | Trung bình | Cao | Quy tắc LWW một chỗ (`domain/sync.ts`) + trigger SQL cùng quy tắc; bộ test hợp đồng chung cho Fake/mock/Supabase local; test hai thiết bị + test ngẫu nhiên 20 seed; `applyRemote` trong transaction; cursor ghi sau khi áp |
+| Lệch đồng hồ giữa thiết bị làm LWW chọn sai | Trung bình | Trung bình | `nextUpdatedAt` luôn > phiên bản đang có trên máy; cursor kéo theo `server_updated_at` (đồng hồ server); chấp nhận phần còn lại (A-24) |
+| Bất biến bị phá sau khi gộp (tổng > 1440 phút/ngày, entry ngoài khoảng goal) | Thấp | Thấp | A-25: hiển thị như dữ liệu, không tự sửa; validate cho lần ghi mới; thống kê không crash (test với dữ liệu vi phạm) |
+| Supabase Free tạm dừng project sau ~7 ngày không hoạt động; quota/egress | Trung bình | Trung bình | App offline-first (NFR-15) nên vẫn dùng được; chỉ báo lỗi; README hướng dẫn khôi phục project; dữ liệu cục bộ vẫn đủ |
+| SDK Supabase làm phình bundle ban đầu (> 250 KB) hoặc bị `modulepreload` | Trung bình | Trung bình | Chỉ `import()` trong `loader.ts`; lint cấm import tĩnh; E2E kiểm không có request chunk khi chưa đăng nhập; đo gzip trong handoff |
+| Lộ secret (`service_role`) hoặc người lạ đọc dữ liệu | Thấp | Cao | Chỉ publishable key ở client; RLS + grant tối thiểu, không DELETE; trigger ép `user_id = auth.uid()`; `git grep` trong AC; test RLS (Docker) hoặc kiểm thủ công U10; OQ-06 (giới hạn đăng ký) |
+| Token phiên trong `localStorage` bị đọc qua XSS | Thấp | Cao | Giữ NFR-05 (không render HTML từ dữ liệu, kể cả dữ liệu kéo từ cloud); không thêm script bên thứ ba; CSP bằng `<meta>` để Later |
+| Mock Supabase lệch hành vi thật (E2E xanh nhưng production lỗi) | Trung bình | Trung bình | Bộ test hợp đồng chạy cả với Supabase local; giữ mock tối thiểu theo đúng request SDK gửi; kiểm thủ công trên project thật (U10) trước khi coi phase 2 xong |
+| Existing E2E (347 test) bị ảnh hưởng khi máy QC có `.env.local` thật | Trung bình | Trung bình | Build E2E chuẩn dùng `--mode e2e` + `.env.e2e` ép cloud tắt; spec cloud tách project riêng |
+| Nhiều tab cùng đồng bộ gây request trùng | Trung bình | Thấp | Web Locks (`opb-sync`), không hỗ trợ thì chạy song song vẫn đúng (LWW idempotent, `applyRemote` trong transaction) |
 
 ## 11. Quyết định kiến trúc
 
@@ -539,9 +949,36 @@ Bối cảnh: FR-14 cho tối đa 1 notification/ngày; cách cũ "gửi xong m�
 **ADR-16 — Lưu timer là một transaction trên `goals` + `entries` + `kv` (M3).**
 Bối cảnh: `TimerService.save` hiện gọi `EntryService.add` (ghi `entries`) rồi `kv.delete('activeTimer')` ở hai transaction riêng; hai tab bấm Save cùng lúc đều thấy timer và tạo 2 entry; đây cũng là ghi đa bảng chưa nguyên tử (NFR-04). Lựa chọn: interface `TimerRepository.saveTimerEntry(expected, entry, maxDayMinutes)` (§5.2): trong một transaction `rw` kiểm `activeTimer` còn đúng là timer đã đọc (goalId + startedAt), goal còn tồn tại, tổng phút ngày còn trong giới hạn, rồi ghi entry và xoá `activeTimer`. Validate field/ngày vẫn ở domain/`EntryService` trước khi vào transaction; các điều kiện có thể bị tab khác làm đổi được kiểm lại trong transaction. Hệ quả: hai Save đồng thời (cùng tab hay khác tab) → đúng 1 entry, lần còn lại `TIMER_NOT_RUNNING`; Save đua Discard → tối đa 1 entry; repository mới phải giữ bảo đảm này (ràng buộc §5.2). `Mutex` trong `TimerService` giữ nguyên (rẻ, giữ thứ tự trong tab). Implementation Dexie không được await promise ngoài Dexie trong transaction.
 
+**Ghi chú v2.0 cho ADR cũ.** ADR-01: tombstone (`deletedAt`) và `dirty` được thêm ở M7 (ADR-20), interface repository giữ nguyên. ADR-08: import vẫn "thay thế toàn bộ", nay thực hiện bằng xoá mềm để lan truyền lên cloud. ADR-10: service worker precache cả chunk lazy (Recharts, Supabase) sau khi cài — đã chấp nhận ngày 2026-10-10 (offline-first); ngân sách 250 KB chỉ áp cho tải trang ban đầu. ADR-12: `locale` vẫn là thiết lập thiết bị, không đồng bộ.
+
+**ADR-17 — Supabase làm backend tuỳ chọn, bật theo cấu hình build (v2.0).**
+Bối cảnh: user muốn lưu goal/quá trình trên cloud nhưng login phải tuỳ chọn; chưa có backend; app là static site trên GitHub Pages. Lựa chọn: Supabase gói Free (Auth Google + Postgres + RLS + PostgREST), client gọi trực tiếp, không server riêng; bật khi có `VITE_SUPABASE_URL` + key hợp lệ lúc build, ngược lại `cloud = null` và app giống phase 1. Hệ quả: không phải vận hành server; bảo mật dựa hoàn toàn vào RLS + grant (phải test); push code trước khi user setup là an toàn; phụ thuộc giới hạn Free (tạm dừng khi không hoạt động, A-31).
+
+**ADR-18 — SDK Supabase nạp lười; nhận biết phiên mà không cần SDK (v2.0).**
+Bối cảnh: NFR-03 (≤ 250 KB gzip ban đầu, hiện ≈ 215 KB); đa số lần mở app không cần cloud. Lựa chọn: chỉ `integration/supabase/loader.ts` gọi `import('./supabase-client')`; `storageKey: 'opb-auth'` cố định để `hasStoredSession()` chỉ cần đọc `localStorage`; nạp khi bấm đăng nhập, có callback, hoặc có phiên; thông tin tài khoản hiển thị từ kv `sync.account` trong lúc chờ. Hệ quả: người không đăng nhập không tải SDK, không request ngoài; có thêm một bước chờ (vài trăm ms) trước lần sync đầu sau khởi động; lint cưỡng chế import.
+
+**ADR-19 — OAuth PKCE, callback bằng query trên base URL (v2.0).**
+Bối cảnh: hash routing (`#/…`) và sub-path `/one-percent-better/`; flow mặc định `implicit` của SDK trả token trong fragment, xung đột router và lộ token trong URL. Lựa chọn: `flowType: 'pkce'`, `redirectTo = <origin><BASE_URL>?auth=callback` (không hash), `detectSessionInUrl: false`, app tự đọc `code`/`error`, xoá query bằng `history.replaceState`, quay về `returnTo` (sessionStorage). Supabase Redirect URLs (project thật, TASKS U5): `https://minh-lgm.github.io/one-percent-better/**`, `http://localhost:4173/**`, `http://localhost:5173/**` (cổng 4174 chỉ dùng với mock, mock tự cho phép `http://localhost:*`). Hệ quả: router không đổi; code dùng một lần, 5 phút; đổi trình duyệt giữa chừng (iOS PWA) → `AUTH_FAILED` (rủi ro §10).
+
+**ADR-20 — Offline-first: IndexedDB là nguồn chính, đánh dấu `dirty`, xoá mềm (v2.0).**
+Bối cảnh: app phải chạy đủ khi offline/không đăng nhập; cần biết bản ghi nào chưa lên cloud và lan truyền việc xoá. Lựa chọn: Dexie v2 thêm `deletedAt` + `dirty` (index) vào `goals`, `entries`; repository giữ chữ ký cũ nhưng xoá mềm và lọc tombstone; mọi ghi đặt `dirty = 1` (kể cả khi chưa đăng nhập — đăng nhập lần đầu tự thành gộp); không FK `entries.goal_id` trên server (thứ tự đến của hàng không bảo đảm), thay bằng lọc entry của goal đã xoá khi đọc + dọn mồ côi cuối chu kỳ. Hệ quả: UI/service/domain gần như không đổi; tombstone tích luỹ (nhỏ, dọn để Later); mọi truy vấn entry phải lọc theo goal sống (test benchmark NFR-03 lại).
+
+**ADR-21 — Last-write-wins theo bản ghi, `updatedAt` đơn điệu, tie → server, quy tắc chung client/server (v2.0).**
+Bối cảnh: một người dùng, vài thiết bị, xung đột hiếm; cần đơn giản, kiểm chứng được. Lựa chọn: so `updatedAt` (thời điểm, không so chuỗi); server (trigger `sync_before_write`) nhận bản đến khi `updatedAt` **lớn hơn** bản đang có, client (`resolveIncoming`) nhận bản server khi `updatedAt` **lớn hơn hoặc bằng** (nên bằng nhau thì cả hai theo server); xoá là một lần sửa; `nextUpdatedAt` chống lệch đồng hồ cục bộ; con trỏ kéo theo `server_updated_at` với cửa sổ lùi 120 s; sau mỗi lần đẩy đọc lại bản chuẩn theo id để thiết bị biết khi nó thua. Hệ quả: hội tụ bảo đảm (mọi bên áp cùng một thứ tự toàn phần); sửa đồng thời khác field vẫn mất một bên (chấp nhận, A-24); goal đã xoá có thể sống lại nếu có bản sửa mới hơn; không cần RPC riêng.
+
+**ADR-22 — Chỉ đồng bộ goal và entry (v2.0).**
+Bối cảnh: user nêu "target và process"; thiết lập như giờ nhắc, quyền notification, ngôn ngữ, timer gắn với thiết bị; đồng bộ blob settings sinh xung đột khó hiểu. Lựa chọn: bảng `goals`, `entries`; kv giữ nguyên cục bộ (§4.4). Hệ quả: schema đơn giản; muốn đồng bộ thêm thiết lập thì thêm bảng `user_settings` (Later, OQ-07).
+
+**ADR-23 — Kiểm thử không cần project thật: Fake + mock HTTP + Supabase local tuỳ chọn (v2.0).**
+Bối cảnh: QC/dev không có tài khoản Supabase/Google thật; Docker có thể không có. Lựa chọn: interface `AuthPort`/`RemoteStore`/`LockPort` cho service test; mock Supabase Node (OAuth PKCE + tập con PostgREST + RLS giả) cho E2E trên sub-path; một bộ test hợp đồng `RemoteStore` chạy với Fake, mock, và Supabase local (`npm run test:db`, cần Docker). Hệ quả: CI/QC chạy được toàn bộ test mặc định; độ tin cậy với Supabase thật phụ thuộc test hợp đồng + kiểm thủ công (danh sách NOT VERIFIED rõ ràng ở TASKS).
+
+**ADR-24 — Đăng nhập lần đầu = gộp; đăng xuất hỏi giữ/xoá, mặc định giữ (v2.0).**
+Bối cảnh: user chốt "merge, không xoá"; máy dùng chung cần xoá được. Lựa chọn: bản ghi cục bộ đã `dirty = 1` nên chu kỳ đầu tự đẩy lên; đổi sang tài khoản khác thì hỏi và `markAllDirty`; đăng xuất: hộp thoại giữ (mặc định)/xoá (`clearUserData` một transaction), thử sync lần cuối trước. Hệ quả: không bao giờ mất dữ liệu do đăng nhập; dữ liệu của tài khoản cũ có thể bị gộp sang tài khoản mới nếu người dùng chọn "Add to account" (có cảnh báo số lượng).
+
 ## Changelog
 
 - 2026-10-09 — v1, tạo mới (mode `new`).
 - 2026-10-09 — v1.1 (khi viết TASKS.md): làm rõ `pace` tính cả hôm nay; thêm quy tắc số phút điền sẵn của timer (1–1440); ghi rõ EntryService validate mọi ngày từ M1 (timer qua nửa đêm ở M2) và xoá goal thì xoá `activeTimer` liên quan; thêm mã lỗi `GOAL_TIMER_RUNNING` (M5); thay `react/no-danger` (plugin không có trong stack) bằng `no-restricted-syntax`.
 - 2026-10-09 — v1.2 (mode `revise`, feedback Gate 2: song ngữ en/vi): §1 thêm luồng i18n; §2 thêm `i18next` 26.4.2 + `react-i18next` 17.0.16 và `Intl` (loại language detector plugin, tự viết, FormatJS, Lingui); §3 thêm component `src/i18n/*`, `LocaleService`, `bootstrap.ts`, `useT`/`useFormat`, `error-messages.ts`, sửa `domain/reminder.ts` (trả dữ liệu, không sinh chữ) và `domain/ics.ts` (nhận chuỗi đã dịch), mở rộng quy tắc phụ thuộc và thêm quy tắc chuỗi hiển thị (lint + test); §4 kv key `locale`; §5.2 `KvKey`; §5.3 `LocaleService`, `ReminderService` nhận `Translator`; §5.4 ánh xạ mã lỗi → key `errors.*`; §5.5 import giữ `locale`; §5.6 body notification theo locale; §5.7 `.ics` UTF-8, SUMMARY/DESCRIPTION theo locale; thêm §5.8 i18n contract; §6 thư mục `src/i18n/`, helper test; §8 chiến lược test i18n; §10 thêm 5 rủi ro; §11 thêm ADR-11 … ADR-13.
 - 2026-10-10 — v1.3 (mode `revise`, ghi nhận deviation M1–M2 đã PASS QC, chuẩn bị M3): §3 thêm `settings-service`, `mutex`, `notification-port`, `app/reminder-scheduler`, cập nhật mô tả `data/*`; quy tắc lint tách lớp bỏ qua `*.test.ts(x)`. §5.2 `KvRepository.update` (nguyên tử, ADR-14), `EntryRepository.getById` (M3), interface mới `TimerRepository.saveTimerEntry` + `SaveTimerEntryOutcome` (M3), `BackupData`, ràng buộc nguyên tử cho mọi implementation repository. §5.3 thêm cột Constructor; `DomainError.params`; `GoalService` tham số `kv` tuỳ chọn; `EntryService` dùng `getById` + tách `prepareAdd` (M3); `TimerService` (`current`, `stop` chỉ xem trước, `Mutex`, `save` nguyên tử ở M3); thêm `SettingsService` (claim/release ngày nhắc), `NotificationPort`; `ReminderService.check` claim-trước-gửi; ghi nhận scheduler chạy bù trigger, `Today.pendingTimer` + cờ `GoalCard` hạ bởi effect, banner tính ở UI. §5.6 thứ tự claim → show → release. §6 thêm file. §10 thêm rủi ro ghi đua nhiều tab. §11 thêm ADR-14 … ADR-16. Không đổi phạm vi, không đổi mã lỗi.
+- 2026-10-12 — v2.0 (mode `revise`, phase 2: đăng nhập Google tuỳ chọn + đồng bộ offline-first qua Supabase). §1 thêm sơ đồ và luồng phase 2; §2 thêm Supabase, `@supabase/supabase-js` 2.117.3 (lazy), Supabase CLI 2.120.0 qua npx, mock Supabase Node; §3 thêm component phase 2 (AuthPort/AuthService, RemoteStore/SyncService, LoginPromptService, LockPort, Dexie v2, LocalSyncStore, LocalDataRepository, integration/supabase, auth-callback, sync-scheduler, UI mới) và quy tắc lint `@supabase/*`; §4 thêm 4.1 kiểu sync + kv `sync`/`loginPrompt`, 4.2 Dexie v2 + quy tắc xoá mềm/`dirty`/`nextUpdatedAt`, 4.3 SQL migration (bảng, trigger LWW, RLS, grant), 4.4 bảng cái gì đồng bộ; §5.1 callback `?auth=callback`; §5.2 `LocalDataRepository`, `LocalSyncStore`; §5.3 `AuthService`, `SyncService`, `LoginPromptService`, sửa `BackupService`; §5.4 mã `AUTH_*`, `SYNC_*`; §5.5 export/import với tombstone; thêm §5.9 Auth contract, §5.10 Sync protocol, §5.11 mock Supabase; §6 thư mục mới; §7 biến `VITE_SUPABASE_*`, `VITE_SYNC_INTERVAL_MS`, biến test DB, secrets Actions; §8 chiến lược test auth/sync (Fake, hai thiết bị, hợp đồng, migration, SQL/RLS, project E2E `cloud`); §9 lệnh `build:e2e`, `build:cloud-e2e`, `preview:cloud-e2e`, `mock:supabase`, `db:*`, `test:db`; §10 thêm 12 rủi ro; §11 ghi chú ADR-01/08/10/12, thêm ADR-17 … ADR-24. Không đổi contract M1–M5 ngoài hành vi xoá mềm/lọc tombstone ở repository (chữ ký giữ nguyên).

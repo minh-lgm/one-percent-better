@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** planner mode revise (phase 2: M6 Auth Google/Supabase, M7 Sync offline-first) → Gate 1
+**Next step:** Gate 1 (phase 2) — user duyệt plan v2 và trả lời OQ-06…09
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -40,7 +40,8 @@
 | M4 | PASS (round 2) | docs/qc/report-M4-r2.md | Firefox/Safari/iOS, screen reader, bản dịch vi NOT VERIFIED | bundle 218,8 kB gzip; Recharts lazy |
 | M5 | PASS (round 2) | docs/qc/report-M5-r2.md | AC9 Firefox/Safari/iOS, screen reader NOT VERIFIED | Dispute M3-D3: orchestrator chọn giữ fix, QC re-target tests/qc/m3-r1.spec.ts:638 |
 | Final QC (phase 1) | PASS (round 2) | docs/qc/report-final-r2.md | r1 FAIL F-D1 (Vitest cache lạnh) → fix 5a73e18 → r2 PASS trên 2 clone sạch |
-| Plan v2 (phase 2) | DOING — planner revise | docs/plan/ | M6 Auth, M7 Sync |
+| Plan v2 (phase 2) | DONE — chờ Gate 1 | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
+| M8 | TODO | | |
 | M6 | TODO | | |
 | M7 | TODO | | |
 | Final QC (phase 2) | TODO | | |
