@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** Gate 2 (phase 2) — user duyệt DESIGN v2 (docs/design/DESIGN.md, mockups 08/09) → developer M6
+**Next step:** developer M6 mode build → qc M6 round 1; orchestrator cập nhật Figma theo DESIGN v2
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -16,6 +16,7 @@
 - 2026-10-10 — (orchestrator, QC M4 OQ1) SW precache sẵn chunk Recharts/Review (~101 kB) sau khi cài, dù trang chưa vào Review → chấp nhận: NFR-03 nói về tải trang ban đầu, precache phục vụ offline-first; planner ghi nhận ở lần revise sau
 - 2026-10-12 — Phase 2: thêm login để lưu target/process trên cloud? → Có. Login TUỲ CHỌN (offline-first, app dùng được không cần tài khoản), có trigger nhắc login để tránh mất dữ liệu; backend: orchestrator chọn Supabase (user chưa có dịch vụ nào); đăng nhập bằng Google (Gmail)
 - 2026-10-12 — Gate 1 phase 2: duyệt plan v2 (M6 Auth, M7 Sync, M8 Nhắc login). OQ-06: ai có Gmail cũng đăng nhập được (không tắt sign-up). OQ-07: CÓ sync giờ nhắc + ngôn ngữ. OQ-08: máy không có Docker Desktop → RLS kiểm tay (U10). OQ-09: không có nút xoá cloud trong app
+- 2026-10-12 — Gate 2 phase 2: duyệt DESIGN v2; giữ câu riêng tư như designer viết (OQ-D11); cập nhật Figma ngay (orchestrator làm)
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
@@ -43,8 +44,8 @@
 | Final QC (phase 1) | PASS (round 2) | docs/qc/report-final-r2.md | r1 FAIL F-D1 (Vitest cache lạnh) → fix 5a73e18 → r2 PASS trên 2 clone sạch |
 | Plan v2.1 (phase 2) | DONE (duyệt 2026-10-12) | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
 | M8 | TODO | | |
-| Design v2 | DONE — chờ Gate 2 | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma chưa cập nhật theo v2 |
-| M6 | TODO | | |
+| Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma chưa cập nhật theo v2 |
+| M6 | DOING — developer build | | |
 | M7 | TODO | | |
 | Final QC (phase 2) | TODO | | |
 
