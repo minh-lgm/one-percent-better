@@ -1,10 +1,11 @@
-import type { KvKey, LocalDataRepository } from '../repositories';
+import { isLive, type KvKey, type LocalDataRepository } from '../repositories';
 import type { AppDatabase } from './db';
+import { liveGoalIds } from './entry-repo';
 
 /** kv rows removed by "sign out and remove data"; `locale` and `loginPrompt` survive (ARCH §5.2, A-37). */
 export const CLEARED_KV_KEYS: readonly KvKey[] = ['settings', 'activeTimer', 'sync', 'prefsSync'];
 
-/** Dexie implementation of `LocalDataRepository` (M6-T2). */
+/** Dexie implementation of `LocalDataRepository` (M6-T2; v2: hard-deletes tombstones too, counts live rows only). */
 export class DexieLocalDataRepository implements LocalDataRepository {
   constructor(private readonly db: AppDatabase) {}
 
@@ -16,8 +17,11 @@ export class DexieLocalDataRepository implements LocalDataRepository {
     });
   }
 
-  async countLive(): Promise<{ goals: number; entries: number }> {
-    const [goals, entries] = await Promise.all([this.db.goals.count(), this.db.entries.count()]);
-    return { goals, entries };
+  countLive(): Promise<{ goals: number; entries: number }> {
+    return this.db.transaction('r', this.db.goals, this.db.entries, async () => {
+      const goalIds = await liveGoalIds(this.db);
+      const entries = await this.db.entries.filter((e) => isLive(e) && goalIds.has(e.goalId)).count();
+      return { goals: goalIds.size, entries };
+    });
   }
 }

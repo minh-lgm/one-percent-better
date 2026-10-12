@@ -1,0 +1,459 @@
+// Sync engine (ARCHITECTURE §5.3, §5.10; FR-45 … FR-50, FR-55; ADR-20/21/24/25). One cycle:
+// push dirty rows → read the canonical rows back → pull by keyset cursor → tombstone orphans →
+// preferences (push dirty groups or pull) → bookkeeping. Errors become a `SyncStatus`, never
+// exceptions. Single-flight inside the tab, `LockPort` (Web Locks) across tabs.
+import type { KvRepository, LocalDataRepository, LocalSyncStore, PullCursor, Subscribable, SyncedPrefsRepository, SyncMeta } from '../data/repositories';
+import { normalizeSyncMeta } from '../data/repositories';
+import { backoffMs, rewindCursor, type SyncErrorCode, type SyncStatus } from '../domain/sync';
+import type { Locale } from '../i18n/types';
+import type { LockPort } from './lock-port';
+import { isRemoteError, type RemoteStore, type RemoteTable } from './remote-store';
+
+export type SyncReason = 'sign-in' | 'startup' | 'online' | 'visible' | 'change' | 'interval' | 'manual' | 'retry' | 'sign-out' | 'rerun';
+
+export type SyncOutcome =
+  | { status: 'ran'; ok: true }
+  | { status: 'ran'; ok: false; error: SyncErrorCode }
+  | { status: 'skipped'; why: 'busy' | 'paused' | 'backoff' | 'offline' | 'awaiting-merge' };
+
+export type FirstSignInDecision = 'merge-silently' | 'confirm-merge' | 'same-user';
+
+/** D5 data (DESIGN F11): shown until the user decides; nothing is uploaded meanwhile. */
+export interface MergePrompt {
+  userId: string;
+  email: string;
+  goals: number;
+  entries: number;
+}
+
+export type SyncEvent =
+  | { type: 'merge-done'; goals: number; entries: number }
+  | { type: 'prefs-applied'; reminderChanged: boolean; localeChanged: Locale | null };
+
+export interface SyncServiceDeps {
+  local: LocalSyncStore;
+  prefs: SyncedPrefsRepository;
+  localData: LocalDataRepository;
+  /** Lazy: the SDK chunk is only loaded on the first cycle (ADR-18). */
+  loadRemote: () => Promise<RemoteStore>;
+  kv: KvRepository;
+  auth: {
+    currentUserId(): string | null;
+    /** Resolves once the stored session has been verified (no request with a stale token). */
+    ready?(): Promise<void>;
+    /** REST answered 401/403: the session is gone (FR-40). */
+    onUnauthorized?(): void;
+  };
+  locks: LockPort;
+  clock?: () => Date;
+  connectivity?: { isOnline(): boolean };
+  timers?: { setTimeout(fn: () => void, ms: number): unknown; clearTimeout(id: unknown): void };
+  /** Rows per push/pull batch (≤ 500, ARCHITECTURE §5.10). */
+  batchSize?: number;
+  /** Push batches per cycle; the rest waits for the next cycle. */
+  maxPushBatches?: number;
+  /** Final sync before signing out gives up after this long. */
+  signOutTimeoutMs?: number;
+}
+
+export const SYNC_LOCK_NAME = 'opb-sync';
+const DEFAULT_BATCH = 500;
+const DEFAULT_MAX_PUSH_BATCHES = 20;
+const DEFAULT_SIGN_OUT_TIMEOUT_MS = 10_000;
+/** Reasons that run even while a retry is pending (manual, network back, the retry itself, sign-in/out, startup). */
+const BYPASS_BACKOFF: ReadonlySet<SyncReason> = new Set(['manual', 'online', 'retry', 'sign-in', 'sign-out', 'startup', 'rerun']);
+
+export class SyncService {
+  private status: SyncStatus = { kind: 'paused', pending: 0, lastSyncedAt: null };
+  private readonly listeners = new Set<(s: SyncStatus) => void>();
+  private readonly eventListeners = new Set<(e: SyncEvent) => void>();
+  private readonly promptListeners = new Set<(p: MergePrompt | null) => void>();
+  private mergePrompt: MergePrompt | null = null;
+  private running: Promise<SyncOutcome> | null = null;
+  private rerun = false;
+  private failures = 0;
+  private retryTimer: unknown = null;
+  private started = false;
+  private stopPending: (() => void) | null = null;
+  private stopMeta: (() => void) | null = null;
+  private remote: RemoteStore | null = null;
+  private readonly clock: () => Date;
+  private readonly timers: NonNullable<SyncServiceDeps['timers']>;
+  private readonly batchSize: number;
+  private readonly maxPushBatches: number;
+
+  constructor(private readonly deps: SyncServiceDeps) {
+    this.clock = deps.clock ?? (() => new Date());
+    this.timers = deps.timers ?? { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: (id) => clearTimeout(id as ReturnType<typeof setTimeout>) };
+    this.batchSize = Math.min(deps.batchSize ?? DEFAULT_BATCH, DEFAULT_BATCH);
+    this.maxPushBatches = deps.maxPushBatches ?? DEFAULT_MAX_PUSH_BATCHES;
+  }
+
+  // ---- observation ----
+
+  current(): SyncStatus {
+    return this.status;
+  }
+
+  watchStatus(): Subscribable<SyncStatus> {
+    return {
+      subscribe: (onNext) => {
+        this.start();
+        this.listeners.add(onNext);
+        onNext(this.status);
+        return () => {
+          this.listeners.delete(onNext);
+        };
+      },
+    };
+  }
+
+  onEvent(cb: (e: SyncEvent) => void): () => void {
+    this.eventListeners.add(cb);
+    return () => {
+      this.eventListeners.delete(cb);
+    };
+  }
+
+  watchMergePrompt(): Subscribable<MergePrompt | null> {
+    return {
+      subscribe: (onNext) => {
+        this.promptListeners.add(onNext);
+        onNext(this.mergePrompt);
+        return () => {
+          this.promptListeners.delete(onNext);
+        };
+      },
+    };
+  }
+
+  /** Subscribe to the pending count and the stored bookkeeping (idempotent). */
+  start(): void {
+    if (this.started) return;
+    this.started = true;
+    this.stopPending = this.deps.local.watchPendingCount().subscribe((pending) => this.set({ pending }), () => undefined);
+    this.stopMeta = this.deps.kv.watch<unknown>('sync').subscribe((raw) => {
+      const meta = normalizeSyncMeta(raw);
+      if (meta.lastSyncedAt !== this.status.lastSyncedAt) this.set({ lastSyncedAt: meta.lastSyncedAt });
+    }, () => undefined);
+  }
+
+  stop(): void {
+    this.stopPending?.();
+    this.stopMeta?.();
+    this.stopPending = null;
+    this.stopMeta = null;
+    this.started = false;
+    this.clearRetry();
+  }
+
+  // ---- account lifecycle ----
+
+  /**
+   * FR-47 / A-27: `merge-silently` on a device never bound to another account, `same-user` when the
+   * last account on this device is this one, `confirm-merge` when it was a different one and the
+   * device still holds data (D5; nothing is uploaded until `confirmMerge`).
+   */
+  async prepareFirstSignIn(userId: string): Promise<FirstSignInDecision> {
+    const meta = await this.readMeta();
+    const previous = meta.lastUserId;
+    if (previous === userId) return 'same-user';
+    if (previous !== null) {
+      const live = await this.deps.localData.countLive();
+      if (live.goals + live.entries > 0) return 'confirm-merge';
+    }
+    return 'merge-silently';
+  }
+
+  /**
+   * Called once per sign-in (scheduler). Either syncs right away (and reports the merge) or raises
+   * the D5 prompt. Returns the decision.
+   */
+  async handleSignedIn(userId: string, email: string): Promise<FirstSignInDecision> {
+    const decision = await this.prepareFirstSignIn(userId);
+    if (decision === 'confirm-merge') {
+      const live = await this.deps.localData.countLive();
+      this.setPrompt({ userId, email, goals: live.goals, entries: live.entries });
+      this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined });
+      return decision;
+    }
+    await this.bindUser(userId, decision === 'merge-silently');
+    const merged = decision === 'merge-silently' && (await this.deps.local.countDirty()) > 0;
+    const outcome = await this.syncNow('sign-in');
+    if (merged && outcome.status === 'ran' && outcome.ok) {
+      const live = await this.deps.localData.countLive();
+      this.emit({ type: 'merge-done', goals: live.goals, entries: live.entries });
+    }
+    return decision;
+  }
+
+  /** D5 "Add to account": every live row and chosen preference group is pushed to the new account. */
+  async confirmMerge(): Promise<SyncOutcome> {
+    const prompt = this.mergePrompt;
+    if (!prompt) return { status: 'skipped', why: 'paused' };
+    await this.deps.local.markAllDirty();
+    await this.deps.prefs.markAllDirty();
+    await this.bindUser(prompt.userId, true);
+    this.setPrompt(null);
+    const outcome = await this.syncNow('sign-in');
+    if (outcome.status === 'ran' && outcome.ok) {
+      const live = await this.deps.localData.countLive();
+      this.emit({ type: 'merge-done', goals: live.goals, entries: live.entries });
+    }
+    return outcome;
+  }
+
+  /** D5 "Cancel": forget the prompt; the caller signs out keeping `lastUserId` (so the question comes back next time). */
+  cancelMerge(): void {
+    this.setPrompt(null);
+  }
+
+  /** Before sign-out (FR-41): one last cycle when online, bounded in time; reports what is still waiting. */
+  async finalSyncBeforeSignOut(): Promise<{ pending: number }> {
+    if (this.deps.connectivity && !this.deps.connectivity.isOnline()) return { pending: await this.deps.local.countDirty() };
+    if (this.mergePrompt) return { pending: await this.deps.local.countDirty() };
+    const timeoutMs = this.deps.signOutTimeoutMs ?? DEFAULT_SIGN_OUT_TIMEOUT_MS;
+    let timer: unknown = null;
+    const timeout = new Promise<'timeout'>((resolve) => {
+      timer = this.timers.setTimeout(() => resolve('timeout'), timeoutMs);
+    });
+    try {
+      await Promise.race([this.syncNow('sign-out'), timeout]);
+    } finally {
+      if (timer !== null) this.timers.clearTimeout(timer);
+    }
+    return { pending: await this.deps.local.countDirty() };
+  }
+
+  /** After sign-out: forget cursors and bookkeeping (`lastUserId` is kept by AuthService). */
+  async reset(): Promise<void> {
+    this.clearRetry();
+    this.failures = 0;
+    this.setPrompt(null);
+    await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null }));
+    this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined, remoteInvalid: undefined, lastSyncedAt: null });
+  }
+
+  /** Session expired (FR-40): keep everything, stop retrying. */
+  pause(): void {
+    this.clearRetry();
+    this.set({ kind: 'paused', nextRetryAt: undefined });
+  }
+
+  // ---- the cycle ----
+
+  syncNow(reason: SyncReason): Promise<SyncOutcome> {
+    if (this.running) {
+      if (reason === 'manual' || reason === 'sign-out' || reason === 'sign-in') {
+        const after = this.running.then(() => this.syncNow(reason));
+        return after;
+      }
+      this.rerun = true;
+      return Promise.resolve({ status: 'skipped', why: 'busy' });
+    }
+    const run = this.guardedCycle(reason).finally(() => {
+      this.running = null;
+      if (this.rerun) {
+        this.rerun = false;
+        void this.syncNow('rerun');
+      }
+    });
+    this.running = run;
+    return run;
+  }
+
+  private async guardedCycle(reason: SyncReason): Promise<SyncOutcome> {
+    const userId = this.deps.auth.currentUserId();
+    if (!userId) {
+      this.set({ kind: 'paused' });
+      return { status: 'skipped', why: 'paused' };
+    }
+    if (this.mergePrompt) return { status: 'skipped', why: 'awaiting-merge' };
+    if (this.deps.connectivity && !this.deps.connectivity.isOnline()) {
+      this.set({ kind: 'offline', error: undefined });
+      return { status: 'skipped', why: 'offline' };
+    }
+    if (!BYPASS_BACKOFF.has(reason) && this.status.nextRetryAt && Date.parse(this.status.nextRetryAt) > this.clock().getTime()) {
+      return { status: 'skipped', why: 'backoff' };
+    }
+    if (reason === 'manual' || reason === 'retry' || reason === 'online') this.clearRetry();
+
+    const outcome = await this.deps.locks.request(SYNC_LOCK_NAME, async () => {
+      this.set({ kind: 'syncing', error: undefined, nextRetryAt: undefined });
+      try {
+        await this.deps.auth.ready?.();
+        const skippedInvalid = await this.cycle(userId);
+        const now = this.clock().toISOString();
+        this.failures = 0;
+        await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), lastSyncedAt: now, lastError: null }));
+        this.set({ kind: 'idle', lastSyncedAt: now, error: undefined, nextRetryAt: undefined, remoteInvalid: skippedInvalid > 0 ? true : undefined, pending: await this.deps.local.countDirty() });
+        return { status: 'ran', ok: true } as const;
+      } catch (e) {
+        return this.fail(e);
+      }
+    });
+    if (outcome.status === 'busy') {
+      // Another tab holds the lock: its result lands in kv `sync`, which `start()` watches.
+      if (this.status.kind === 'syncing') this.set({ kind: 'idle' });
+      return { status: 'skipped', why: 'busy' };
+    }
+    return outcome.value;
+  }
+
+  /** Returns the number of invalid remote rows skipped. */
+  private async cycle(userId: string): Promise<number> {
+    const remote = await this.getRemote();
+    let skippedInvalid = 0;
+
+    // 1. Push, then read the canonical rows back (ADR-21: the device learns when it lost).
+    skippedInvalid += await this.pushPhase(remote);
+
+    // 2. Pull by keyset cursor, goals before entries; the cursor is stored after each applied page.
+    for (const table of ['goals', 'entries'] as const) {
+      const meta = await this.readMeta();
+      let cursor: PullCursor | null = rewindCursor(meta.cursor[table]);
+      for (;;) {
+        if (this.deps.auth.currentUserId() !== userId) throw new Error('signed out during sync');
+        const page = table === 'goals' ? await remote.pull('goals', cursor, this.batchSize) : await remote.pull('entries', cursor, this.batchSize);
+        skippedInvalid += page.skippedInvalid;
+        if (page.rows.length > 0) {
+          await this.deps.local.applyRemote(table === 'goals' ? { goals: page.rows as never, entries: [] } : { goals: [], entries: page.rows as never });
+        }
+        if (page.next) {
+          cursor = page.next;
+          await this.writeCursor(table, page.next);
+        }
+        if (!page.hasMore) break;
+      }
+    }
+
+    // 3. Orphans (entries of goals deleted elsewhere) are tombstoned; together with the entries the
+    //    pull cascaded, they are pushed right away so one cycle per device converges.
+    await this.deps.local.tombstoneOrphanEntries(this.clock());
+    if ((await this.deps.local.countDirty()) > 0) skippedInvalid += await this.pushPhase(remote);
+
+    // 3b. Preferences (v2.1): push dirty groups (the server returns the merged row) or pull.
+    const dirtyPrefs = await this.deps.prefs.getDirty();
+    let remotePrefs;
+    if (dirtyPrefs) {
+      remotePrefs = await remote.pushPrefs(dirtyPrefs);
+    } else {
+      const pulled = await remote.pullPrefs();
+      skippedInvalid += pulled.skippedInvalid;
+      remotePrefs = pulled.prefs;
+    }
+    const applied = await this.deps.prefs.applyRemote(remotePrefs);
+    if (applied.reminderChanged || applied.localeChanged) this.emit({ type: 'prefs-applied', reminderChanged: applied.reminderChanged, localeChanged: applied.localeChanged });
+
+    return skippedInvalid;
+  }
+
+  /** Push loop: up to `maxPushBatches` batches of dirty rows, each read back and applied. */
+  private async pushPhase(remote: RemoteStore): Promise<number> {
+    let skippedInvalid = 0;
+    let before = await this.deps.local.countDirty();
+    for (let i = 0; i < this.maxPushBatches && before > 0; i += 1) {
+      const dirty = await this.deps.local.getDirty(this.batchSize);
+      if (dirty.goals.length === 0 && dirty.entries.length === 0) break;
+      await remote.push(dirty);
+      const fetched = await remote.fetchByIds({ goals: dirty.goals.map((g) => g.id), entries: dirty.entries.map((e) => e.id) });
+      skippedInvalid += fetched.skippedInvalid;
+      await this.deps.local.applyRemote({ goals: fetched.goals, entries: fetched.entries });
+      const after = await this.deps.local.countDirty();
+      if (after >= before) break; // nothing was acknowledged (e.g. rows rejected server-side): do not spin
+      before = after;
+    }
+    return skippedInvalid;
+  }
+
+  private async fail(e: unknown): Promise<SyncOutcome> {
+    const offline = this.deps.connectivity ? !this.deps.connectivity.isOnline() : false;
+    const code: SyncErrorCode = isRemoteError(e) ? e.code : offline ? 'SYNC_OFFLINE' : 'SYNC_UNREACHABLE';
+    const at = this.clock().toISOString();
+    try {
+      await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), lastError: { code, at } }));
+    } catch {
+      // storage trouble: the in-memory status still reports the error
+    }
+    if (code === 'SYNC_UNAUTHORIZED') {
+      this.clearRetry();
+      this.set({ kind: 'paused', error: code, nextRetryAt: undefined });
+      this.deps.auth.onUnauthorized?.();
+      return { status: 'ran', ok: false, error: code };
+    }
+    this.failures += 1;
+    const delay = backoffMs(this.failures);
+    const nextRetryAt = new Date(this.clock().getTime() + delay).toISOString();
+    this.scheduleRetry(delay);
+    this.set({ kind: code === 'SYNC_OFFLINE' ? 'offline' : 'error', error: code, nextRetryAt, pending: await this.safeCountDirty() });
+    return { status: 'ran', ok: false, error: code };
+  }
+
+  // ---- internals ----
+
+  private async bindUser(userId: string, resetCursor: boolean): Promise<void> {
+    await this.deps.kv.update<unknown>('sync', (cur) => {
+      const meta = normalizeSyncMeta(cur);
+      return resetCursor ? { ...meta, lastUserId: userId, cursor: { goals: null, entries: null } } : { ...meta, lastUserId: userId };
+    });
+  }
+
+  private getRemote(): Promise<RemoteStore> {
+    if (this.remote) return Promise.resolve(this.remote);
+    return this.deps.loadRemote().then((r) => {
+      this.remote = r;
+      return r;
+    });
+  }
+
+  private async readMeta(): Promise<SyncMeta> {
+    return normalizeSyncMeta(await this.deps.kv.get<unknown>('sync'));
+  }
+
+  private async writeCursor(table: RemoteTable, cursor: PullCursor): Promise<void> {
+    await this.deps.kv.update<unknown>('sync', (cur) => {
+      const meta = normalizeSyncMeta(cur);
+      return { ...meta, cursor: { ...meta.cursor, [table]: cursor } };
+    });
+  }
+
+  private async safeCountDirty(): Promise<number> {
+    try {
+      return await this.deps.local.countDirty();
+    } catch {
+      return this.status.pending;
+    }
+  }
+
+  private scheduleRetry(delay: number): void {
+    this.clearRetry();
+    this.retryTimer = this.timers.setTimeout(() => {
+      this.retryTimer = null;
+      void this.syncNow('retry');
+    }, delay);
+  }
+
+  private clearRetry(): void {
+    if (this.retryTimer !== null) {
+      this.timers.clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+  }
+
+  private set(patch: Partial<SyncStatus>): void {
+    const next: SyncStatus = { ...this.status, ...patch };
+    // Drop undefined optionals so equality checks and tests see a clean object.
+    for (const key of ['error', 'nextRetryAt', 'remoteInvalid'] as const) if (next[key] === undefined) delete next[key];
+    this.status = next;
+    this.listeners.forEach((l) => l(next));
+  }
+
+  private setPrompt(prompt: MergePrompt | null): void {
+    this.mergePrompt = prompt;
+    this.promptListeners.forEach((l) => l(prompt));
+  }
+
+  private emit(e: SyncEvent): void {
+    this.eventListeners.forEach((l) => l(e));
+  }
+}

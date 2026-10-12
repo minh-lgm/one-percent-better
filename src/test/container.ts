@@ -5,7 +5,9 @@ import type { NotificationPermissionState } from '../domain/reminder';
 import { createI18n } from '../i18n/instance';
 import type { Locale } from '../i18n/types';
 import type { PersistState } from '../integration/storage';
+import { noLocks } from '../services/lock-port';
 import { fakeAuthLoader, FakeAuthPort, MemoryReturnTo } from './fake-auth-port';
+import { FakeRemoteServer, FakeRemoteStore } from './fake-remote-store';
 import { fakeNotifications, type FakeNotifications } from './notifications';
 
 export interface TestAuth {
@@ -14,6 +16,9 @@ export interface TestAuth {
   state: { stored: boolean; loads: number; cleared: number };
   returnTo: MemoryReturnTo;
   online: { value: boolean };
+  /** M7: the fake cloud behind `syncService` (shared between containers when `remoteServer` is passed). */
+  server: FakeRemoteServer;
+  remote: FakeRemoteStore;
 }
 
 export interface TestContainer {
@@ -42,6 +47,11 @@ export async function createTestContainer(
     /** Simulate a persisted SDK session (`localStorage['opb-auth']`). */
     authStored?: boolean;
     online?: boolean;
+    /** M7: share a fake cloud between containers (two devices). */
+    remoteServer?: FakeRemoteServer;
+    /** M7: which user the fake RemoteStore writes as (defaults to USER1). */
+    remoteUserId?: string;
+    clock?: () => Date;
   } = {},
 ): Promise<TestContainer> {
   const i18n = createI18n({ locale: options.locale ?? 'en', strictMissingKeys: true });
@@ -62,6 +72,8 @@ export async function createTestContainer(
   };
   const loader = options.cloud ? fakeAuthLoader(options.authPort ?? new FakeAuthPort(), { stored: options.authStored }) : null;
   const returnTo = new MemoryReturnTo();
+  const server = options.remoteServer ?? new FakeRemoteServer();
+  const remote = new FakeRemoteStore(server, options.remoteUserId ?? '00000000-0000-4000-8000-000000000001');
   const container = await createContainer({
     i18n,
     dbName: `test-app-${Date.now()}-${++n}-${Math.random().toString(36).slice(2)}`,
@@ -72,9 +84,12 @@ export async function createTestContainer(
     cloud: options.cloud ? TEST_CLOUD : null,
     authStorage: null,
     loadAuth: loader?.loadAuth,
+    loadRemote: async () => remote,
+    locks: noLocks,
     connectivity,
     returnTo,
     redirectUrl: TEST_REDIRECT_URL,
+    clock: options.clock,
   });
   if (loader) {
     // The real container reads localStorage; the test container uses the fake loader's flag instead.
@@ -86,8 +101,9 @@ export async function createTestContainer(
     container,
     i18n,
     notifications,
-    auth: loader ? { port: loader.port, state: loader.state, returnTo, online } : null,
+    auth: loader ? { port: loader.port, state: loader.state, returnTo, online, server, remote } : null,
     async dispose() {
+      container.dispose();
       await container.db.delete();
     },
   };

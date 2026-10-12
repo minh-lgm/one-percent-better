@@ -89,7 +89,7 @@ describe('Goal detail (M3-AC5)', () => {
     await screen.findByRole('heading', { level: 1, name: en.goals.title });
     observer.disconnect();
     expect(seen).toEqual([]);
-    expect(await tc!.container.db.goals.get('g5')).toBeUndefined();
+    expect((await tc!.container.db.goals.get('g5'))?.deletedAt).toBeTruthy(); // v2: soft delete (ADR-20)
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.goalDeleted));
   });
 

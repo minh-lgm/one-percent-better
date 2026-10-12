@@ -4,6 +4,7 @@ import { BACKUP_MIME_TYPE, backupReminder } from '../../domain/backup';
 import { toISODate } from '../../domain/dates';
 import { buildReminderIcs, ICS_FILE_NAME } from '../../domain/ics';
 import type { NotificationPermissionState } from '../../domain/reminder';
+import type { SyncStatus } from '../../domain/sync';
 import type { DomainError } from '../../domain/types';
 import type { MessageKey } from '../../i18n/types';
 import { downloadTextFile, ICS_MIME_TYPE, readTextFile } from '../../integration/file-io';
@@ -15,10 +16,11 @@ import { BackupBanner } from '../components/BackupBanner';
 import { Badge, type BadgeTone } from '../components/Badge';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Icon } from '../components/Icon';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { PageHeader } from '../components/PageHeader';
 import { ReminderTimeField } from '../components/ReminderTimeField';
-import { SignOutDialog } from '../components/SignOutDialog';
+import { SignOutDialog, type SignOutChoice } from '../components/SignOutDialog';
 import { Switch } from '../components/Switch';
 import { errorMessage, WRITE_FAILED_KEY } from '../error-messages';
 import { useFormat } from '../hooks/useFormat';
@@ -48,6 +50,16 @@ interface ImportState {
   opener: HTMLElement | null;
 }
 
+/** "Saved to your account" note on the Language / Reminders cards (DESIGN SettingsSyncNote, M7). */
+function SettingsSyncNote({ text, testId }: { text: string; testId: string }) {
+  return (
+    <p className="hint sync-note" data-testid={testId}>
+      <Icon name="cloudCheck" />
+      <span>{text}</span>
+    </p>
+  );
+}
+
 /** Settings (DESIGN S7). Cards: Language, Account (M6, only with cloud config), Reminders (M2), Backup (M3), Storage, About. */
 export function Settings() {
   const { t } = useT();
@@ -55,16 +67,19 @@ export function Settings() {
   const toast = useToast();
   const id = useId();
   const now = useNow();
-  const { storagePersistence, settingsService, notifications, backupService, goalService, authService } = useServices();
+  const { storagePersistence, settingsService, notifications, backupService, goalService, authService, syncService } = useServices();
   const online = useOnline();
   const auth = useSubscribable(() => authService.watch(), [authService]);
   const authState = auth.data ?? authService.state();
+  const syncStatus = useSubscribable<SyncStatus>(() => (syncService ? syncService.watchStatus() : { subscribe: () => () => {} }), [syncService]);
+  const sync: SyncStatus | null = syncService ? (syncStatus.data ?? syncService.current()) : null;
   const accountHeading = useRef<HTMLHeadingElement>(null);
   const signInButton = useRef<HTMLButtonElement>(null);
   const signOutButton = useRef<HTMLButtonElement>(null);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [signOutBusy, setSignOutBusy] = useState(false);
   const [signOutWriteFailed, setSignOutWriteFailed] = useState(false);
+  const [signOutSyncFailed, setSignOutSyncFailed] = useState(false);
   const [persist, setPersist] = useState<PersistState | null>(null);
   const [permission, setPermission] = useState<NotificationPermissionState>(() => notifications.permission());
   const settings = useSubscribable(() => settingsService.watch(), [settingsService]);
@@ -99,9 +114,11 @@ export function Settings() {
   }, [notifications]);
 
   const storage = persist ? STORAGE_VIEW[persist] : null;
-  const perm = PERMISSION_VIEW[permission];
   const reminderEnabled = settings.data?.reminderEnabled ?? false;
   const reminderTime = settings.data?.reminderTime ?? '20:00';
+  const perm = PERMISSION_VIEW[permission];
+  // Reminders turned on elsewhere (synced) while this device never allowed notifications (DESIGN S7, FR-55).
+  const permDesc: MessageKey = permission === 'default' && reminderEnabled ? 'settings.permission.defaultOnDesc' : perm.desc;
 
   async function requestPermission() {
     setPermission(await notifications.requestPermission());
@@ -155,7 +172,7 @@ export function Settings() {
     if (!importing || busy) return;
     setBusy('import');
     try {
-      const r = await backupService.import(importing.preview);
+      const r = await backupService.import(importing.preview, new Date());
       if (r.ok) {
         toast.show('toast.backupImported', { goals: f.count('format.goalsCount', r.value.goals), entries: f.count('format.entriesCount', r.value.entries) });
         setImportError(null);
@@ -185,17 +202,22 @@ export function Settings() {
   const lastBackupAt = settings.data?.lastBackupAt ?? null;
   const backupNag = settings.data && goals.data ? backupReminder(lastBackupAt, goals.data.length, now) : null;
   const count = (key: 'format.goalsCount' | 'format.entriesCount', n: number) => f.count(key, n);
-  const importBody = importing
-    ? t('import.body', {
+  const cloudOn = authState.kind !== 'unavailable';
+  const signedIn = authState.kind === 'signed-in';
+  const importBodyParams = importing
+    ? {
         goals: count('format.goalsCount', importing.preview.goals),
         entries: count('format.entriesCount', importing.preview.entries),
         date: f.dateShort(new Date(importing.preview.exportedAt)),
         curGoals: count('format.goalsCount', importing.counts.goals),
         curEntries: count('format.entriesCount', importing.counts.entries),
-      })
-    : '';
+      }
+    : null;
+  // D3 signed-in variant (FR-51): the import also replaces the account's copy; `expired` uses the standard D3.
+  const importBody = importBodyParams ? t(signedIn ? 'import.bodySignedIn' : 'import.body', importBodyParams) : '';
+  const importExtra = importing && signedIn && !online ? t('import.offlineNote') : undefined;
 
-  // ---- Account (M6, FR-39 … FR-41) ----
+  // ---- Account (M6, FR-39 … FR-41; M7 sync) ----
   function signIn() {
     void authService.signIn('#/settings');
   }
@@ -205,8 +227,15 @@ export function Settings() {
     requestAnimationFrame(() => signInButton.current?.focus());
   }
 
+  async function syncNow() {
+    if (!syncService) return;
+    const r = await syncService.syncNow('manual');
+    if (r.status === 'ran' && r.ok) toast.show('toast.syncNowDone');
+  }
+
   function openSignOut() {
     setSignOutWriteFailed(false);
+    setSignOutSyncFailed(false);
     setSignOutOpen(true);
   }
 
@@ -215,11 +244,19 @@ export function Settings() {
     requestAnimationFrame(() => signOutButton.current?.focus());
   }
 
-  async function confirmSignOut({ keepData }: { keepData: boolean }) {
+  async function confirmSignOut({ keepData, removeAnyway }: SignOutChoice) {
     if (signOutBusy) return;
     setSignOutBusy(true);
     setSignOutWriteFailed(false);
     try {
+      // FR-41 (M7): one last sync when online, bounded in time; "Remove" with changes still waiting asks again.
+      if (syncService && signedIn && online && !removeAnyway && (sync?.pending ?? 0) > 0) {
+        const { pending } = await syncService.finalSyncBeforeSignOut();
+        if (!keepData && pending > 0) {
+          setSignOutSyncFailed(true);
+          return;
+        }
+      }
       const r = await authService.signOut({ keepData });
       if (!r.ok) {
         setSignOutWriteFailed(true);
@@ -235,9 +272,8 @@ export function Settings() {
     }
   }
 
-  const cloudOn = authState.kind !== 'unavailable';
-  const signedIn = authState.kind === 'signed-in';
   const aboutDesc = signedIn ? t('settings.about.descSignedIn') : cloudOn ? t('settings.about.descCloud') : t('settings.about.desc');
+  const backupDesc = signedIn ? t('settings.backup.descSignedIn') : t('settings.backup.desc');
 
   function downloadIcs() {
     const now = new Date();
@@ -263,15 +299,28 @@ export function Settings() {
             {t('settings.language.desc')}
           </p>
           <LanguageSwitcher describedBy="lang-desc" />
+          {signedIn ? <SettingsSyncNote text={t('settings.language.syncNote')} testId="language-sync-note" /> : null}
           <p className="hint">{t('settings.language.browserNote')}</p>
         </section>
 
         {authState.kind !== 'unavailable' ? (
-          <AccountCard auth={authState} online={online} onSignIn={signIn} onSignOut={openSignOut} onDismissError={dismissAuthError} headingRef={accountHeading} signInRef={signInButton} signOutRef={signOutButton} />
+          <AccountCard
+            auth={authState}
+            online={online}
+            sync={sync}
+            onSignIn={signIn}
+            onSignOut={openSignOut}
+            onDismissError={dismissAuthError}
+            onSyncNow={() => void syncNow()}
+            headingRef={accountHeading}
+            signInRef={signInButton}
+            signOutRef={signOutButton}
+          />
         ) : null}
 
         <section className="card" aria-labelledby="h-reminders">
           <h2 id="h-reminders">{t('settings.reminders.title')}</h2>
+          {signedIn ? <SettingsSyncNote text={t('settings.reminders.syncNote')} testId="reminders-sync-note" /> : null}
           <Switch
             id={`${id}-reminder`}
             label={t('settings.reminders.switch')}
@@ -296,7 +345,7 @@ export function Settings() {
             </Badge>
           </div>
           <p className="hint" data-testid="permission-desc">
-            {t(perm.desc)}
+            {t(permDesc)}
           </p>
           {permission === 'default' ? (
             <div className="btn-row">
@@ -321,7 +370,9 @@ export function Settings() {
 
         <section className="card" aria-labelledby="h-backup">
           <h2 id="h-backup">{t('settings.backup.title')}</h2>
-          <p className="desc">{t('settings.backup.desc')}</p>
+          <p className="desc" data-testid="backup-desc">
+            {backupDesc}
+          </p>
           {backupNag ? <BackupBanner reminder={backupNag} /> : null}
           <p className="backup-last num" data-testid="last-backup">
             {lastBackupAt ? t('settings.backup.last', { date: f.dateShort(new Date(lastBackupAt)) }) : t('settings.backup.lastNever')}
@@ -344,7 +395,9 @@ export function Settings() {
               onChange={(e) => void onImportFile(e)}
             />
           </div>
-          <p className="hint">{t('settings.backup.importHint')}</p>
+          <p className="hint" data-testid="import-hint">
+            {signedIn ? t('settings.backup.importHintSignedIn') : t('settings.backup.importHint')}
+          </p>
           {importErrorText ? <Alert>{importErrorText}</Alert> : null}
         </section>
 
@@ -377,14 +430,26 @@ export function Settings() {
       </div>
       <ConfirmDialog
         open={importing !== null}
-        title={t('import.title')}
+        title={t(importing && signedIn ? 'import.titleSignedIn' : 'import.title')}
         body={importBody}
+        extra={importExtra}
         confirmLabel={t('import.confirm')}
         busy={busy === 'import'}
         onConfirm={() => void confirmImport()}
         onCancel={closeImport}
       />
-      {cloudOn ? <SignOutDialog open={signOutOpen} busy={signOutBusy} writeFailed={signOutWriteFailed} onConfirm={(c) => void confirmSignOut(c)} onCancel={cancelSignOut} /> : null}
+      {cloudOn ? (
+        <SignOutDialog
+          open={signOutOpen}
+          busy={signOutBusy}
+          writeFailed={signOutWriteFailed}
+          syncFailed={signOutSyncFailed}
+          pending={signedIn ? (sync?.pending ?? 0) : 0}
+          online={online}
+          onConfirm={(c) => void confirmSignOut(c)}
+          onCancel={cancelSignOut}
+        />
+      ) : null}
     </>
   );
 }

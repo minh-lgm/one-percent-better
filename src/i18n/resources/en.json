@@ -56,7 +56,11 @@
     "daysCount_one": "{{count}} day",
     "daysCount_other": "{{count}} days",
     "minSec": "{{m}} min {{s}} s",
-    "hours": "{{n}} h"
+    "hours": "{{n}} h",
+    "changesCount_one": "{{count}} change",
+    "changesCount_other": "{{count}} changes",
+    "todayAt": "today at {{time}}",
+    "dateAt": "{{date}} at {{time}}"
   },
   "toast": {
     "goalCreated": "Goal created",
@@ -77,7 +81,10 @@
     "signedOutKept": "Signed out. Your data is still on this device.",
     "signedOutRemoved": "Signed out. Data removed from this device.",
     "signInCancelled": "Sign-in was cancelled.",
-    "signInFailed": "Couldn't sign you in."
+    "signInFailed": "Couldn't sign you in.",
+    "mergeDone": "Signed in. Your account now has {{goals}}, {{entries}}.",
+    "prefsFromAccount": "Settings updated from your account",
+    "syncNowDone": "Everything is up to date"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Enter a name for your goal.",
@@ -116,7 +123,11 @@
     "AUTH_OFFLINE": "You're offline. Connect to the internet, then sign in.",
     "AUTH_CANCELLED": "Sign-in was cancelled. You're not signed in, and nothing on this device changed.",
     "AUTH_FAILED": "Couldn't sign you in. Nothing on this device changed. Try again, and finish signing in in the same browser where you started.",
-    "AUTH_SESSION_EXPIRED": "Your sign-in expired. Sign in again to keep syncing. Your data, including changes that haven't synced yet, is kept on this device."
+    "AUTH_SESSION_EXPIRED": "Your sign-in expired. Sign in again to keep syncing. Your data, including changes that haven't synced yet, is kept on this device.",
+    "SYNC_OFFLINE": "You're offline. Your changes are saved on this device and will sync when you're back online.",
+    "SYNC_UNREACHABLE": "Couldn't reach your account just now. Your changes are safe on this device. We'll try again soon, or you can tap Sync now.",
+    "SYNC_UNAUTHORIZED": "Your sign-in is no longer valid. Sign in again to keep syncing. Your data on this device is safe.",
+    "SYNC_REMOTE_INVALID": "Some items from your account couldn't be read and were skipped. Everything else is synced."
   },
   "empty": {
     "today": {
@@ -297,7 +308,8 @@
         "vi": "Tiếng Việt"
       },
       "browserNote": "The date and time pickers and permission prompts follow your browser's language.",
-      "saveFailed": "Language changed, but it couldn't be saved on this device. It may reset when you reload."
+      "saveFailed": "Language changed, but it couldn't be saved on this device. It may reset when you reload.",
+      "syncNote": "Saved to your account and used on your other devices."
     },
     "account": {
       "title": "Account",
@@ -310,7 +322,14 @@
       "signOut": "Sign out",
       "expiredTitle": "Sign in again",
       "expiredAccount": "Account: {{email}}",
-      "goTo": "Go to Account"
+      "goTo": "Go to Account",
+      "lastSynced": "Last synced",
+      "neverSynced": "Not yet",
+      "pending": "Waiting to sync",
+      "syncedInfo": "Synced with this account: goals, entries, reminder settings and language. A running timer stays on the device where you started it.",
+      "syncNow": "Sync now",
+      "offlineSync": "You're offline. Changes are saved on this device and sync when you're back online.",
+      "nextRetry": "Trying again at {{time}}."
     },
     "reminders": {
       "title": "Reminders",
@@ -324,7 +343,8 @@
       "limit": "Heads up: reminders are sent only while 1% Better is open (in a tab or an installed window, even in the background). To be reminded when the app is closed, add a daily event to your calendar.",
       "ios": "On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).",
       "ics": "Add reminder to calendar (.ics)",
-      "icsHint": "Adds a repeating daily event at {{time}}."
+      "icsHint": "Adds a repeating daily event at {{time}}.",
+      "syncNote": "Reminder on/off and time are saved to your account and used on your other devices. Notification permission is set separately on each device."
     },
     "permission": {
       "default": "Not asked yet",
@@ -332,7 +352,8 @@
       "denied": "Blocked",
       "unsupported": "Not supported",
       "defaultDesc": "Turn on the reminder and your browser will ask for permission.",
-      "grantedDesc": "You'll get one notification a day while 1% Better is open."
+      "grantedDesc": "You'll get one notification a day while 1% Better is open.",
+      "defaultOnDesc": "Reminders are on, but this device hasn't allowed notifications yet. Allow them to get a notification; you'll still see the reminder banner in the app."
     },
     "backup": {
       "title": "Backup",
@@ -341,7 +362,9 @@
       "lastNever": "Last backup: Never",
       "export": "Export backup (JSON)",
       "import": "Import backup…",
-      "importHint": "Importing replaces everything currently on this device."
+      "importHint": "Importing replaces everything currently on this device.",
+      "descSignedIn": "Your data is saved on this device and synced to your account. A backup file is an extra copy you keep yourself.",
+      "importHintSignedIn": "Importing replaces everything on this device and in your account."
     },
     "storage": {
       "title": "Storage",
@@ -428,7 +451,10 @@
   "import": {
     "title": "Replace all data?",
     "body": "This backup has {{goals}}, {{entries}}, exported {{date}}. Importing replaces everything currently on this device ({{curGoals}}, {{curEntries}}). This can't be undone.",
-    "confirm": "Replace all data"
+    "confirm": "Replace all data",
+    "titleSignedIn": "Replace data on all your devices?",
+    "bodySignedIn": "This backup has {{goals}}, {{entries}}, exported {{date}}. Importing replaces everything currently on this device ({{curGoals}}, {{curEntries}}) and, once synced, everything in your account too, so it changes your other devices as well. This can't be undone.",
+    "offlineNote": "You're offline, so the change will reach your account when you're back online."
   },
   "heatmap": {
     "cell": {
@@ -511,7 +537,45 @@
       "removeDesc": "Deletes your goals, entries and reminder settings on this device. Choose this on a shared device. Your account keeps everything.",
       "confirmKeep": "Sign out",
       "confirmRemove": "Sign out and remove data",
-      "working": "Signing out…"
+      "working": "Signing out…",
+      "unsynced_one": "1 change hasn't synced to your account yet.",
+      "unsynced_other": "{{count}} changes haven't synced to your account yet.",
+      "unsyncedOnline": "We'll try to sync before signing you out.",
+      "unsyncedOffline": "You're offline, so they can't sync right now. If you keep the data on this device, they'll sync when you sign in again with this account.",
+      "unsyncedRemove": "If you remove the data from this device, these changes will be lost.",
+      "syncFailed": "Couldn't sync your changes. If you remove the data now, they will be lost.",
+      "removeAnyway": "Remove anyway"
+    },
+    "merge": {
+      "title": "Add this device's data to your account?",
+      "body": "This device still has {{goals}}, {{entries}} from another account. If you continue, they'll be added to the account {{email}}, next to what's already there.",
+      "note": "Cancel signs you out. Nothing is uploaded.",
+      "confirm": "Add to account",
+      "working": "Adding…"
+    }
+  },
+  "sync": {
+    "indicator": {
+      "label": "Sync status",
+      "synced": "Synced {{time}}",
+      "syncedNoTime": "Synced",
+      "syncing": "Syncing…",
+      "signingIn": "Signing in…",
+      "waiting_one": "{{count}} change waiting to sync",
+      "waiting_other": "{{count}} changes waiting to sync",
+      "offline_one": "Offline · {{count}} change waiting",
+      "offline_other": "Offline · {{count}} changes waiting",
+      "offlineNone": "Offline · all changes synced",
+      "error": "Couldn't sync",
+      "retry": "Retry",
+      "retryAria": "Retry sync",
+      "expired": "Sign in again to sync"
+    },
+    "announce": {
+      "synced": "All changes are synced.",
+      "offline": "You're offline. Changes will sync when you're back online.",
+      "error": "Sync failed. Your changes are safe on this device and will be retried.",
+      "expired": "Your sign-in expired. Sign in again to keep syncing."
     }
   }
 }

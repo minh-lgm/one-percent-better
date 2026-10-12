@@ -1,5 +1,5 @@
 import { render, type RenderResult } from '@testing-library/react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter, RouterProvider } from 'react-router';
 import { App } from '../app/App';
@@ -31,15 +31,18 @@ export interface RenderOptions {
  */
 export async function renderWithLocale(ui: ReactElement, locale: Locale = 'en', options: Omit<RenderOptions, 'locale'> = {}): Promise<RenderResult & { tc: TestContainer }> {
   const tc = options.container ?? (await createTestContainer({ locale }));
-  const result = render(
+  const route = options.route ?? '/';
+  // Providers as a `wrapper` so `rerender(<Component …/>)` keeps i18n, services, toasts and the router.
+  const Wrapper = ({ children }: { children: ReactNode }) => (
     <I18nextProvider i18n={tc.i18n}>
       <ServicesProvider container={tc.container}>
         <ToastProvider>
-          <MemoryRouter initialEntries={[options.route ?? '/']}>{ui}</MemoryRouter>
+          <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
         </ToastProvider>
       </ServicesProvider>
-    </I18nextProvider>,
+    </I18nextProvider>
   );
+  const result = render(ui, { wrapper: Wrapper });
   return Object.assign(result, { tc });
 }
 

@@ -7,12 +7,23 @@ export interface MockUser {
 
 export declare const USERS: { u1: MockUser; u2: MockUser };
 
+export interface MockLogEntry {
+  method: string;
+  path: string;
+  query: Record<string, string>;
+  body: string[] | null;
+  /** Rows in the request body (batch size of an upsert). */
+  rows: number;
+  at: number;
+}
+
 export interface MockState {
-  log: Array<{ method: string; path: string; query: Record<string, string>; body: string[] | null; at: number }>;
+  log: MockLogEntry[];
   tokenTtlS: number;
   now: number | null;
   refreshMode: 'ok' | 'invalid_grant';
-  fail: Array<{ path: string; status: number; times: number }>;
+  fail: Array<{ path: string; status: number; times: number; delay?: number }>;
+  rows: { goals: Map<string, Map<string, Record<string, unknown>>>; entries: Map<string, Map<string, Record<string, unknown>>>; settings: Map<string, Record<string, unknown>> };
   exchanges: number;
   refreshes: number;
 }

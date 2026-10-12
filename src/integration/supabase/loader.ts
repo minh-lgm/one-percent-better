@@ -2,6 +2,7 @@
 // `@supabase/*` imports so the SDK lands in its own chunk, loaded only when needed.
 import type { CloudConfig } from '../../config/env';
 import type { AuthPort } from '../../services/auth-port';
+import type { RemoteStore } from '../../services/remote-store';
 
 /** Storage key used by the SDK client (`auth.storageKey`); fixed so presence can be checked without the SDK. */
 export const AUTH_STORAGE_KEY = 'opb-auth';
@@ -35,6 +36,21 @@ export function clearStoredSession(storage: (StorageLike & Pick<Storage, 'remove
   }
 }
 
+/** Remove only the single-use PKCE code verifiers the SDK left behind (M6-P1); the session stays. */
+export function clearPkceVerifiers(storage: (StorageLike & Pick<Storage, 'removeItem'>) | null | undefined): void {
+  if (!storage) return;
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < storage.length; i += 1) {
+      const k = storage.key(i);
+      if (k && k.startsWith(`${AUTH_STORAGE_KEY}-`) && k.endsWith('code-verifier')) keys.push(k);
+    }
+    keys.forEach((k) => storage.removeItem(k));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 /**
  * `() => Promise<AuthPort>` that imports `supabase-client` once (memoised; a failed
  * import can be retried). The only `import()` of the SDK chunk in the app.
@@ -45,6 +61,25 @@ export function createSupabaseLoader(cloud: CloudConfig, storage: Storage | unde
     if (!pending) {
       pending = import('./supabase-client')
         .then((m) => m.createSupabaseAuthPort(cloud, storage))
+        .catch((e: unknown) => {
+          pending = null;
+          throw e;
+        });
+    }
+    return pending;
+  };
+}
+
+/**
+ * M7: `() => Promise<RemoteStore>` sharing the SDK client of the auth port (same session, same
+ * chunk). The auth loader is awaited first, so the SDK is still loaded exactly once.
+ */
+export function createRemoteLoader(loadAuth: () => Promise<AuthPort>): () => Promise<RemoteStore> {
+  let pending: Promise<RemoteStore> | null = null;
+  return () => {
+    if (!pending) {
+      pending = Promise.all([loadAuth(), import('./supabase-client')])
+        .then(([port, m]) => m.createSupabaseRemoteStore(port))
         .catch((e: unknown) => {
           pending = null;
           throw e;

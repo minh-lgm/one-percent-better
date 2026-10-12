@@ -21,6 +21,8 @@ export interface AuthServiceDeps {
   storedSession: () => boolean;
   /** Removes the SDK's stored session without the SDK (sign-out while the SDK cannot load). */
   clearStoredSession?: () => void;
+  /** Drops leftover PKCE code verifiers (M6-P1) after a callback that never reached the SDK. */
+  clearPkceVerifier?: () => void;
   local: LocalDataRepository;
   kv: KvRepository;
   connectivity: { isOnline(): boolean };
@@ -166,16 +168,20 @@ export class AuthService {
   /** Step 3 of F9: the page came back with `?auth=callback&code=…` (or `&error=…`). Sets `signing-in` synchronously. */
   completeCallback(cb: AuthCallbackParams): Promise<Result<AuthSession>> {
     if (!this.deps) return Promise.resolve(fail(authError('AUTH_FAILED', 'cloud is not configured')));
+    // M6-D1: a stale/replayed callback while a valid session exists must not demote that session.
+    const previous = this.current.kind === 'signed-in' ? this.current : null;
+    const verifying = this.pending;
     this.set({ kind: 'signing-in' });
-    const result = this.runCallback(cb);
+    const result = this.runCallback(cb, previous, verifying);
     this.pending = result.then(() => undefined);
     return result;
   }
 
-  private async runCallback(cb: AuthCallbackParams): Promise<Result<AuthSession>> {
+  private async runCallback(cb: AuthCallbackParams, previous: Extract<AuthState, { kind: 'signed-in' }> | null, verifying: Promise<void>): Promise<Result<AuthSession>> {
     if ('error' in cb) {
       const code: AuthErrorCode = cb.error === 'access_denied' ? 'AUTH_CANCELLED' : 'AUTH_FAILED';
-      this.set(this.withError(await this.idleState(), code));
+      this.deps!.clearPkceVerifier?.();
+      this.set(this.withError(await this.failedState(previous, verifying), code));
       this.emitOutcome({ kind: 'error', code });
       return fail(authError(code, `provider returned ${cb.error}: ${cb.description}`));
     }
@@ -186,10 +192,25 @@ export class AuthService {
       this.emitOutcome({ kind: 'signed-in', email: session.email });
       return ok(session);
     } catch (e) {
-      this.set(this.withError(await this.idleState(), 'AUTH_FAILED'));
+      this.set(this.withError(await this.failedState(previous, verifying), 'AUTH_FAILED'));
       this.emitOutcome({ kind: 'error', code: 'AUTH_FAILED' });
       return fail(authError('AUTH_FAILED', `code exchange failed: ${String(e)}`));
     }
+  }
+
+  /**
+   * State after a failed callback: the signed-in state we had before, as long as the device still
+   * holds the SDK session (M6-D1); otherwise the usual idle state (`expired` / `signed-out`).
+   */
+  private async failedState(previous: Extract<AuthState, { kind: 'signed-in' }> | null, verifying: Promise<void>): Promise<AuthState> {
+    if (previous) {
+      await verifying.catch(() => undefined);
+      if (this.deps!.storedSession()) {
+        if (this.current.kind === 'expired' || this.current.kind === 'signed-out') return this.current;
+        return previous;
+      }
+    }
+    return this.idleState();
   }
 
   /**
@@ -197,13 +218,19 @@ export class AuthService {
    * Remove: `clearUserData()` first (throws → nothing signed out, the dialog can report it).
    * Network problems never block the local sign-out.
    */
-  async signOut({ keepData }: { keepData: boolean }): Promise<Result<void>> {
+  async signOut({ keepData, preserveLastUserId = false }: { keepData: boolean; preserveLastUserId?: boolean }): Promise<Result<void>> {
     if (!this.deps) return fail(authError('AUTH_FAILED', 'cloud is not configured'));
     const meta = await this.readMeta();
     this.signingOut = true;
     try {
       if (!keepData) await this.deps.local.clearUserData();
-      else await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), userId: null, account: null, lastUserId: meta.userId ?? normalizeSyncMeta(cur).lastUserId }));
+      else
+        await this.deps.kv.update<unknown>('sync', (cur) => {
+          const current = normalizeSyncMeta(cur);
+          // D5 "Cancel" (M7): the device was never bound to the new account, so the previous one stays.
+          const lastUserId = preserveLastUserId ? current.lastUserId : (meta.userId ?? current.lastUserId);
+          return { ...current, userId: null, account: null, lastUserId };
+        });
       if (this.deps.storedSession() || this.port) {
         try {
           const port = await this.getPort();
@@ -236,6 +263,7 @@ export class AuthService {
 
   private withError(idle: AuthState, lastError: AuthErrorCode): AuthState {
     if (idle.kind === 'expired') return { kind: 'expired', email: idle.email, lastError };
+    if (idle.kind === 'signed-in') return idle; // the valid session stands; the toast reports the failed callback
     return { kind: 'signed-out', lastError };
   }
 
@@ -250,8 +278,19 @@ export class AuthService {
   }
 
   private async applySignedIn(session: AuthSession): Promise<void> {
-    await this.deps!.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), userId: session.userId, account: { email: session.email, name: session.name } }));
+    await this.deps!.kv.update<unknown>('sync', (cur) => {
+      const meta = normalizeSyncMeta(cur);
+      // Switching accounts without a sign-out (expired → other Google account): remember who was here (FR-47).
+      const lastUserId = meta.userId && meta.userId !== session.userId ? meta.userId : meta.lastUserId;
+      return { ...meta, userId: session.userId, account: { email: session.email, name: session.name }, lastUserId };
+    });
     this.set({ kind: 'signed-in', userId: session.userId, email: session.email, name: session.name });
+  }
+
+  /** M7: REST answered 401/403 → the session is gone (FR-40). Data and kv `sync.account` stay. */
+  expire(): void {
+    if (this.current.kind !== 'signed-in') return;
+    this.set({ kind: 'expired', email: this.current.email });
   }
 
   private getPort(): Promise<AuthPort> {

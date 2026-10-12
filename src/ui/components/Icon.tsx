@@ -25,6 +25,11 @@ const PATHS = {
   restore: <><path d="M4 10a8 8 0 1 1 2.3 5.7" /><path d="M4 4v6h6" /></>,
   sync: <><path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3" /><path d="M20 4v4h-4M4 20v-4h4" /></>,
   lockOpen: <><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 7.5-2" /></>,
+  // v2 (M7) sync indicator, from mockup 09-account.html
+  cloudCheck: <><path d="M7 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117.2 8.6 4.5 4.5 0 0117 18z" /><path d="M9.5 13.2l2 2 3.5-3.7" /></>,
+  cloudDot: <><path d="M7 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117.2 8.6 4.5 4.5 0 0117 18z" /><path d="M12 13.5h.01" strokeWidth="3.5" /></>,
+  cloudOff: <><path d="M7 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117.2 8.6 4.5 4.5 0 0117 18z" /><path d="M4 4l16 16" /></>,
+  warn: <path d="M12 4l9 16H3zM12 10v4M12 17h.01" />,
 } as const;
 
 export type IconName = keyof typeof PATHS;

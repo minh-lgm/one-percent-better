@@ -70,8 +70,9 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
       const r = await other.service.import(preview.value);
       expect(r).toEqual({ ok: true, value: { goals: 5, entries: 23 } });
       const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id));
-      expect(byId(await db2.goals.toArray())).toEqual(byId(s1.goals));
-      expect(byId(await db2.entries.toArray())).toEqual(byId(s1.entries));
+      const again = await new DexieBackupRepository(db2).exportAll();
+      expect(byId(again.goals)).toEqual(byId(s1.goals));
+      expect(byId(again.entries)).toEqual(byId(s1.entries));
     } finally {
       await db2.delete();
     }
@@ -98,9 +99,9 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
     if (!preview.ok) return;
     expect(await service.counts()).toEqual({ goals: 1, entries: 1 });
     await service.import(preview.value);
-    expect(await db.goals.count()).toBe(5);
-    expect(await db.goals.get('temp')).toBeUndefined();
-    expect(await db.entries.count()).toBe(23);
+    expect(await db.goals.filter((g) => g.deletedAt == null).count()).toBe(5);
+    expect((await db.goals.get('temp'))?.deletedAt).toBeTruthy(); // v2: soft-deleted (ADR-20)
+    expect(await db.entries.filter((e) => e.deletedAt == null).count()).toBe(23);
     expect(await db.kv.get('activeTimer')).toBeUndefined();
     expect(await settings.get()).toEqual({ reminderEnabled: true, reminderTime: '07:30', lastReminderDate: null, lastBackupAt: '2026-10-01T00:00:00.000Z', plusOneShown: {} });
     expect(await db.kv.get('locale')).toEqual({ key: 'locale', value: 'vi' });
@@ -130,5 +131,29 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
     }
     expect(await db.goals.toArray()).toEqual([expect.objectContaining({ id: 'temp' })]);
     expect(await db.entries.count()).toBe(0);
+  });
+});
+
+describe('BackupService.import when signed in (M7-AC11, FR-51, A-29)', () => {
+  it('stamps every imported goal/entry with updatedAt = nextUpdatedAt(now, …) so the file wins at the next sync; signed out keeps the stamps', async () => {
+    const signedIn = { value: true };
+    const service2 = new BackupService(new DexieBackupRepository(db), settings, () => signedIn.value);
+    const s1 = datasetS1();
+    const future = { ...s1.goals[0], updatedAt: '2026-10-09T05:00:00.000Z' };
+    const json = JSON.stringify({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals: [future, ...s1.goals.slice(1)], entries: s1.entries, settings: {} });
+    const preview = service2.parse(json, json.length);
+    if (!preview.ok) throw new Error('setup');
+    await service2.import(preview.value, FIXED_NOW);
+    const rows = await db.goals.toArray();
+    expect(rows.find((g) => g.id === 'g2')?.updatedAt).toBe(FIXED_NOW.toISOString());
+    expect(rows.find((g) => g.id === 'g1')?.updatedAt).toBe('2026-10-09T05:00:00.001Z');
+    expect((await db.entries.get('e-g1-1'))?.updatedAt).toBe(FIXED_NOW.toISOString());
+    for (const g of rows) expect(g.dirty).toBe(1);
+
+    signedIn.value = false;
+    const again = service2.parse(JSON.stringify({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals: s1.goals, entries: s1.entries, settings: {} }), 10);
+    if (!again.ok) throw new Error('setup');
+    await service2.import(again.value, new Date('2026-10-09T06:00:00.000Z'));
+    expect((await db.goals.get('g1'))?.updatedAt).toBe(s1.goals[0].updatedAt);
   });
 });

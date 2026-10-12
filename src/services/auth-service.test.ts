@@ -333,3 +333,81 @@ describe('AuthService.onOutcome (UI feedback for the OAuth round-trip)', () => {
     expect(seen).toEqual([{ kind: 'signed-in', email: USER1.email }]);
   });
 });
+
+describe('AuthService — M7 additions (M6-D1 fix, expire, account switch, preserveLastUserId)', () => {
+  it('M6-D1: a stale/bogus callback while a valid stored session exists keeps the signed-in state (no demotion to expired)', async () => {
+    await db.kv.put({ key: 'sync', value: { userId: USER1.userId, account: { email: USER1.email, name: USER1.name } } });
+    const port = new FakeAuthPort();
+    port.session = USER1;
+    const { service, states } = build({ stored: true, port });
+    await service.init();
+    await service.settled();
+    expect(service.state()).toEqual({ kind: 'signed-in', ...USER1 });
+    port.exchangeResult = new Error('invalid or expired auth code');
+    const outcomes: unknown[] = [];
+    service.onOutcome((o) => outcomes.push(o));
+    const r = await service.completeCallback({ code: 'already-used-or-bogus' });
+    expect(r.ok).toBe(false);
+    expect(service.state()).toEqual({ kind: 'signed-in', ...USER1 });
+    expect(states.some((s) => s.kind === 'expired')).toBe(false);
+    expect(outcomes).toEqual([{ kind: 'error', code: 'AUTH_FAILED' }]);
+    // The same holds for a provider error while signed in.
+    await service.completeCallback({ error: 'access_denied', description: 'cancelled' });
+    expect(service.state()).toEqual({ kind: 'signed-in', ...USER1 });
+  });
+
+  it('a failed callback while the stored session is gone still ends in expired/signed-out (unchanged behaviour)', async () => {
+    const { service, loader } = build({ stored: false });
+    await service.init();
+    loader.port.exchangeResult = new Error('nope');
+    await service.completeCallback({ code: 'bogus' });
+    expect(service.state()).toEqual({ kind: 'signed-out', lastError: 'AUTH_FAILED' });
+  });
+
+  it('expire(): signed-in → expired keeping kv sync.account; no-op in other states', async () => {
+    const port = new FakeAuthPort();
+    port.session = USER1;
+    const { service } = build({ stored: true, port });
+    await service.init();
+    await service.settled();
+    service.expire();
+    expect(service.state()).toEqual({ kind: 'expired', email: USER1.email });
+    expect((await syncMeta()).account).toEqual({ email: USER1.email, name: USER1.name });
+    service.expire();
+    expect(service.state()).toEqual({ kind: 'expired', email: USER1.email });
+  });
+
+  it('signing in as another account without signing out remembers the previous one as lastUserId (FR-47)', async () => {
+    await db.kv.put({ key: 'sync', value: { userId: USER1.userId, account: { email: USER1.email, name: USER1.name } } });
+    const { service, loader } = build({ stored: false });
+    await service.init();
+    expect(service.state()).toEqual({ kind: 'expired', email: USER1.email });
+    loader.port.exchangeResult = USER2;
+    await service.completeCallback({ code: 'ok' });
+    expect(service.state()).toEqual({ kind: 'signed-in', ...USER2 });
+    expect(await syncMeta()).toMatchObject({ userId: USER2.userId, lastUserId: USER1.userId });
+  });
+
+  it('signOut({ keepData, preserveLastUserId }) keeps the previous lastUserId (D5 Cancel)', async () => {
+    await db.kv.put({ key: 'sync', value: { userId: USER2.userId, lastUserId: USER1.userId, account: { email: USER2.email, name: USER2.name } } });
+    const port = new FakeAuthPort();
+    port.session = USER2;
+    const { service } = build({ stored: true, port });
+    await service.init();
+    await service.settled();
+    await service.signOut({ keepData: true, preserveLastUserId: true });
+    expect(service.state()).toEqual({ kind: 'signed-out' });
+    expect(await syncMeta()).toMatchObject({ userId: null, lastUserId: USER1.userId });
+  });
+
+  it('callback error with a provider error clears the PKCE verifier through the injected cleaner (M6-P1)', async () => {
+    const { service } = build({ stored: false });
+    let cleared = 0;
+    (service as unknown as { deps: { clearPkceVerifier?: () => void } }).deps.clearPkceVerifier = () => {
+      cleared += 1;
+    };
+    await service.init();
+    await service.completeCallback({ error: 'access_denied', description: 'cancelled' });
+    expect(cleared).toBe(1);
+  });
+});

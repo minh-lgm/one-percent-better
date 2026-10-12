@@ -88,3 +88,24 @@ describe('format.ts (ARCH §5.8, M1-AC18)', () => {
     expect(vi.weekdayShort('2026-10-05')).toBe(new Intl.DateTimeFormat('vi-VN', { weekday: 'short' }).format(new Date(2026, 9, 5)));
   });
 });
+
+describe('v2 sync time formats (DESIGN §7.1)', () => {
+  const now = new Date('2026-10-09T14:30:00+07:00');
+  it('clock / syncedShort / syncedAt in en and vi', async () => {
+    const { createFormatters } = await import('./format');
+    const { createI18n, createTranslator } = await import('./instance');
+    const en = createFormatters('en', createTranslator(createI18n({ locale: 'en', strictMissingKeys: true })));
+    const vi = createFormatters('vi', createTranslator(createI18n({ locale: 'vi', strictMissingKeys: true })));
+    const today = new Date('2026-10-09T14:05:00+07:00');
+    const yesterday = new Date('2026-10-08T09:30:00+07:00');
+    expect(en.clock(today)).toBe('14:05');
+    expect(vi.clock(today)).toBe('14:05');
+    expect(en.syncedShort(today, now)).toBe('14:05');
+    expect(en.syncedShort(yesterday, now)).toBe('2026-10-08');
+    expect(vi.syncedShort(yesterday, now)).toBe('08/10/2026');
+    expect(en.syncedAt(today.toISOString(), now)).toBe('today at 14:05');
+    expect(en.syncedAt(yesterday, now)).toBe('2026-10-08 at 09:30');
+    expect(vi.syncedAt(today, now)).toBe('hôm nay lúc 14:05');
+    expect(vi.syncedAt(yesterday, now)).toBe('08/10/2026 lúc 09:30');
+  });
+});

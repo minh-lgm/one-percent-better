@@ -94,7 +94,7 @@ describe('TimerService.stop / save / discard (M2-AC3, M2-AC4)', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.value).toMatchObject({ goalId: 'g1', date: '2026-10-09', minutes: 25, note: 'Pomodoro', source: 'timer' });
-    expect(await db.entries.get(r.value.id)).toEqual(r.value);
+    expect(await db.entries.get(r.value.id)).toEqual({ ...r.value, deletedAt: null, dirty: 1 });
     expect(await kv.get('activeTimer')).toBeUndefined();
   });
 
@@ -126,7 +126,7 @@ describe('TimerService.stop / save / discard (M2-AC3, M2-AC4)', () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errors[0].code).toBe('ENTRY_MINUTES_INVALID');
     expect(await timers.current()).toBeDefined();
-    expect(await db.entries.where('goalId').equals('g1').count()).toBe(8);
+    expect(await db.entries.where('goalId').equals('g1').filter((e) => e.deletedAt == null).count()).toBe(8);
   });
 
   it('discard removes the timer without creating an entry', async () => {
@@ -184,7 +184,7 @@ describe('GoalService.remove discards the timer of the deleted goal (M2-AC5)', (
     await timers.start('g1', FIXED_NOW);
     expect((await goalService.remove('g1')).ok).toBe(true);
     expect(await kv.get('activeTimer')).toBeUndefined();
-    expect(await db.goals.get('g1')).toBeUndefined();
+    expect((await db.goals.get('g1'))?.deletedAt).toBeTruthy(); // v2: soft delete (ADR-20)
   });
 
   it('keeps a timer that belongs to another goal', async () => {

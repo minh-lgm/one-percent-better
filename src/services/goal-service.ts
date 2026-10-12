@@ -1,5 +1,6 @@
 import type { EntryRepository, GoalRepository, KvRepository } from '../data/repositories';
 import { entriesOutsidePeriod, validateGoalInput, type GoalInput } from '../domain/goal';
+import { nextUpdatedAt } from '../domain/sync';
 import { fail, ok, type ActiveTimer, type Goal, type Result } from '../domain/types';
 
 export type IdGenerator = () => string;
@@ -37,7 +38,8 @@ export class GoalService {
       }
     }
 
-    const goal: Goal = { ...existing, ...validated.value, updatedAt: now.toISOString() };
+    // M7 (FR-49): an edit is always newer than the version this device holds, even with a slow clock.
+    const goal: Goal = { ...existing, ...validated.value, updatedAt: nextUpdatedAt(now, existing.updatedAt) };
     await this.goals.put(goal);
     return ok(goal);
   }
@@ -65,7 +67,7 @@ export class GoalService {
       if (timer && timer.goalId === id) return fail({ code: 'GOAL_TIMER_RUNNING', message: `goal ${id} has a running timer` });
     }
     if (existing.archived === archived) return ok(existing);
-    const goal: Goal = { ...existing, archived, updatedAt: now.toISOString() };
+    const goal: Goal = { ...existing, archived, updatedAt: nextUpdatedAt(now, existing.updatedAt) };
     await this.goals.put(goal);
     return ok(goal);
   }

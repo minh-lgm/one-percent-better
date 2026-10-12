@@ -2,8 +2,12 @@
 // Reached exclusively through `loader.ts` (dynamic import) so the SDK is its own chunk.
 import { createClient, type AuthChangeEvent, type Session, type SupabaseClient, type SupportedStorage } from '@supabase/supabase-js';
 import type { CloudConfig } from '../../config/env';
+import type { PullCursor, RemoteChanges, RemotePrefs } from '../../data/repositories';
+import type { Goal, LogEntry } from '../../domain/types';
 import { displayName, type AuthEvent, type AuthPort, type AuthSession } from '../../services/auth-port';
-import { AUTH_STORAGE_KEY, clearStoredSession } from './loader';
+import { chunk, FETCH_IDS_BATCH_MAX, PUSH_BATCH_MAX, REMOTE_TIMEOUT_MS, RemoteError, type FetchedRows, type PulledPrefs, type PullPage, type RemoteStore, type RemoteTable } from '../../services/remote-store';
+import { AUTH_STORAGE_KEY, clearPkceVerifiers, clearStoredSession } from './loader';
+import { entryToRow, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, prefsToRow } from './mapper';
 
 export interface SupabaseClientOptions {
   /** Defaults to `localStorage`; tests pass an in-memory adapter. */
@@ -87,6 +91,8 @@ export class SupabaseAuthPort implements AuthPort {
       return toSession(data.session);
     } finally {
       this.exchanging = false;
+      // The code verifier is single-use: drop it whether the exchange succeeded or not (M6-P1).
+      clearPkceVerifiers(this.storage as Storage);
     }
   }
 
@@ -131,4 +137,152 @@ export class SupabaseAuthPort implements AuthPort {
 export function createSupabaseAuthPort(cloud: CloudConfig, storage?: Storage | SupportedStorage, options: Omit<SupabaseClientOptions, 'storage'> = {}): AuthPort {
   const client = createSupabase(cloud, { ...options, storage });
   return new SupabaseAuthPort(client, { ...options, storage });
+}
+
+// ---- M7: RemoteStore over PostgREST (ARCHITECTURE §5.10) ----
+
+interface PostgrestLikeError {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+}
+
+/** Map a PostgREST/fetch failure to a `RemoteError` (NFR-15). */
+export function toRemoteError(status: number, error: PostgrestLikeError | null, cause?: unknown): RemoteError {
+  const message = error?.message ?? 'unknown';
+  if (status === 401 || status === 403 || error?.code === 'PGRST301' || error?.code === '42501') return new RemoteError('SYNC_UNAUTHORIZED', `HTTP ${status}: ${message}`, { cause });
+  if (status === 0) {
+    const aborted = /abort/i.test(message) || /abort/i.test(error?.hint ?? '');
+    if (aborted) return new RemoteError('SYNC_UNREACHABLE', `timeout: ${message}`, { cause });
+    return new RemoteError('SYNC_OFFLINE', `network: ${message}`, { cause });
+  }
+  return new RemoteError('SYNC_UNREACHABLE', `HTTP ${status}: ${message}`, { cause });
+}
+
+export interface SupabaseRemoteStoreOptions {
+  /** Per-request timeout; `0` disables (tests). */
+  timeoutMs?: number;
+}
+
+const stripQuotes = (v: string) => v.replace(/"/g, '');
+
+/**
+ * `RemoteStore` on `supabase.from(...)`. Every row sent carries `user_id`; RLS + the triggers
+ * make it impossible to write someone else's row. Rows read are validated by `mapper.ts`.
+ */
+export class SupabaseRemoteStore implements RemoteStore {
+  private readonly timeoutMs: number;
+
+  constructor(
+    readonly client: SupabaseClient,
+    private readonly userId: () => Promise<string | null>,
+    options: SupabaseRemoteStoreOptions = {},
+  ) {
+    this.timeoutMs = options.timeoutMs ?? REMOTE_TIMEOUT_MS;
+  }
+
+  private async uid(): Promise<string> {
+    const id = await this.userId();
+    if (!id) throw new RemoteError('SYNC_UNAUTHORIZED', 'no session');
+    return id;
+  }
+
+  /** Runs one PostgREST query with the timeout; throws `RemoteError`. */
+  private async run<T>(build: (signal: AbortSignal | undefined) => PromiseLike<{ data: T | null; error: PostgrestLikeError | null; status: number }>): Promise<T | null> {
+    const controller = this.timeoutMs > 0 ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), this.timeoutMs) : null;
+    try {
+      const res = await build(controller?.signal);
+      if (res.error) throw toRemoteError(res.status, res.error);
+      return res.data;
+    } catch (e) {
+      if (e instanceof RemoteError) throw e;
+      const name = (e as { name?: string })?.name ?? '';
+      if (name === 'AbortError') throw new RemoteError('SYNC_UNREACHABLE', 'timeout', { cause: e });
+      throw new RemoteError('SYNC_OFFLINE', `network: ${String((e as Error)?.message ?? e)}`, { cause: e });
+    } finally {
+      if (timer !== null) clearTimeout(timer);
+    }
+  }
+
+  async push(changes: RemoteChanges): Promise<void> {
+    const uid = await this.uid();
+    for (const batch of chunk(changes.goals, PUSH_BATCH_MAX)) {
+      await this.run((signal) => withSignal(this.client.from('goals').upsert(batch.map((g) => goalToRow(g, uid)), { onConflict: 'user_id,id' }), signal));
+    }
+    for (const batch of chunk(changes.entries, PUSH_BATCH_MAX)) {
+      await this.run((signal) => withSignal(this.client.from('entries').upsert(batch.map((e) => entryToRow(e, uid)), { onConflict: 'user_id,id' }), signal));
+    }
+  }
+
+  async fetchByIds(ids: { goals: string[]; entries: string[] }): Promise<FetchedRows> {
+    const out: FetchedRows = { goals: [], entries: [], serverUpdatedAt: {}, skippedInvalid: 0 };
+    for (const batch of chunk(ids.goals, FETCH_IDS_BATCH_MAX)) {
+      const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('goals').select('*').in('id', batch), signal))) ?? [];
+      const m = mapGoalRows(rows);
+      out.goals.push(...m.rows);
+      Object.assign(out.serverUpdatedAt, m.serverUpdatedAt);
+      out.skippedInvalid += m.skippedInvalid;
+    }
+    for (const batch of chunk(ids.entries, FETCH_IDS_BATCH_MAX)) {
+      const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('entries').select('*').in('id', batch), signal))) ?? [];
+      const m = mapEntryRows(rows);
+      out.entries.push(...m.rows);
+      Object.assign(out.serverUpdatedAt, m.serverUpdatedAt);
+      out.skippedInvalid += m.skippedInvalid;
+    }
+    return out;
+  }
+
+  pull(table: 'goals', cursor: PullCursor | null, limit: number): Promise<PullPage<Goal>>;
+  pull(table: 'entries', cursor: PullCursor | null, limit: number): Promise<PullPage<LogEntry>>;
+  async pull(table: RemoteTable, cursor: PullCursor | null, limit: number): Promise<PullPage<Goal> | PullPage<LogEntry>> {
+    const rows =
+      (await this.run<Array<Record<string, unknown>>>((signal) => {
+        let q = this.client.from(table).select('*');
+        if (cursor) {
+          // PostgREST: server_updated_at > c  OR  (server_updated_at = c AND id > c.id); values quoted.
+          const stamp = stripQuotes(cursor.serverUpdatedAt);
+          const id = stripQuotes(cursor.id);
+          q = q.or(`server_updated_at.gt."${stamp}",and(server_updated_at.eq."${stamp}",id.gt."${id}")`);
+        }
+        return withSignal(q.order('server_updated_at', { ascending: true }).order('id', { ascending: true }).limit(limit + 1), signal);
+      })) ?? [];
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
+    const next = last ? { serverUpdatedAt: new Date(String(last.server_updated_at)).toISOString(), id: String(last.id) } : null;
+    const m = table === 'goals' ? mapGoalRows(page) : mapEntryRows(page);
+    return { rows: m.rows as never, serverUpdatedAt: m.serverUpdatedAt, next, hasMore, skippedInvalid: m.skippedInvalid };
+  }
+
+  async pushPrefs(prefs: RemotePrefs): Promise<RemotePrefs> {
+    const uid = await this.uid();
+    const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('settings').upsert(prefsToRow(prefs, uid), { onConflict: 'user_id' }).select('*'), signal))) ?? [];
+    if (rows.length === 0) {
+      // Nothing newer (the trigger returned NULL): read the current row back.
+      const pulled = await this.pullPrefs();
+      return pulled.prefs ?? { reminder: null, locale: null };
+    }
+    return mapPrefsRow(rows[0]).prefs;
+  }
+
+  async pullPrefs(): Promise<PulledPrefs> {
+    const uid = await this.uid();
+    const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('settings').select('*').eq('user_id', uid), signal))) ?? [];
+    if (rows.length === 0) return { prefs: null, skippedInvalid: 0 };
+    return mapPrefsRow(rows[0]);
+  }
+}
+
+/** Attach an abort signal when one is given (the builder API is chainable). */
+function withSignal<B extends { abortSignal(signal: AbortSignal): B }>(builder: B, signal: AbortSignal | undefined): B {
+  return signal ? builder.abortSignal(signal) : builder;
+}
+
+/** Factory used by `loader.ts`: a RemoteStore sharing the auth port's SDK client. */
+export function createSupabaseRemoteStore(port: AuthPort, options: SupabaseRemoteStoreOptions = {}): RemoteStore {
+  const client = (port as SupabaseAuthPort).client;
+  return new SupabaseRemoteStore(client, async () => (await client.auth.getSession()).data.session?.user.id ?? null, options);
 }

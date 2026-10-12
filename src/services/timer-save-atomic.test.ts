@@ -95,7 +95,7 @@ describe('TimerService.save across two tabs (M3-AC15)', () => {
     const r = await t.timers.save({ minutes: 30, note: '' }, NOW);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errors[0].code).toBe('GOAL_NOT_FOUND');
-    expect(await db.entries.where('goalId').equals('g1').count()).toBe(0);
+    expect(await db.entries.where('goalId').equals('g1').filter((e) => e.deletedAt == null).count()).toBe(0);
   });
 });
 
@@ -203,7 +203,7 @@ describe('EntryService.update/remove use getById only (M3-AC14)', () => {
     expect((await service.remove('e-g1-5')).ok).toBe(true);
     expect(repo.getById).toHaveBeenCalledTimes(1);
     expect(repo.getByDateRange).not.toHaveBeenCalled();
-    expect(await db.entries.get('e-g1-5')).toBeUndefined();
+    expect((await db.entries.get('e-g1-5'))?.deletedAt).toBeTruthy(); // v2: soft delete (ADR-20)
   });
 
   it('unknown id → ENTRY_NOT_FOUND and the database is unchanged', async () => {

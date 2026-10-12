@@ -47,7 +47,7 @@ describe('DexieTimerRepository.saveTimerEntry (M3-AC15, ADR-16)', () => {
   it('saved: writes the entry and removes activeTimer in one go', async () => {
     const entry = timerEntry();
     expect(await timers.saveTimerEntry(TIMER_G1, entry, 1440)).toEqual({ status: 'saved' });
-    expect(await db.entries.get('timer-entry')).toEqual(entry);
+    expect(await db.entries.get('timer-entry')).toEqual({ ...entry, deletedAt: null, dirty: 1 });
     expect(await kv.get('activeTimer')).toBeUndefined();
   });
 
@@ -85,7 +85,8 @@ describe('DexieTimerRepository.saveTimerEntry (M3-AC15, ADR-16)', () => {
     await new DexieGoalRepository(db).deleteWithEntries('g1');
     expect(await kv.get('activeTimer')).toEqual(TIMER_G1); // the repository alone does not touch kv
     expect(await timers.saveTimerEntry(TIMER_G1, timerEntry(), 1440)).toEqual({ status: 'goal-missing' });
-    expect(await db.entries.where('goalId').equals('g1').count()).toBe(0);
+    expect(await db.entries.where('goalId').equals('g1').filter((e) => e.deletedAt == null).count()).toBe(0);
+    expect(await db.entries.get('timer-entry')).toBeUndefined();
   });
 
   it('rolls back when the entry put fails: no entry, activeTimer untouched', async () => {

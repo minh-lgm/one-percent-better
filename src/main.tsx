@@ -6,6 +6,7 @@ import { bootstrap } from './app/bootstrap';
 import { createContainer } from './app/container';
 import { startReminderScheduler } from './app/reminder-scheduler';
 import { createAppRouter } from './app/router';
+import { startSyncScheduler } from './app/sync-scheduler';
 import { env } from './config/env';
 import { cleanCallbackUrl, readAuthCallback, sessionReturnTo } from './integration/auth-callback';
 import { listenForNavigation } from './integration/sw-messages';
@@ -47,6 +48,8 @@ async function start(): Promise<void> {
   startReminderScheduler({ check: (now) => container.reminderService.check(now), intervalMs: env.reminderCheckIntervalMs });
   // A click on the reminder notification asks the page to go to Today.
   listenForNavigation();
+  // M7: background sync triggers (sign-in, startup, online, visible, 2 s after a change, every interval).
+  if (container.syncService) startSyncScheduler({ sync: container.syncService, auth: container.authService, intervalMs: env.syncIntervalMs });
 
   // Service worker only in production builds (ADR-06); dev server runs without it.
   if (import.meta.env.PROD) {

@@ -2,6 +2,7 @@ import type { BackupRepository } from '../data/repositories';
 import { backupFileName, buildBackup, parseBackup, type BackupFile } from '../domain/backup';
 import { toISODate } from '../domain/dates';
 import { normalizeSettings } from '../domain/settings';
+import { nextUpdatedAt } from '../domain/sync';
 import { ok, type ISODate, type ISODateTime, type Result } from '../domain/types';
 import type { SettingsService } from './settings-service';
 
@@ -28,6 +29,8 @@ export class BackupService {
   constructor(
     private readonly backups: BackupRepository,
     private readonly settings: SettingsService,
+    /** v2.0 (FR-51, A-29): when signed in, imported rows are stamped "now" so they replace the account's copy. */
+    private readonly isSignedIn: () => boolean = () => false,
   ) {}
 
   /** Serialise everything and remember `lastBackupAt = now` (also inside the file). */
@@ -52,11 +55,16 @@ export class BackupService {
   /**
    * Replace everything with the parsed file in one transaction (ADR-08). Clears the
    * running timer and `lastReminderDate`; never touches the device language (ADR-12).
+   * Signed in (A-29): every row gets `updatedAt = nextUpdatedAt(now, row.updatedAt)` so the
+   * file wins over the account's copy at the next sync; signed out: rows are kept as they are (M3).
    */
-  async import(preview: BackupPreview): Promise<Result<BackupCounts>> {
+  async import(preview: BackupPreview, now: Date = new Date()): Promise<Result<BackupCounts>> {
     const { file } = preview;
     const settings = normalizeSettings({ ...file.settings, lastReminderDate: null });
-    await this.backups.replaceAll({ goals: file.goals, entries: file.entries, settings });
+    const stamp = this.isSignedIn();
+    const goals = stamp ? file.goals.map((g) => ({ ...g, updatedAt: nextUpdatedAt(now, g.updatedAt) })) : file.goals;
+    const entries = stamp ? file.entries.map((e) => ({ ...e, updatedAt: nextUpdatedAt(now, e.updatedAt) })) : file.entries;
+    await this.backups.replaceAll({ goals, entries, settings });
     return ok({ goals: file.goals.length, entries: file.entries.length });
   }
 

@@ -4,7 +4,8 @@ import { useServices } from '../hooks/useServices';
 import { useT } from '../hooks/useT';
 import { AuthFeedback } from './AuthFeedback';
 import { Icon, type IconName } from './Icon';
-import { OfflineChip } from './OfflineChip';
+import { StatusRow } from './StatusRow';
+import { SyncFeedback } from './SyncFeedback';
 import { ToastRegion } from './Toast';
 import { UpdateToast } from './UpdateToast';
 
@@ -15,13 +16,14 @@ const TABS: Array<{ to: string; icon: IconName; key: 'nav.today' | 'nav.goals' |
   { to: '/settings', icon: 'settings', key: 'nav.settings' },
 ];
 
-/** Skip link, tab bar (< 1024 px) / sidebar (≥ 1024 px), main region, toasts. */
+/** Skip link, tab bar (< 1024 px) / sidebar (≥ 1024 px), main region (with the StatusRow), toasts. */
 export function AppShell() {
   const { t } = useT();
   const { authService } = useServices();
   const mainRef = useRef<HTMLElement>(null);
   // Review uses the 960 px column (DESIGN §3.2 / S6, mockup 06 `main.wide`) so the 53-week heatmap fits on desktop.
   const wide = useLocation().pathname.startsWith('/review');
+  const cloud = authService.isAvailable();
   return (
     <>
       <a
@@ -50,13 +52,14 @@ export function AppShell() {
       </nav>
       <div className="content">
         <main id="main" ref={mainRef} tabIndex={-1} className={wide ? 'wide' : undefined}>
-          <OfflineChip />
+          <StatusRow />
           <Outlet />
         </main>
       </div>
       <ToastRegion />
       <UpdateToast />
-      {authService.isAvailable() ? <AuthFeedback /> : null}
+      {cloud ? <AuthFeedback /> : null}
+      {cloud ? <SyncFeedback /> : null}
     </>
   );
 }

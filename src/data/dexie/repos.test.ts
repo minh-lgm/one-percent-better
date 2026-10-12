@@ -43,18 +43,26 @@ describe('DexieGoalRepository', () => {
     await seedS1();
     await goals.deleteWithEntries('g2');
     expect(await goals.getById('g2')).toBeUndefined();
-    expect(await db.entries.where('goalId').equals('g2').count()).toBe(0);
-    expect(await db.goals.count()).toBe(4);
-    expect(await db.entries.count()).toBe(23 - 13);
+    expect(await entries.getByGoal('g2')).toEqual([]);
+    expect((await goals.getAll()).length).toBe(4);
+    expect((await entries.getByDateRange('2026-01-01', '2026-12-31')).length).toBe(23 - 13);
+    // v2 (ADR-20): the rows are tombstones, not gone; one stamp for the goal and its entries.
+    const g2 = (await db.goals.get('g2'))!;
+    expect(g2.deletedAt).toBe(g2.updatedAt);
+    expect(g2.dirty).toBe(1);
+    const rows = await db.entries.where('goalId').equals('g2').toArray();
+    expect(rows).toHaveLength(13);
+    for (const e of rows) expect(e).toMatchObject({ deletedAt: g2.deletedAt, updatedAt: g2.deletedAt, dirty: 1 });
   });
 
-  it('deleteWithEntries rolls back when the goal delete fails (M1-AC9)', async () => {
+  it('deleteWithEntries rolls back when the entry write fails (M1-AC9)', async () => {
     await seedS1();
-    const spy = vi.spyOn(db.goals, 'delete').mockRejectedValueOnce(new Error('boom'));
+    const spy = vi.spyOn(db.entries, 'bulkPut').mockRejectedValueOnce(new Error('boom'));
     await expect(goals.deleteWithEntries('g1')).rejects.toThrow('boom');
     spy.mockRestore();
     expect(await goals.getById('g1')).toBeDefined();
-    expect(await db.entries.where('goalId').equals('g1').count()).toBe(8);
+    expect((await db.goals.get('g1'))?.deletedAt ?? null).toBeNull();
+    expect(await entries.getByGoal('g1')).toHaveLength(8);
   });
 
   it('watchAll emits on changes', async () => {
@@ -85,6 +93,7 @@ describe('DexieEntryRepository', () => {
   });
 
   it('delete and watch', async () => {
+    await goals.put(buildGoal({ id: 'g' }));
     await entries.put(buildEntry({ id: 'e1', goalId: 'g', date: '2026-10-09', minutes: 20 }));
     const seen: number[] = [];
     const unsubscribe = entries.watchByDateRange('2026-10-09', '2026-10-09').subscribe((list) => seen.push(list.length));

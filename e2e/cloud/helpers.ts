@@ -69,3 +69,46 @@ export async function kvSync(page: Page): Promise<{ userId: string | null; accou
 }
 
 export const FIXED_MS = FIXED_TIME.getTime();
+
+// ---- M7 ----
+
+/** Dataset C1 (TASKS phase 2): one cloud goal + two entries for u1. */
+export const C1 = {
+  goals: [{ id: 'c1-goal', name: 'Cloud goal', why: '', targetType: 'daily', targetMinutes: 15, startDate: '2026-10-01', endDate: '2026-12-31', archived: false, createdAt: '2026-10-05T01:00:00.000Z', updatedAt: '2026-10-05T01:00:00.000Z' }],
+  entries: [
+    { id: 'c1-e1', goalId: 'c1-goal', date: '2026-10-06', minutes: 15, note: '', source: 'manual', createdAt: '2026-10-05T01:00:00.000Z', updatedAt: '2026-10-05T01:00:00.000Z' },
+    { id: 'c1-e2', goalId: 'c1-goal', date: '2026-10-07', minutes: 15, note: '', source: 'manual', createdAt: '2026-10-05T01:00:00.000Z', updatedAt: '2026-10-05T01:00:00.000Z' },
+  ],
+};
+
+export const syncIndicator = (page: Page): Locator => page.getByTestId('sync-indicator');
+export const statusRow = (page: Page): Locator => page.getByTestId('status-row');
+
+/** Wait until the indicator reports `state` (`synced`, `pending`, `offline`, `error`, `expired`, `syncing`, `signing-in`). */
+export async function expectSyncState(page: Page, state: string, timeout = 15_000): Promise<void> {
+  await expect(syncIndicator(page)).toHaveAttribute('data-state', state, { timeout });
+}
+
+/** Press "Sync now" on the Account card (Settings) and wait for the indicator to come back to `synced`. */
+export async function syncNow(page: Page): Promise<void> {
+  if (!page.url().includes('#/settings')) await page.goto('#/settings');
+  await expect(page.getByTestId('sync-now')).toBeEnabled();
+  await page.getByTestId('sync-now').click();
+  await expectSyncState(page, 'synced');
+}
+
+/** Pending count shown on the Account card (`N changes`). */
+export async function pendingCount(page: Page): Promise<number> {
+  const text = await page.getByTestId('pending-count').textContent();
+  return Number((text ?? '').replace(/[^0-9]/g, ''));
+}
+
+/** Collect pageerror + unhandledrejection (M7-AC13). Call before navigating. */
+export function collectErrors(page: Page): { list: string[] } {
+  const list: string[] = [];
+  page.on('pageerror', (e) => list.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /unhandled/i.test(m.text())) list.push(`console: ${m.text()}`);
+  });
+  return { list };
+}

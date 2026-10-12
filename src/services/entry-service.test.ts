@@ -10,6 +10,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 
 let db: AppDatabase;
 let service: EntryService;
+const liveEntries = () => db.entries.filter((e) => e.deletedAt == null).count();
 const goal = buildGoal({ id: 'g1', startDate: '2026-10-01', endDate: '2026-10-31' });
 
 beforeEach(async () => {
@@ -34,7 +35,7 @@ describe('EntryService.add (M1-AC6)', () => {
     expect(r.value.id).toMatch(UUID_RE);
     expect(r.value).toMatchObject({ goalId: 'g1', date: TODAY, minutes: 20, note: 'Ch. 3', source: 'manual' });
     expect(r.value.createdAt).toBe(FIXED_NOW.toISOString());
-    expect(await db.entries.count()).toBe(1);
+    expect(await liveEntries()).toBe(1);
   });
 
   it('rejects invalid minutes and long notes without storing', async () => {
@@ -45,7 +46,7 @@ describe('EntryService.add (M1-AC6)', () => {
     }
     const r = await add(10, 'a'.repeat(281));
     if (!r.ok) expect(r.errors[0].code).toBe('ENTRY_NOTE_TOO_LONG');
-    expect(await db.entries.count()).toBe(0);
+    expect(await liveEntries()).toBe(0);
   });
 
   it('enforces the 1440-minute day limit', async () => {
@@ -112,7 +113,7 @@ describe('EntryService.update / remove (M1-AC7)', () => {
     const a = await add(20);
     if (!a.ok) throw new Error('setup');
     expect((await service.remove(a.value.id)).ok).toBe(true);
-    expect(await db.entries.count()).toBe(0);
+    expect(await liveEntries()).toBe(0);
     const missing = await service.remove(a.value.id);
     if (!missing.ok) expect(missing.errors[0].code).toBe('ENTRY_NOT_FOUND');
   });

@@ -1,15 +1,28 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { WRITE_FAILED_KEY } from '../error-messages';
+import { useFormat } from '../hooks/useFormat';
 import { useT } from '../hooks/useT';
 import { Alert } from './Alert';
 import { Button } from './Button';
+import { Icon } from './Icon';
+
+export interface SignOutChoice {
+  keepData: boolean;
+  /** Remove confirmed again after the final sync failed (DESIGN D4 "Remove anyway"). */
+  removeAnyway?: boolean;
+}
 
 export interface SignOutDialogProps {
   open: boolean;
   busy?: boolean;
   /** Removing local data failed: the dialog stays open with `errors.WRITE_FAILED`. */
   writeFailed?: boolean;
-  onConfirm: (choice: { keepData: boolean }) => void;
+  /** M7: changes not yet in the account (FR-41 warning block). */
+  pending?: number;
+  online?: boolean;
+  /** M7: the final sync could not push everything while "Remove" was selected (OQ-D10). */
+  syncFailed?: boolean;
+  onConfirm: (choice: SignOutChoice) => void;
   onCancel: () => void;
 }
 
@@ -19,8 +32,9 @@ type Choice = 'keep' | 'remove';
  * D4 — "Sign out?" (DESIGN S7, 8.1). Native `<dialog>` + showModal(); the safe
  * default (Keep) is selected and focused; Esc/Cancel close without doing anything.
  */
-export function SignOutDialog({ open, busy = false, writeFailed = false, onConfirm, onCancel }: SignOutDialogProps) {
+export function SignOutDialog({ open, busy = false, writeFailed = false, pending = 0, online = true, syncFailed = false, onConfirm, onCancel }: SignOutDialogProps) {
   const { t } = useT();
+  const f = useFormat();
   const id = useId();
   const ref = useRef<HTMLDialogElement>(null);
   const keepRef = useRef<HTMLInputElement>(null);
@@ -49,19 +63,32 @@ export function SignOutDialog({ open, busy = false, writeFailed = false, onConfi
     return () => dialog.removeEventListener('cancel', handleCancel);
   }, [onCancel, busy]);
 
+  const remove = choice === 'remove';
+  const unsynced = pending > 0;
+  const removeAnyway = syncFailed && remove;
+
   function submit(e: FormEvent) {
     e.preventDefault();
     if (busy) return;
-    onConfirm({ keepData: choice === 'keep' });
+    onConfirm(removeAnyway ? { keepData: false, removeAnyway: true } : { keepData: !remove });
   }
 
-  const remove = choice === 'remove';
+  const describedBy = unsynced ? `${id}-body ${id}-unsynced` : `${id}-body`;
   return (
-    <dialog ref={ref} className="dialog signout" aria-labelledby={`${id}-title`} aria-describedby={`${id}-body`} aria-busy={busy || undefined} data-testid="signout-dialog">
+    <dialog ref={ref} className="dialog signout" aria-labelledby={`${id}-title`} aria-describedby={describedBy} aria-busy={busy || undefined} data-testid="signout-dialog">
       <form onSubmit={submit} noValidate>
         <div className="dialog-body">
           <h2 id={`${id}-title`}>{t('auth.signOut.title')}</h2>
           <p id={`${id}-body`}>{t('auth.signOut.body')}</p>
+          {unsynced ? (
+            <div className="alert info unsynced" id={`${id}-unsynced`} data-testid="unsynced-warning">
+              <Icon name="info" />
+              <div className="stack-t">
+                <p>{f.count('auth.signOut.unsynced', pending)}</p>
+                <p>{online ? t('auth.signOut.unsyncedOnline') : t('auth.signOut.unsyncedOffline')}</p>
+              </div>
+            </div>
+          ) : null}
           <fieldset className="radios" disabled={busy}>
             <legend>{t('auth.signOut.legend')}</legend>
             {/* The label is the tap target; the accessible name is only the bold line, the description is linked separately (DESIGN 8.1). */}
@@ -84,11 +111,16 @@ export function SignOutDialog({ open, busy = false, writeFailed = false, onConfi
               </span>
             </label>
           </fieldset>
+          {/* Always in the DOM (DESIGN 8.1): content appearing inside a live region is announced. */}
+          <div role="status" className={remove && unsynced ? 'remove-note' : 'sr-only'} data-testid="unsynced-remove">
+            {remove && unsynced ? t('auth.signOut.unsyncedRemove') : ''}
+          </div>
+          {syncFailed ? <Alert>{t('auth.signOut.syncFailed')}</Alert> : null}
           {writeFailed ? <Alert>{t(WRITE_FAILED_KEY)}</Alert> : null}
         </div>
         <div className="actions">
           <Button type="submit" variant={remove ? 'danger' : 'primary'} disabled={busy} aria-busy={busy || undefined} data-testid="signout-confirm">
-            {busy ? t('auth.signOut.working') : remove ? t('auth.signOut.confirmRemove') : t('auth.signOut.confirmKeep')}
+            {busy ? t('auth.signOut.working') : removeAnyway ? t('auth.signOut.removeAnyway') : remove ? t('auth.signOut.confirmRemove') : t('auth.signOut.confirmKeep')}
           </Button>
           <Button variant="secondary" onClick={onCancel} disabled={busy}>
             {t('common.cancel')}

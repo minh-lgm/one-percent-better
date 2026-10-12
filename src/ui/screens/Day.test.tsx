@@ -88,7 +88,7 @@ describe('Day (M3-AC1, AC2, AC3, AC4)', () => {
     await user.click(within(guitar).getByRole('button', { name: 'Delete entry: 10 min, Scales' }));
     await user.click(within(guitar).getByRole('button', { name: en.common.delete }));
     await waitFor(() => expect(within(guitar).getByText('0/20')).toBeInTheDocument());
-    expect(await tc!.container.db.entries.count()).toBe(23);
+    expect(await tc!.container.db.entries.filter((e) => e.deletedAt == null).count()).toBe(23); // v2: soft delete (ADR-20)
   });
 
   it('M3-AC3: only goals whose period contains the day are listed (ended goals included)', async () => {

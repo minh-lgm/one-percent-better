@@ -1,6 +1,6 @@
 import { INTL_TAG, type Locale, type Translator } from './types';
 
-export type CountKey = 'format.goalsCount' | 'format.entriesCount' | 'format.daysCount';
+export type CountKey = 'format.goalsCount' | 'format.entriesCount' | 'format.daysCount' | 'format.changesCount' | 'sync.indicator.waiting' | 'sync.indicator.offline' | 'auth.signOut.unsynced';
 
 export interface Formatters {
   readonly locale: Locale;
@@ -40,6 +40,12 @@ export interface Formatters {
   duration(minutes: number): string;
   /** `00:25:31` — locale independent. */
   hhmmss(ms: number): string;
+  /** `14:05` — 24 h local time, same in both locales (DESIGN §7.1). */
+  clock(date: string | Date): string;
+  /** v2 sync indicator: `14:05` on the same local day as `now`, otherwise the short date. */
+  syncedShort(date: string | Date, now: Date): string;
+  /** v2 Account card: `today at 14:05` / `2026-10-08 at 09:30` (`format.todayAt` / `format.dateAt`). */
+  syncedAt(date: string | Date, now: Date): string;
 }
 
 const cache = new Map<string, Intl.DateTimeFormat | Intl.NumberFormat>();
@@ -167,5 +173,21 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
       const s = total % 60;
       return `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
     },
+    clock(date) {
+      const d = date instanceof Date ? date : new Date(date);
+      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    },
+    syncedShort(date, now) {
+      const d = date instanceof Date ? date : new Date(date);
+      return toIso(d) === toIso(now) ? clockOf(d) : dateShort(d);
+    },
+    syncedAt(date, now) {
+      const d = date instanceof Date ? date : new Date(date);
+      return toIso(d) === toIso(now) ? t('format.todayAt', { time: clockOf(d) }) : t('format.dateAt', { date: dateShort(d), time: clockOf(d) });
+    },
   };
+}
+
+function clockOf(d: Date): string {
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }

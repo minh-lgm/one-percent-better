@@ -30,6 +30,18 @@ const SUPABASE_RULES = [
   ['(^|/)supabase-client(\\.[cm]?[jt]sx?)?$', 'Do not import supabase-client statically: use integration/supabase/loader (ADR-18, keeps the SDK out of the entry chunk).'],
 ];
 
+// M6-P1: `import('@supabase/…')` / `import('…/supabase-client')` must not appear outside the integration folder either.
+const DYNAMIC_SUPABASE_SELECTORS = [
+  {
+    selector: "ImportExpression > Literal[value=/^@supabase/]",
+    message: 'Dynamic import of @supabase/* is only allowed in src/integration/supabase/** (ADR-18).',
+  },
+  {
+    selector: "ImportExpression > Literal[value=/supabase-client([.][cm]?[jt]sx?)?$/]",
+    message: 'Dynamic import of supabase-client is only allowed in src/integration/supabase/loader.ts (ADR-18).',
+  },
+];
+
 const HARDCODED_TEXT_SELECTORS = [
   {
     selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
@@ -95,6 +107,12 @@ export default tseslint.config(
     ignores: ['src/integration/supabase/**', 'tests/db/**'],
     rules: restrictImports(SUPABASE_RULES),
   },
+  {
+    // Non-JSX files: only the dynamic-import rule (the .tsx configs below restate it next to the text rules).
+    files: ['src/**/*.ts', 'e2e/**/*.ts', 'tests/**/*.ts'],
+    ignores: ['src/integration/supabase/**', 'tests/db/**'],
+    rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_SUPABASE_SELECTORS] },
+  },
 
   // ---- Layer rules (ARCHITECTURE §3) ----
   {
@@ -146,14 +164,14 @@ export default tseslint.config(
     files: ['src/ui/**/*.tsx', 'src/app/**/*.tsx'],
     ignores: TEST_FILES,
     rules: {
-      'no-restricted-syntax': ['error', ...HARDCODED_TEXT_SELECTORS],
+      'no-restricted-syntax': ['error', ...HARDCODED_TEXT_SELECTORS, ...DYNAMIC_SUPABASE_SELECTORS],
     },
   },
   {
     files: ['**/*.tsx'],
     ignores: ['src/ui/**/*.tsx', 'src/app/**/*.tsx'],
     rules: {
-      'no-restricted-syntax': ['error', HARDCODED_TEXT_SELECTORS[0]],
+      'no-restricted-syntax': ['error', HARDCODED_TEXT_SELECTORS[0], ...DYNAMIC_SUPABASE_SELECTORS],
     },
   },
 );

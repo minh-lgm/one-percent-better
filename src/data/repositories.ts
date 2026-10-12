@@ -1,4 +1,6 @@
+import type { PrefGroupMeta, SyncErrorCode } from '../domain/sync';
 import type { ActiveTimer, Goal, ISODate, ISODateTime, LogEntry, Settings } from '../domain/types';
+import type { Locale } from '../i18n/types';
 
 export interface Subscribable<T> {
   subscribe(onNext: (value: T) => void, onError?: (e: unknown) => void): () => void;
@@ -43,7 +45,7 @@ export interface SyncMeta {
   account: { email: string; name: string } | null;
   cursor: { goals: PullCursor | null; entries: PullCursor | null };
   lastSyncedAt: ISODateTime | null;
-  lastError: { code: string; at: ISODateTime } | null;
+  lastError: { code: SyncErrorCode; at: ISODateTime } | null;
 }
 
 export const EMPTY_SYNC_META: SyncMeta = {
@@ -69,7 +71,7 @@ export function normalizeSyncMeta(raw: unknown): SyncMeta {
     account: account && typeof account.email === 'string' ? { email: account.email, name: typeof account.name === 'string' ? account.name : '' } : null,
     cursor: { goals: isCursor(cursor?.goals) ? cursor.goals : null, entries: isCursor(cursor?.entries) ? cursor.entries : null },
     lastSyncedAt: typeof r.lastSyncedAt === 'string' ? r.lastSyncedAt : null,
-    lastError: lastError && typeof lastError.code === 'string' && typeof lastError.at === 'string' ? { code: lastError.code, at: lastError.at } : null,
+    lastError: lastError && typeof lastError.code === 'string' && typeof lastError.at === 'string' ? { code: lastError.code as SyncErrorCode, at: lastError.at } : null,
   };
 }
 
@@ -130,4 +132,109 @@ export interface LocalDataRepository {
   clearUserData(): Promise<void>;
   /** Number of live goals/entries (sign-out / merge dialogs). */
   countLive(): Promise<{ goals: number; entries: number }>;
+}
+
+// ---- M7: sync rows, local sync store, synced preferences (ARCHITECTURE §4.1, §4.2, §5.2) ----
+
+/** IndexedDB cannot index booleans: the "needs push" flag is 0/1. */
+export type SyncFlag = 0 | 1;
+/** What the Dexie tables hold from schema v2 on (ADR-20). Only the data layer sees these. */
+export type GoalRow = Goal & { deletedAt: ISODateTime | null; dirty: SyncFlag };
+export type EntryRow = LogEntry & { deletedAt: ISODateTime | null; dirty: SyncFlag };
+/** Exchange format with a `RemoteStore`: domain record + tombstone marker, no `dirty`. */
+export type SyncRecord<T> = T & { deletedAt: ISODateTime | null };
+
+export interface RemoteChanges {
+  goals: SyncRecord<Goal>[];
+  entries: SyncRecord<LogEntry>[];
+}
+
+export interface ApplyResult {
+  applied: number;
+  keptLocal: number;
+  skippedInvalid: number;
+}
+
+/** Strip the local-only `dirty` flag (rows → records). */
+export function toSyncRecord<T extends { dirty?: SyncFlag }>(row: T): Omit<T, 'dirty'> {
+  const { dirty: _dirty, ...rest } = row;
+  return rest;
+}
+
+/** Strip both sync markers (rows → domain). */
+export function toDomain<T extends { dirty?: SyncFlag; deletedAt?: ISODateTime | null }>(row: T): Omit<T, 'dirty' | 'deletedAt'> {
+  const { dirty: _dirty, deletedAt: _deletedAt, ...rest } = row;
+  return rest;
+}
+
+/** `true` for rows that are not tombstones (rows written before v2 have no `deletedAt` at all). */
+export function isLive(row: { deletedAt?: ISODateTime | null } | undefined): boolean {
+  return !!row && row.deletedAt == null;
+}
+
+/**
+ * Local side of the sync protocol (ARCHITECTURE §5.2, §5.10). Every write is one IndexedDB
+ * transaction, so it is atomic per batch and serialised across tabs.
+ */
+export interface LocalSyncStore {
+  /** Up to `limit` dirty rows per table, goals first. Includes tombstones. */
+  getDirty(limit: number): Promise<RemoteChanges>;
+  /**
+   * ONE readwrite transaction over goals + entries: `resolveIncoming(local, remote)` per row;
+   * `apply` → write the remote row with `dirty = 0`; `keep-local` → untouched. A remote row equal to
+   * the local one (same `updatedAt`, same deleted-ness) only clears `dirty`. Applying a goal
+   * tombstone soft-deletes the goal's live entries (`dirty = 1`).
+   */
+  applyRemote(changes: RemoteChanges): Promise<ApplyResult>;
+  /** `dirty = 1` on every live row (merge into another account, FR-47). Returns how many. */
+  markAllDirty(): Promise<number>;
+  /** Soft-delete live entries whose goal is soft-deleted (end-of-cycle cleanup). Returns how many. */
+  tombstoneOrphanEntries(now: Date): Promise<number>;
+  countDirty(): Promise<number>;
+  /** Dirty goals + dirty entries + dirty preference groups (v2.1). */
+  watchPendingCount(): Subscribable<number>;
+}
+
+export type { PrefGroupMeta };
+export type PrefGroup = 'reminder' | 'locale';
+
+/** kv key `prefsSync`: only the sync markers; the values stay in kv `settings` / `locale`. */
+export interface PrefsSyncState {
+  reminder: PrefGroupMeta;
+  locale: PrefGroupMeta;
+}
+
+export const EMPTY_PREFS_SYNC: PrefsSyncState = { reminder: { updatedAt: null, dirty: 0 }, locale: { updatedAt: null, dirty: 0 } };
+
+function normalizeGroup(raw: unknown): PrefGroupMeta {
+  const g = raw && typeof raw === 'object' ? (raw as { updatedAt?: unknown; dirty?: unknown }) : {};
+  const updatedAt = typeof g.updatedAt === 'string' && !Number.isNaN(Date.parse(g.updatedAt)) ? g.updatedAt : null;
+  return { updatedAt, dirty: g.dirty === 1 && updatedAt !== null ? 1 : 0 };
+}
+
+export function normalizePrefsSync(raw: unknown): PrefsSyncState {
+  const r = raw && typeof raw === 'object' ? (raw as { reminder?: unknown; locale?: unknown }) : {};
+  return { reminder: normalizeGroup(r.reminder), locale: normalizeGroup(r.locale) };
+}
+
+/** One `settings` row on the cloud (ARCHITECTURE §4.1). A `null` group = not set / not sent. */
+export interface RemotePrefs {
+  reminder: { enabled: boolean; time: string; updatedAt: ISODateTime } | null;
+  locale: { value: Locale; updatedAt: ISODateTime } | null;
+}
+
+/** Synced user preferences (v2.1, FR-55): values + sync markers written in one transaction. */
+export interface SyncedPrefsRepository {
+  /** Update `settings.reminderEnabled/reminderTime` (other fields kept) + mark the reminder group. */
+  setReminder(patch: { reminderEnabled?: boolean; reminderTime?: string }, now: Date): Promise<Settings>;
+  /** kv `locale` + mark the locale group, in one transaction. */
+  setLocale(locale: Locale, now: Date): Promise<void>;
+  /** Groups that need a push, or `null` when none is dirty. */
+  getDirty(): Promise<RemotePrefs | null>;
+  /** `resolvePrefGroup` per group in one transaction; reports which local values changed. */
+  applyRemote(remote: RemotePrefs | null): Promise<{ reminderChanged: boolean; localeChanged: Locale | null }>;
+  /** Switch to another account (FR-47): every group with a marker becomes dirty. */
+  markAllDirty(): Promise<void>;
+  getState(): Promise<PrefsSyncState>;
+  watchState(): Subscribable<PrefsSyncState>;
 }

@@ -53,7 +53,10 @@
     "entriesCount_other": "{{count}} lần ghi",
     "daysCount_other": "{{count}} ngày",
     "minSec": "{{m}} phút {{s}} giây",
-    "hours": "{{n}} giờ"
+    "hours": "{{n}} giờ",
+    "changesCount_other": "{{count}} thay đổi",
+    "todayAt": "hôm nay lúc {{time}}",
+    "dateAt": "{{date}} lúc {{time}}"
   },
   "toast": {
     "goalCreated": "Đã tạo mục tiêu",
@@ -74,7 +77,10 @@
     "signedOutKept": "Đã đăng xuất. Dữ liệu của bạn vẫn còn trên thiết bị này.",
     "signedOutRemoved": "Đã đăng xuất. Dữ liệu đã được xóa khỏi thiết bị này.",
     "signInCancelled": "Đã hủy đăng nhập.",
-    "signInFailed": "Không đăng nhập được."
+    "signInFailed": "Không đăng nhập được.",
+    "mergeDone": "Đã đăng nhập. Tài khoản của bạn hiện có {{goals}}, {{entries}}.",
+    "prefsFromAccount": "Đã cập nhật cài đặt từ tài khoản của bạn",
+    "syncNowDone": "Mọi thứ đã được cập nhật"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Hãy nhập tên cho mục tiêu của bạn.",
@@ -113,7 +119,11 @@
     "AUTH_OFFLINE": "Bạn đang ngoại tuyến. Hãy kết nối mạng rồi đăng nhập.",
     "AUTH_CANCELLED": "Bạn đã hủy đăng nhập. Bạn chưa đăng nhập và không có gì trên thiết bị này bị thay đổi.",
     "AUTH_FAILED": "Không đăng nhập được. Không có gì trên thiết bị này bị thay đổi. Hãy thử lại và hoàn tất đăng nhập trong cùng trình duyệt bạn đã bắt đầu.",
-    "AUTH_SESSION_EXPIRED": "Phiên đăng nhập của bạn đã hết hạn. Hãy đăng nhập lại để tiếp tục đồng bộ. Dữ liệu của bạn, kể cả các thay đổi chưa đồng bộ, vẫn được giữ trên thiết bị này."
+    "AUTH_SESSION_EXPIRED": "Phiên đăng nhập của bạn đã hết hạn. Hãy đăng nhập lại để tiếp tục đồng bộ. Dữ liệu của bạn, kể cả các thay đổi chưa đồng bộ, vẫn được giữ trên thiết bị này.",
+    "SYNC_OFFLINE": "Bạn đang ngoại tuyến. Thay đổi của bạn đã được lưu trên thiết bị này và sẽ được đồng bộ khi có mạng trở lại.",
+    "SYNC_UNREACHABLE": "Hiện chưa kết nối được tới tài khoản của bạn. Thay đổi của bạn vẫn an toàn trên thiết bị này. App sẽ tự thử lại, hoặc bạn có thể bấm Đồng bộ ngay.",
+    "SYNC_UNAUTHORIZED": "Phiên đăng nhập không còn hợp lệ. Hãy đăng nhập lại để tiếp tục đồng bộ. Dữ liệu trên thiết bị này vẫn an toàn.",
+    "SYNC_REMOTE_INVALID": "Một số mục từ tài khoản của bạn không đọc được nên đã bị bỏ qua. Mọi thứ còn lại đã được đồng bộ."
   },
   "empty": {
     "today": {
@@ -289,7 +299,8 @@
         "vi": "Tiếng Việt"
       },
       "browserNote": "Ô chọn ngày, giờ và hộp xin quyền do trình duyệt hiển thị nên theo ngôn ngữ của trình duyệt.",
-      "saveFailed": "Đã đổi ngôn ngữ, nhưng không lưu được trên thiết bị này. Ngôn ngữ có thể trở về mặc định khi bạn tải lại trang."
+      "saveFailed": "Đã đổi ngôn ngữ, nhưng không lưu được trên thiết bị này. Ngôn ngữ có thể trở về mặc định khi bạn tải lại trang.",
+      "syncNote": "Được lưu vào tài khoản của bạn và dùng cho các thiết bị khác của bạn."
     },
     "account": {
       "title": "Tài khoản",
@@ -302,7 +313,14 @@
       "signOut": "Đăng xuất",
       "expiredTitle": "Hãy đăng nhập lại",
       "expiredAccount": "Tài khoản: {{email}}",
-      "goTo": "Đến mục Tài khoản"
+      "goTo": "Đến mục Tài khoản",
+      "lastSynced": "Đồng bộ gần nhất",
+      "neverSynced": "Chưa lần nào",
+      "pending": "Đang chờ đồng bộ",
+      "syncedInfo": "Được đồng bộ với tài khoản này: mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ. Bộ đếm giờ đang chạy chỉ nằm trên thiết bị bạn bắt đầu.",
+      "syncNow": "Đồng bộ ngay",
+      "offlineSync": "Bạn đang ngoại tuyến. Thay đổi được lưu trên thiết bị này và sẽ đồng bộ khi có mạng trở lại.",
+      "nextRetry": "Sẽ thử lại lúc {{time}}."
     },
     "reminders": {
       "title": "Nhắc nhở",
@@ -316,7 +334,8 @@
       "limit": "Lưu ý: lời nhắc chỉ được gửi khi 1% Better đang mở (trong một tab hoặc cửa sổ đã cài, kể cả khi chạy nền). Để được nhắc khi đã đóng app, hãy thêm một sự kiện hằng ngày vào lịch của bạn.",
       "ios": "Trên iPhone hoặc iPad, thông báo chỉ hoạt động sau khi bạn thêm app vào Màn hình chính (iOS 16.4 trở lên).",
       "ics": "Thêm lời nhắc vào lịch (.ics)",
-      "icsHint": "Thêm một sự kiện lặp lại hằng ngày lúc {{time}}."
+      "icsHint": "Thêm một sự kiện lặp lại hằng ngày lúc {{time}}.",
+      "syncNote": "Việc bật/tắt và giờ nhắc được lưu vào tài khoản của bạn và dùng cho các thiết bị khác. Quyền thông báo được đặt riêng trên từng thiết bị."
     },
     "permission": {
       "default": "Chưa hỏi",
@@ -324,7 +343,8 @@
       "denied": "Bị chặn",
       "unsupported": "Không hỗ trợ",
       "defaultDesc": "Bật nhắc nhở và trình duyệt sẽ xin quyền thông báo của bạn.",
-      "grantedDesc": "Bạn sẽ nhận một thông báo mỗi ngày khi 1% Better đang mở."
+      "grantedDesc": "Bạn sẽ nhận một thông báo mỗi ngày khi 1% Better đang mở.",
+      "defaultOnDesc": "Nhắc nhở đang bật nhưng thiết bị này chưa cho phép thông báo. Hãy cho phép để nhận thông báo; bạn vẫn sẽ thấy lời nhắc ngay trong app."
     },
     "backup": {
       "title": "Sao lưu",
@@ -333,7 +353,9 @@
       "lastNever": "Lần sao lưu gần nhất: Chưa có",
       "export": "Xuất sao lưu (JSON)",
       "import": "Nhập sao lưu…",
-      "importHint": "Nhập sao lưu sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này."
+      "importHint": "Nhập sao lưu sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này.",
+      "descSignedIn": "Dữ liệu của bạn được lưu trên thiết bị này và đồng bộ vào tài khoản. Tệp sao lưu là một bản sao bạn tự giữ.",
+      "importHintSignedIn": "Nhập sao lưu sẽ thay thế toàn bộ dữ liệu trên thiết bị này và trong tài khoản của bạn."
     },
     "storage": {
       "title": "Bộ nhớ",
@@ -418,7 +440,10 @@
   "import": {
     "title": "Thay thế toàn bộ dữ liệu?",
     "body": "Bản sao lưu này có {{goals}}, {{entries}}, xuất ngày {{date}}. Nhập sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này ({{curGoals}}, {{curEntries}}). Bạn không thể hoàn tác.",
-    "confirm": "Thay thế toàn bộ dữ liệu"
+    "confirm": "Thay thế toàn bộ dữ liệu",
+    "titleSignedIn": "Thay thế dữ liệu trên mọi thiết bị của bạn?",
+    "bodySignedIn": "Bản sao lưu này có {{goals}}, {{entries}}, xuất ngày {{date}}. Nhập sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này ({{curGoals}}, {{curEntries}}) và, sau khi đồng bộ, cả dữ liệu trong tài khoản của bạn, nên các thiết bị khác của bạn cũng thay đổi theo. Bạn không thể hoàn tác.",
+    "offlineNote": "Bạn đang ngoại tuyến nên thay đổi sẽ đến tài khoản của bạn khi có mạng trở lại."
   },
   "heatmap": {
     "cell": {
@@ -501,7 +526,42 @@
       "removeDesc": "Xóa mục tiêu, lần ghi và cài đặt nhắc nhở trên thiết bị này. Hãy chọn khi dùng máy chung. Tài khoản của bạn vẫn giữ mọi thứ.",
       "confirmKeep": "Đăng xuất",
       "confirmRemove": "Đăng xuất và xóa dữ liệu",
-      "working": "Đang đăng xuất…"
+      "working": "Đang đăng xuất…",
+      "unsynced_other": "{{count}} thay đổi chưa được đồng bộ vào tài khoản của bạn.",
+      "unsyncedOnline": "App sẽ thử đồng bộ trước khi đăng xuất.",
+      "unsyncedOffline": "Bạn đang ngoại tuyến nên chưa đồng bộ được. Nếu giữ dữ liệu trên thiết bị này, các thay đổi sẽ được đồng bộ khi bạn đăng nhập lại bằng tài khoản này.",
+      "unsyncedRemove": "Nếu xóa dữ liệu khỏi thiết bị này, các thay đổi đó sẽ mất.",
+      "syncFailed": "Không đồng bộ được các thay đổi của bạn. Nếu xóa dữ liệu bây giờ, chúng sẽ mất.",
+      "removeAnyway": "Vẫn xóa"
+    },
+    "merge": {
+      "title": "Thêm dữ liệu trên thiết bị này vào tài khoản của bạn?",
+      "body": "Thiết bị này vẫn còn {{goals}}, {{entries}} từ một tài khoản khác. Nếu tiếp tục, chúng sẽ được thêm vào tài khoản {{email}}, cạnh những gì đã có.",
+      "note": "Chọn Hủy sẽ đăng xuất. Không có gì được tải lên.",
+      "confirm": "Thêm vào tài khoản",
+      "working": "Đang thêm…"
+    }
+  },
+  "sync": {
+    "indicator": {
+      "label": "Trạng thái đồng bộ",
+      "synced": "Đã đồng bộ {{time}}",
+      "syncedNoTime": "Đã đồng bộ",
+      "syncing": "Đang đồng bộ…",
+      "signingIn": "Đang đăng nhập…",
+      "waiting_other": "{{count}} thay đổi chờ đồng bộ",
+      "offline_other": "Ngoại tuyến · {{count}} thay đổi đang chờ",
+      "offlineNone": "Ngoại tuyến · mọi thay đổi đã đồng bộ",
+      "error": "Không đồng bộ được",
+      "retry": "Thử lại",
+      "retryAria": "Thử lại đồng bộ",
+      "expired": "Đăng nhập lại để đồng bộ"
+    },
+    "announce": {
+      "synced": "Mọi thay đổi đã được đồng bộ.",
+      "offline": "Bạn đang ngoại tuyến. Thay đổi sẽ được đồng bộ khi có mạng trở lại.",
+      "error": "Đồng bộ không thành công. Thay đổi của bạn vẫn an toàn trên thiết bị này và sẽ được thử lại.",
+      "expired": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục đồng bộ."
     }
   }
 }

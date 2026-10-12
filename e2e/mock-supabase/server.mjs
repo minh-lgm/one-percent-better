@@ -1,7 +1,9 @@
 // Mock Supabase for E2E and integration tests (ARCHITECTURE §5.11, ADR-23).
 // Plain Node `http`, no dependencies, in-memory state. It imitates exactly what the
 // app needs from Supabase Auth (OAuth PKCE with a fake account chooser, token
-// exchange, refresh, logout) plus `/__test/*` controls. REST (`/rest/v1/*`) is M7.
+// exchange, refresh, logout), the PostgREST subset used by `SupabaseRemoteStore`
+// (M7: upsert with merge-duplicates, select with `in`/`or`/`eq`/`order`/`limit`,
+// per-user rows like RLS, last-write-wins like the SQL triggers), plus `/__test/*` controls.
 //
 // Run standalone: `node e2e/mock-supabase/server.mjs [--port 54321]`
 // In Vitest:      `const mock = await startMockSupabase(0)` (random port).
@@ -17,6 +19,7 @@ export const USERS = {
 const JWT_SECRET = 'mock-supabase-jwt-secret-not-a-real-secret';
 const DEFAULT_TOKEN_TTL_S = 3600;
 const ALLOWED_REDIRECT = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//;
+const REST_TABLES = ['goals', 'entries', 'settings'];
 
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
 
@@ -48,12 +51,91 @@ function appendQuery(url, params) {
   return `${url}${sep}${new URLSearchParams(params).toString()}`;
 }
 
+/** Postgres `timestamptz` comparison: as instants. Unparsable → -Infinity. */
+const ms = (v) => {
+  const t = Date.parse(String(v ?? ''));
+  return Number.isNaN(t) ? Number.NEGATIVE_INFINITY : t;
+};
+
+const userKeyOf = (id) => Object.keys(USERS).find((k) => USERS[k].id === id) ?? null;
+
+/** Domain (camelCase) → cloud row (snake_case); accepts rows already in snake_case. */
+function toSnakeGoal(r) {
+  if ('target_type' in r || 'start_date' in r) return { ...r };
+  return {
+    id: r.id,
+    name: r.name,
+    why: r.why ?? '',
+    target_type: r.targetType,
+    target_minutes: r.targetMinutes,
+    start_date: r.startDate,
+    end_date: r.endDate,
+    archived: r.archived ?? false,
+    created_at: r.createdAt,
+    updated_at: r.updatedAt,
+    deleted_at: r.deletedAt ?? null,
+  };
+}
+function toSnakeEntry(r) {
+  if ('goal_id' in r) return { ...r };
+  return {
+    id: r.id,
+    goal_id: r.goalId,
+    date: r.date,
+    minutes: r.minutes,
+    note: r.note ?? '',
+    source: r.source ?? 'manual',
+    created_at: r.createdAt,
+    updated_at: r.updatedAt,
+    deleted_at: r.deletedAt ?? null,
+  };
+}
+
+const GOAL_COLUMNS = ['user_id', 'id', 'name', 'why', 'target_type', 'target_minutes', 'start_date', 'end_date', 'archived', 'created_at', 'updated_at', 'deleted_at', 'server_updated_at'];
+const ENTRY_COLUMNS = ['user_id', 'id', 'goal_id', 'date', 'minutes', 'note', 'source', 'created_at', 'updated_at', 'deleted_at', 'server_updated_at'];
+const SETTINGS_COLUMNS = ['user_id', 'reminder_enabled', 'reminder_time', 'reminder_updated_at', 'locale', 'locale_updated_at', 'server_updated_at'];
+
+/** Only the columns of ARCHITECTURE §4.3 are stored (unknown columns would be a PostgREST 400). */
+function pick(row, columns) {
+  const out = {};
+  for (const c of columns) out[c] = row[c] === undefined ? null : row[c];
+  return out;
+}
+
+/** Rough check constraints of the migration; a violated row makes the whole batch fail (like Postgres). */
+function checkRow(table, row) {
+  if (table === 'goals') {
+    if (typeof row.id !== 'string' || row.id.length < 1 || row.id.length > 64) return 'id';
+    if (typeof row.name !== 'string' || row.name.length < 1 || row.name.length > 60) return 'name';
+    if (typeof row.why !== 'string' || row.why.length > 280) return 'why';
+    if (!['daily', 'total'].includes(row.target_type)) return 'target_type';
+    if (!Number.isInteger(row.target_minutes) || row.target_minutes < 1 || row.target_minutes > 600000) return 'target_minutes';
+    if (String(row.end_date) < String(row.start_date)) return 'end_date';
+    if (ms(row.updated_at) === Number.NEGATIVE_INFINITY || ms(row.created_at) === Number.NEGATIVE_INFINITY) return 'timestamps';
+  } else if (table === 'entries') {
+    if (typeof row.id !== 'string' || row.id.length < 1 || row.id.length > 64) return 'id';
+    if (typeof row.goal_id !== 'string' || row.goal_id.length < 1 || row.goal_id.length > 64) return 'goal_id';
+    if (!Number.isInteger(row.minutes) || row.minutes < 1 || row.minutes > 1440) return 'minutes';
+    if (typeof row.note !== 'string' || row.note.length > 280) return 'note';
+    if (!['manual', 'timer'].includes(row.source)) return 'source';
+    if (ms(row.updated_at) === Number.NEGATIVE_INFINITY || ms(row.created_at) === Number.NEGATIVE_INFINITY) return 'timestamps';
+  } else if (table === 'settings') {
+    const rNull = row.reminder_enabled == null;
+    if ((row.reminder_time == null) !== rNull || (row.reminder_updated_at == null) !== rNull) return 'reminder group';
+    if (!rNull && !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(String(row.reminder_time))) return 'reminder_time';
+    const lNull = row.locale == null;
+    if ((row.locale_updated_at == null) !== lNull) return 'locale group';
+    if (!lNull && !['en', 'vi'].includes(row.locale)) return 'locale';
+  }
+  return null;
+}
+
 /**
  * Creates the mock. `listen(port)` resolves with the bound port; `close()` stops it.
  *
  * State is partitioned by the request's `User-Agent` (or `?scope=` / `x-opb-scope` on
  * `/__test/*`): Playwright workers run in parallel against one mock, so each worker gets its
- * own browser UA (e2e/cloud/fixtures.ts) and its own flows, tokens, toggles and log.
+ * own browser UA (e2e/cloud/fixtures.ts) and its own flows, tokens, toggles, rows and log.
  */
 export function createMockSupabase() {
   const partitions = new Map();
@@ -80,14 +162,22 @@ export function createMockSupabase() {
       /** Fixed "now" (ms) for issued tokens; null = real clock. Lets E2E with a frozen page clock expire tokens. */
       now: null,
       refreshMode: 'ok', // 'ok' | 'invalid_grant'
-      fail: [], // { path, status, times }
-      rows: { goals: new Map(), entries: new Map(), settings: new Map() }, // per-user seeds (M7 REST)
+      fail: [], // { path, status, times, delay }
+      rows: { goals: new Map(), entries: new Map(), settings: new Map() }, // userKey → Map(id → row)
       exchanges: 0,
       refreshes: 0,
+      lastServerStamp: 0,
     };
   }
 
   const nowS = (state) => Math.floor((state.now ?? Date.now()) / 1000);
+
+  /** `clock_timestamp()`: strictly increasing per partition (never frozen by `now`: the DB clock is real). */
+  function serverStamp(state) {
+    const t = Math.max(Date.now(), state.lastServerStamp + 1);
+    state.lastServerStamp = t;
+    return new Date(t).toISOString();
+  }
 
   function issueSession(state, userKey) {
     const user = USERS[userKey];
@@ -165,6 +255,11 @@ export function createMockSupabase() {
     send(res, status, { error, error_description: description, code: status, msg: description, error_code: error });
   }
 
+  /** PostgREST-shaped error body. */
+  function restError(res, status, code, message, details = null, hint = null) {
+    send(res, status, { code, details, hint, message });
+  }
+
   function bearerUser(state, req) {
     const auth = req.headers.authorization ?? '';
     const token = auth.replace(/^Bearer\s+/i, '');
@@ -173,7 +268,7 @@ export function createMockSupabase() {
     return Object.values(USERS).find((u) => u.id === claims.sub) ?? null;
   }
 
-  /** `/__test/fail?path=token&status=500&times=1`: the next `times` requests whose path contains `path` fail. */
+  /** `/__test/fail?path=token&status=500&times=1[&delay=ms]`: the next `times` requests whose path contains `path` fail. */
   function takeFailure(state, pathname) {
     const i = state.fail.findIndex((f) => pathname.includes(f.path) && f.times > 0);
     if (i === -1) return null;
@@ -191,6 +286,173 @@ export function createMockSupabase() {
 ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', 'Cancel')}</body></html>`;
   }
 
+  // ---- REST (M7) ----
+
+  function userRows(state, table, userKey) {
+    let map = state.rows[table].get(userKey);
+    if (!map) {
+      map = new Map();
+      state.rows[table].set(userKey, map);
+    }
+    return map;
+  }
+
+  /** `sync_before_write`: insert, or update only when `updated_at` is strictly newer (tie → server). Returns the stored row or null (kept). */
+  function upsertRow(state, table, userKey, incoming) {
+    const columns = table === 'goals' ? GOAL_COLUMNS : ENTRY_COLUMNS;
+    const rows = userRows(state, table, userKey);
+    const row = pick({ ...incoming, user_id: USERS[userKey].id }, columns);
+    const old = rows.get(String(row.id));
+    if (old) {
+      if (ms(row.updated_at) <= ms(old.updated_at)) return null;
+      const next = { ...old, ...row, user_id: old.user_id, created_at: old.created_at, server_updated_at: serverStamp(state) };
+      rows.set(String(row.id), next);
+      return next;
+    }
+    const next = { ...row, server_updated_at: serverStamp(state) };
+    rows.set(String(row.id), next);
+    return next;
+  }
+
+  /** `settings_before_write`: per-group LWW; a `null` group keeps the stored values; nothing newer → row untouched (null). */
+  function upsertSettings(state, userKey, incoming) {
+    const row = pick({ ...incoming, user_id: USERS[userKey].id }, SETTINGS_COLUMNS);
+    const rows = state.rows.settings;
+    const old = rows.get(userKey);
+    if (!old) {
+      const next = { ...row, server_updated_at: serverStamp(state) };
+      rows.set(userKey, next);
+      return next;
+    }
+    let changed = false;
+    const next = { ...old };
+    const newer = (a, b) => a != null && (b == null || ms(a) > ms(b));
+    if (newer(row.reminder_updated_at, old.reminder_updated_at)) {
+      next.reminder_enabled = row.reminder_enabled;
+      next.reminder_time = row.reminder_time;
+      next.reminder_updated_at = row.reminder_updated_at;
+      changed = true;
+    }
+    if (newer(row.locale_updated_at, old.locale_updated_at)) {
+      next.locale = row.locale;
+      next.locale_updated_at = row.locale_updated_at;
+      changed = true;
+    }
+    if (!changed) return null;
+    next.server_updated_at = serverStamp(state);
+    rows.set(userKey, next);
+    return next;
+  }
+
+  const unquote = (v) => String(v).replace(/^"(.*)"$/, '$1');
+
+  /** The PostgREST filters `SupabaseRemoteStore` uses: `col=eq.v`, `id=in.(...)`, `or=(server_updated_at.gt.X,and(server_updated_at.eq.X,id.gt.Y))`. */
+  function applyFilters(rows, searchParams) {
+    let out = rows;
+    for (const [key, value] of searchParams.entries()) {
+      if (['select', 'order', 'limit', 'offset', 'on_conflict', 'columns'].includes(key)) continue;
+      if (key === 'or') {
+        const m = /^\(server_updated_at\.gt\.("?[^",)]+"?),and\(server_updated_at\.eq\.("?[^",)]+"?),id\.gt\.("?[^")]*"?)\)\)$/.exec(value);
+        if (!m) throw new Error(`mock-supabase: unsupported or= filter ${value}`);
+        const stamp = ms(unquote(m[1]));
+        const id = unquote(m[3]);
+        out = out.filter((r) => ms(r.server_updated_at) > stamp || (ms(r.server_updated_at) === stamp && String(r.id) > id));
+        continue;
+      }
+      const op = /^(eq|in|gt|gte|lt|lte)\.(.*)$/s.exec(value);
+      if (!op) throw new Error(`mock-supabase: unsupported filter ${key}=${value}`);
+      if (op[1] === 'in') {
+        const list = op[2].replace(/^\((.*)\)$/s, '$1').split(',').map((s) => unquote(s.trim()));
+        const set = new Set(list);
+        out = out.filter((r) => set.has(String(r[key])));
+        continue;
+      }
+      const v = unquote(op[2]);
+      out = out.filter((r) => {
+        const a = r[key];
+        if (op[1] === 'eq') return String(a) === v;
+        const isTime = /_at$/.test(key);
+        const left = isTime ? ms(a) : String(a);
+        const right = isTime ? ms(v) : v;
+        if (op[1] === 'gt') return left > right;
+        if (op[1] === 'gte') return left >= right;
+        if (op[1] === 'lt') return left < right;
+        return left <= right;
+      });
+    }
+    return out;
+  }
+
+  function applyOrder(rows, order) {
+    if (!order) return rows;
+    const keys = order.split(',').map((part) => {
+      const [col, dir] = part.split('.');
+      return { col, desc: dir === 'desc' };
+    });
+    return [...rows].sort((a, b) => {
+      for (const { col, desc } of keys) {
+        const isTime = /_at$/.test(col);
+        const x = isTime ? ms(a[col]) : String(a[col]);
+        const y = isTime ? ms(b[col]) : String(b[col]);
+        if (x < y) return desc ? 1 : -1;
+        if (x > y) return desc ? -1 : 1;
+      }
+      return 0;
+    });
+  }
+
+  async function handleRest(state, req, res, url, body) {
+    const table = url.pathname.slice('/rest/v1/'.length);
+    if (!REST_TABLES.includes(table)) return restError(res, 404, 'PGRST205', `Could not find the table 'public.${table}' in the schema cache`);
+    const user = bearerUser(state, req);
+    if (!user) return restError(res, 401, 'PGRST301', 'JWT expired');
+    const userKey = userKeyOf(user.id);
+    const prefer = String(req.headers.prefer ?? '');
+    const wantsRows = prefer.includes('return=representation');
+
+    if (req.method === 'GET') {
+      let rows = table === 'settings' ? [...(state.rows.settings.has(userKey) ? [state.rows.settings.get(userKey)] : [])] : [...userRows(state, table, userKey).values()];
+      let filtered;
+      try {
+        filtered = applyFilters(rows, url.searchParams);
+      } catch (e) {
+        return restError(res, 400, 'PGRST100', String(e.message));
+      }
+      filtered = applyOrder(filtered, url.searchParams.get('order'));
+      const limit = url.searchParams.get('limit');
+      if (limit !== null) filtered = filtered.slice(0, Number(limit));
+      return send(res, 200, filtered, { 'Content-Range': `0-${Math.max(filtered.length - 1, 0)}/*` });
+    }
+
+    if (req.method === 'POST') {
+      if (!prefer.includes('resolution=merge-duplicates')) return restError(res, 400, 'PGRST102', 'mock-supabase only supports upsert (Prefer: resolution=merge-duplicates)');
+      const incoming = Array.isArray(body) ? body : body && typeof body === 'object' ? [body] : [];
+      for (const row of incoming) {
+        const problem = checkRow(table, row);
+        if (problem) return restError(res, 400, '23514', `new row for relation "${table}" violates check constraint (${problem})`);
+      }
+      const written = [];
+      if (table === 'settings') {
+        if (url.searchParams.get('on_conflict') !== 'user_id') return restError(res, 400, 'PGRST102', 'settings upsert needs on_conflict=user_id');
+        for (const row of incoming) {
+          const stored = upsertSettings(state, userKey, row);
+          if (stored) written.push(stored);
+        }
+      } else {
+        if (url.searchParams.get('on_conflict') !== 'user_id,id') return restError(res, 400, 'PGRST102', `${table} upsert needs on_conflict=user_id,id`);
+        for (const row of incoming) {
+          const stored = upsertRow(state, table, userKey, row);
+          if (stored) written.push(stored);
+        }
+      }
+      if (wantsRows) return send(res, 201, written);
+      return send(res, 201, '', { 'Content-Type': 'application/json' });
+    }
+
+    if (req.method === 'DELETE' || req.method === 'PATCH') return restError(res, 401, '42501', `permission denied for table ${table}`);
+    return restError(res, 405, 'PGRST105', 'method not supported');
+  }
+
   async function handle(req, res) {
     const url = new URL(req.url, 'http://mock');
     const { pathname } = url;
@@ -206,13 +468,20 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
       }
     }
     if (!pathname.startsWith('/__test')) {
-      state.log.push({ method: req.method, path: pathname, query: q, body: body && typeof body === 'object' ? Object.keys(body) : null, at: Date.now() });
+      const rows = Array.isArray(body) ? body.length : body && typeof body === 'object' ? 1 : 0;
+      state.log.push({ method: req.method, path: pathname, query: q, body: body && typeof body === 'object' && !Array.isArray(body) ? Object.keys(body) : null, rows, at: Date.now() });
     }
 
     if (req.method === 'OPTIONS') return send(res, 204, '');
 
     const failure = takeFailure(state, pathname);
-    if (failure) return authError(res, failure.status, 'server_error', `forced failure (${failure.status})`);
+    if (failure) {
+      if (failure.delay) await new Promise((r) => setTimeout(r, failure.delay));
+      if (pathname.startsWith('/rest/')) return restError(res, failure.status, failure.status === 401 ? 'PGRST301' : '', `forced failure (${failure.status})`);
+      return authError(res, failure.status, 'server_error', `forced failure (${failure.status})`);
+    }
+
+    if (pathname.startsWith('/rest/v1/')) return handleRest(state, req, res, url, body);
 
     // ---- Auth ----
     if (pathname === '/auth/v1/health') return send(res, 200, { name: 'mock-supabase', version: 'mock', ok: true });
@@ -284,7 +553,11 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
     }
     if (pathname === '/__test/log') return send(res, 200, { log: state.log, exchanges: state.exchanges, refreshes: state.refreshes });
     if (pathname === '/__test/fail') {
-      state.fail.push({ path: q.path ?? 'token', status: Number(q.status ?? 500), times: Number(q.times ?? 1) });
+      if (q.clear !== undefined) {
+        state.fail = [];
+        return send(res, 200, { ok: true, fail: state.fail });
+      }
+      state.fail.push({ path: q.path ?? 'token', status: Number(q.status ?? 500), times: Number(q.times ?? 1), delay: Number(q.delay ?? 0) });
       return send(res, 200, { ok: true, fail: state.fail });
     }
     if (pathname === '/__test/session') {
@@ -293,20 +566,26 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
       if (q.now !== undefined) state.now = q.now === '' ? null : Number(q.now);
       return send(res, 200, { ok: true, tokenTtlS: state.tokenTtlS, refreshMode: state.refreshMode, now: state.now });
     }
+    if (pathname === '/__test/token') {
+      // A ready-made session for in-process tests (contract suite): no PKCE round-trip needed.
+      const userKey = USERS[q.user] ? q.user : 'u1';
+      return send(res, 200, issueSession(state, userKey));
+    }
     if (pathname === '/__test/seed' && req.method === 'POST') {
+      // Rows may be given in domain (camelCase) or cloud (snake_case) shape; they bypass LWW and get a server stamp.
       const userKey = body?.user ?? 'u1';
-      for (const table of ['goals', 'entries', 'settings']) {
-        if (!Array.isArray(body?.[table])) continue;
-        const map = state.rows[table].get(userKey) ?? new Map();
-        for (const row of body[table]) map.set(row.id ?? userKey, row);
-        state.rows[table].set(userKey, map);
-      }
+      if (Array.isArray(body?.goals)) for (const r of body.goals) userRows(state, 'goals', userKey).set(String(r.id), { ...pick({ ...toSnakeGoal(r), user_id: USERS[userKey].id }, GOAL_COLUMNS), server_updated_at: r.server_updated_at ?? serverStamp(state) });
+      if (Array.isArray(body?.entries)) for (const r of body.entries) userRows(state, 'entries', userKey).set(String(r.id), { ...pick({ ...toSnakeEntry(r), user_id: USERS[userKey].id }, ENTRY_COLUMNS), server_updated_at: r.server_updated_at ?? serverStamp(state) });
+      if (Array.isArray(body?.settings)) for (const r of body.settings) state.rows.settings.set(userKey, { ...pick({ ...r, user_id: USERS[userKey].id }, SETTINGS_COLUMNS), server_updated_at: serverStamp(state) });
       return send(res, 200, { ok: true });
     }
     if (pathname === '/__test/rows') {
       const userKey = q.user ?? 'u1';
-      const out = {};
-      for (const table of ['goals', 'entries', 'settings']) out[table] = [...(state.rows[table].get(userKey)?.values() ?? [])];
+      const out = {
+        goals: [...(state.rows.goals.get(userKey)?.values() ?? [])],
+        entries: [...(state.rows.entries.get(userKey)?.values() ?? [])],
+        settings: state.rows.settings.has(userKey) ? [state.rows.settings.get(userKey)] : [],
+      };
       return send(res, 200, out);
     }
 

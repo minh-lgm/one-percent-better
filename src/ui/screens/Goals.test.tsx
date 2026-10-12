@@ -70,9 +70,10 @@ describe('Goals (M1-AC5, M1-AC9, M1-AC18)', () => {
     await user.click(within(dialog).getByRole('button', { name: en.goal.delete.confirm }));
     await waitFor(() => expect(screen.queryByRole('heading', { level: 3, name: 'Read' })).toBeNull());
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.goalDeleted));
-    expect(await tc!.container.db.goals.get('g1')).toBeUndefined();
-    expect(await tc!.container.db.entries.where('goalId').equals('g1').count()).toBe(0);
-    expect(await tc!.container.db.entries.count()).toBe(15);
+    // v2 (ADR-20): soft delete, invisible to the app, tombstones kept for the account.
+    expect((await tc!.container.db.goals.get('g1'))?.deletedAt).toBeTruthy();
+    expect(await tc!.container.db.entries.where('goalId').equals('g1').filter((e) => e.deletedAt == null).count()).toBe(0);
+    expect(await tc!.container.db.entries.filter((e) => e.deletedAt == null).count()).toBe(15);
     expect(screen.getByRole('heading', { level: 2, name: 'Active (2)' })).toBeInTheDocument();
   });
 

@@ -121,9 +121,9 @@ describe('Settings — Backup card (M3-AC6, AC8, AC9, AC10, AC13)', () => {
     await user.click(within(dialog2).getByRole('button', { name: en.import.confirm }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Backup imported: 5 goals, 23 entries'));
-    expect(await tc!.container.db.goals.get('temp')).toBeUndefined();
-    expect(await tc!.container.db.goals.count()).toBe(5);
-    expect(await tc!.container.db.entries.count()).toBe(23);
+    expect((await tc!.container.db.goals.get('temp'))?.deletedAt).toBeTruthy(); // v2: soft delete (ADR-20)
+    expect(await tc!.container.db.goals.filter((g) => g.deletedAt == null).count()).toBe(5);
+    expect(await tc!.container.db.entries.filter((e) => e.deletedAt == null).count()).toBe(23);
     expect(await tc!.container.db.kv.get('activeTimer')).toBeUndefined();
     expect((await tc!.container.settingsService.get()).lastReminderDate).toBeNull();
   });

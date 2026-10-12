@@ -1,6 +1,7 @@
 import type { EntryRepository, GoalRepository } from '../data/repositories';
 import { toISODate } from '../domain/dates';
 import { checkDayLimit, validateEntryDate, validateEntryFields } from '../domain/entry';
+import { nextUpdatedAt } from '../domain/sync';
 import { fail, ok, type EntrySource, type ISODate, type LogEntry, type Result } from '../domain/types';
 import { defaultIdGenerator, type IdGenerator } from './goal-service';
 
@@ -77,7 +78,7 @@ export class EntryService {
     const limitError = checkDayLimit(others, fields.value.minutes);
     if (limitError) return fail(limitError);
 
-    const entry: LogEntry = { ...existing, ...fields.value, updatedAt: now.toISOString() };
+    const entry: LogEntry = { ...existing, ...fields.value, updatedAt: nextUpdatedAt(now, existing.updatedAt) };
     await this.entries.put(entry);
     return ok(entry);
   }

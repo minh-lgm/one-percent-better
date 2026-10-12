@@ -42,11 +42,14 @@ describe('DexieBackupRepository (M3-AC7, M3-AC8, M3-AC9, NFR-04)', () => {
     const s1 = datasetS1();
     const settings = { ...DEFAULT_SETTINGS, reminderTime: '21:00' };
     await repo.replaceAll({ goals: s1.goals, entries: s1.entries, settings });
-    expect(await db.goals.get('temp')).toBeUndefined();
-    expect(await db.entries.get('temp-e')).toBeUndefined();
+    // v2 (ADR-20): rows not in the file are soft-deleted (so the deletion reaches the account); file rows are live + dirty.
+    expect((await db.goals.get('temp'))?.deletedAt).toBeTruthy();
+    expect((await db.entries.get('temp-e'))?.deletedAt).toBeTruthy();
     const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id));
-    expect(byId(await db.goals.toArray())).toEqual(byId(s1.goals));
-    expect(byId(await db.entries.toArray())).toEqual(byId(s1.entries));
+    const exported = await repo.exportAll();
+    expect(byId(exported.goals)).toEqual(byId(s1.goals));
+    expect(byId(exported.entries)).toEqual(byId(s1.entries));
+    expect(await db.goals.where('dirty').equals(1).count()).toBe(6);
     expect(await db.kv.get('settings')).toEqual({ key: 'settings', value: settings });
     expect(await db.kv.get('activeTimer')).toBeUndefined();
     expect(await db.kv.get('locale')).toEqual({ key: 'locale', value: 'vi' });
@@ -60,10 +63,13 @@ describe('DexieBackupRepository (M3-AC7, M3-AC8, M3-AC9, NFR-04)', () => {
     const db2 = createTestDatabase();
     await openDatabase(db2);
     try {
-      await new DexieBackupRepository(db2).replaceAll(data);
+      const repo2 = new DexieBackupRepository(db2);
+      await repo2.replaceAll(data);
       const sortById = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id));
-      expect(sortById(await db2.goals.toArray())).toEqual(sortById(s1.goals));
-      expect(sortById(await db2.entries.toArray())).toEqual(sortById(s1.entries));
+      const again = await repo2.exportAll();
+      expect(sortById(again.goals)).toEqual(sortById(s1.goals));
+      expect(sortById(again.entries)).toEqual(sortById(s1.entries));
+      expect(JSON.stringify(again)).not.toMatch(/deletedAt|dirty/);
     } finally {
       await db2.delete();
     }
@@ -77,8 +83,12 @@ describe('DexieBackupRepository (M3-AC7, M3-AC8, M3-AC9, NFR-04)', () => {
     const spy = vi.spyOn(db.entries, 'bulkAdd').mockRejectedValueOnce(new Error('disk full'));
     await expect(repo.replaceAll({ goals: s1.goals, entries: s1.entries, settings: DEFAULT_SETTINGS })).rejects.toThrow('disk full');
     spy.mockRestore();
-    expect(await db.goals.toArray()).toEqual([expect.objectContaining({ id: 'temp' })]);
-    expect(await db.entries.toArray()).toEqual([expect.objectContaining({ id: 'temp-e' })]);
+    const goalsAfter = await db.goals.toArray();
+    expect(goalsAfter).toEqual([expect.objectContaining({ id: 'temp' })]);
+    expect(goalsAfter[0].deletedAt ?? null).toBeNull();
+    const entriesAfter = await db.entries.toArray();
+    expect(entriesAfter).toEqual([expect.objectContaining({ id: 'temp-e' })]);
+    expect(entriesAfter[0].deletedAt ?? null).toBeNull();
     expect(await db.kv.get('activeTimer')).toBeDefined();
     expect(await db.kv.get('settings')).toBeUndefined();
   });

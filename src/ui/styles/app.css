@@ -1786,20 +1786,24 @@ details.curve-table summary:focus-visible {
 }
 
 /* D4 Sign out: body scrolls, button row sticks to the bottom (DESIGN 3.5) */
-dialog.dialog.signout {
+dialog.dialog.signout,
+dialog.dialog.merge {
   max-height: calc(100dvh - 16px);
   padding: 0;
 }
-dialog.dialog.signout[open] {
+dialog.dialog.signout[open],
+dialog.dialog.merge[open] {
   display: flex;
   flex-direction: column;
 }
-.dialog.signout .dialog-body {
+.dialog.signout .dialog-body,
+.dialog.merge .dialog-body {
   padding: 24px 24px 0;
   overflow: auto;
   min-height: 0;
 }
-.dialog.signout .actions {
+.dialog.signout .actions,
+.dialog.merge .actions {
   position: sticky;
   bottom: 0;
   margin: 20px 0 0;
@@ -1880,4 +1884,164 @@ dialog.dialog.signout[open] {
   font: inherit;
   cursor: pointer;
   border-radius: var(--r-sm);
+}
+
+/* ---- M7: StatusRow + SyncIndicator (DESIGN 3.1, 5, mockup 01-today / 09-account) ---- */
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--chip-h);
+  margin-bottom: 8px;
+}
+.status-row > .offline-chip {
+  margin-bottom: 0;
+  margin-right: auto;
+}
+.sync {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--chip-h);
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 20px;
+  font-weight: 600;
+  max-width: 100%;
+  white-space: normal;
+  text-decoration: none;
+}
+.sync .ic {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.sync.synced .ic {
+  color: var(--primary);
+}
+.sync.syncing,
+.sync.signing-in {
+  color: var(--text);
+}
+.sync.pending {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.sync.error {
+  background: var(--danger-soft);
+  border-color: transparent;
+  color: var(--on-danger-soft);
+}
+.sync.expired {
+  background: var(--info-soft);
+  border-color: transparent;
+  color: var(--info);
+}
+.sync.expired::after {
+  content: "";
+  position: absolute;
+  inset: -6px 0;
+}
+.sync.expired:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.sync .retry {
+  position: relative;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  padding: 0 0 0 4px;
+  cursor: pointer;
+}
+.sync .retry::after {
+  content: "";
+  position: absolute;
+  inset: -8px -6px;
+}
+.sync .retry:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Account card sync details (A5 - A9) */
+.account .dl {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.account .dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.account .dl dt {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 20px;
+}
+.account .dl dd {
+  font-weight: 600;
+  margin: 0;
+}
+.account .dl + .hint,
+.account .info-line + .hint {
+  margin-top: 12px;
+}
+.hint.info-line,
+.hint.sync-note {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+.hint.info-line .ic,
+.hint.sync-note .ic {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 2px;
+}
+.hint.sync-note .ic {
+  color: var(--primary);
+}
+.hint.sync-note {
+  margin-top: 12px;
+}
+.account .who + .alert,
+.account .alert + .dl {
+  margin-top: 12px;
+}
+
+/* D4 unsynced block + remove note; D5 */
+.dialog .alert.unsynced {
+  margin: 12px 0;
+}
+.dialog .remove-note {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--danger-soft);
+  color: var(--on-danger-soft);
+  font-size: var(--text-sm);
+  line-height: 20px;
+  font-weight: 500;
+}
+dialog.dialog.merge .merge-body {
+  overflow-wrap: anywhere;
+}
+dialog.dialog.merge .hint {
+  margin-top: 8px;
 }

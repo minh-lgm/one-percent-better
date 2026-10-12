@@ -94,7 +94,7 @@ describe('Today (M1-AC2, AC5, AC6, AC7, AC18)', () => {
     await user.click(within(confirm).getByRole('button', { name: en.common.delete }));
     await waitFor(() => expect(within(card).getByText('10/30')).toBeInTheDocument());
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.entryDeleted));
-    expect(await tc!.container.db.entries.count()).toBe(1);
+    expect(await tc!.container.db.entries.filter((e) => e.deletedAt == null).count()).toBe(1); // v2: soft delete (ADR-20)
   });
 
   it('shows validation errors inline and keeps the form', async () => {
