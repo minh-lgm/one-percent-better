@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** designer revise DESIGN v2 → Gate 2 (phase 2)
+**Next step:** Gate 2 (phase 2) — user duyệt DESIGN v2 (docs/design/DESIGN.md, mockups 08/09) → developer M6
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -43,7 +43,7 @@
 | Final QC (phase 1) | PASS (round 2) | docs/qc/report-final-r2.md | r1 FAIL F-D1 (Vitest cache lạnh) → fix 5a73e18 → r2 PASS trên 2 clone sạch |
 | Plan v2.1 (phase 2) | DONE (duyệt 2026-10-12) | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
 | M8 | TODO | | |
-| Design v2 | DOING — designer revise | docs/design/ | |
+| Design v2 | DONE — chờ Gate 2 | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma chưa cập nhật theo v2 |
 | M6 | TODO | | |
 | M7 | TODO | | |
 | Final QC (phase 2) | TODO | | |
