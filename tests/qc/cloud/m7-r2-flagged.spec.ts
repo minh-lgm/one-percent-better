@@ -93,7 +93,6 @@ test('flagged rows: reload keeps the flag and the notice, editing keeps them out
 });
 
 test('Sign out -> Remove with rows that never reached the account (flagged): is the person warned that they will be lost?', async ({ page }) => {
-  test.fail(true, 'M7-D5: D4 counts only dirty > 0 rows, so rows flagged dirty = 2 (never in the account) are removed without the unsynced warning; remove this marker when fixed');
   await importBackup(page);
   await plantLongIdGoal(page);
   await signInAsMinh(page);
@@ -104,6 +103,13 @@ test('Sign out -> Remove with rows that never reached the account (flagged): is 
   await signOutDialog(page).getByRole('radio', { name: EN.auth.signOut.remove }).check();
   // Observation (recorded in the report): the unsynced warning is shown only for dirty > 0 rows.
   const warned = await page.getByTestId('unsynced-warning').count();
+  // M8 (M7-D5 fixed): the warning counts the 2 refused rows (goal + entry), Remove no longer claims the account keeps everything, and choosing Remove adds the "will be lost" note.
+  await expect(signOutDialog(page).getByTestId('unsynced-warning')).toHaveAttribute('data-rejected', '2');
+  await expect(signOutDialog(page).getByTestId('unsynced-warning')).toHaveAttribute('data-pending', '0');
+  await expect(signOutDialog(page)).toContainText(EN.auth.signOut.rejected_other.replace('{{count}}', '2'));
+  await expect(signOutDialog(page)).not.toContainText('Your account keeps everything');
+  await expect(signOutDialog(page)).toContainText(EN.auth.signOut.removeDescRejected);
+  await expect(signOutDialog(page).getByTestId('unsynced-remove')).toContainText(EN.auth.signOut.rejectedRemove);
   await page.getByTestId('signout-confirm').click();
   await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-out', { timeout: 20_000 });
   await expect(toast(page)).toHaveText(EN.toast.signedOutRemoved);

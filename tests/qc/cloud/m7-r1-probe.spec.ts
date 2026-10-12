@@ -519,7 +519,9 @@ test.describe('QC M7 (round 2): a row the cloud would refuse must not freeze syn
     expect(raw.goals.filter((g) => g.id.length !== 70).every((g) => g.dirty === 0)).toBe(true);
     expect(raw.entries.filter((e) => e.id !== 'legacy-e1').every((e) => e.dirty === 0)).toBe(true);
     await gotoHash(page, '/settings');
-    await expect(page.getByTestId('remote-invalid')).toContainText(EN.errors.SYNC_REMOTE_INVALID);
+    // M8 (M7-P1): rows on this device that the cloud refused have their own wording, not the "items from your account couldn't be read" line.
+    await expect(page.getByTestId('remote-invalid')).toContainText(EN.settings.account.localRejected_other.replace('{{count}}', '2'));
+    await expect(page.getByTestId('remote-invalid')).not.toContainText(EN.errors.SYNC_REMOTE_INVALID);
     await expect(page.getByTestId('sync-error')).toHaveCount(0);
   });
 });

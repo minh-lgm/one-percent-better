@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** qc M8 round 1 (report docs/qc/report-M8-r1.md) → Final QC phase 2 → U0/U8
+**Next step:** qc scope final (phase 2; report docs/qc/report-final-phase2.md) → tổng kết → user U0 + U8 → push/deploy
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -46,11 +46,11 @@
 | M5 | PASS (round 2) | docs/qc/report-M5-r2.md | AC9 Firefox/Safari/iOS, screen reader NOT VERIFIED | Dispute M3-D3: orchestrator chọn giữ fix, QC re-target tests/qc/m3-r1.spec.ts:638 |
 | Final QC (phase 1) | PASS (round 2) | docs/qc/report-final-r2.md | r1 FAIL F-D1 (Vitest cache lạnh) → fix 5a73e18 → r2 PASS trên 2 clone sạch |
 | Plan v2.1 (phase 2) | DONE (duyệt 2026-10-12) | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
-| M8 | DOING — dev DONE, chờ QC r1 | docs/handoff/dev-M8.md | kèm fix M7-D5 |
+| M8 | PASS (round 1) | docs/qc/report-M8-r1.md | M7-D5, M7-P1 FIXED |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
 | M7 | PASS (round 2) | docs/qc/report-M7-r2.md | 19/19 AC đạt; 4 dispute đã re-target, M6-D1 FIXED |
-| Final QC (phase 2) | TODO | | |
+| Final QC (phase 2) | DOING | | |
 
 ## Backlog (defect Minor, đề xuất chưa làm)
 | ID | Mô tả | Nguồn |
@@ -69,8 +69,10 @@
 | M5-P1 | Trục Y curve hiện `+0.0%` (mockup `+0%`); focusHeading dùng requestAnimationFrame; lỗi import vượt giới hạn dùng chung IMPORT_INVALID_SCHEMA (nên có câu riêng) | QC M5 r1/r2 |
 | M6-D1 | (FIXED trong M7) Replay `?auth=callback&code=…` cũ/giả khi đang có phiên hợp lệ → card kẹt "Sign in again" tới khi reload; M7 sẽ làm sync tạm dừng (auth-service completeCallback). Test QC có test.fail | QC M6 r1 |
 | M6-P1 | DESIGN §7.7.5 cần thêm key `settings.about.privacyLink`; ESLint chưa chặn dynamic import @supabase trong src/ui; PKCE verifier còn trong localStorage tới khi sign-out; dist cloud-off vẫn chứa chunk SDK không dùng; privacy.html nói sync trước khi M7 có | QC M6 r1 |
-| M7-D5 | Sign out → Remove xoá cả hàng `dirty = 2` (cloud từ chối) không cảnh báo; D4 nói "account keeps everything" — giao dev sửa trong M8 | QC M7 r2 |
-| M7-P1 | Key copy riêng cho hàng trên máy bị cloud từ chối; dọn tombstone đã sync; `npm run check` trên máy có .env.local ra bản cloud ON | QC M7 r1/r2 |
+| M7-D5 | (FIXED trong M8) Sign out → Remove xoá cả hàng `dirty = 2` (cloud từ chối) không cảnh báo; D4 nói "account keeps everything" — giao dev sửa trong M8 | QC M7 r2 |
+| M7-P1 | (FIXED trong M8, 7 chuỗi dev đề xuất NOT IN DESIGN — designer duyệt) Key copy riêng cho hàng trên máy bị cloud từ chối; dọn tombstone đã sync; `npm run check` trên máy có .env.local ra bản cloud ON | QC M7 r1/r2 |
+| M8-D1 | Mốc lastDismissedAt/lastExportHintAt ở tương lai (đồng hồ máy từng sai) làm banner/hint im hàng chục năm (login-prompt.ts isSnoozed) — clamp mốc > now | QC M8 r1 |
+| M8-P1 | OQ-D12 (hint export chỉ khi online) planner/designer chốt; README còn "(used from M7)"; exportBackup không catch quanh claimExportHint | QC M8 r1 |
 | M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
 ## Tổng kết (2026-10-10)
