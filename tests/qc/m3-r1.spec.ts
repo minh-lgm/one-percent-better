@@ -42,8 +42,9 @@ function watch(page: Page) {
   return problems;
 }
 
-async function dbAll(page: Page, store: 'goals' | 'entries'): Promise<Array<Record<string, unknown>>> {
-  return page.evaluate(
+/** Rows of a Dexie table. M7 (soft delete): live rows only by default; `raw: true` includes tombstones. */
+async function dbAll(page: Page, store: 'goals' | 'entries', raw = false): Promise<Array<Record<string, unknown>>> {
+  const rows = await page.evaluate(
     (s) =>
       new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
         const req = indexedDB.open('one-percent-better');
@@ -59,6 +60,7 @@ async function dbAll(page: Page, store: 'goals' | 'entries'): Promise<Array<Reco
       }),
     store,
   );
+  return raw ? rows : rows.filter((r) => r.deletedAt === null || r.deletedAt === undefined);
 }
 
 type Sample = { goals: Array<Record<string, unknown>>; entries: Array<Record<string, unknown>>; settings: Record<string, unknown>; [k: string]: unknown };
@@ -77,7 +79,8 @@ async function importContent(page: Page, content: string | Buffer, copy: typeof 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: copy.import.confirm }).click();
-  await expect(dialog).toBeHidden();
+  // The 16k-entry file takes ~3 s alone but 8-12 s while 12 workers share the machine (M7 round 1 measured 8.1/10.3/11.6 s): give the replace room.
+  await expect(dialog).toBeHidden({ timeout: 40_000 });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -292,7 +295,12 @@ test.describe('Goal detail (M3-AC5) exploratory', () => {
     await page.getByRole('dialog').getByRole('button', { name: EN.goal.delete.confirm }).click();
     await expect(page).toHaveURL(/#\/goals$/);
     await expect(toast(page)).toHaveText(EN.toast.goalDeleted);
-    expect((await dbAll(page, 'entries')).filter((e) => e.goalId === 'g2')).toHaveLength(0);
+    expect((await dbAll(page, 'entries')).filter((e) => e.goalId === 'g2')).toHaveLength(0); // live rows (M7: soft delete)
+    const g2Raw = (await dbAll(page, 'entries', true)).filter((e) => e.goalId === 'g2');
+    expect(g2Raw.length).toBeGreaterThan(0); // tombstones, all dirty, all with deletedAt
+    for (const e of g2Raw) expect(e).toMatchObject({ dirty: 1 });
+    for (const e of g2Raw) expect(e.deletedAt).toBeTruthy();
+    expect(new Set(g2Raw.map((e) => e.deletedAt)).size).toBe(1); // one stamp for the whole cascade
     expect(await kvGet(page, 'activeTimer')).toBeNull();
     await gotoHash(page, '/goals/g2');
     await expect(page.getByTestId('history')).toHaveCount(0);
@@ -446,6 +454,9 @@ test.describe('Backup (M3-AC6..AC11) exploratory', () => {
     // Focus trap: Tab stays inside
     await upload(page, JSON.stringify({ ...(await sampleFile()), goals: [], entries: [] }));
     dialog = page.getByRole('dialog');
+    // Wait until the modal is really open with focus inside (pressing Tab before showModal() ran raced under load: M7 round 1 flake).
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: EN.common.cancel })).toBeFocused();
     for (let i = 0; i < 4; i++) {
       await page.keyboard.press('Tab');
       expect(await page.evaluate(() => document.activeElement === document.body || !!document.activeElement?.closest('[role="dialog"], dialog'))).toBe(true);
@@ -453,7 +464,12 @@ test.describe('Backup (M3-AC6..AC11) exploratory', () => {
     await dialog.getByRole('button', { name: EN.import.confirm }).dblclick();
     await expect(dialog).toBeHidden();
     await expect(toast(page)).toHaveText('Backup imported: 0 goals, 0 entries');
-    expect(await dbAll(page, 'goals')).toHaveLength(0);
+    expect(await dbAll(page, 'goals')).toHaveLength(0); // live rows (M7: soft delete)
+    const replacedRaw = await dbAll(page, 'goals', true);
+    expect(replacedRaw).toHaveLength(5); // the 5 replaced goals are dirty tombstones
+    for (const g of replacedRaw) expect(g).toMatchObject({ dirty: 1 });
+    for (const g of replacedRaw) expect(g.deletedAt).toBeTruthy();
+    expect((await dbAll(page, 'entries'))).toHaveLength(0);
     await gotoHash(page, '/today');
     await expect(page.getByRole('heading', { level: 2, name: EN.empty.today.noGoals })).toBeVisible();
     await expect(page.getByTestId('backup-banner')).toHaveCount(0); // no goals -> no nag

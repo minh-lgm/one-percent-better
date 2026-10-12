@@ -171,17 +171,30 @@ test.describe('M1 QC flows', () => {
     await expect(page.getByTestId('goal-row')).toHaveCount(0);
     await page.goto(`${ORIGIN}/#/today`);
     await expect(page.getByRole('heading', { name: 'Start with one small goal' })).toBeVisible();
-    const remaining = await page.evaluate(
+    // M7 (soft delete, ADR-20): the rows stay as tombstones (deletedAt set, dirty = 1); nothing LIVE remains.
+    const rows = await page.evaluate(
       () =>
-        new Promise<number>((resolve) => {
+        new Promise<{ goals: Array<Record<string, unknown>>; entries: Array<Record<string, unknown>> }>((resolve, reject) => {
           const req = indexedDB.open('one-percent-better');
+          req.onerror = () => reject(req.error);
           req.onsuccess = () => {
-            const c = req.result.transaction('entries').objectStore('entries').count();
-            c.onsuccess = () => resolve(c.result);
+            const tx = req.result.transaction(['goals', 'entries'], 'readonly');
+            const g = tx.objectStore('goals').getAll();
+            const e = tx.objectStore('entries').getAll();
+            tx.oncomplete = () => {
+              req.result.close();
+              resolve({ goals: g.result as Array<Record<string, unknown>>, entries: e.result as Array<Record<string, unknown>> });
+            };
           };
         }),
     );
-    expect(remaining).toBe(0);
+    expect(rows.entries.filter((e) => e.deletedAt === null)).toHaveLength(0);
+    expect(rows.goals.filter((g) => g.deletedAt === null)).toHaveLength(0);
+    expect(rows.entries).toHaveLength(1);
+    expect(rows.entries[0]).toMatchObject({ dirty: 1 });
+    expect(rows.entries[0]?.deletedAt).toBeTruthy();
+    expect(rows.goals).toHaveLength(1);
+    expect(rows.goals[0]?.deletedAt).toBe(rows.goals[0]?.updatedAt);
   });
 
   test('day rollover: Today and entries follow the new local date after midnight without reload', async ({ page }) => {
@@ -190,6 +203,7 @@ test.describe('M1 QC flows', () => {
     await page.getByLabel(/^Name/).fill('Read');
     await page.getByRole('textbox', { name: /^Minutes per day/ }).fill('30');
     await page.getByRole('button', { name: 'Save goal' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Goals' })).toBeVisible(); // let the save finish before leaving the form (M7 round 1 flake fix)
     await page.goto(`${ORIGIN}/#/today`);
     await expect(page.getByText('Friday, October 9')).toBeVisible();
     await log(page, 'Read', '10');

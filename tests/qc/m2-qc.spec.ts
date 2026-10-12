@@ -26,20 +26,25 @@ import {
 
 const ORIGIN = 'http://localhost:4173';
 
-async function dbAll(page: Page, store: 'goals' | 'entries'): Promise<Array<Record<string, unknown>>> {
-  return page.evaluate(
+/** Rows of a Dexie table. M7 (soft delete): live rows only by default; `raw: true` includes tombstones. */
+async function dbAll(page: Page, store: 'goals' | 'entries', raw = false): Promise<Array<Record<string, unknown>>> {
+  const rows = await page.evaluate(
     (s) =>
       new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
         const req = indexedDB.open('one-percent-better');
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
           const r = req.result.transaction(s).objectStore(s).getAll();
-          r.onsuccess = () => resolve(r.result as Array<Record<string, unknown>>);
+          r.onsuccess = () => {
+            resolve(r.result as Array<Record<string, unknown>>);
+            req.result.close();
+          };
           r.onerror = () => reject(r.error);
         };
       }),
     store,
   );
+  return raw ? rows : rows.filter((r) => r.deletedAt === null || r.deletedAt === undefined);
 }
 
 /** Collect page errors, console errors and any request leaving the origin. */
@@ -179,7 +184,10 @@ test.describe('M2 QC — AC1..AC5 independent', () => {
     await page.getByRole('dialog').getByRole('button', { name: EN.goal.delete.confirm }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0); // deletion is async: wait for it before reading storage
     await expect.poll(() => kvGet(page, 'activeTimer')).toBeNull();
-    expect(await dbAll(page, 'goals')).toHaveLength(0);
+    expect(await dbAll(page, 'goals')).toHaveLength(0); // live rows (M7: soft delete)
+    const rawGoals = await dbAll(page, 'goals', true);
+    expect(rawGoals).toHaveLength(2); // both deleted goals stay as dirty tombstones
+    for (const g of rawGoals) expect(g).toMatchObject({ dirty: 1, deletedAt: g.updatedAt });
     expect(problems).toEqual([]);
   });
 

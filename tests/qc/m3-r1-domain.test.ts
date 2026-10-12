@@ -257,10 +257,14 @@ describe('BackupService on a real container', () => {
       const preview = backupService.parse(SAMPLE, bytes(SAMPLE));
       if (!preview.ok) throw new Error('parse');
       await Promise.allSettled([backupService.import(preview.value), timerService.save({ minutes: 30, note: '' }, NOW)]);
-      const goalIds = new Set((await db.goals.toArray()).map((x) => x.id));
-      const orphans = (await db.entries.toArray()).filter((e) => !goalIds.has(e.goalId));
+      // M7 (soft delete, ADR-20): "orphan" = a LIVE entry whose goal is not live; the replaced "Racer" stays as a tombstone.
+      const rawGoals = await db.goals.toArray();
+      const liveGoalIds = new Set(rawGoals.filter((x) => x.deletedAt === null).map((x) => x.id));
+      const orphans = (await db.entries.toArray()).filter((e) => e.deletedAt === null && !liveGoalIds.has(e.goalId));
       expect(orphans, `round ${i}`).toEqual([]);
-      expect(await db.goals.count()).toBe(5);
+      expect(liveGoalIds.size, `round ${i}`).toBe(5);
+      expect(rawGoals.filter((x) => x.deletedAt !== null).map((x) => x.name), `round ${i}`).toEqual(['Racer']);
+      expect((await new DexieGoalRepository(db).getAll()).length, `round ${i}`).toBe(5);
     }
   });
 
@@ -358,8 +362,11 @@ describe('M3-AC15 atomic timer save (QC-owned re-implementation of the two-tab r
       const other = tab();
       const goals = new DexieGoalRepository(db);
       await Promise.allSettled([tab().svc.save({ minutes: 30, note: '' }, NOW), goals.deleteWithEntries('g1'), other.svc.discard()]);
-      const orphan = await db.entries.where('goalId').equals('g1').count();
-      expect(orphan, `round ${i}`).toBe(0);
+      // M7 (soft delete): the goal row and all its entries end as tombstones; no LIVE entry may survive the deletion.
+      const rows = await db.entries.where('goalId').equals('g1').toArray();
+      expect(rows.filter((e) => e.deletedAt === null), `round ${i}`).toEqual([]);
+      expect((await db.goals.get('g1'))?.deletedAt, `round ${i}`).toBeTruthy();
+      expect(await new DexieEntryRepository(db).getByGoal('g1'), `round ${i}`).toEqual([]);
     }
   });
 

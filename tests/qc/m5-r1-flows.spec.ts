@@ -68,8 +68,9 @@ async function idbPut(page: Page, store: 'goals' | 'entries' | 'kv', value: unkn
     [store, value] as const,
   );
 }
-async function idbAll(page: Page, store: 'goals' | 'entries'): Promise<Array<Record<string, unknown>>> {
-  return page.evaluate(
+/** Rows of a Dexie table. M7 (soft delete): live rows only by default; `raw: true` includes tombstones. */
+async function idbAll(page: Page, store: 'goals' | 'entries', raw = false): Promise<Array<Record<string, unknown>>> {
+  const rows = await page.evaluate(
     (s) =>
       new Promise<Array<Record<string, unknown>>>((resolve, reject) => {
         const req = indexedDB.open('one-percent-better');
@@ -84,6 +85,7 @@ async function idbAll(page: Page, store: 'goals' | 'entries'): Promise<Array<Rec
       }),
     store,
   );
+  return raw ? rows : rows.filter((r) => r.deletedAt === null || r.deletedAt === undefined);
 }
 
 const live = (page: Page) => page.getByTestId('plus-one-live');
@@ -271,7 +273,11 @@ test.describe('Delete from Goal detail', () => {
     // timer discarded, entries gone
     await gotoHash(page, '/today');
     await expect(timerCard(page)).toHaveCount(0);
-    expect((await idbAll(page, 'entries')).filter((e) => e.goalId === 'g1')).toEqual([]);
+    expect((await idbAll(page, 'entries')).filter((e) => e.goalId === 'g1')).toEqual([]); // live rows (M7: soft delete)
+    const g1Raw = (await idbAll(page, 'entries', true)).filter((e) => e.goalId === 'g1');
+    expect(g1Raw).toHaveLength(8);
+    for (const e of g1Raw) expect(e).toMatchObject({ dirty: 1 });
+    for (const e of g1Raw) expect(e.deletedAt).toBeTruthy();
     expect(problems).toEqual([]);
   });
 });
@@ -554,6 +560,7 @@ test.describe('Backlog items closed in M5 (verified independently in the browser
     await expect(page.getByRole('article')).toHaveCount(2);
     expect(await page.getByRole('article').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') ?? e.querySelector('h2,h3')?.textContent))).toEqual(['Goal a', 'Goal b']);
     await gotoHash(page, '/goals');
+    await expect(page.getByTestId('goal-row')).toHaveCount(8); // wait for the list to render before reading it (M7 round 1 flake fix)
     const names = await page.getByTestId('goal-row').locator('a[href^="#/goals/"]:not([href$="/edit"])').allInnerTexts();
     expect(names).toEqual(['Goal a', 'Goal b', 'Goal c', 'Goal d', 'Goal e', 'Goal f', 'Goal g', 'Goal h']);
     await gotoHash(page, '/day/2026-10-08');

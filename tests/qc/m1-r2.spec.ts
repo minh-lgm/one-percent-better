@@ -184,6 +184,8 @@ test.describe('R2 D3 strict number input (entry form)', () => {
     await page.getByLabel(/^Name/).fill('Read');
     await page.getByRole('textbox', { name: /^Minutes per day/ }).fill('30');
     await page.getByRole('button', { name: 'Save goal' }).click();
+    // Wait for the save to finish (the form navigates to Goals afterwards); going to Today first raced under load (M7 round 1 flake).
+    await expect(page.getByRole('heading', { level: 1, name: 'Goals' })).toBeVisible();
     await page.goto(`${ORIGIN}/#/today`);
   }
   for (const v of ['0x1E', '1e1', '0b11', '+10', '٣٠', '10.', '1,0', '-5', '0', '1441', '12.5', '']) {

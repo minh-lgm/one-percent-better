@@ -20,7 +20,7 @@ interface Row {
 }
 
 const rows: Row[] = [];
-for (const line of design.split('\n')) {
+for (const line of design.split(/\r?\n/)) { // CRLF-safe: a Windows clone (core.autocrlf) has CRLF in DESIGN.md
   const m = /^\| `([A-Za-z0-9_.]+)` \| M6 \|/.exec(line);
   if (!m) continue;
   const cells = line.split(/ \| /).map((c) => c.replace(/^\| /, '').replace(/ \|$/, ''));

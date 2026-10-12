@@ -2,7 +2,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from '../../../e2e/cloud/fixtures';
-import { accountCard, CLOUD_BASE_URL, FIXED_MS, signInViaMock, signOutDialog } from '../../../e2e/cloud/helpers';
+import { accountCard, CLOUD_BASE_URL, FIXED_MS, MOCK_SUPABASE_URL, signInViaMock, signOutDialog } from '../../../e2e/cloud/helpers';
 import { at, EN, expectNoHorizontalScroll, expectNoViLeaks, freezeClock, gotoHash, toast, VI } from '../../../e2e/helpers/app';
 
 /** serious/critical axe violations as readable strings. */
@@ -11,24 +11,18 @@ export async function axeAll(page: Page): Promise<string[]> {
   return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`);
 }
 
-/** Put a hand-made SDK session in localStorage (far-future expiry, no network needed). Call on an app page, then reload. */
-export async function forgeSession(page: Page, user: { email: string; full_name?: string; name?: string }): Promise<void> {
-  await page.evaluate((u) => {
-    const meta: Record<string, string> = {};
-    if (u.full_name !== undefined) meta.full_name = u.full_name;
-    if (u.name !== undefined) meta.name = u.name;
-    localStorage.setItem(
-      'opb-auth',
-      JSON.stringify({
-        access_token: 'forged.access.token',
-        refresh_token: 'forged-refresh',
-        token_type: 'bearer',
-        expires_in: 3600,
-        expires_at: 4102444800,
-        user: { id: '00000000-0000-4000-8000-0000000000aa', aud: 'authenticated', role: 'authenticated', email: u.email, app_metadata: { provider: 'google' }, user_metadata: meta, created_at: '2026-10-01T00:00:00Z' },
-      }),
-    );
-  }, user);
+/**
+ * Put a VALID SDK session for an arbitrary identity in localStorage. M7 re-target (dev-M7 §9.2): a hand-forged token is
+ * now rejected by REST with 401 (-> "expired", correct per FR-40/NFR-15), so the session is minted by the mock itself
+ * (`/__test/token?email=&name=`, `name=` empty = no name) and keeps the u1 `sub`. Call on an app page, then reload.
+ * `page.request` carries the context User-Agent, i.e. the worker's mock partition.
+ */
+export async function mintSession(page: Page, user: { email: string; full_name?: string; name?: string }): Promise<void> {
+  const name = user.full_name ?? user.name ?? '';
+  const res = await page.request.get(`${MOCK_SUPABASE_URL}/__test/token?user=u1&email=${encodeURIComponent(user.email)}&name=${encodeURIComponent(name)}`);
+  expect(res.ok()).toBe(true);
+  const session = await res.text();
+  await page.evaluate((json) => localStorage.setItem('opb-auth', json), session);
 }
 
 /** Per-worker User-Agent so the mock keeps this browser context in the worker's partition (e2e/cloud/fixtures.ts). */
@@ -56,7 +50,7 @@ test.describe('M6-AC11 extra: identity rendering at 360 px', () => {
         const page = await ctx.newPage();
         await freezeClock(page);
         await page.goto('#/settings');
-        await forgeSession(page, id.user);
+        await mintSession(page, id.user);
         await page.reload();
         await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in', { timeout: 15_000 });
         expect(await page.evaluate(() => (window as unknown as { __xss?: number }).__xss)).toBeUndefined();
@@ -144,7 +138,7 @@ test.describe('M6-AC11 extra: layout', () => {
       const page = await ctx.newPage();
       await freezeClock(page);
       await page.goto('#/settings');
-      await forgeSession(page, { email: 'nguyen.thi.hong.nhung.phuong.2026@gmail.com', full_name: 'Nguyễn Thị Hồng Nhung Phương' });
+      await mintSession(page, { email: 'nguyen.thi.hong.nhung.phuong.2026@gmail.com', full_name: 'Nguyễn Thị Hồng Nhung Phương' });
       await page.reload();
       await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in', { timeout: 15_000 });
       await accountCard(page).getByRole('button', { name: VI.settings.account.signOut }).click();
@@ -182,7 +176,7 @@ test.describe('M6-AC11 extra: layout', () => {
       const googleBtn = await accountCard(page).getByRole('button', { name: EN.auth.signInGoogle }).boundingBox();
       expect(googleBtn!.height).toBeGreaterThanOrEqual(43.5);
       await page.screenshot({ path: testInfo.outputPath(`signed-out-${vp.w}.png`), fullPage: true });
-      await forgeSession(page, { email: 'minh.test@example.com', full_name: 'Minh Test' });
+      await mintSession(page, { email: 'minh.test@example.com', full_name: 'Minh Test' });
       await page.reload();
       await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in', { timeout: 15_000 });
       const so = await accountCard(page).getByRole('button', { name: EN.settings.account.signOut }).boundingBox();

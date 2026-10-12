@@ -54,24 +54,27 @@ async function goalIdOf(page: Page, name: string): Promise<string> {
   return href!.replace(/^#?\/goals\//, '');
 }
 
-async function dbCounts(page: Page): Promise<{ goals: number; entries: number }> {
+/** Row counts of the raw Dexie tables. M7 (soft delete): LIVE rows only (deletedAt null) unless `raw` is true (tombstones included). */
+async function dbCounts(page: Page, raw = false): Promise<{ goals: number; entries: number }> {
   return page.evaluate(
-    () =>
+    (includeTombstones) =>
       new Promise((resolve, reject) => {
         const req = indexedDB.open('one-percent-better');
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
           const db = req.result;
           const tx = db.transaction(['goals', 'entries'], 'readonly');
-          const g = tx.objectStore('goals').count();
-          const e = tx.objectStore('entries').count();
+          const g = tx.objectStore('goals').getAll();
+          const e = tx.objectStore('entries').getAll();
+          const live = (rows: Array<{ deletedAt?: string | null }>) => rows.filter((r) => includeTombstones || r.deletedAt === null || r.deletedAt === undefined).length;
           tx.oncomplete = () => {
             db.close();
-            resolve({ goals: g.result, entries: e.result });
+            resolve({ goals: live(g.result), entries: live(e.result) });
           };
           tx.onerror = () => reject(tx.error);
         };
       }),
+    raw,
   );
 }
 
@@ -249,7 +252,8 @@ for (const cfg of CONFIGS) {
         await expect(dialog).toBeHidden();
         await expect(page.getByRole('link', { name, exact: true })).toHaveCount(0);
       }
-      expect(await dbCounts(page)).toEqual({ goals: 0, entries: 0 });
+      expect(await dbCounts(page)).toEqual({ goals: 0, entries: 0 }); // live rows (M7: soft delete)
+      expect(await dbCounts(page, true)).toEqual({ goals: 2, entries: 4 }); // the deleted data stays as tombstones until synced
       await gotoHash(page, '/today');
       await expect(page.getByText(copy.empty.today.noGoals)).toBeVisible();
       await gotoHash(page, '/review');

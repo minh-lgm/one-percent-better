@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** qc M7 round 1 (report docs/qc/report-M7-r1.md; re-target 4 nhóm test QC theo dev handoff §9) → M8 → Final QC phase 2 → U8
+**Next step:** developer M7 mode fix (docs/qc/report-M7-r1.md: D1, D2 Major; D3, D4 Minor; brand mark) → qc M7 round 2 → M8 → Final QC phase 2 → U8
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -49,7 +49,7 @@
 | M8 | TODO | | |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
-| M7 | DOING — dev DONE (b980b6f) + brand (01898c2), chờ QC r1 | docs/handoff/dev-M7.md | Dispute §9: 4 nhóm test QC cần re-target (hard-delete, forgeSession 401, toast gộp, M6-D1 test.fail) |
+| M7 | DOING — QC r1 FAIL (D1 id>64 kẹt sync, D2 đẩy dữ liệu sang tài khoản mới sau 401; D3/D4 Minor), developer fix | docs/qc/report-M7-r1.md | 19/19 AC đạt; 4 dispute đã re-target, M6-D1 FIXED |
 | Final QC (phase 2) | TODO | | |
 
 ## Backlog (defect Minor, đề xuất chưa làm)

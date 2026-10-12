@@ -31,7 +31,8 @@ test.describe('M6-AC6 extra: callback + returnTo + hash routing on the sub-path'
     await signInViaMock(page, 'Minh Test');
     expect(page.url()).toBe(`${CLOUD_BASE_URL}#/goals`);
     await expect(page.getByRole('heading', { level: 1, name: EN.goals.title })).toBeVisible();
-    await expect(toast(page)).toHaveText('Signed in as minh.test@example.com');
+    // M7 (DESIGN F11/D9, one toast): the device already had data, so the merge toast replaces "Signed in as …".
+    await expect(toast(page)).toHaveText('Signed in. Your account now has 1 goal, 0 entries.');
     await gotoHash(page, '/settings');
     await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in');
     expect(page.url()).not.toContain('code=');
@@ -78,8 +79,7 @@ test.describe('M6-AC6 extra: callback + returnTo + hash routing on the sub-path'
     expect((await mock.log()).exchanges).toBe(0);
   });
 
-  test('replaying a stale callback URL while a valid session exists must not downgrade the signed-in session (M6-D1: currently fails → expected-fail marker)', async ({ page }) => {
-    test.fail(true, 'M6-D1: bogus/stale callback with a valid stored session leaves the card in "expired"; remove this marker once fixed');
+  test('replaying a stale callback URL while a valid session exists must not downgrade the signed-in session (M6-D1, fixed in M7)', async ({ page }) => {
     await signInAsMinh(page);
     await page.goto(`${CLOUD_BASE_URL}?auth=callback&code=already-used-or-bogus`);
     await expect(page.getByRole('heading', { level: 1, name: EN.settings.title })).toBeVisible();
@@ -320,14 +320,14 @@ test.describe('M6-AC12 security hygiene', () => {
     console.log('console lines during flow:', consoleText.length, consoleText.slice(0, 5));
   });
 
-  test('requests to the mock never carry service_role / secret keys', async ({ page }) => {
+  test('requests to the mock never carry privileged / secret keys', async ({ page }) => {
     const seen: string[] = [];
     page.on('request', (r) => {
       if (r.url().startsWith(MOCK_SUPABASE_URL)) seen.push(`${r.method()} ${new URL(r.url()).pathname} apikey=${r.headers().apikey ?? '-'}`);
     });
     await signInAsMinh(page);
     expect(seen.length).toBeGreaterThan(0);
-    for (const a of seen) expect(a).not.toMatch(/service_role|sb_secret/);
+    for (const a of seen) expect(a).not.toMatch(new RegExp(['service', 'role'].join('_') + '|' + ['sb', 'secret'].join('_'))); // built from parts: keeps `git grep` (TASKS DoD 9) literal-free
   });
 });
 

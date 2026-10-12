@@ -173,23 +173,37 @@ describe('M1-AC8/AC9/AC13 services over fake IndexedDB', () => {
     expect(big.value.createdAt).toBeTruthy();
   });
 
-  it('deleteWithEntries removes entries of that goal only and rolls back on failure', async () => {
+  it('deleteWithEntries soft-deletes the goal and its entries only (tombstone, dirty) and rolls back on failure (M7: ADR-20 re-target)', async () => {
     const w = wire();
     const a = await w.goalService.create({ ...base, name: 'A' }, NOW);
     const b = await w.goalService.create({ ...base, name: 'B' }, NOW);
     if (!a.ok || !b.ok) throw new Error('x');
     for (const g of [a, b]) for (const d of ['2026-10-07', '2026-10-08']) await w.entryService.add({ goalId: g.value.id, date: d, minutes: 10, note: '', source: 'manual' }, NOW);
     await w.goalService.remove(a.value.id);
-    expect(await w.db.entries.where('goalId').equals(a.value.id).count()).toBe(0);
-    expect(await w.db.entries.where('goalId').equals(b.value.id).count()).toBe(2);
-    expect(await w.db.goals.count()).toBe(1);
-    // failure injection: make goals.delete throw after entries were deleted inside the same transaction
-    const orig = w.db.goals.delete.bind(w.db.goals);
-    w.db.goals.delete = (() => Promise.reject(new Error('boom'))) as unknown as typeof w.db.goals.delete;
+    // user-visible: repository hides goal A and its entries, B untouched
+    expect((await w.goals.getAll()).map((g) => g.id)).toEqual([b.value.id]);
+    expect(await w.entries.getByGoal(a.value.id)).toEqual([]);
+    expect(await w.entries.getByGoal(b.value.id)).toHaveLength(2);
+    // raw rows: tombstones with deletedAt === updatedAt, dirty = 1; entries of A share the stamp; B live
+    const rawA = await w.db.goals.get(a.value.id);
+    expect(rawA?.deletedAt).toBeTruthy();
+    expect(rawA?.deletedAt).toBe(rawA?.updatedAt);
+    expect(rawA?.dirty).toBe(1);
+    const rawEntriesA = await w.db.entries.where('goalId').equals(a.value.id).toArray();
+    expect(rawEntriesA).toHaveLength(2);
+    for (const e of rawEntriesA) expect({ deletedAt: e.deletedAt, dirty: e.dirty }).toEqual({ deletedAt: rawA?.deletedAt, dirty: 1 });
+    const rawEntriesB = await w.db.entries.where('goalId').equals(b.value.id).toArray();
+    for (const e of rawEntriesB) expect(e.deletedAt).toBeNull();
+    expect((await w.db.goals.get(b.value.id))?.deletedAt).toBeNull();
+    // failure injection: the entries write fails after the goal tombstone was written in the same transaction -> all rolled back
+    const orig = w.db.entries.bulkPut.bind(w.db.entries);
+    w.db.entries.bulkPut = (() => Promise.reject(new Error('boom'))) as unknown as typeof w.db.entries.bulkPut;
     await expect(w.goalService.remove(b.value.id)).rejects.toThrow();
-    w.db.goals.delete = orig;
-    expect(await w.db.goals.count()).toBe(1);
-    expect(await w.db.entries.where('goalId').equals(b.value.id).count()).toBe(2);
+    w.db.entries.bulkPut = orig;
+    expect((await w.goals.getAll()).map((g) => g.id)).toEqual([b.value.id]);
+    expect((await w.db.goals.get(b.value.id))?.deletedAt).toBeNull();
+    expect((await w.db.entries.where('goalId').equals(b.value.id).toArray()).filter((e) => e.deletedAt === null)).toHaveLength(2);
+    expect(await w.entries.getByGoal(b.value.id)).toHaveLength(2);
   });
 });
 
