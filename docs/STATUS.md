@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** Gate 1 (phase 2) — user duyệt plan v2 và trả lời OQ-06…09
+**Next step:** planner revise nhỏ (OQ-06 mở sign-up, OQ-07 sync settings) → designer revise DESIGN v2 → Gate 2
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -15,6 +15,7 @@
 - 2026-10-09 — Thư mục `1%better` làm npx lỗi "URI malformed"? → User chọn đổi tên nhưng chưa làm; 2026-10-10 user nói "triển khai tiếp", orchestrator tạm tạo `subst Z:` nhưng user yêu cầu bỏ; đã gỡ Z:. Chốt: đổi tên thư mục thành `one-percent-better` — đã đổi 2026-10-10, npx chạy bình thường.
 - 2026-10-10 — (orchestrator, QC M4 OQ1) SW precache sẵn chunk Recharts/Review (~101 kB) sau khi cài, dù trang chưa vào Review → chấp nhận: NFR-03 nói về tải trang ban đầu, precache phục vụ offline-first; planner ghi nhận ở lần revise sau
 - 2026-10-12 — Phase 2: thêm login để lưu target/process trên cloud? → Có. Login TUỲ CHỌN (offline-first, app dùng được không cần tài khoản), có trigger nhắc login để tránh mất dữ liệu; backend: orchestrator chọn Supabase (user chưa có dịch vụ nào); đăng nhập bằng Google (Gmail)
+- 2026-10-12 — Gate 1 phase 2: duyệt plan v2 (M6 Auth, M7 Sync, M8 Nhắc login). OQ-06: ai có Gmail cũng đăng nhập được (không tắt sign-up). OQ-07: CÓ sync giờ nhắc + ngôn ngữ. OQ-08: máy không có Docker Desktop → RLS kiểm tay (U10). OQ-09: không có nút xoá cloud trong app
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
@@ -40,7 +41,7 @@
 | M4 | PASS (round 2) | docs/qc/report-M4-r2.md | Firefox/Safari/iOS, screen reader, bản dịch vi NOT VERIFIED | bundle 218,8 kB gzip; Recharts lazy |
 | M5 | PASS (round 2) | docs/qc/report-M5-r2.md | AC9 Firefox/Safari/iOS, screen reader NOT VERIFIED | Dispute M3-D3: orchestrator chọn giữ fix, QC re-target tests/qc/m3-r1.spec.ts:638 |
 | Final QC (phase 1) | PASS (round 2) | docs/qc/report-final-r2.md | r1 FAIL F-D1 (Vitest cache lạnh) → fix 5a73e18 → r2 PASS trên 2 clone sạch |
-| Plan v2 (phase 2) | DONE — chờ Gate 1 | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
+| Plan v2 (phase 2) | DONE (duyệt 2026-10-12; planner sửa nhỏ theo OQ) | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
 | M8 | TODO | | |
 | M6 | TODO | | |
 | M7 | TODO | | |
