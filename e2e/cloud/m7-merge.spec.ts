@@ -130,3 +130,57 @@ test.describe('M7-AC12 sign out with changes waiting (FR-41)', () => {
     expect(syncNow).toBeDefined();
   });
 });
+
+// ---- QC M7 round 1 regressions ----
+
+test.describe('M7-D2 session expired, then another account signs in', () => {
+  test('D5 asks first and nothing is uploaded to u2 until "Add to account"; Cancel leaves u2 empty', async ({ page, mock }) => {
+    await createGoal(page, READ);
+    await signInAsMinh(page);
+    await expectSyncState(page, 'synced');
+    await mock.fail('rest', 401, 1000);
+    await gotoHash(page, '/today');
+    await logTime(page, 'Read', 7);
+    await expectSyncState(page, 'expired', 15_000);
+    await mock.clearFailures();
+    await gotoHash(page, '/settings');
+    const restBefore = (await mock.log()).log.filter((l) => l.path.startsWith('/rest/')).length;
+    await signInViaMock(page, 'Other User');
+    const d5 = page.getByTestId('merge-dialog');
+    await expect(d5).toHaveAttribute('open', { timeout: 15_000 });
+    await expect(d5).toContainText('other.user@example.com');
+    await page.waitForTimeout(2500);
+    expect((await mock.log()).log.filter((l) => l.path.startsWith('/rest/')).length).toBe(restBefore); // not a single REST call with the new token
+    expect((await mock.rows('u2')).goals).toHaveLength(0);
+    expect((await mock.rows('u2')).entries).toHaveLength(0);
+    await d5.getByRole('button', { name: EN.common.cancel }).click();
+    await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-out');
+    await page.waitForTimeout(1000);
+    expect((await mock.rows('u2')).entries).toHaveLength(0);
+    // The pending entry is still on the device.
+    await gotoHash(page, '/today');
+    await expect(page.getByRole('article', { name: 'Read' }).locator('.amount')).toContainText('7/30');
+
+    // Again → Add to account: now (and only now) the device data reaches u2.
+    await gotoHash(page, '/settings');
+    await signInViaMock(page, 'Other User');
+    await expect(d5).toHaveAttribute('open', { timeout: 15_000 });
+    await d5.getByRole('button', { name: EN.auth.merge.confirm }).click();
+    await expect(toast(page)).toContainText('Signed in. Your account now has 1 goal, 1 entry.', { timeout: 15_000 });
+    expect((await mock.liveRows('u2')).entries).toHaveLength(1);
+  });
+});
+
+test.describe('M7-D4 sign-in feedback when the first sync fails', () => {
+  test('device with data signs in while the cloud answers 500: "Signed in as …" is shown (no merge toast, no silence)', async ({ page, mock }) => {
+    await createGoal(page, READ);
+    await mock.fail('rest', 500, 1000);
+    await gotoHash(page, '/settings');
+    await signInViaMock(page, 'Minh Test');
+    await expect(toast(page)).toHaveText('Signed in as minh.test@example.com', { timeout: 8_000 });
+    await expectSyncState(page, 'error', 15_000);
+    await mock.clearFailures();
+    await syncNow(page);
+    expect((await mock.liveRows('u1')).goals).toHaveLength(1);
+  });
+});

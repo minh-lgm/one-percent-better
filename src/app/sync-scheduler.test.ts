@@ -122,6 +122,14 @@ describe('startSyncScheduler', () => {
     expect(h.calls.filter((c) => c.startsWith('signedIn'))).toEqual(['signedIn:u1', 'signedIn:u1']);
     h.setAuth({ kind: 'signed-out' });
     expect(h.calls[h.calls.length - 1]).toBe('reset');
+    // (M7-D2) an OAuth callback in progress pauses (aborts) whatever runs; the account that arrives starts over.
+    h.setAuth(SIGNED_IN);
+    await h.flush();
+    h.setAuth({ kind: 'signing-in' });
+    expect(h.calls[h.calls.length - 1]).toBe('pause');
+    h.setAuth({ kind: 'signed-in', userId: 'u2', email: 'other@example.com', name: 'Other' });
+    await h.flush();
+    expect(h.calls.filter((c) => c.startsWith('signedIn'))).toEqual(['signedIn:u1', 'signedIn:u1', 'signedIn:u1', 'signedIn:u2']);
     h.stop();
   });
 

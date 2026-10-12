@@ -137,7 +137,8 @@ export interface LocalDataRepository {
 // ---- M7: sync rows, local sync store, synced preferences (ARCHITECTURE §4.1, §4.2, §5.2) ----
 
 /** IndexedDB cannot index booleans: the "needs push" flag is 0/1. */
-export type SyncFlag = 0 | 1;
+/** 0 = in sync, 1 = waiting to push, 2 = rejected by the cloud (kept on the device, not retried until edited; M7-D1). */
+export type SyncFlag = 0 | 1 | 2;
 /** What the Dexie tables hold from schema v2 on (ADR-20). Only the data layer sees these. */
 export type GoalRow = Goal & { deletedAt: ISODateTime | null; dirty: SyncFlag };
 export type EntryRow = LogEntry & { deletedAt: ISODateTime | null; dirty: SyncFlag };
@@ -193,6 +194,10 @@ export interface LocalSyncStore {
   countDirty(): Promise<number>;
   /** Dirty goals + dirty entries + dirty preference groups (v2.1). */
   watchPendingCount(): Subscribable<number>;
+  /** M7-D1: rows the cloud refused → `dirty = 2` (only rows still at `dirty = 1`). Returns how many were flagged. */
+  markRejected(ids: { goals: string[]; entries: string[] }): Promise<number>;
+  /** Rows (live or tombstoned) flagged `dirty = 2`. */
+  countRejected(): Promise<number>;
 }
 
 export type { PrefGroupMeta };

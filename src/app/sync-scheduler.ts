@@ -64,7 +64,9 @@ export function startSyncScheduler({ sync, auth, intervalMs, deps = {} }: SyncSc
       void sync.handleSignedIn(state.userId, state.email);
       return;
     }
-    if (state.kind === 'expired') {
+    if (state.kind === 'expired' || state.kind === 'signing-in') {
+      // Expired: stop retrying. Signing in (OAuth callback in progress, possibly for another account):
+      // abort whatever cycle is running; `signed-in` below starts over for the account that arrives (M7-D2).
       signedInUser = null;
       sync.pause();
       return;

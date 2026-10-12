@@ -2,7 +2,7 @@
 // Pure: parsing and validation only. The file is untrusted input: size limit,
 // JSON.parse in try/catch, strict zod schema, referential integrity. No eval.
 import { z } from 'zod';
-import { DAILY_MINUTES_MAX, DAILY_MINUTES_MIN, DAY_MINUTES_LIMIT, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX, GOAL_NAME_MAX, GOAL_WHY_MAX, IMPORT_MAX_BYTES, PERIOD_DAYS_MAX, TOTAL_HOURS_MAX, TOTAL_HOURS_MIN } from '../config/constants';
+import { DAILY_MINUTES_MAX, DAILY_MINUTES_MIN, DAY_MINUTES_LIMIT, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX, GOAL_NAME_MAX, GOAL_WHY_MAX, ID_MAX, IMPORT_MAX_BYTES, PERIOD_DAYS_MAX, TOTAL_HOURS_MAX, TOTAL_HOURS_MIN } from '../config/constants';
 import { daysInclusive, isValidISODate, isWithin } from './dates';
 import { dailyTarget } from './goal';
 import { isValidReminderTime } from './reminder';
@@ -46,7 +46,8 @@ export function buildBackup(content: BackupContent, exportedAt: Date): BackupFil
 
 const isoDate = z.string().refine(isValidISODate, 'YYYY-MM-DD');
 const isoDateTime = z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'ISO date-time');
-const id = z.string().min(1).max(200);
+// Same limit as the cloud (mapper.ts / SQL): a row the importer accepts must be pushable (M7-D1).
+const id = z.string().min(1).max(ID_MAX);
 
 // M3-D3: a backup must obey the same goal limits as the form (ARCH §4): daily
 // 1–1440 min, total 1–10,000 h (stored in minutes), period ≤ 1827 days, derived

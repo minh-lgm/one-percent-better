@@ -132,6 +132,25 @@ describe('applyRemote', () => {
   });
 });
 
+describe('markRejected / countRejected (M7-D1)', () => {
+  it('flags only rows still at dirty 1, excludes them from getDirty/countDirty, keeps them in the DB; markAllDirty retries them', async () => {
+    const g1 = buildGoal({ id: 'g1', name: 'Keep', updatedAt: T1 });
+    const g2 = buildGoal({ id: 'x'.repeat(70), name: 'Too long', updatedAt: T1 });
+    await db.goals.bulkPut([{ ...g1, deletedAt: null, dirty: 1 }, { ...g2, deletedAt: null, dirty: 1 }]);
+    await db.entries.put({ ...buildEntry({ id: 'e1', goalId: 'g1', updatedAt: T1 }), deletedAt: null, dirty: 0 });
+    expect(await store.markRejected({ goals: [g2.id, 'missing'], entries: ['e1'] })).toBe(1); // e1 is not dirty → untouched
+    expect((await db.goals.get(g2.id))!.dirty).toBe(2);
+    expect((await db.entries.get('e1'))!.dirty).toBe(0);
+    expect(await store.countRejected()).toBe(1);
+    expect(await store.countDirty()).toBe(1);
+    expect((await store.getDirty(10)).goals.map((g) => g.id)).toEqual(['g1']);
+    expect(await db.goals.count()).toBe(2); // nothing deleted
+    expect(await store.markAllDirty()).toBe(3);
+    expect((await db.goals.get(g2.id))!.dirty).toBe(1);
+    expect(await store.countRejected()).toBe(0);
+  });
+});
+
 describe('tombstoneOrphanEntries and watchPendingCount', () => {
   it('only touches live entries whose goal is soft-deleted', async () => {
     const s1 = await seedLive(0);

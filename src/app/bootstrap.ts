@@ -39,7 +39,7 @@ export async function bootstrap({ navigatorLanguage, createContainer, i18n: exis
   setLocale(i18n, locale);
 
   // First account state before the first render (DESIGN S7 "Loading": saved account, no flash).
-  await container.authService.init();
+  await container.authService.init({ callbackPending: !!authCallback && container.authService.isAvailable() });
   if (authCallback) {
     // Drop the one-time code from the URL now (a reload must not replay it), then finish in the background;
     // the Account card shows "Signing you in…" meanwhile (A3) and the result arrives as a toast/Alert.

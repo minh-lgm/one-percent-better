@@ -7,14 +7,14 @@ import { normalizeSyncMeta } from '../data/repositories';
 import { backoffMs, rewindCursor, type SyncErrorCode, type SyncStatus } from '../domain/sync';
 import type { Locale } from '../i18n/types';
 import type { LockPort } from './lock-port';
-import { isRemoteError, type RemoteStore, type RemoteTable } from './remote-store';
+import { isRemoteError, rejectedCount, type RemoteStore, type RemoteTable } from './remote-store';
 
 export type SyncReason = 'sign-in' | 'startup' | 'online' | 'visible' | 'change' | 'interval' | 'manual' | 'retry' | 'sign-out' | 'rerun';
 
 export type SyncOutcome =
   | { status: 'ran'; ok: true }
   | { status: 'ran'; ok: false; error: SyncErrorCode }
-  | { status: 'skipped'; why: 'busy' | 'paused' | 'backoff' | 'offline' | 'awaiting-merge' };
+  | { status: 'skipped'; why: 'busy' | 'paused' | 'backoff' | 'offline' | 'awaiting-merge' | 'aborted' };
 
 export type FirstSignInDecision = 'merge-silently' | 'confirm-merge' | 'same-user';
 
@@ -57,6 +57,18 @@ export interface SyncServiceDeps {
 }
 
 export const SYNC_LOCK_NAME = 'opb-sync';
+
+interface CycleContext {
+  userId: string;
+  generation: number;
+}
+
+class SyncAborted extends Error {
+  constructor() {
+    super('sync aborted: account context changed');
+    this.name = 'SyncAborted';
+  }
+}
 const DEFAULT_BATCH = 500;
 const DEFAULT_MAX_PUSH_BATCHES = 20;
 const DEFAULT_SIGN_OUT_TIMEOUT_MS = 10_000;
@@ -70,6 +82,12 @@ export class SyncService {
   private readonly promptListeners = new Set<(p: MergePrompt | null) => void>();
   private mergePrompt: MergePrompt | null = null;
   private firstSignIn: Promise<boolean> | null = null;
+  /**
+   * Bumped whenever the account context changes (sign-in handled, merge confirmed, pause, reset). A running
+   * cycle re-checks it (and the current user id) before every remote request and local write, and aborts
+   * instead of acting for the wrong account (M7-D2).
+   */
+  private generation = 0;
   private running: Promise<SyncOutcome> | null = null;
   private rerun = false;
   private failures = 0;
@@ -171,27 +189,35 @@ export class SyncService {
    * the D5 prompt. Returns the decision.
    */
   async handleSignedIn(userId: string, email: string): Promise<FirstSignInDecision> {
-    // Decided before the first await so `willAnnounceMerge()` can be asked by the UI right away.
-    const decided = (async () => {
+    this.generation += 1; // a cycle still running for the previous account must not touch this one (M7-D2)
+    // `willAnnounceMerge()` resolves `true` only once the merge cycle has really pushed the device data
+    // (M7-D4: a failed first cycle shows the plain "Signed in" toast instead of nothing).
+    let announce: (v: boolean) => void = () => undefined;
+    this.firstSignIn = new Promise<boolean>((resolve) => {
+      announce = resolve;
+    });
+    try {
       const decision = await this.prepareFirstSignIn(userId);
       const merged = decision === 'merge-silently' && (await this.deps.local.countDirty()) > 0;
-      return { decision, merged };
-    })();
-    this.firstSignIn = decided.then((r) => r.merged);
-    const { decision, merged } = await decided;
-    if (decision === 'confirm-merge') {
-      const live = await this.deps.localData.countLive();
-      this.setPrompt({ userId, email, goals: live.goals, entries: live.entries });
-      this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined });
+      if (!merged) announce(false);
+      if (decision === 'confirm-merge') {
+        const live = await this.deps.localData.countLive();
+        this.setPrompt({ userId, email, goals: live.goals, entries: live.entries });
+        this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined });
+        return decision;
+      }
+      await this.bindUser(userId, decision === 'merge-silently');
+      const outcome = await this.syncNow('sign-in');
+      const ok = outcome.status === 'ran' && outcome.ok;
+      if (merged && ok) {
+        const live = await this.deps.localData.countLive();
+        this.emit({ type: 'merge-done', goals: live.goals, entries: live.entries });
+      }
+      announce(merged && ok);
       return decision;
+    } finally {
+      announce(false);
     }
-    await this.bindUser(userId, decision === 'merge-silently');
-    const outcome = await this.syncNow('sign-in');
-    if (merged && outcome.status === 'ran' && outcome.ok) {
-      const live = await this.deps.localData.countLive();
-      this.emit({ type: 'merge-done', goals: live.goals, entries: live.entries });
-    }
-    return decision;
   }
 
   /**
@@ -207,6 +233,7 @@ export class SyncService {
   async confirmMerge(): Promise<SyncOutcome> {
     const prompt = this.mergePrompt;
     if (!prompt) return { status: 'skipped', why: 'paused' };
+    this.generation += 1;
     await this.deps.local.markAllDirty();
     await this.deps.prefs.markAllDirty();
     await this.bindUser(prompt.userId, true);
@@ -248,6 +275,7 @@ export class SyncService {
   async reset(): Promise<void> {
     this.clearRetry();
     this.failures = 0;
+    this.generation += 1;
     this.setPrompt(null);
     this.firstSignIn = null;
     if ((await this.deps.kv.get<unknown>('sync')) != null) {
@@ -259,6 +287,7 @@ export class SyncService {
   /** Session expired (FR-40): keep everything, stop retrying. */
   pause(): void {
     this.clearRetry();
+    this.generation += 1;
     this.set({ kind: 'paused', nextRetryAt: undefined });
   }
 
@@ -300,17 +329,26 @@ export class SyncService {
     }
     if (reason === 'manual' || reason === 'retry' || reason === 'online') this.clearRetry();
 
+    const run: CycleContext = { userId, generation: this.generation };
     const outcome = await this.deps.locks.request(SYNC_LOCK_NAME, async () => {
       this.set({ kind: 'syncing', error: undefined, nextRetryAt: undefined });
       try {
         await this.deps.auth.ready?.();
-        const skippedInvalid = await this.cycle(userId);
+        this.checkpoint(run);
+        const skippedInvalid = await this.cycle(run);
+        this.checkpoint(run);
         const now = this.clock().toISOString();
         this.failures = 0;
         await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), lastSyncedAt: now, lastError: null }));
-        this.set({ kind: 'idle', lastSyncedAt: now, error: undefined, nextRetryAt: undefined, remoteInvalid: skippedInvalid > 0 ? true : undefined, pending: await this.deps.local.countDirty() });
+        const rejected = await this.deps.local.countRejected();
+        this.set({ kind: 'idle', lastSyncedAt: now, error: undefined, nextRetryAt: undefined, remoteInvalid: skippedInvalid > 0 || rejected > 0 ? true : undefined, pending: await this.deps.local.countDirty() });
         return { status: 'ran', ok: true } as const;
       } catch (e) {
+        if (e instanceof SyncAborted) {
+          // The account context changed under us: leave no trace, the new context decides what runs next.
+          if (this.status.kind === 'syncing') this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined });
+          return { status: 'skipped', why: 'aborted' } as const;
+        }
         return this.fail(e);
       }
     });
@@ -322,22 +360,28 @@ export class SyncService {
     return outcome.value;
   }
 
-  /** Returns the number of invalid remote rows skipped. */
-  private async cycle(userId: string): Promise<number> {
+  /** Throws `SyncAborted` when the cycle no longer belongs to the current account context (M7-D2). */
+  private checkpoint(run: CycleContext): void {
+    if (this.generation !== run.generation || this.deps.auth.currentUserId() !== run.userId) throw new SyncAborted();
+  }
+
+  /** Returns the number of invalid remote rows skipped (+ rows the cloud rejected). */
+  private async cycle(run: CycleContext): Promise<number> {
     const remote = await this.getRemote();
     let skippedInvalid = 0;
 
     // 1. Push, then read the canonical rows back (ADR-21: the device learns when it lost).
-    skippedInvalid += await this.pushPhase(remote);
+    skippedInvalid += await this.pushPhase(remote, run);
 
     // 2. Pull by keyset cursor, goals before entries; the cursor is stored after each applied page.
     for (const table of ['goals', 'entries'] as const) {
       const meta = await this.readMeta();
       let cursor: PullCursor | null = rewindCursor(meta.cursor[table]);
       for (;;) {
-        if (this.deps.auth.currentUserId() !== userId) throw new Error('signed out during sync');
+        this.checkpoint(run);
         const page = table === 'goals' ? await remote.pull('goals', cursor, this.batchSize) : await remote.pull('entries', cursor, this.batchSize);
         skippedInvalid += page.skippedInvalid;
+        this.checkpoint(run);
         if (page.rows.length > 0) {
           await this.deps.local.applyRemote(table === 'goals' ? { goals: page.rows as never, entries: [] } : { goals: [], entries: page.rows as never });
         }
@@ -351,12 +395,14 @@ export class SyncService {
 
     // 3. Orphans (entries of goals deleted elsewhere) are tombstoned; together with the entries the
     //    pull cascaded, they are pushed right away so one cycle per device converges.
+    this.checkpoint(run);
     await this.deps.local.tombstoneOrphanEntries(this.clock());
-    if ((await this.deps.local.countDirty()) > 0) skippedInvalid += await this.pushPhase(remote);
+    if ((await this.deps.local.countDirty()) > 0) skippedInvalid += await this.pushPhase(remote, run);
 
     // 3b. Preferences (v2.1): push dirty groups (the server returns the merged row) or pull.
     const dirtyPrefs = await this.deps.prefs.getDirty();
     let remotePrefs;
+    this.checkpoint(run);
     if (dirtyPrefs) {
       remotePrefs = await remote.pushPrefs(dirtyPrefs);
     } else {
@@ -364,22 +410,36 @@ export class SyncService {
       skippedInvalid += pulled.skippedInvalid;
       remotePrefs = pulled.prefs;
     }
+    this.checkpoint(run);
     const applied = await this.deps.prefs.applyRemote(remotePrefs);
     if (applied.reminderChanged || applied.localeChanged) this.emit({ type: 'prefs-applied', reminderChanged: applied.reminderChanged, localeChanged: applied.localeChanged });
 
     return skippedInvalid;
   }
 
-  /** Push loop: up to `maxPushBatches` batches of dirty rows, each read back and applied. */
-  private async pushPhase(remote: RemoteStore): Promise<number> {
+  /**
+   * Push loop: up to `maxPushBatches` batches of dirty rows, each read back and applied. Rows the cloud
+   * refuses (M7-D1) are flagged `dirty = 2` on the device — kept, no longer counted as waiting, not
+   * retried until edited — and counted like invalid remote rows so the Account card mentions them.
+   */
+  private async pushPhase(remote: RemoteStore, run: CycleContext): Promise<number> {
     let skippedInvalid = 0;
     let before = await this.deps.local.countDirty();
     for (let i = 0; i < this.maxPushBatches && before > 0; i += 1) {
       const dirty = await this.deps.local.getDirty(this.batchSize);
       if (dirty.goals.length === 0 && dirty.entries.length === 0) break;
-      await remote.push(dirty);
-      const fetched = await remote.fetchByIds({ goals: dirty.goals.map((g) => g.id), entries: dirty.entries.map((e) => e.id) });
+      this.checkpoint(run);
+      const pushed = await remote.push(dirty);
+      this.checkpoint(run);
+      if (rejectedCount(pushed) > 0) {
+        skippedInvalid += rejectedCount(pushed);
+        await this.deps.local.markRejected(pushed.rejected);
+      }
+      const rejectedGoals = new Set(pushed.rejected.goals);
+      const rejectedEntries = new Set(pushed.rejected.entries);
+      const fetched = await remote.fetchByIds({ goals: dirty.goals.map((g) => g.id).filter((id) => !rejectedGoals.has(id)), entries: dirty.entries.map((e) => e.id).filter((id) => !rejectedEntries.has(id)) });
       skippedInvalid += fetched.skippedInvalid;
+      this.checkpoint(run);
       await this.deps.local.applyRemote({ goals: fetched.goals, entries: fetched.entries });
       const after = await this.deps.local.countDirty();
       if (after >= before) break; // nothing was acknowledged (e.g. rows rejected server-side): do not spin

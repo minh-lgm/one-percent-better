@@ -352,6 +352,30 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
 
   const unquote = (v) => String(v).replace(/^"(.*)"$/, '$1');
 
+  /** PostgREST `in.(a,"b,c","d\"e")`: comma-separated, double-quoted values may contain `,` `(` `)` and backslash-escaped `"` / `\\`. */
+  function parseInList(raw) {
+    const s = String(raw).replace(/^\((.*)\)$/s, '$1');
+    const out = [];
+    let cur = '';
+    let quoted = false;
+    for (let i = 0; i < s.length; i += 1) {
+      const c = s[i];
+      if (quoted) {
+        if (c === '\\' && i + 1 < s.length) {
+          cur += s[i + 1];
+          i += 1;
+        } else if (c === '"') quoted = false;
+        else cur += c;
+      } else if (c === '"') quoted = true;
+      else if (c === ',') {
+        out.push(cur.trim());
+        cur = '';
+      } else cur += c;
+    }
+    if (cur !== '' || out.length > 0) out.push(cur.trim());
+    return out;
+  }
+
   /** The PostgREST filters `SupabaseRemoteStore` uses: `col=eq.v`, `id=in.(...)`, `or=(server_updated_at.gt.X,and(server_updated_at.eq.X,id.gt.Y))`. */
   function applyFilters(rows, searchParams) {
     let out = rows;
@@ -368,8 +392,7 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
       const op = /^(eq|in|gt|gte|lt|lte)\.(.*)$/s.exec(value);
       if (!op) throw new Error(`mock-supabase: unsupported filter ${key}=${value}`);
       if (op[1] === 'in') {
-        const list = op[2].replace(/^\((.*)\)$/s, '$1').split(',').map((s) => unquote(s.trim()));
-        const set = new Set(list);
+        const set = new Set(parseInList(op[2]));
         out = out.filter((r) => set.has(String(r[key])));
         continue;
       }

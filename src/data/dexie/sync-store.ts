@@ -131,6 +131,19 @@ export class DexieSyncStore implements LocalSyncStore {
   watchPendingCount(): Subscribable<number> {
     return fromLiveQuery(() => this.countDirty());
   }
+
+  markRejected(ids: { goals: string[]; entries: string[] }): Promise<number> {
+    return this.db.transaction('rw', this.db.goals, this.db.entries, async () => {
+      let n = 0;
+      if (ids.goals.length > 0) n += await this.db.goals.where('id').anyOf(ids.goals).and((g) => g.dirty === 1).modify({ dirty: 2 });
+      if (ids.entries.length > 0) n += await this.db.entries.where('id').anyOf(ids.entries).and((e) => e.dirty === 1).modify({ dirty: 2 });
+      return n;
+    });
+  }
+
+  countRejected(): Promise<number> {
+    return this.db.transaction('r', this.db.goals, this.db.entries, async () => (await this.db.goals.where('dirty').equals(2).count()) + (await this.db.entries.where('dirty').equals(2).count()));
+  }
 }
 
 /** Field-by-field equality of two rows (both already normalised to the row shape). */

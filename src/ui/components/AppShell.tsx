@@ -41,7 +41,7 @@ export function AppShell() {
           <span className="mark" aria-hidden="true">
             <img src={`${import.meta.env.BASE_URL}brand-mark-96.png`} width="28" height="28" alt="" decoding="async" />
           </span>
-          <span>{t('app.brandSuffix')}</span>
+          <span>{t('app.name')}</span>
         </NavLink>
         {TABS.map((tab) => (
           <NavLink key={tab.to} className="item" to={tab.to}>

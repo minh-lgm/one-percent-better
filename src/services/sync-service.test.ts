@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { normalizeSyncMeta } from '../data/repositories';
 import type { SyncStatus } from '../domain/sync';
-import { buildGoal } from '../test/builders';
+import { buildEntry, buildGoal } from '../test/builders';
 import { FakeRemoteServer, offlineError, unauthorizedError, unreachableError } from '../test/fake-remote-store';
 import { createDevice, MemoryLockPort, serverSnapshot, U1, U2, type Device } from '../test/two-devices';
 import { noLocks } from './lock-port';
@@ -104,14 +104,103 @@ describe('one cycle', () => {
     expect(server.calls).toEqual([]);
   });
 
-  it('a signed-in user is required on every pull page: signing out mid-cycle aborts safely', async () => {
+  it('signing out mid-cycle aborts the cycle at the next checkpoint: outcome skipped/aborted, status paused, no error (M7-D2)', async () => {
     const a = await device('A');
+    await a.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, NOW);
     a.remote.delayMs = 5;
     const p = a.sync.syncNow('manual');
     a.user.id = null;
     const r = await p;
-    expect(r.status).toBe('ran');
-    expect(await a.store.countDirty()).toBe(0);
+    expect(r).toEqual({ status: 'skipped', why: 'aborted' });
+    expect(a.sync.current()).toMatchObject({ kind: 'paused' });
+    expect(a.sync.current().error).toBeUndefined();
+  });
+});
+
+describe('rows the cloud refuses (M7-D1)', () => {
+  it('a goal with a 70-char id does not block the others: cycle ok, 4 goals + their entries land, the row stays local as dirty 2, remoteInvalid, pending 0, no re-push', async () => {
+    const a = await device('A');
+    const long = 'x'.repeat(70);
+    const stamp = NOW.toISOString();
+    await a.db.goals.bulkPut([
+      ...['g1', 'g2', 'g3', 'g4', long].map((id) => ({ ...buildGoal({ id, name: `Goal ${id.slice(0, 4)}`, createdAt: stamp, updatedAt: stamp }), deletedAt: null, dirty: 1 as const })),
+    ]);
+    await a.db.entries.bulkPut([
+      { ...buildEntry({ id: 'e1', goalId: 'g1', updatedAt: stamp }), deletedAt: null, dirty: 1 as const },
+      { ...buildEntry({ id: 'e2', goalId: long, updatedAt: stamp }), deletedAt: null, dirty: 1 as const },
+    ]);
+    const r = await a.sync.syncNow('manual');
+    expect(r).toEqual({ status: 'ran', ok: true });
+    expect(a.sync.current()).toMatchObject({ kind: 'idle', pending: 0, remoteInvalid: true });
+    expect(a.sync.current().error).toBeUndefined();
+    expect(server.live('goals', U1).map((g) => g.id).sort()).toEqual(['g1', 'g2', 'g3', 'g4']);
+    expect(server.live('entries', U1).map((e) => e.id)).toEqual(['e1']);
+    expect((await a.db.goals.get(long))!.dirty).toBe(2);
+    expect((await a.db.entries.get('e2'))!.dirty).toBe(2);
+    expect(await a.store.countRejected()).toBe(2);
+    // Next cycle: nothing is re-pushed, the flag stays visible.
+    const pushes = server.calls.filter((c) => c.method === 'push').length;
+    await a.sync.syncNow('manual');
+    expect(server.calls.filter((c) => c.method === 'push').length).toBe(pushes);
+    expect(a.sync.current()).toMatchObject({ kind: 'idle', pending: 0, remoteInvalid: true });
+  });
+});
+
+describe('account context changes while a cycle runs (M7-D2)', () => {
+  it('handleSignedIn for another account aborts the cycle of the previous one before its first request: nothing of u1 is pushed with the new context', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const a = await device('A', { ready: () => gate });
+    await a.kv.set('sync', { userId: U1, lastUserId: U1, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null, account: null });
+    await a.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, NOW);
+    const first = a.sync.syncNow('startup'); // u1's cycle, parked at the gate (SDK still loading / session being verified)
+    a.user.id = U2;
+    const decision = a.sync.handleSignedIn(U2, 'u2@example.com'); // the OAuth callback brought another account
+    release();
+    expect(await first).toEqual({ status: 'skipped', why: 'aborted' });
+    expect(await decision).toBe('confirm-merge');
+    expect(server.calls.filter((c) => c.method === 'push')).toEqual([]);
+    expect(server.live('goals', U1)).toEqual([]);
+    expect(server.live('goals', U2)).toEqual([]);
+    expect(a.sync.current()).toMatchObject({ kind: 'paused' });
+  });
+
+  it('pause() (session expired / signing in) and reset() abort a running cycle', async () => {
+    for (const stop of ['pause', 'reset'] as const) {
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const a = await device(`A-${stop}`, { ready: () => gate });
+      await a.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, NOW);
+      const before = server.calls.length;
+      const p = a.sync.syncNow('manual');
+      if (stop === 'pause') a.sync.pause();
+      else await a.sync.reset();
+      release();
+      expect(await p).toEqual({ status: 'skipped', why: 'aborted' });
+      expect(server.calls.length).toBe(before);
+    }
+  });
+
+  it('willAnnounceMerge resolves false when the merge cycle fails (M7-D4), true once it has pushed', async () => {
+    const a = await device('A');
+    await a.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, NOW);
+    a.remote.failure = unreachableError();
+    const events: SyncEvent[] = [];
+    a.sync.onEvent((e) => events.push(e));
+    const handled = a.sync.handleSignedIn(U1, 'u1@example.com');
+    expect(await a.sync.willAnnounceMerge()).toBe(false);
+    await handled;
+    expect(events).toEqual([]);
+    a.remote.failure = null;
+    await a.sync.reset();
+    await a.kv.set('sync', { userId: U1, lastUserId: null, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null, account: null });
+    await a.sync.handleSignedIn(U1, 'u1@example.com');
+    expect(await a.sync.willAnnounceMerge()).toBe(true);
+    expect(events.map((e) => e.type)).toEqual(['merge-done']);
   });
 });
 

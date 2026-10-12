@@ -56,17 +56,20 @@ export function SyncIndicator({ auth, status, online, onRetry, announceDebounceM
     previous.current = state;
     if (state === null || prev === null) return; // first render / hidden: nothing to say
     if (state === prev) return;
+    // Transient states say nothing and must not cancel an armed announcement (M7-D3: offline →
+    // synced → syncing → synced within 2 ms used to lose "All changes are synced.").
+    if (state === 'syncing' || state === 'pending' || state === 'signing-in') return;
     let key: MessageKey | null = null;
     if (ANNOUNCED.has(state)) {
       key = `sync.announce.${state}` as MessageKey;
       lastBad.current = state;
     } else if (state === 'synced' && lastBad.current !== null) {
-      // Back to synced after error/offline/expired (an intermediate `syncing` is transparent).
+      // Back to synced after error/offline/expired.
       key = 'sync.announce.synced';
       lastBad.current = null;
     }
-    if (timer.current !== null) clearTimeout(timer.current);
     if (!key) return;
+    if (timer.current !== null) clearTimeout(timer.current);
     const message = t(key);
     timer.current = setTimeout(() => {
       timer.current = null;

@@ -44,6 +44,8 @@ export class AuthService {
   private portPromise: Promise<AuthPort> | null = null;
   private signingOut = false;
   private pending: Promise<void> = Promise.resolve();
+  /** Signed-in state known from kv when `init({ callbackPending })` deferred to the callback (M7-D2 / M6-D1). */
+  private savedBeforeCallback: Extract<AuthState, { kind: 'signed-in' }> | null = null;
   private readonly outcomeListeners = new Set<(o: AuthOutcome) => void>();
   private pendingOutcome: AuthOutcome | null = null;
 
@@ -114,15 +116,23 @@ export class AuthService {
    * without loading the SDK when there is nothing to verify. With a stored session the saved
    * account is shown immediately and verified in the background (no flash of "signed out").
    */
-  async init(): Promise<void> {
+  async init(options: { callbackPending?: boolean } = {}): Promise<void> {
     if (!this.deps) return;
     const meta = await this.readMeta();
     if (!this.deps.storedSession()) {
       this.set(meta.userId ? { kind: 'expired', email: meta.account?.email ?? '' } : { kind: 'signed-out' });
       return;
     }
-    if (meta.userId && meta.account) this.set({ kind: 'signed-in', userId: meta.userId, email: meta.account.email, name: meta.account.name });
-    else this.set({ kind: 'signing-in' });
+    const saved: AuthState | null = meta.userId && meta.account ? { kind: 'signed-in', userId: meta.userId, email: meta.account.email, name: meta.account.name } : null;
+    if (options.callbackPending) {
+      // An OAuth callback is about to be exchanged, maybe for another account: do not announce (and
+      // sync for) the saved account meanwhile (M7-D2). The saved state is only used if the callback
+      // fails while the stored session is still there (M6-D1).
+      this.savedBeforeCallback = saved?.kind === 'signed-in' ? saved : null;
+      this.set({ kind: 'signing-in' });
+      return;
+    }
+    this.set(saved ?? { kind: 'signing-in' });
     this.pending = this.verifyStoredSession(meta);
   }
 
@@ -169,7 +179,8 @@ export class AuthService {
   completeCallback(cb: AuthCallbackParams): Promise<Result<AuthSession>> {
     if (!this.deps) return Promise.resolve(fail(authError('AUTH_FAILED', 'cloud is not configured')));
     // M6-D1: a stale/replayed callback while a valid session exists must not demote that session.
-    const previous = this.current.kind === 'signed-in' ? this.current : null;
+    const previous = this.current.kind === 'signed-in' ? this.current : this.savedBeforeCallback;
+    this.savedBeforeCallback = null;
     const verifying = this.pending;
     this.set({ kind: 'signing-in' });
     const result = this.runCallback(cb, previous, verifying);

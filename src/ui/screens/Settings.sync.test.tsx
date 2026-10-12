@@ -142,6 +142,19 @@ describe('Settings — signed-in copy (M7-AC15, DESIGN S7)', () => {
     await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent(`Signed in as ${USER1.email}`));
   });
 
+  it('(M7-D4) first sign-in with device data while the cloud fails: the plain "Signed in as …" toast is shown, not silence', async () => {
+    tc = await createTestContainer({ cloud: true });
+    await tc.container.authService.init();
+    await tc.container.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, new Date());
+    tc.auth!.remote.failure = unreachableError();
+    await renderApp({ route: '/settings', container: tc });
+    tc.auth!.port.session = USER1;
+    await tc.container.authService.completeCallback({ code: 'ok' });
+    await sync().handleSignedIn(U1, USER1.email);
+    await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent(`Signed in as ${USER1.email}`));
+    expect(screen.getByTestId('sync-indicator')).toHaveAttribute('data-state', 'error');
+  });
+
   it('D3 signed in: title/body variant, offline note when offline; signed out keeps the M3 dialog', async () => {
     await signedIn();
     await tc!.container.db.goals.put(buildGoal({ id: 'temp', name: 'Temp' }));

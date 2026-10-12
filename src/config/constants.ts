@@ -13,6 +13,8 @@ export const ENTRY_NOTE_MAX = 280;
 export const DAY_MINUTES_LIMIT = 1440;
 
 export const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
+/** Record id length accepted everywhere (backup importer, cloud mapper, SQL `check (char_length(id) between 1 and 64)`). */
+export const ID_MAX = 64;
 
 /** Delay before showing a loading skeleton, to avoid flicker (DESIGN §4). */
 export const LOADING_DELAY_MS = 150;

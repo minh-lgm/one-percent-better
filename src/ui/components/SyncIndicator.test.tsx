@@ -114,6 +114,20 @@ describe('SyncIndicator (M7-AC15, FR-50)', () => {
     await waitFor(() => expect(live).toHaveTextContent(en.sync.announce.expired));
   });
 
+  it('(M7-D3) offline with nothing waiting → online: the transient syncing right after synced does not cancel "All changes are synced."', async () => {
+    const onRetry = vitest.fn();
+    const r = await renderWithLocale(<SyncIndicator auth={SIGNED_IN} status={idle()} online onRetry={onRetry} announceDebounceMs={20} />, 'en');
+    tc = r.tc;
+    const live = screen.getByTestId('sync-announce');
+    const re = (status: SyncStatus, online = true) => r.rerender(<SyncIndicator auth={SIGNED_IN} status={status} online={online} onRetry={onRetry} announceDebounceMs={20} />);
+    re(idle({ kind: 'offline' }), false);
+    await waitFor(() => expect(live).toHaveTextContent(en.sync.announce.offline));
+    re(idle(), true); // network back: synced …
+    re(idle({ kind: 'syncing' })); // … the `online` trigger starts a cycle 2 ms later …
+    re(idle()); // … which ends synced
+    await waitFor(() => expect(live).toHaveTextContent(en.sync.announce.synced));
+  });
+
   it('vi: every state renders Vietnamese copy, no English leaks', async () => {
     const { rerender, onRetry } = await renderChip(SIGNED_IN, idle({ lastSyncedAt: '2026-10-08T02:30:00.000Z' }), 'vi');
     const states: Array<[AuthState, SyncStatus | null, boolean]> = [

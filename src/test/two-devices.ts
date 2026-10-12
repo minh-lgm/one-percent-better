@@ -53,6 +53,8 @@ export interface DeviceOptions {
   batchSize?: number;
   timers?: SyncServiceDeps['timers'];
   signOutTimeoutMs?: number;
+  /** Gate awaited before the first remote request of every cycle (deterministic race tests). */
+  ready?: () => Promise<void>;
 }
 
 export const U1 = '00000000-0000-4000-8000-000000000001';
@@ -80,7 +82,7 @@ export async function createDevice(name: string, server: FakeRemoteServer, optio
     localData,
     loadRemote: async () => remote,
     kv,
-    auth: { currentUserId: () => user.id },
+    auth: { currentUserId: () => user.id, ...(options.ready ? { ready: options.ready } : {}) },
     locks: options.locks ?? noLocks,
     clock: tick,
     connectivity: { isOnline: () => online.value },

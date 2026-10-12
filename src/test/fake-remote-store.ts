@@ -7,8 +7,8 @@
 import type { PullCursor, RemoteChanges, RemotePrefs } from '../data/repositories';
 import { compareStamps } from '../domain/sync';
 import type { Goal, ISODateTime, LogEntry } from '../domain/types';
-import { entryToRow, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, prefsToRow } from '../integration/supabase/mapper';
-import { chunk, FETCH_IDS_BATCH_MAX, PUSH_BATCH_MAX, RemoteError, type FetchedRows, type PulledPrefs, type PullPage, type RemoteStore, type RemoteTable } from '../services/remote-store';
+import { entryRowSchema, entryToRow, goalRowSchema, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, prefsToRow } from '../integration/supabase/mapper';
+import { chunk, FETCH_IDS_BATCH_MAX, NO_REJECTS, PUSH_BATCH_MAX, RemoteError, type FetchedRows, type PulledPrefs, type PullPage, type PushResult, type RemoteStore, type RemoteTable } from '../services/remote-store';
 
 type Row = Record<string, unknown> & { id: string; user_id: string; updated_at: string; server_updated_at: string };
 type PrefRow = Record<string, unknown> & { user_id: string; server_updated_at: string };
@@ -138,15 +138,20 @@ export class FakeRemoteStore implements RemoteStore {
     }
   }
 
-  async push(changes: RemoteChanges): Promise<void> {
-    for (const batch of chunk(changes.goals, PUSH_BATCH_MAX)) {
+  async push(changes: RemoteChanges): Promise<PushResult> {
+    const result = NO_REJECTS();
+    // Same rule as `SupabaseRemoteStore`: rows the cloud schema refuses are reported, never stored (M7-D1).
+    const goals = changes.goals.map((g) => goalToRow(g, this.userId)).filter((row) => goalRowSchema.safeParse(row).success || !result.rejected.goals.push(String(row.id)));
+    const entries = changes.entries.map((e) => entryToRow(e, this.userId)).filter((row) => entryRowSchema.safeParse(row).success || !result.rejected.entries.push(String(row.id)));
+    for (const batch of chunk(goals, PUSH_BATCH_MAX)) {
       await this.guard('push', batch.length);
-      for (const g of batch) this.server.upsert('goals', this.userId, goalToRow(g, this.userId));
+      for (const row of batch) this.server.upsert('goals', this.userId, row);
     }
-    for (const batch of chunk(changes.entries, PUSH_BATCH_MAX)) {
+    for (const batch of chunk(entries, PUSH_BATCH_MAX)) {
       await this.guard('push', batch.length);
-      for (const e of batch) this.server.upsert('entries', this.userId, entryToRow(e, this.userId));
+      for (const row of batch) this.server.upsert('entries', this.userId, row);
     }
+    return result;
   }
 
   async fetchByIds(ids: { goals: string[]; entries: string[] }): Promise<FetchedRows> {

@@ -13,7 +13,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
-  workers: process.env.CI ? 1 : undefined,
+  // 8 workers: with 12+ the heavy specs (axe on every screen, large datasets) hit their timeouts (QC M7 r1 §9.2).
+  workers: process.env.CI ? 1 : 8,
   reporter: [['list'], ['html', { open: 'never' }]],
   timeout: 60_000,
   expect: { timeout: 10_000 },

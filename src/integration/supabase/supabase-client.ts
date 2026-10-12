@@ -5,9 +5,9 @@ import type { CloudConfig } from '../../config/env';
 import type { PullCursor, RemoteChanges, RemotePrefs } from '../../data/repositories';
 import type { Goal, LogEntry } from '../../domain/types';
 import { displayName, type AuthEvent, type AuthPort, type AuthSession } from '../../services/auth-port';
-import { chunk, FETCH_IDS_BATCH_MAX, PUSH_BATCH_MAX, REMOTE_TIMEOUT_MS, RemoteError, type FetchedRows, type PulledPrefs, type PullPage, type RemoteStore, type RemoteTable } from '../../services/remote-store';
+import { chunk, FETCH_IDS_BATCH_MAX, isConstraintRejection, NO_REJECTS, PUSH_BATCH_MAX, REMOTE_TIMEOUT_MS, RemoteError, type FetchedRows, type PulledPrefs, type PullPage, type PushResult, type RemoteStore, type RemoteTable } from '../../services/remote-store';
 import { AUTH_STORAGE_KEY, clearPkceVerifiers, clearStoredSession } from './loader';
-import { entryToRow, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, prefsToRow } from './mapper';
+import { entryRowSchema, entryToRow, goalRowSchema, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, prefsToRow } from './mapper';
 
 export interface SupabaseClientOptions {
   /** Defaults to `localStorage`; tests pass an in-memory adapter. */
@@ -151,13 +151,14 @@ interface PostgrestLikeError {
 /** Map a PostgREST/fetch failure to a `RemoteError` (NFR-15). */
 export function toRemoteError(status: number, error: PostgrestLikeError | null, cause?: unknown): RemoteError {
   const message = error?.message ?? 'unknown';
-  if (status === 401 || status === 403 || error?.code === 'PGRST301' || error?.code === '42501') return new RemoteError('SYNC_UNAUTHORIZED', `HTTP ${status}: ${message}`, { cause });
+  const meta = { cause, status, pgCode: error?.code };
+  if (status === 401 || status === 403 || error?.code === 'PGRST301' || error?.code === '42501') return new RemoteError('SYNC_UNAUTHORIZED', `HTTP ${status}: ${message}`, meta);
   if (status === 0) {
     const aborted = /abort/i.test(message) || /abort/i.test(error?.hint ?? '');
-    if (aborted) return new RemoteError('SYNC_UNREACHABLE', `timeout: ${message}`, { cause });
-    return new RemoteError('SYNC_OFFLINE', `network: ${message}`, { cause });
+    if (aborted) return new RemoteError('SYNC_UNREACHABLE', `timeout: ${message}`, meta);
+    return new RemoteError('SYNC_OFFLINE', `network: ${message}`, meta);
   }
-  return new RemoteError('SYNC_UNREACHABLE', `HTTP ${status}: ${message}`, { cause });
+  return new RemoteError('SYNC_UNREACHABLE', `HTTP ${status}: ${message}`, meta);
 }
 
 export interface SupabaseRemoteStoreOptions {
@@ -166,6 +167,9 @@ export interface SupabaseRemoteStoreOptions {
 }
 
 const stripQuotes = (v: string) => v.replace(/"/g, '');
+
+/** PostgREST `in.(…)` element: always double-quoted, backslash and double quote escaped (NV-8: ids are free text from backups). */
+export const quoteInValue = (v: string): string => `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 /**
  * `RemoteStore` on `supabase.from(...)`. Every row sent carries `user_id`; RLS + the triggers
@@ -206,27 +210,45 @@ export class SupabaseRemoteStore implements RemoteStore {
     }
   }
 
-  async push(changes: RemoteChanges): Promise<void> {
+  async push(changes: RemoteChanges): Promise<PushResult> {
     const uid = await this.uid();
-    for (const batch of chunk(changes.goals, PUSH_BATCH_MAX)) {
-      await this.run((signal) => withSignal(this.client.from('goals').upsert(batch.map((g) => goalToRow(g, uid)), { onConflict: 'user_id,id' }), signal));
-    }
-    for (const batch of chunk(changes.entries, PUSH_BATCH_MAX)) {
-      await this.run((signal) => withSignal(this.client.from('entries').upsert(batch.map((e) => entryToRow(e, uid)), { onConflict: 'user_id,id' }), signal));
+    const result = NO_REJECTS();
+    // Rows the cloud schema (= SQL check constraints) refuses never leave the device (M7-D1).
+    const goals = changes.goals.map((g) => goalToRow(g, uid)).filter((row) => goalRowSchema.safeParse(row).success || !result.rejected.goals.push(String(row.id)));
+    const entries = changes.entries.map((e) => entryToRow(e, uid)).filter((row) => entryRowSchema.safeParse(row).success || !result.rejected.entries.push(String(row.id)));
+    for (const batch of chunk(goals, PUSH_BATCH_MAX)) await this.pushRows('goals', batch, result.rejected.goals);
+    for (const batch of chunk(entries, PUSH_BATCH_MAX)) await this.pushRows('entries', batch, result.rejected.entries);
+    return result;
+  }
+
+  /** One upsert; a constraint rejection (400, SQLSTATE 22xxx/23xxx) splits the batch so only the bad rows are isolated. */
+  private async pushRows(table: RemoteTable, rows: Array<Record<string, unknown>>, rejected: string[]): Promise<void> {
+    if (rows.length === 0) return;
+    try {
+      await this.run((signal) => withSignal(this.client.from(table).upsert(rows, { onConflict: 'user_id,id' }), signal));
+    } catch (e) {
+      if (!isConstraintRejection(e)) throw e;
+      if (rows.length === 1) {
+        rejected.push(String(rows[0].id));
+        return;
+      }
+      const mid = Math.ceil(rows.length / 2);
+      await this.pushRows(table, rows.slice(0, mid), rejected);
+      await this.pushRows(table, rows.slice(mid), rejected);
     }
   }
 
   async fetchByIds(ids: { goals: string[]; entries: string[] }): Promise<FetchedRows> {
     const out: FetchedRows = { goals: [], entries: [], serverUpdatedAt: {}, skippedInvalid: 0 };
     for (const batch of chunk(ids.goals, FETCH_IDS_BATCH_MAX)) {
-      const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('goals').select('*').in('id', batch), signal))) ?? [];
+      const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('goals').select('*').filter('id', 'in', `(${batch.map(quoteInValue).join(',')})`), signal))) ?? [];
       const m = mapGoalRows(rows);
       out.goals.push(...m.rows);
       Object.assign(out.serverUpdatedAt, m.serverUpdatedAt);
       out.skippedInvalid += m.skippedInvalid;
     }
     for (const batch of chunk(ids.entries, FETCH_IDS_BATCH_MAX)) {
-      const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('entries').select('*').in('id', batch), signal))) ?? [];
+      const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('entries').select('*').filter('id', 'in', `(${batch.map(quoteInValue).join(',')})`), signal))) ?? [];
       const m = mapEntryRows(rows);
       out.entries.push(...m.rows);
       Object.assign(out.serverUpdatedAt, m.serverUpdatedAt);

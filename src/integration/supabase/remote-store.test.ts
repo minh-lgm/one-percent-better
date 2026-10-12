@@ -3,7 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { startMockSupabase, USERS, type MockSupabase } from '../../../e2e/mock-supabase/server.mjs';
 import { describeRemoteStoreContract, goalRaw, type ContractHarness } from '../../services/remote-store.contract';
-import { createSupabase, SupabaseRemoteStore } from './supabase-client';
+import { createSupabase, quoteInValue, SupabaseRemoteStore } from './supabase-client';
 
 let mock: MockSupabase;
 
@@ -70,6 +70,39 @@ describe('SupabaseRemoteStore error mapping (M7-AC5, NFR-15)', () => {
       await fetch(`${mock.url}/__test/fail?path=rest&status=${status}&times=1`);
       await expect(store.pull('goals', null, 10)).rejects.toMatchObject({ code: 'SYNC_UNAUTHORIZED' });
     }
+  });
+
+  it('(M7-D1) a batch the server rejects with a constraint error (400 / 23514) is split: only the bad row is reported, the rest is stored', async () => {
+    // The row passes the client schema; only the server refuses it (a constraint the mapper does not mirror).
+    const rejecting: typeof fetch = async (input, init) => {
+      const body = typeof init?.body === 'string' ? init.body : '';
+      if (init?.method === 'POST' && String(input).includes('/rest/v1/goals') && body.includes('"id":"server-no"')) {
+        return new Response(JSON.stringify({ code: '23514', message: 'new row for relation "goals" violates check constraint', details: null, hint: null }), { status: 400, headers: { 'content-type': 'application/json' } });
+      }
+      return fetch(input, init);
+    };
+    const store = await storeFor('u1', rejecting);
+    const goals = ['a1', 'server-no', 'a3', 'a4', 'a5'].map((id) => ({ ...goalRaw(id, '2026-10-09T03:00:00.000Z') }));
+    const r = await store.push({ goals: goals.map((g) => ({ id: String(g.id), name: String(g.name), why: '', targetType: 'daily' as const, targetMinutes: 30, startDate: '2026-10-01', endDate: '2026-10-31', archived: false, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-09T03:00:00.000Z', deletedAt: null })), entries: [] });
+    expect(r.rejected).toEqual({ goals: ['server-no'], entries: [] });
+    expect((await store.pull('goals', null, 100)).rows.map((g) => g.id).sort()).toEqual(['a1', 'a3', 'a4', 'a5']);
+    // Other 400s (not a data/constraint SQLSTATE) are still a failure of the cycle, never a silent rejection.
+    const broken: typeof fetch = async (input, init) =>
+      init?.method === 'POST' && String(input).includes('/rest/v1/entries') ? new Response(JSON.stringify({ code: 'PGRST102', message: 'bad body' }), { status: 400, headers: { 'content-type': 'application/json' } }) : fetch(input, init);
+    const store2 = await storeFor('u1', broken);
+    await expect(store2.push({ goals: [], entries: [{ id: 'e1', goalId: 'a1', date: '2026-10-05', minutes: 5, note: '', source: 'manual', createdAt: '2026-10-05T00:00:00.000Z', updatedAt: '2026-10-09T03:00:00.000Z', deletedAt: null }] })).rejects.toMatchObject({ code: 'SYNC_UNREACHABLE', status: 400, pgCode: 'PGRST102' });
+    await fetch(`${mock.url}/__test/reset`);
+  });
+
+  it('(NV-8) ids with quotes, backslashes, commas and parentheses round-trip through fetchByIds (`in.(…)` quoting)', async () => {
+    const store = await storeFor('u1');
+    const ids = ['plain', 'with,comma', 'with(paren)', 'with"quote', 'back\\slash', 'mix",\\(x)'];
+    expect(quoteInValue('a"b\\c')).toBe('"a\\"b\\\\c"');
+    await store.push({ goals: ids.map((id) => ({ id, name: 'N', why: '', targetType: 'daily' as const, targetMinutes: 30, startDate: '2026-10-01', endDate: '2026-10-31', archived: false, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-09T03:00:00.000Z', deletedAt: null })), entries: [] });
+    const fetched = await store.fetchByIds({ goals: ids, entries: [] });
+    expect(fetched.goals.map((g) => g.id).sort()).toEqual([...ids].sort());
+    expect((await store.fetchByIds({ goals: ['with"quote'], entries: [] })).goals.map((g) => g.id)).toEqual(['with"quote']);
+    await fetch(`${mock.url}/__test/reset`);
   });
 
   it('network failure (TypeError: Failed to fetch) → SYNC_OFFLINE', async () => {

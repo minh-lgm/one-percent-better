@@ -10,7 +10,6 @@ import { checkParity, flattenMessages, variablesOf } from './parity';
 export const SAME_VALUE_ALLOWLIST = [
   'app.name',
   'app.shortName',
-  'app.brandSuffix',
   'doc.title',
   'settings.language.title',
   'settings.language.option.en',

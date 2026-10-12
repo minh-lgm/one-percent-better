@@ -30,9 +30,24 @@ export interface FetchedRows extends RemoteChanges {
   skippedInvalid: number;
 }
 
+/** Rows the cloud will never take (schema / check constraint): left on the device, flagged, never retried as they are (M7-D1). */
+export interface PushResult {
+  rejected: { goals: string[]; entries: string[] };
+}
+
+export const NO_REJECTS = (): PushResult => ({ rejected: { goals: [], entries: [] } });
+
+export function rejectedCount(r: PushResult): number {
+  return r.rejected.goals.length + r.rejected.entries.length;
+}
+
 export interface RemoteStore {
-  /** Upsert in batches (≤ 500 rows per table), goals before entries, `onConflict 'user_id,id'`. The server trigger decides LWW. */
-  push(changes: RemoteChanges): Promise<void>;
+  /**
+   * Upsert in batches (≤ 500 rows per table), goals before entries, `onConflict 'user_id,id'`. The server
+   * trigger decides LWW. Rows that fail the cloud schema are not sent (or are isolated when the server
+   * rejects a batch with a constraint error) and come back in `rejected`; the other rows still land.
+   */
+  push(changes: RemoteChanges): Promise<PushResult>;
   /** The canonical server rows for the given ids (batches of ≤ 100 ids per request). */
   fetchByIds(ids: { goals: string[]; entries: string[] }): Promise<FetchedRows>;
   /** Keyset page after `cursor` (`server_updated_at`, then `id`), ascending, at most `limit` rows. */
@@ -46,14 +61,26 @@ export interface RemoteStore {
 
 /** Failure of a remote call, already mapped to a `SyncErrorCode` (NFR-15). */
 export class RemoteError extends Error {
+  /** HTTP status (0 = network), when known. */
+  readonly status?: number;
+  /** Postgres SQLSTATE or PostgREST code, when the server sent one. */
+  readonly pgCode?: string;
+
   constructor(
     readonly code: Exclude<SyncErrorCode, 'SYNC_REMOTE_INVALID'>,
     message: string,
-    options?: { cause?: unknown },
+    options?: { cause?: unknown; status?: number; pgCode?: string },
   ) {
-    super(message, options);
+    super(message, options?.cause !== undefined ? { cause: options.cause } : undefined);
     this.name = 'RemoteError';
+    if (options?.status !== undefined) this.status = options.status;
+    if (options?.pgCode !== undefined) this.pgCode = options.pgCode;
   }
+}
+
+/** A 400 whose SQLSTATE is a data exception (22xxx) or an integrity-constraint violation (23xxx): the row, not the network. */
+export function isConstraintRejection(e: unknown): boolean {
+  return isRemoteError(e) && e.status === 400 && /^2[23]/.test(e.pgCode ?? '');
 }
 
 export function isRemoteError(e: unknown): e is RemoteError {

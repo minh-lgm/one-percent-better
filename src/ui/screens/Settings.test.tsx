@@ -22,7 +22,7 @@ describe('Settings (M1-AC10, M1-AC16, M1-AC17)', () => {
     await waitFor(() => expect(screen.getByText(en.settings.storage.protected)).toBeInTheDocument());
     expect(screen.getByText(en.settings.storage.protectedDesc)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: en.settings.about.title })).toBeInTheDocument();
-    expect(screen.getByText(en.app.name)).toBeInTheDocument();
+    expect(screen.getAllByText(en.app.name).length).toBeGreaterThan(0); // nav brand (M7 brand) + About card
     const enOption = screen.getByRole('radio', { name: 'English' });
     const viOption = screen.getByRole('radio', { name: 'Tiếng Việt' });
     expect(enOption).toBeChecked();

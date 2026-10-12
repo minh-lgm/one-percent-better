@@ -175,6 +175,18 @@ export function describeRemoteStoreContract(name: string, setup: () => Promise<C
       expect((await u2.fetchByIds({ goals: ['g1'], entries: [] })).goals[0].name).toBe('Mine');
     });
 
+    it('(M7-D1) push: a row the cloud schema refuses (id > 64 chars) is reported in `rejected`, the other rows still land', async () => {
+      const h = await setup();
+      await h.reset();
+      const u1 = h.as('u1');
+      const long = 'x'.repeat(65);
+      const r = await u1.push({ goals: [G('g1', T0), G(long, T0), G('g3', T0)], entries: [E('e1', 'g1', T0), { ...E('e2', 'g1', T0), goalId: long }, { ...E(long, 'g1', T0) }] });
+      expect(r.rejected).toEqual({ goals: [long], entries: ['e2', long] });
+      expect((await u1.pull('goals', null, 500)).rows.map((x) => x.id).sort()).toEqual(['g1', 'g3']);
+      expect((await u1.pull('entries', null, 500)).rows.map((x) => x.id)).toEqual(['e1']);
+      expect(await u1.push({ goals: [G('g4', T0)], entries: [] })).toEqual({ rejected: { goals: [], entries: [] } });
+    });
+
     it('invalid rows on the server are skipped and counted; valid ones still come back', async ({ skip }) => {
       const h = await setup();
       const seedRaw = h.seedRaw;

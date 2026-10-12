@@ -1,7 +1,8 @@
 // M7-AC8 (triggers + indicator), M7-AC9 (deletion propagates, device-only state stays), M7-AC10
 // (same-record conflict), M7-AC13 (401, hostile data, invalid rows, no page errors).
 import { expect, test } from './fixtures';
-import { createGoal, EN, expectAxeClean, freezeClock, goalCard, gotoHash, importBackup, kvGet, logTime, startTimer, timerCard } from '../helpers/app';
+import { readFileSync } from 'node:fs';
+import { createGoal, EN, expectAxeClean, fixturePath, freezeClock, goalCard, gotoHash, importBackup, kvGet, logTime, startTimer, timerCard } from '../helpers/app';
 import { accountCard, C1, collectErrors, expectSyncState, pendingCount, signInAsMinh, syncIndicator, syncNow } from './helpers';
 
 const READ = { name: 'Read', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' };
@@ -203,5 +204,84 @@ test.describe('M7-AC13 fault tolerance and untrusted cloud data (NFR-05, NFR-15)
     await expect(page.getByRole('table')).not.toContainText('5000');
     expect(dialogs).toBe(0);
     expect(errors.list).toEqual([]);
+  });
+});
+
+// ---- QC M7 round 1 regressions ----
+
+/** Phase-1 data path: a goal (+ one entry) whose id is longer than the cloud accepts, written straight into IndexedDB (dirty, live). */
+async function plantLongIdGoal(page: Parameters<typeof gotoHash>[0], id: string): Promise<void> {
+  await page.evaluate(
+    (longId) =>
+      new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('one-percent-better');
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction(['goals', 'entries'], 'readwrite');
+          const stamp = '2026-10-08T01:00:00.000Z';
+          tx.objectStore('goals').put({ id: longId, name: 'Legacy id', why: '', targetType: 'daily', targetMinutes: 10, startDate: '2026-10-01', endDate: '2026-10-31', archived: false, createdAt: stamp, updatedAt: stamp, deletedAt: null, dirty: 1 });
+          tx.objectStore('entries').put({ id: 'legacy-e1', goalId: longId, date: '2026-10-08', minutes: 10, note: '', source: 'manual', createdAt: stamp, updatedAt: stamp, deletedAt: null, dirty: 1 });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    id,
+  );
+}
+
+test.describe('M7-D1 a row the cloud refuses must not freeze sync (poison pill)', () => {
+  test('a legacy goal with a 70-char id stays on the device, flagged; the 5 valid goals / 23 entries still reach the account; the importer refuses such ids up front', async ({ page, mock }) => {
+    const errors = collectErrors(page);
+    await freezeClock(page);
+    await importBackup(page);
+    const longId = 'x'.repeat(70);
+    await plantLongIdGoal(page, longId);
+    await signInAsMinh(page);
+    await expectSyncState(page, 'synced', 20_000);
+    await expect.poll(() => pendingCount(page)).toBe(0);
+    await expect(page.getByTestId('remote-invalid')).toContainText(EN.errors.SYNC_REMOTE_INVALID);
+    await expect(page.getByTestId('sync-error')).toHaveCount(0);
+    const live = await mock.liveRows('u1');
+    expect(live.goals.map((g) => g.id).sort()).toEqual(['g1', 'g2', 'g3', 'g4', 'g5']);
+    expect(live.entries).toHaveLength(23);
+    // Nothing lost on the device: the legacy goal is still there, still usable.
+    await gotoHash(page, '/goals');
+    await expect(page.getByRole('heading', { level: 3, name: 'Legacy id' })).toBeVisible();
+    // A later change still syncs normally (the flagged row never blocks a batch).
+    await gotoHash(page, '/today');
+    await logTime(page, 'Guitar', 5);
+    await expect.poll(async () => (await mock.liveRows('u1')).entries.length, { timeout: 10_000 }).toBe(24);
+    await expectSyncState(page, 'synced', 10_000);
+
+    // Importer: a backup whose goal id is 65 characters is refused before anything changes (same limit as the cloud).
+    const file = JSON.parse(readFileSync(fixturePath('sample-backup.json'), 'utf8')) as { goals: Array<{ id: string }>; entries: Array<{ goalId: string }> };
+    const bad = 'y'.repeat(65);
+    for (const e of file.entries) if (e.goalId === file.goals[0].id) e.goalId = bad;
+    file.goals[0].id = bad;
+    await gotoHash(page, '/settings');
+    await page.getByTestId('import-file').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByText(EN.errors.IMPORT_INVALID_SCHEMA)).toBeVisible();
+    expect((await mock.liveRows('u1')).goals).toHaveLength(5);
+    expect(errors.list).toEqual([]);
+  });
+});
+
+test.describe('M7-D3 live region after offline with nothing waiting', () => {
+  test('offline (all synced) → online: "All changes are synced." is announced despite the transient syncing', async ({ page, context }) => {
+    await createGoal(page, READ);
+    await signInAsMinh(page);
+    await expectSyncState(page, 'synced');
+    const live = page.getByTestId('sync-announce');
+    await context.setOffline(true);
+    await expectSyncState(page, 'offline');
+    await expect(live).toHaveText(EN.sync.announce.offline, { timeout: 4_000 });
+    await context.setOffline(false);
+    await expectSyncState(page, 'synced', 20_000);
+    await expect(live).toHaveText(EN.sync.announce.synced, { timeout: 4_000 });
   });
 });

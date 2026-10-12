@@ -93,6 +93,26 @@ describe('AuthService.init — lazy loading (M6-AC5, ADR-18)', () => {
     expect(await syncMeta()).toMatchObject({ userId: USER1.userId, account: { email: USER1.email, name: USER1.name } });
   });
 
+  it('(M7-D2) init({ callbackPending }) with a stored session: signing-in, SDK not loaded, no signed-in emitted for the saved account; a failed callback restores it (M6-D1), a successful one signs in the new account', async () => {
+    await db.kv.put({ key: 'sync', value: { userId: USER1.userId, lastUserId: USER1.userId, account: { email: USER1.email, name: USER1.name } } });
+    const port = new FakeAuthPort();
+    const { service, loader, states } = build({ stored: true, port });
+    await service.init({ callbackPending: true });
+    expect(service.state()).toEqual({ kind: 'signing-in' });
+    expect(states.filter((s) => s.kind === 'signed-in')).toEqual([]);
+    expect(loader.state.loads).toBe(0);
+    // Callback fails (stale code) while the stored session is still there → the saved account, not "expired".
+    await service.completeCallback({ error: 'invalid', description: 'stale' });
+    expect(service.state()).toMatchObject({ kind: 'signed-in', userId: USER1.userId, email: USER1.email });
+
+    // Fresh service, same device: the callback brings ANOTHER account → signed-in(u2) is the only signed-in state seen.
+    const b = build({ stored: true, port: new FakeAuthPort() });
+    b.port.exchangeResult = USER2;
+    await b.service.init({ callbackPending: true });
+    await b.service.completeCallback({ code: 'ok' });
+    expect(b.states.filter((s) => s.kind === 'signed-in').map((s) => (s as { userId: string }).userId)).toEqual([USER2.userId]);
+  });
+
   it('stored session that the SDK rejects → expired (email from kv), data untouched', async () => {
     await db.goals.bulkPut(datasetS1().goals);
     await db.kv.put({ key: 'sync', value: { userId: USER1.userId, account: { email: USER1.email, name: USER1.name } } });

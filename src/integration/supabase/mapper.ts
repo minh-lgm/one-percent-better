@@ -3,7 +3,7 @@
 // dropped and counted (NFR-05); nothing from the cloud reaches IndexedDB unchecked.
 // No `@supabase/*` import here: the FakeRemoteStore and the mock share these rules.
 import { z } from 'zod';
-import { DAILY_MINUTES_MAX, DAILY_MINUTES_MIN, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX, GOAL_NAME_MAX, GOAL_WHY_MAX, TOTAL_HOURS_MAX, TOTAL_HOURS_MIN } from '../../config/constants';
+import { DAILY_MINUTES_MAX, DAILY_MINUTES_MIN, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX, GOAL_NAME_MAX, GOAL_WHY_MAX, ID_MAX, TOTAL_HOURS_MAX, TOTAL_HOURS_MIN } from '../../config/constants';
 import { isValidISODate } from '../../domain/dates';
 import { isValidReminderTime } from '../../domain/reminder';
 import type { Goal, ISODateTime, LogEntry } from '../../domain/types';
@@ -36,7 +36,7 @@ const nullableTimestamp = z.unknown().transform((v, ctx) => {
   return t;
 });
 const isoDate = z.string().refine(isValidISODate, 'YYYY-MM-DD');
-const id = z.string().min(1).max(64);
+const id = z.string().min(1).max(ID_MAX);
 
 export const goalRowSchema = z
   .object({
