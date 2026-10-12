@@ -14,9 +14,10 @@
 --danger:#B3261E;--on-danger:#FFFFFF;--danger-soft:#FCE9E7;--on-danger-soft:#8C1D18;
 --info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;
 --heat-0:#E7E5DC;--heat-1:#BFE3CC;--heat-2:#82C69C;--heat-3:#3FA06A;--heat-4:#1F7A4D;
+--google-bg:#FFFFFF;--google-border:#747775;--google-text:#1F1F1F;
 --scrim:rgba(20,28,24,.5);--shadow-1:0 1px 2px rgba(20,30,25,.06);--shadow-2:0 12px 40px rgba(20,30,25,.22);
---r-sm:6px;--r-md:10px;--r-lg:16px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:56px;--content-max:960px}
-@media (prefers-color-scheme:dark){:root{
+--r-sm:6px;--r-md:10px;--r-lg:16px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:56px;--content-max:960px;--chip-h:32px}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
 --bg:#121513;--surface:#1B1F1C;--surface-2:#242925;--border:#343B36;--border-input:#7C867F;
 --text:#ECEFEA;--text-muted:#A3ACA5;
 --primary:#5CC98F;--primary-hover:#7AD6A5;--on-primary:#0C2217;--primary-soft:#1E3328;--on-primary-soft:#A8E6C3;
@@ -24,16 +25,30 @@
 --danger:#FF8A80;--on-danger:#3B0A07;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;
 --info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;
 --heat-0:#2A302C;--heat-1:#24503A;--heat-2:#2F7A55;--heat-3:#43A773;--heat-4:#7FDDA8;
+--google-bg:#131314;--google-border:#8E918F;--google-text:#E3E3E3;
 --scrim:rgba(0,0,0,.6);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 12px 40px rgba(0,0,0,.55)}}
+:root[data-theme=dark]{color-scheme:dark;
+--bg:#121513;--surface:#1B1F1C;--surface-2:#242925;--border:#343B36;--border-input:#7C867F;
+--text:#ECEFEA;--text-muted:#A3ACA5;
+--primary:#5CC98F;--primary-hover:#7AD6A5;--on-primary:#0C2217;--primary-soft:#1E3328;--on-primary-soft:#A8E6C3;
+--plus-bg:#3A2D14;--plus-text:#F5C97F;--plus-border:#6B5224;
+--danger:#FF8A80;--on-danger:#3B0A07;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;
+--info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;
+--heat-0:#2A302C;--heat-1:#24503A;--heat-2:#2F7A55;--heat-3:#43A773;--heat-4:#7FDDA8;
+--google-bg:#131314;--google-border:#8E918F;--google-text:#E3E3E3;
+--scrim:rgba(0,0,0,.6);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 12px 40px rgba(0,0,0,.55)}
+:root[data-theme=light]{color-scheme:light}
+[hidden]{display:none!important}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:400 16px/24px var(--font);-webkit-text-size-adjust:100%}
-h1,h2,h3,p,ul{margin:0}ul{padding:0;list-style:none}
+h1,h2,h3,p,ul,dl,dd{margin:0}ul{padding:0;list-style:none}
 a{color:var(--primary)}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .skip{position:absolute;left:8px;top:-60px;background:var(--surface);padding:8px 12px;border-radius:var(--r-md);z-index:60}
 .skip:focus{top:8px}
 .ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.glogo{width:20px;height:20px;flex:none;display:block}
 .num{font-variant-numeric:tabular-nums}.muted{color:var(--text-muted)}.small{font-size:14px;line-height:20px}
 /* shell */
 .nav{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
@@ -56,10 +71,11 @@ h1{font-size:24px;line-height:30px;font-weight:700}
 @media (min-width:1024px){h1{font-size:28px;line-height:34px}}
 h2{font-size:18px;line-height:26px;font-weight:600}
 /* controls */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:0 16px;border:1px solid transparent;border-radius:var(--r-md);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;background:none;color:var(--text)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:10px 16px;border:1px solid transparent;border-radius:var(--r-md);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;background:none;color:var(--text);text-align:center}
 .btn.primary{background:var(--primary);color:var(--on-primary)}.btn.primary:hover{background:var(--primary-hover)}
 .btn.secondary{background:var(--surface);border-color:var(--border-input)}.btn.secondary:hover{background:var(--surface-2)}
 .btn.danger{background:var(--danger);color:var(--on-danger)}
+.btn[disabled],.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-1)}
 .badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:var(--r-full);font-size:13px;line-height:20px;font-weight:600;background:var(--surface-2);color:var(--text);border:1px solid var(--border);white-space:nowrap}
 .badge.ok{background:var(--primary-soft);color:var(--on-primary-soft);border-color:transparent}
@@ -70,8 +86,11 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 .banner .ic{margin-top:2px}
 .alert{display:flex;gap:10px;align-items:flex-start;padding:12px 16px;border-radius:var(--r-md);background:var(--danger-soft);color:var(--on-danger-soft);font-weight:500}
 .alert .ic{margin-top:2px}
+.alert.info{background:var(--info-soft);color:var(--info)}
+.alert .stack-t{min-width:0;flex:1}.alert strong{display:block}
+.alert .btn{min-height:var(--tap);padding:6px 12px;color:inherit;text-decoration:underline;flex:none}
 .mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
-@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}.spin{animation:none!important}}
 /* screen-specific */
 .sections>*+*{margin-top:16px}
 .card h2{margin-bottom:4px}
@@ -105,6 +124,53 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 .dialog .actions{display:flex;flex-direction:column;gap:8px;margin-top:24px}
 @media (min-width:640px){.dialog .actions{flex-direction:row-reverse;justify-content:flex-start}}
 .preview-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-muted);margin:32px 0 8px}
+/* ---------- Phase 2 ---------- */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin 1s linear infinite}
+.gbtn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:var(--tap);padding:6px 16px 6px 12px;border:1px solid var(--google-border);border-radius:var(--r-md);background:var(--google-bg);color:var(--google-text);font:500 15px/20px var(--font);cursor:pointer;text-align:center;max-width:100%}
+.gbtn:hover{box-shadow:inset 0 0 0 100px color-mix(in srgb,var(--google-text) 8%,transparent)}
+.gbtn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
+@media (max-width:639px){.gbtn.full{width:100%}}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--primary-soft);color:var(--on-primary-soft);display:grid;place-items:center;font-weight:700;font-size:16px;flex:none}
+.who{display:flex;gap:12px;align-items:flex-start;margin-top:12px}
+.who .t{min-width:0;flex:1}
+.who .name{font-weight:700;overflow-wrap:anywhere}
+.who .mail{color:var(--text-muted);font-size:14px;line-height:20px;overflow-wrap:anywhere}
+.dl{margin-top:16px;border-top:1px solid var(--border)}
+.dl>div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.dl dt{color:var(--text-muted);font-size:14px;line-height:20px}
+.dl dd{font-weight:600}
+.signing{display:flex;gap:12px;align-items:flex-start;margin-top:12px}
+.signing p{font-size:14px;line-height:20px;color:var(--text-muted)}
+.syncnote{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:14px;line-height:20px;color:var(--text-muted)}
+.syncnote .ic{width:16px;height:16px;margin-top:2px;color:var(--primary)}
+.status-row{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px;min-height:var(--chip-h);margin-bottom:8px}
+.sync{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:var(--chip-h);padding:4px 12px;border-radius:16px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:14px;line-height:20px;font-weight:600;max-width:100%;text-decoration:none}
+.sync .ic{width:16px;height:16px}
+.sync.synced .ic{color:var(--primary)}
+.sync.syncing,.sync.signingin{color:var(--text)}
+.sync.pending{background:var(--surface-2);color:var(--text)}
+.sync.error{background:var(--danger-soft);border-color:transparent;color:var(--on-danger-soft)}
+.sync.expired{background:var(--info-soft);border-color:transparent;color:var(--info)}
+.sync.expired::after{content:"";position:absolute;inset:-6px 0}
+.sync .retry{position:relative;border:0;background:none;color:inherit;font:inherit;text-decoration:underline;padding:0 0 0 4px;cursor:pointer}
+.sync .retry::after{content:"";position:absolute;inset:-8px -6px}
+.radios{border:0;margin:16px 0 0;padding:0;min-width:0}
+.radios legend{font-weight:600;font-size:15px;margin-bottom:2px;padding:0}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border-input);border-radius:var(--r-md);margin-top:8px;min-height:var(--tap);cursor:pointer}
+.opt input{margin:2px 0 0;width:20px;height:20px;accent-color:var(--primary);flex:none}
+.opt .l{min-width:0}.opt strong{display:block;font-weight:600}
+.opt .d{display:block;color:var(--text-muted);font-size:14px;line-height:20px}
+.opt:has(input:checked){border-color:var(--primary);background:var(--primary-soft)}
+.dlg-form .when-remove{display:none}
+.dlg-form:has(input[value=remove]:checked) .when-keep{display:none}
+.dlg-form:has(input[value=remove]:checked) .when-remove{display:inline}
+.dlg-form:has(input[value=remove]:checked) .confirm-btn{background:var(--danger);color:var(--on-danger)}
+.mock-tools{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:12px 16px;margin-bottom:16px;border:1px dashed var(--border-input);border-radius:var(--r-md);background:var(--surface);font-size:14px}
+.mock-tools label{display:inline-flex;align-items:center;gap:6px;min-height:var(--tap);padding:0 6px;cursor:pointer}
+.mock-tools select{min-height:var(--tap);font:inherit;padding:0 8px;border-radius:var(--r-md);border:1px solid var(--border-input);background:var(--surface);color:var(--text);max-width:100%}
+.mock-tools fieldset{border:0;margin:0;padding:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.mock-tools legend{float:left;margin-right:6px;font-weight:600;padding:0}
 </style>
 </head>
 <body>
@@ -118,6 +184,13 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
 <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></symbol>
 <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4M12 17h.01"/></symbol>
+<symbol id="i-cloud-check" viewBox="0 0 24 24"><path d="M7 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117.2 8.6 4.5 4.5 0 0117 18z"/><path d="M9.5 13.2l2 2 3.5-3.7"/></symbol>
+<symbol id="i-cloud-dot" viewBox="0 0 24 24"><path d="M7 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117.2 8.6 4.5 4.5 0 0117 18z"/><path d="M12 13.5h.01" stroke-width="3.5"/></symbol>
+<symbol id="i-cloud-off" viewBox="0 0 24 24"><path d="M7 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117.2 8.6 4.5 4.5 0 0117 18z"/><path d="M4 4l16 16"/></symbol>
+<symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 11a8 8 0 00-14-4M4 5v3h3M4 13a8 8 0 0014 4M20 19v-3h-3"/></symbol>
+<symbol id="i-lock-open" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 017.5-1.9"/></symbol>
+<symbol id="g-logo" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></symbol>
 </defs></svg>
 <a class="skip" href="#main">Skip to content</a>
 
@@ -131,6 +204,34 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 
 <div class="content">
 <main id="main" tabindex="-1">
+  <div class="mock-tools" role="group" aria-label="Mockup controls (not part of the app)">
+    <label>Account state <select id="mstate">
+      <option value="off">Cloud not configured (phase 1)</option>
+      <option value="out" selected>Cloud on · signed out</option>
+      <option value="ing">Cloud on · signing in</option>
+      <option value="in-synced">Signed in · synced</option>
+      <option value="in-syncing">Signed in · syncing</option>
+      <option value="in-offline">Signed in · offline, 3 pending</option>
+      <option value="in-error">Signed in · sync error</option>
+      <option value="exp">Session expired</option>
+    </select></label>
+    <fieldset><legend>Theme</legend>
+      <label><input type="radio" name="mtheme" value="system" checked> System</label>
+      <label><input type="radio" name="mtheme" value="light"> Light</label>
+      <label><input type="radio" name="mtheme" value="dark"> Dark</label>
+    </fieldset>
+  </div>
+
+  <!-- v2 StatusRow: SyncIndicator replaces the offline chip once signed in (M7) -->
+  <div class="status-row" data-v="in exp ing" role="group" aria-label="Sync status">
+    <span class="sync synced" data-v="synced"><svg class="ic" aria-hidden="true"><use href="#i-cloud-check"/></svg><span>Synced 14:05</span></span>
+    <span class="sync syncing" data-v="syncing"><svg class="ic spin" aria-hidden="true"><use href="#i-sync"/></svg><span>Syncing…</span></span>
+    <span class="sync pending" data-v="offline"><svg class="ic" aria-hidden="true"><use href="#i-cloud-off"/></svg><span>Offline · 3 changes waiting</span></span>
+    <span class="sync error" data-v="error"><svg class="ic" aria-hidden="true"><use href="#i-warn"/></svg><span>Couldn't sync</span><button class="retry" type="button" aria-label="Retry sync"><span>Retry</span></button></span>
+    <a class="sync expired" href="#main" data-v="exp"><svg class="ic" aria-hidden="true"><use href="#i-lock-open"/></svg><span>Sign in again to sync</span></a>
+    <span class="sync signingin" data-v="ing"><svg class="ic spin" aria-hidden="true"><use href="#i-sync"/></svg><span>Signing in…</span></span>
+  </div>
+
   <header class="page-head"><h1>Settings</h1></header>
 
   <div class="sections">
@@ -146,6 +247,50 @@ h2{font-size:18px;line-height:26px;font-weight:600}
         </div>
       </fieldset>
       <p class="hint">The date and time pickers and permission prompts follow your browser's language.</p>
+      <p class="syncnote" data-v="in"><svg class="ic" aria-hidden="true"><use href="#i-cloud-check"/></svg><span>Saved to your account and used on your other devices.</span></p>
+    </section>
+
+    <!-- v2 M6/M7: Account (hidden when the build has no cloud configuration) -->
+    <section class="card" aria-labelledby="h-acct" data-v="cloud">
+      <h2 id="h-acct">Account</h2>
+
+      <!-- A1 / A2-less: signed out -->
+      <div data-v="out">
+        <p class="desc">Sign in with Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.</p>
+        <div class="btn-row"><button class="gbtn full" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button></div>
+        <p class="hint" style="margin-top:8px">From Google, the app only receives your name and email.</p>
+      </div>
+
+      <!-- A3 signing in -->
+      <div data-v="ing" aria-busy="true">
+        <div class="signing" role="status"><svg class="ic spin" aria-hidden="true"><use href="#i-sync"/></svg><div><p style="color:var(--text);font-weight:600">Signing you in…</p><p>Finishing up. This only takes a moment.</p></div></div>
+        <div class="btn-row"><button class="gbtn full" type="button" disabled aria-busy="true"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Signing in…</span></button></div>
+      </div>
+
+      <!-- A5 … A8 signed in -->
+      <div data-v="in">
+        <div class="who"><span class="avatar" aria-hidden="true">M</span>
+          <div class="t"><p class="name">Minh Test</p><p class="mail">minh.test@example.com</p><p class="mail">Signed in with Google</p></div></div>
+        <div class="alert" role="alert" data-v="error" style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><div class="stack-t"><p>Couldn't reach your account just now. Your changes are safe on this device. We'll try again soon, or you can tap Sync now.</p><p class="small" style="margin-top:4px">Trying again at 14:09.</p></div></div>
+        <dl class="dl">
+          <div><dt>Last synced</dt><dd><span data-v="synced syncing">today at 14:05</span><span data-v="offline">2026-10-08 at 21:40</span><span data-v="error">today at 13:52</span></dd></div>
+          <div><dt>Waiting to sync</dt><dd><span data-v="synced">0 changes</span><span data-v="syncing">2 changes</span><span data-v="offline">3 changes</span><span data-v="error">1 change</span></dd></div>
+        </dl>
+        <p class="hint" style="margin-top:12px">Synced with this account: goals, entries, reminder settings and language. A running timer stays on the device where you started it.</p>
+        <div class="btn-row">
+          <button class="btn secondary" type="button" data-v="synced error">Sync now</button>
+          <button class="btn secondary" type="button" aria-disabled="true" data-v="syncing"><svg class="ic spin" aria-hidden="true"><use href="#i-sync"/></svg>Syncing…</button>
+          <button class="btn secondary" type="button" disabled aria-describedby="off-sync" data-v="offline">Sync now</button>
+          <button class="btn secondary" type="button">Sign out</button>
+        </div>
+        <p class="hint" id="off-sync" data-v="offline">You're offline. Changes are saved on this device and sync when you're back online.</p>
+      </div>
+
+      <!-- A10 expired -->
+      <div data-v="exp">
+        <div class="alert info" role="status" style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-lock-open"/></svg><div class="stack-t"><strong>Sign in again</strong><p>Your sign-in expired. Sign in again to keep syncing. Your data, including changes that haven't synced yet, is kept on this device.</p><p class="small" style="margin-top:4px">Account: minh.test@example.com</p></div></div>
+        <div class="btn-row"><button class="gbtn full" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button><button class="btn secondary" type="button">Sign out</button></div>
+      </div>
     </section>
 
     <!-- M2 -->
@@ -170,33 +315,53 @@ h2{font-size:18px;line-height:26px;font-weight:600}
       </div>
       <div class="btn-row"><button class="btn secondary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg>Add reminder to calendar (.ics)</button></div>
       <p class="hint">Adds a repeating daily event at 20:00.</p>
+      <p class="syncnote" data-v="in"><svg class="ic" aria-hidden="true"><use href="#i-cloud-check"/></svg><span>Reminder on/off and time are saved to your account and used on your other devices. Notification permission is set separately on each device.</span></p>
     </section>
 
     <!-- M3 -->
     <section class="card" aria-labelledby="h-bak">
       <h2 id="h-bak">Backup</h2>
-      <p class="desc">Your data lives only on this device. Export a backup now and then, or to move to another device.</p>
+      <p class="desc" data-v="off">Your data lives only on this device. Export a backup now and then, or to move to another device.</p>
+      <p class="desc" data-v="outcopy">Your data lives on this device. Sign in to keep a copy in your account too, or export a backup file now and then.</p>
+      <p class="desc" data-v="in">Your data is saved on this device and synced to your account. A backup file is an extra copy you keep yourself.</p>
       <div class="banner" style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><p>It's been 31 days since your last backup.</p></div>
       <p style="margin-top:12px"><strong>Last backup:</strong> <span class="num">2026-09-08</span></p>
       <div class="btn-row">
         <button class="btn primary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>Export backup (JSON)</button>
         <button class="btn secondary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg>Import backup…</button>
       </div>
-      <p class="hint">Importing replaces everything currently on this device.</p>
+      <p class="hint" data-v="off outcopy">Importing replaces everything currently on this device.</p>
+      <p class="hint" data-v="in">Importing replaces everything on this device and in your account.</p>
+      <!-- v2 M8: ExportSignInHint (appears after a successful Export, signed out only, at most once per 30 days) -->
+      <div class="limit" role="group" aria-label="Automatic backup" data-v="out">
+        <p>Backup downloaded. To keep a copy automatically, sign in with Google: your goals and entries then sync to your account.</p>
+        <div class="btn-row" style="margin-top:12px"><button class="gbtn full" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button></div>
+      </div>
       <div class="alert" role="alert" style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p>This file isn't valid JSON. Choose a backup exported from 1% Better. Nothing was changed.</p></div>
     </section>
 
     <!-- M1 -->
     <section class="card" aria-labelledby="h-sto">
       <h2 id="h-sto">Storage</h2>
-      <div class="perm" style="margin-top:8px"><strong id="sto-l">Protection from automatic clearing</strong><span class="badge ok" aria-labelledby="sto-l sto-v"><span id="sto-v">Protected</span></span></div>
-      <p class="hint">Your browser won't clear this data automatically.</p>
+      <div data-v="off in exp ing">
+        <div class="perm" style="margin-top:8px"><strong id="sto-l">Protection from automatic clearing</strong><span class="badge ok" aria-labelledby="sto-l sto-v"><span id="sto-v">Protected</span></span></div>
+        <p class="hint">Your browser won't clear this data automatically.</p>
+      </div>
+      <div data-v="out">
+        <div class="perm" style="margin-top:8px"><strong id="sto-l2">Protection from automatic clearing</strong><span class="badge" aria-labelledby="sto-l2 sto-v2"><span id="sto-v2">Not protected</span></span></div>
+        <p class="hint">Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.</p>
+        <p class="hint">Signing in also keeps a copy of your data in your account.</p>
+        <div class="btn-row" style="margin-top:8px"><button class="btn secondary" type="button">Go to Account</button></div>
+      </div>
     </section>
 
     <section class="card" aria-labelledby="h-abt">
       <h2 id="h-abt">About</h2>
       <p><strong>1% Better per Day</strong></p>
-      <p class="desc">Everything you log stays on this device. No account, no tracking.</p>
+      <p class="desc" data-v="off">Everything you log stays on this device. No account, no tracking.</p>
+      <p class="desc" data-v="outcopy">Everything you log is saved on this device first. Signing in is optional, and there's no tracking.</p>
+      <p class="desc" data-v="in">Everything you log is saved on this device first and synced to your account. There's no tracking.</p>
+      <p class="hint" data-v="cloud">If you sign in, your goals, entries, reminder settings and language are stored in this app's database (Supabase) under your account. Other people who use the app can't see them.</p>
     </section>
 
     <!-- reference -->
@@ -209,11 +374,12 @@ h2{font-size:18px;line-height:26px;font-weight:600}
         <li><span class="badge">Not supported</span><p>This browser doesn't support notifications. You'll still see a reminder banner in the app.</p></li>
       </ul>
       <p class="hint" style="margin-top:8px">Storage states: "Protected", "Not protected" (Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.), "Unknown".</p>
+      <p class="hint" style="margin-top:8px" data-v="cloud">Phase 2: when reminders are turned on from another device and this one has not allowed notifications, the chip shows "Not asked yet" with "Reminders are on, but this device hasn't allowed notifications yet…" and the Allow notifications button. See 09-account.html section 6.</p>
     </section>
   </div>
 
   <h2 class="preview-title">Dialog preview — Import backup (D3). Real app opens it as a modal &lt;dialog&gt; after the file is validated; initial focus on Cancel.</h2>
-  <div class="dialog" role="group" aria-labelledby="dlg-h">
+  <div class="dialog" role="group" aria-labelledby="dlg-h" data-v="off outcopy">
     <h2 id="dlg-h">Replace all data?</h2>
     <p>This backup has 5 goals, 23 entries, exported 2026-10-09. Importing replaces everything currently on this device (1 goal, 3 entries). This can't be undone.</p>
     <div class="actions">
@@ -221,10 +387,56 @@ h2{font-size:18px;line-height:26px;font-weight:600}
       <button class="btn secondary" type="button">Cancel</button>
     </div>
   </div>
+  <div class="dialog" role="group" aria-labelledby="dlg-h2" data-v="in">
+    <h2 id="dlg-h2">Replace data on all your devices?</h2>
+    <p>This backup has 5 goals, 23 entries, exported 2026-10-09. Importing replaces everything currently on this device (1 goal, 3 entries) and, once synced, everything in your account too, so it changes your other devices as well. This can't be undone.</p>
+    <div class="actions">
+      <button class="btn danger" type="button">Replace all data</button>
+      <button class="btn secondary" type="button">Cancel</button>
+    </div>
+  </div>
 
-  <aside class="mock-note">Mockup S7 Settings. M1: Language + Storage + About. Language: choosing an option applies immediately (no Save button), keeps focus on the option, and shows the toast "Language changed" in the new language; both option labels always stay "English" / "Tiếng Việt". Card order: Language, Reminders, Backup, Storage, About.</aside>
-<aside class="mock-note" style="margin-top:12px">M2: Reminders (switch, time, permission, limits, .ics). M3: Backup (the banner and the red alert are examples of states; only one of them shows at a time in the real app). The "Reference" card is for developers and not part of the real screen.</aside>
+  <h2 class="preview-title" data-v="in">Dialog preview — Sign out (D4). Opens when "Sign out" is pressed; initial focus on the selected "Keep" option. Select "Remove data" to see the destructive variant. All states: 09-account.html.</h2>
+  <form class="dialog dlg-form" role="group" aria-labelledby="d4h" data-v="in" onsubmit="return false">
+    <h2 id="d4h">Sign out?</h2>
+    <p>You'll stop syncing on this device. Your data in your account stays safe.</p>
+    <fieldset class="radios"><legend>What should happen to the data on this device?</legend>
+      <label class="opt"><input type="radio" name="d4" value="keep" checked><span class="l"><strong>Keep data on this device</strong><span class="d">Recommended. You can keep using 1% Better without an account.</span></span></label>
+      <label class="opt"><input type="radio" name="d4" value="remove"><span class="l"><strong>Remove data from this device</strong><span class="d">Deletes your goals, entries and reminder settings on this device. Choose this on a shared device. Your account keeps everything.</span></span></label>
+    </fieldset>
+    <div class="actions"><button class="btn primary confirm-btn" type="button"><span class="when-keep">Sign out</span><span class="when-remove">Sign out and remove data</span></button><button class="btn secondary" type="button">Cancel</button></div>
+  </form>
+
+  <aside class="mock-note">Mockup S7 Settings. M1: Language + Storage + About. Language: choosing an option applies immediately (no Save button), keeps focus on the option, and shows the toast "Language changed" in the new language; both option labels always stay "English" / "Tiếng Việt". Card order: Language, Account (phase 2, only when cloud is configured), Reminders, Backup, Storage, About.</aside>
+  <aside class="mock-note" style="margin-top:12px">M2: Reminders (switch, time, permission, limits, .ics). M3: Backup (the banner and the red alert are examples of states; only one of them shows at a time in the real app). The "Reference" card is for developers and not part of the real screen. Phase 2 (M6–M8): use "Account state" at the top to see the Account card, the sync indicator, the "saved to your account" notes, and the Backup / Storage / About / D3 copy that changes with the account state; the select is a design tool, not part of the app.</aside>
 </main>
 </div>
+
+<script>
+(function(){
+var TOK={
+ "off":["off"],
+ "out":["cloud","out","outcopy"],
+ "ing":["cloud","ing","outcopy"],
+ "in-synced":["cloud","in","synced"],
+ "in-syncing":["cloud","in","syncing"],
+ "in-offline":["cloud","in","offline"],
+ "in-error":["cloud","in","error"],
+ "exp":["cloud","exp","outcopy"]
+};
+function show(state){
+  var t=TOK[state];
+  document.querySelectorAll("[data-v]").forEach(function(el){
+    var want=el.getAttribute("data-v").split(/\s+/);
+    el.hidden=!want.some(function(w){return t.indexOf(w)>=0});
+  });
+}
+var sel=document.getElementById("mstate");
+sel.addEventListener("change",function(){show(sel.value)});
+document.querySelectorAll("input[name=mtheme]").forEach(function(r){r.addEventListener("change",function(){
+  if(r.value==="system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme",r.value)})});
+show(sel.value);
+})();
+</script>
 </body>
 </html>

@@ -1,23 +1,24 @@
 # Design — 1% Better per Day
 
-Phiên bản: v1.1 (mode `revise`, 2026-10-09: thêm tiếng Việt, PRD v1.2). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
+Phiên bản: **v2.0** (mode `revise`, 2026-10-12: phase 2 — đăng nhập Google tuỳ chọn + đồng bộ cloud; PRD v2.1, ARCHITECTURE v2.1, TASKS v2.1). Trước đó v1.1 (2026-10-09, thêm tiếng Việt). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`. **Phase 2 chỉ thêm, không đổi** token, bố cục và copy của phase 1; app build không cấu hình cloud (FR-38) giống hệt thiết kế v1.1.
 Loại app: **GUI** (PWA một người dùng, mobile-first 360 px, dùng tốt trên desktop 1440 px). **UI song ngữ English (`en`) / Tiếng Việt (`vi`)**: mặc định theo `navigator.language`, đổi trong Settings (FR-32 … FR-36). Tài liệu bằng tiếng Việt. **Nguồn sự thật của mọi chuỗi UI là mục 7 (bảng key `en` / `vi`); developer copy nguyên văn từ đó vào `en.json` / `vi.json`.** Các khối "Copy" trong mục 4 là bản `en` để đọc nhanh theo ngữ cảnh; nếu lệch với mục 7 thì mục 7 thắng.
 
 Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 px, tự theo sáng/tối của hệ thống): xem `docs/design/mockups/index.html`. Các mockup viết bằng `en`; riêng Today có thêm bản `vi`.
 
 | Mockup | Màn hình | Milestone chính |
 | :- | :- | :- |
-| `mockups/01-today.html` | S1 Today (banner nhắc, form ghi nhanh, card đạt/chưa đạt) | M1 (+M2 banner) |
-| `mockups/01-today.vi.html` | S1 Today bản tiếng Việt (cùng dữ liệu; tham chiếu độ dài chuỗi `vi` ở 360 px) | M1 (+M2 banner) |
+| `mockups/01-today.html` | S1 Today (banner nhắc, form ghi nhanh, card đạt/chưa đạt). **v2:** bộ chọn trạng thái tài khoản (chưa đăng nhập + LoginPromptBanner, hoặc đã đăng nhập với SyncIndicator 5 trạng thái), nút đổi sáng/tối | M1 (+M2 banner); M7 (SyncIndicator); M8 (LoginPromptBanner) |
+| `mockups/01-today.vi.html` | S1 Today bản tiếng Việt (cùng dữ liệu; tham chiếu độ dài chuỗi `vi` ở 360 px). **v2:** cùng bộ chọn trạng thái tài khoản, chuỗi `vi` | M1 (+M2 banner); M7; M8 |
 | `mockups/02-goals.html` | S2 Goals (nhóm trạng thái, xác nhận xoá) | M1 |
 | `mockups/03-goal-form.html` | S3 Goal form (lỗi inline, gợi ý chỉ tiêu ngày) | M1 |
 | `mockups/04-timer.html` | S1 khi timer chạy + D1 Stop dialog | M2 |
 | `mockups/05-day.html` | S5 Day (ghi bù) | M3 |
 | `mockups/06-review.html` | S6 Review (heatmap, streak, thống kê, biểu đồ tuần/tháng; đổi được All goals / Read) | M4 |
 | `mockups/07-goal-detail.html` | S4 Goal detail với đường cong 1% | M3 (lịch sử) / M5 (đầy đủ) |
-| `mockups/08-settings.html` | S7 Settings (ngôn ngữ, nhắc nhở, backup, storage) | M1–M3 |
+| `mockups/08-settings.html` | S7 Settings (ngôn ngữ, **card Account (v2)**, nhắc nhở, backup, storage, about). **v2:** bộ chọn trạng thái tài khoản (chưa đăng nhập / đang đăng nhập / đã đăng nhập / hết phiên / ngoại tuyến), ghi chú "theo tài khoản", Backup/Storage/About theo trạng thái, D3 biến thể đã đăng nhập | M1–M3; M6 (Account, About); M7 (đồng bộ, D3); M8 (gợi ý Backup/Storage) |
+| `mockups/09-account.html` | **Mới (v2):** bảng tham chiếu mọi trạng thái của card Account, nút Google, SyncIndicator, LoginPromptBanner, ExportSignInHint, dialog D3 (đã đăng nhập), D4, D5. Có nút đổi `English` / `Tiếng Việt` (bản `vi` đầy đủ để kiểm 360 px) và sáng/tối | M6, M7, M8 |
 
-Mockup dùng một đoạn JS nhỏ inline chỉ để sinh heatmap/biểu đồ từ dataset S1 (đúng số liệu trong `TASKS.md`); không có request mạng.
+Mockup dùng một đoạn JS nhỏ inline: (a) sinh heatmap/biểu đồ từ dataset S1 (đúng số liệu trong `TASKS.md`); (b) **v2:** nút đổi giao diện sáng/tối (đặt `data-theme` trên `<html>`, mặc định theo hệ điều hành), bộ chọn trạng thái tài khoản (bật/tắt khối bằng thuộc tính `data-acct`), và ở `09-account.html` đổi `en`/`vi`. Không có request mạng, không CDN, không font ngoài; logo chữ G của Google là SVG inline.
 
 ---
 
@@ -27,7 +28,8 @@ Mockup dùng một đoạn JS nhỏ inline chỉ để sinh heatmap/biểu đồ
 2. **Khích lệ nhẹ, không phô trương.** "+1%" là một viên thuốc (pill) nhỏ màu hổ phách, chỉ xuất hiện khi goal đạt chỉ tiêu ngày. Không confetti, không âm thanh, không điểm/huy hiệu (PRD non-goal). Ngày chưa đạt **không dùng màu đỏ** và không có chữ "failed"/"missed" (A-02: ngày lỡ không trừ). Đỏ chỉ dành cho lỗi và hành động phá huỷ.
 3. **Số liệu trung thực.** Đường cong lý tưởng 1.01^k và đường thực tế 1.01^n vẽ cùng một thang đo; hiển thị đúng con số (một chữ số thập phân), có chú thích cách tính. Heatmap/biểu đồ luôn có bản text tương đương.
 4. **Mobile-first, desktop rộng rãi.** Cùng nội dung, khác bố cục: thanh tab dưới (< 1024 px) → sidebar trái (≥ 1024 px); Review và Goal detail tận dụng chiều rộng để thấy cả heatmap năm.
-5. **Dữ liệu của bạn, nằm trên máy bạn.** Giọng điệu bình tĩnh, nói rõ giới hạn thật (nhắc nhở chỉ khi app mở, cần backup, trình duyệt có thể dọn dữ liệu). Không dọa, không đổ lỗi người dùng.
+5. **Dữ liệu của bạn, nằm trên máy bạn trước.** Giọng điệu bình tĩnh, nói rõ giới hạn thật (nhắc nhở chỉ khi app mở, cần backup, trình duyệt có thể dọn dữ liệu). Không dọa, không đổ lỗi người dùng.
+6. **(Phase 2) Tài khoản là một lựa chọn, không phải một cánh cổng.** Đăng nhập Google chỉ thêm một bản sao an toàn trên cloud; app không bao giờ chặn, không hỏi lặp, không làm chậm việc ghi thời gian vì chưa đăng nhập hoặc vì mất mạng. Mọi chỗ nhắc đăng nhập đều là banner/dòng chữ có "Not now" hoặc có thể bỏ qua, không phải dialog. Mọi nơi nói về dữ liệu phải nói **đúng nơi dữ liệu đang nằm** (chỉ trên máy này / máy này + tài khoản của bạn) và trạng thái đồng bộ phải luôn đọc được, kể cả bằng screen reader.
 
 ---
 
@@ -133,6 +135,9 @@ Khi app đang mở và đã qua giờ nhắc và còn goal chưa đạt:
    <parse + validate OK?> --no--> (!) Alert lỗi theo mã (IMPORT_*), dữ liệu cũ KHÔNG đổi
    --yes--> [D3 Import preview dialog: "5 goals, 23 entries"] --> "Replace all data" / "Cancel"
    --> thay thế trong 1 transaction --> toast "Backup imported: 5 goals, 23 entries"
+(v2, M7) Đã đăng nhập: D3 dùng biến thể "Replace data on all your devices?" (nói rõ import cũng thay dữ liệu trong tài khoản);
+         offline thêm dòng "reaches your account when you're back online"; sau import chỉ báo đồng bộ chuyển "Syncing…" --> "Synced".
+(v2, M8) Chưa đăng nhập + cloud bật + chưa gợi ý trong 30 ngày: sau Export thành công hiện ExportSignInHint trong card Backup (F14).
 ```
 
 ### F8 — Archive / xoá goal (US-12, FR-04) — M1 (xoá), M5 (archive)
@@ -142,6 +147,122 @@ Khi app đang mở và đã qua giờ nhắc và còn goal chưa đạt:
         (đang có timer chạy: dialog thêm dòng "Its running timer will be discarded.")
 "Archive" --> <timer đang chạy trên goal?> --yes--> (!) GOAL_TIMER_RUNNING --> thông báo, không đổi
           --no--> goal sang nhóm "Archived", ẩn khỏi Today/nhắc nhở; "Restore" để đưa lại
+```
+
+### Phase 2 — đăng nhập tuỳ chọn và đồng bộ (v2.0)
+
+Mọi flow dưới đây chỉ tồn tại khi bản build có cấu hình cloud (FR-38). Chưa đăng nhập thì F1–F8 không đổi. Trang đăng nhập/đồng ý của Google là **trang ngoài app**, không thiết kế ở đây.
+
+### F9 — Đăng nhập bằng Google (US-16, FR-39, FR-40) — M6 (banner Today: M8)
+
+```text
+Điểm vào (đều dẫn tới cùng một luồng, khác nhau ở returnTo):
+  [Settings > Account "Sign in with Google"]   returnTo = #/settings            (M6)
+  [Today > LoginPromptBanner "Sign in with Google"]  returnTo = #/today         (M8)
+  [Settings > Backup > ExportSignInHint "Sign in with Google"]  returnTo = #/settings   (M8)
+        |
+        v  bấm nút
+   <online?> --no--> nút `disabled` + dòng "You're offline. Connect to the internet to sign in." (AUTH_OFFLINE nếu vẫn gọi được)
+        |yes
+        v  nút đổi thành "Signing in…" (disabled); lưu returnTo; điều hướng TOÀN TRANG tới Google
+[Trang Google: chọn tài khoản --> đồng ý]   (ngoài app; người dùng có thể bấm Cancel/Back)
+        |--- huỷ ---> về <BASE_URL>?auth=callback&error=access_denied
+        |--- đồng ý -> về <BASE_URL>?auth=callback&code=…
+        v
+[App mở lại] bootstrap đọc + xoá query --> vào ĐÚNG màn returnTo (không nháy màn khác)
+   Account card + StatusRow hiện "Signing in…" (signing-in) trong lúc đổi code lấy phiên
+   <thành công?>
+     |no --> (!) signed-out + lỗi: AUTH_CANCELLED (huỷ) | AUTH_FAILED (lỗi khác, gồm mở callback ở trình duyệt khác)
+     |        Ở Settings: Alert danger trong card Account (có nút "Dismiss"), nút đăng nhập dùng lại được ngay.
+     |        Ở màn khác (Today): toast lỗi (8 s) kèm nút "Go to Account" --> #/settings.
+     |        Dữ liệu cục bộ KHÔNG đổi; không có dialog chặn.
+     |yes--> signed-in: toast "Signed in as <email>"; focus ở <h1> của màn (như mọi lần đổi route)
+              Card Account hiện avatar chữ cái đầu + tên + email.
+              (M7) --> F11 (gộp dữ liệu) --> F13 (đồng bộ)
+```
+Mở app khi offline: phiên đã lưu vẫn hiện (email, tên) và **không** báo lỗi (FR-40); chỉ báo đồng bộ nói "Offline".
+
+### F10 — Đăng xuất, giữ hoặc xoá dữ liệu trên máy (US-19, FR-41) — M6 (cảnh báo chưa đồng bộ: M7)
+
+```text
+[Settings > Account (signed-in)] bấm "Sign out"
+        |
+        v
+[D4 Sign out dialog]  mặc định: (•) Keep data on this device   ( ) Remove data from this device
+   (M7) <còn thay đổi chưa đồng bộ?> --yes--> khối cảnh báo "N changes haven't synced…" + "We'll try to sync before signing you out." (online)
+                                               hoặc "You're offline … they'll sync when you sign in again" (offline)
+   |Cancel / Esc ------------------------------> đóng dialog, vẫn đăng nhập, focus về nút "Sign out"
+   |chọn Remove --> nút primary đổi thành "Sign out and remove data" (danger); (nếu còn thay đổi chưa đồng bộ) hiện thêm
+   |                 "If you remove the data from this device, these changes will be lost."
+   |"Sign out" / "Sign out and remove data"
+        v  nút "Signing out…" (disabled); (M7, online) thử đồng bộ lần cuối, tối đa 10 s
+   <Remove và vẫn còn thay đổi chưa đẩy được?> --yes--> (!) dialog GIỮ MỞ, Alert "Couldn't sync your changes. If you remove the data now, they will be lost."
+                                                        nút đổi "Remove anyway" (danger); người dùng đổi sang Keep hoặc Cancel hoặc xác nhận lại
+   v
+Keep:   signed-out, goal/entry/timer/cài đặt còn nguyên;  toast "Signed out. Your data is still on this device."
+Remove: signed-out, goal/entry/timer/cài đặt nhắc bị xoá, NGÔN NGỮ giữ nguyên; Today về empty "Start with one small goal";
+        toast "Signed out. Data removed from this device."
+Đăng xuất không xoá gì trên cloud. Focus sau khi đóng: tiêu đề card Account.
+ (!) Mất mạng khi đăng xuất không chặn: phiên cục bộ vẫn được xoá (ARCH §5.9).
+```
+
+### F11 — Đăng nhập lần đầu trên máy đã có dữ liệu; đổi sang tài khoản khác (US-16, US-17, FR-47) — M7
+
+```text
+Vừa signed-in (F9)
+   <thiết bị từng gắn tài khoản KHÁC và còn dữ liệu cục bộ?>
+     |no  (chưa từng gắn tài khoản, hoặc cùng tài khoản)
+     |     --> gộp NGAY, không hỏi: dữ liệu chưa đăng nhập được đẩy lên và gộp với dữ liệu trên cloud
+     |         StatusRow "Syncing…" --> "Synced"; toast "Signed in. Your account now has 6 goals, 25 entries."
+     |         (cùng id: bản mới hơn thắng; không có bản ghi nào bị xoá vì việc đăng nhập)
+     |yes  --> [D5 Merge account dialog] (đồng bộ tạm dừng, chưa đẩy gì lên)
+                 "Add this device's data to your account?" nêu số goal/entry + email tài khoản mới
+                 |"Add to account" --> gộp (như nhánh no) --> toast tóm tắt
+                 |"Cancel" / Esc    --> đăng xuất (Keep), KHÔNG đẩy gì lên, toast "Signed out. Your data is still on this device."
+                 Focus ban đầu: "Cancel" (an toàn hơn; không có gì được tải lên cho tới khi người dùng chủ động xác nhận)
+Hết phiên rồi đăng nhập bằng tài khoản Google khác --> rơi vào nhánh "yes" (tài khoản đã lưu ≠ tài khoản mới).
+```
+
+### F12 — Phiên hết hạn (FR-40) — M6 (chỉ báo: M7)
+
+```text
+Refresh token không dùng được / REST trả 401 --> trạng thái `expired` (không có dialog, không chặn)
+   StatusRow: chip info "Sign in again to sync" (là link --> #/settings); aria-live: "Your sign-in expired. …"
+   Account card: Alert info "Your sign-in expired" + email đã lưu + [Sign in with Google] [Sign out]
+   Dữ liệu cục bộ và thay đổi chưa đẩy lên GIỮ NGUYÊN; đồng bộ tạm dừng; app dùng bình thường (ghi, timer, review)
+   Đăng nhập lại (cùng tài khoản) --> F9 --> thay đổi chờ được đẩy lên --> Synced
+   "Sign out" từ trạng thái này --> D4 (không có bước đồng bộ lần cuối vì không có phiên)
+```
+
+### F13 — Đồng bộ nền và chỉ báo (US-17, US-18, FR-45, FR-46, FR-50) — M7
+
+```text
+Ghi cục bộ (tạo/sửa/xoá goal, entry, Save timer, import, đổi giờ nhắc/ngôn ngữ) --> lưu IndexedDB NGAY, UI cập nhật NGAY
+   --> StatusRow: "N changes waiting to sync" (online) hoặc "Offline · N changes waiting" (offline)
+   --> ~2 s sau (gom thay đổi) hoặc khi online / quay lại tab / mỗi 5 phút / bấm "Sync now":
+        "Syncing…" (xoay nhẹ) --> "Synced 14:05"
+   (!) Lỗi mạng/máy chủ: "Couldn't sync · Retry" (chip lỗi); tự thử lại 30 s → tối đa 15 phút; "Retry" / "Sync now" thử ngay
+   (!) 401/403: chuyển `expired` (F12)
+   (!) Dữ liệu cloud sai định dạng: bị bỏ qua, chỉ báo vẫn "Synced"; card Account hiện dòng thông tin SYNC_REMOTE_INVALID
+Thay đổi từ thiết bị khác xuất hiện sau lần đồng bộ kế tiếp (không realtime). Giờ nhắc/ngôn ngữ từ cloud:
+   áp ngay không reload (ngôn ngữ đổi tại chỗ), toast "Settings updated from your account"; KHÔNG tự xin quyền notification.
+```
+
+### F14 — Nhắc đăng nhập nhẹ nhàng (US-20, FR-52, FR-53, FR-54) — M8
+
+```text
+[Today] cloud bật + chưa đăng nhập + online + (≥ 7 ngày từ bản ghi đầu tiên hoặc ≥ 10 entry) + chưa "Not now" trong 14 ngày + chưa đủ 3 lần
+   --> LoginPromptBanner (không modal, không che goal, không chiếm focus)
+        |"Sign in with Google" --> F9 (returnTo #/today)
+        |"Not now" --> banner ẩn, toast "OK. You can sign in any time from Settings.", focus về <h1>;
+                       14 ngày sau hiện lại; sau 3 lần "Not now" không hiện trên Today nữa (Account card vẫn luôn có nút)
+        BackupBanner không hiện cùng lúc (banner đăng nhập ưu tiên); khi banner đăng nhập ẩn do "Not now", BackupBanner hiện như cũ.
+[Settings > Backup] Export thành công + chưa đăng nhập + chưa gợi ý trong 30 ngày
+   --> ngoài toast "Backup exported", dưới hai nút hiện ExportSignInHint (khối thông tin, có nút "Sign in with Google")
+[Settings > Account] chưa đăng nhập: LUÔN có lời giải thích + nút, không có "Not now"
+[Settings > Storage] "Not protected" + cloud bật + chưa đăng nhập: thêm câu gợi ý + nút "Go to Account"
+Không bao giờ hiện lời nhắc đăng nhập khi: cloud tắt, đã đăng nhập, phiên hết hạn (card Account lo). Banner Today còn cần đang online (FR-52);
+ExportSignInHint (FR-53) không xét online: nếu đang offline, nút đăng nhập trong hint bị vô hiệu kèm dòng "You're offline. Connect to the internet to sign in."
 ```
 
 ---
@@ -156,6 +277,8 @@ Khi app đang mở và đã qua giờ nhắc và còn goal chưa đạt:
 - **Tab `Review` chỉ hiện từ M4** (chưa có route). Mục ở M1–M3 chỉ có 3 tab. Link "Log a past day" trên Today chỉ hiện từ M3. Link tên goal → Goal detail chỉ có từ M3.
 - Màn hình con (Goal form, Goal detail, Day) giữ nguyên tab cha được tô sáng: Goal form và Goal detail → `Goals`; Day → `Today`.
 - Mỗi lần đổi route: đặt `document.title` ("Today — 1% Better"), chuyển focus tới `<h1>` của màn mới (`tabindex="-1"`), có skip link "Skip to content" ở đầu trang.
+- **(v2) StatusRow**: một hàng cao 32 px ở **đầu `<main>`**, ngay trên `page-head`, canh phải, dùng chung cho mọi màn trong AppShell (Today, Goals, Goal form/detail, Day, Review, Settings). Nó chứa `OfflineChip` (như v1, canh trái) **hoặc** `SyncIndicator`: khi `AuthState` là `signing-in`, `signed-in` hoặc `expired`, `SyncIndicator` thay chỗ `OfflineChip` (chip sync đã nói "Offline" khi cần); riêng `expired` mà đang offline thì hiện cả hai. Chưa đăng nhập hoặc cloud tắt: hàng này chỉ chứa `OfflineChip` khi offline và **không chiếm chỗ** khi không có gì để hiện (không đổi bố cục phase 1). Đã đăng nhập: hàng luôn hiện (chiều cao cố định 32 px, không nhảy bố cục khi đổi trạng thái).
+- **(v2) Callback OAuth không phải route**: `<BASE_URL>?auth=callback&code=…` (query, trước dấu `#`) được `bootstrap` xử lý và thay bằng `returnTo` (`#/settings` hoặc `#/today`) trước khi render; người dùng không bao giờ thấy màn hình "callback". Không thêm route mới.
 
 ```text
                 ┌──────────── Tab bar / Sidebar ────────────┐
@@ -193,6 +316,9 @@ Không có thanh cuộn ngang ở `documentElement` ở 360–1440 px (NFR-06). 
 | **M3** | S5 Day + DateNav; S4 Goal detail bản cơ bản (thông tin + lịch sử, chưa có chart); Settings mục Backup + D3 ImportPreviewDialog + Alert lỗi import; BackupBanner (Today); link "Log a past day"; tên goal thành link |
 | **M4** | Tab Review + S6 Review; Heatmap; StatCard; BarChart (Recharts, lazy); chip streak trên Today |
 | **M5** | CurveChart + Goal detail đầy đủ (headline, stat, nút Archive); hiệu ứng/announce "+1%" một lần; Archive/Restore + nhóm "Archived"; EmptyState/ErrorState đầy đủ mọi màn; ErrorBoundary; Skeleton/loading rà soát |
+| **M6** *(v2)* | `GoogleSignInButton`; `AccountCard` trong Settings (ẩn khi cloud chưa cấu hình; signed-out, offline, signing-in, signed-in cơ bản [avatar, tên, email, "Sign out"], expired, Alert lỗi `AUTH_*`); `SignOutDialog` (D4, chưa có cảnh báo đồng bộ); `Toast` biến thể lỗi có `action`; card About mới (`settings.about.descCloud/descSignedIn/privacy`); thứ tự card Language → **Account** → Reminders → Backup → Storage → About; chuỗi `settings.account.*`, `auth.signOut.*` (trừ cảnh báo), `auth.signInGoogle`, `errors.AUTH_*`, toast `signedIn/signedOutKept/signedOutRemoved` |
+| **M7** *(v2)* | `SyncIndicator` + StatusRow trong AppShell (5 trạng thái + signing-in); chi tiết đồng bộ trong `AccountCard` (Last synced, Waiting to sync, "Sync now", Alert lỗi `SYNC_*`, dòng `SYNC_REMOTE_INVALID`); `MergeAccountDialog` (D5); cảnh báo chưa đồng bộ trong D4; D3 biến thể đã đăng nhập; ghi chú "theo tài khoản" ở card Language và Reminders + biến thể quyền `default` khi nhắc đã bật từ cloud; mô tả Backup khi đã đăng nhập; toast `mergeDone`, `prefsFromAccount`, `syncNowDone`; chuỗi `sync.*`, `auth.merge.*`, `import.*SignedIn`, `errors.SYNC_*` |
+| **M8** *(v2)* | `LoginPromptBanner` (Today); `ExportSignInHint` (card Backup); gợi ý đăng nhập ở card Storage "Not protected"; mô tả Backup khi chưa đăng nhập; chuỗi `loginPrompt.*`, `exportHint.*`, `settings.backup.descSignedOut`, `settings.storage.notProtectedSignIn` (+ nút dùng `settings.account.goTo`) |
 
 ### 3.4 Bố cục với chuỗi tiếng Việt (rà 360 px)
 
@@ -238,6 +364,31 @@ Chuỗi `vi` thường dài hơn `en` khoảng 10–30 % (nhất là câu hướ
 
 **Kiểm chứng** (NFR-11e, M1-AC18): Playwright viewport 360×740 ở `vi-VN`, `document.documentElement.scrollWidth <= clientWidth` trên Today (có form mở), Goals (đủ 3 nhóm), Goal form (có lỗi ở mọi field), Settings; từ M4 thêm Review (ngoại lệ `.heatmap-scroll`). Mockup tham chiếu: `mockups/01-today.vi.html` (mở ở 360 px, so với `01-today.html`).
 
+### 3.5 Rủi ro 360 px cho thành phần phase 2 (v2.0)
+
+Áp dụng đủ 7 quy tắc chung của 3.4. Số đo ước lượng ở 360 px (nội dung 328 px; trong card ≈ 294 px; trong banner/hint ≈ 296 px). Các chuỗi dài nhất là chuỗi `vi`; chuỗi lấy từ dữ liệu người dùng/Google (tên, email) có thể dài hơn mọi chuỗi dịch.
+
+| Vị trí | Chuỗi / dữ liệu | Ước lượng | Xử lý |
+| :- | :- | :- | :- |
+| Account card: hàng danh tính (avatar 40 px + 12 px khoảng + chữ) | Email dài (`nguyen.thi.hong.nhung.phuong.2026@gmail.com`, 44 ký tự); tên dài (`Nguyễn Thị Hồng Nhung Phương`) | cột chữ còn ≈ 242 px; email 44 ký tự ≈ 320 px; tên 28 ký tự đậm ≈ 230 px | Avatar `flex: none`, canh trên (`align-items: flex-start`); cột chữ `flex: 1; min-width: 0`; tên và email `overflow-wrap: anywhere`, **cho xuống dòng, không cắt `…`**. Tên tối đa 2–3 dòng là chấp nhận được |
+| Nút `Sign in with Google` / `Đăng nhập bằng Google` | 19 / 21 ký tự | logo 20 + khoảng 10 + chữ ≈ 165 + padding 24 = ≈ 220 px | Dưới 640 px nút **rộng đầy** vùng chứa (chữ canh giữa cùng logo); từ 640 px rộng theo nội dung, canh trái. `min-height: 44 px`; chữ được xuống 2 dòng nếu zoom 200 % |
+| Card Account: hàng `Sync now` + `Sign out` | `Đồng bộ ngay` + `Đăng xuất` (cả hai đang bận: `Đang đồng bộ…`) | ≈ 125 + 105 + 8 = 238 px; bận ≈ 150 + 105 + 8 | `.btn-row` đã `flex-wrap`; nút thứ hai xuống hàng khi thiếu chỗ, không thu nhỏ |
+| Card Account: `dl` chi tiết đồng bộ | `Đồng bộ gần nhất` + `hôm nay lúc 14:05`; `Đang chờ đồng bộ` + `12 thay đổi` | nhãn ≈ 130 + giá trị ≈ 140 = 270 px (sát 294) | Mỗi hàng là `flex-wrap: wrap; justify-content: space-between; gap: 2px 12px`: giá trị rơi xuống dòng dưới (canh trái) khi hẹp. Không dùng bảng hai cột cố định |
+| SyncIndicator, chuỗi dài nhất | `Ngoại tuyến · 12 thay đổi đang chờ` (34 ký tự), `1.234 thay đổi đang chờ đồng bộ` (30), `Đăng nhập lại để đồng bộ` (24) | ≈ 230–290 px gồm icon 16 px + padding 24 px, trong 328 px | Chip `white-space: normal`, `max-width: 100%`, có thể 2 dòng (bo góc `--r-md` thay `--r-full` khi 2 dòng nhờ `border-radius: 16px`); `min-height: 32 px` |
+| StatusRow khi `expired` + offline | `Ngoại tuyến — lưu trên thiết bị` (≈ 230 px) + `Đăng nhập lại để đồng bộ` (≈ 200 px) | 430 px > 328 | `flex-wrap: wrap; gap: 8px`; hai chip chồng lên hai dòng, mỗi chip canh theo phía của nó |
+| Chip lỗi `Không đồng bộ được` + nút `Thử lại` | 18 + 7 ký tự | ≈ 170 px | Nút `Thử lại` là vùng bấm 44 px bằng `::after` mở rộng (xem 5, SyncIndicator); không làm chip cao hơn 32 px |
+| LoginPromptBanner | Tiêu đề `Giữ tiến trình của bạn an toàn` (30 ký tự đậm ≈ 245 px) + thân ≈ 105 ký tự (3–4 dòng) + hai nút `Đăng nhập bằng Google` (≈ 220 px) và `Để sau` (≈ 70 px) | cao ≈ 160–210 px | Banner **không có cột icon riêng** ở < 640 px (icon cùng hàng với tiêu đề) để thân chiếm đủ 296 px; hàng nút `flex-wrap`, hai nút thường vừa một hàng (≈ 298 px sát mép) nên **dự phòng** xuống hai hàng; từ 640 px icon thành cột trái và hai nút nằm cùng hàng |
+| ExportSignInHint | thân ≈ 120 ký tự + nút Google | cao ≈ 150 px | Khối chữ rồi nút xếp dọc; nút rộng đầy < 640 px |
+| Dialog D4 (SignOut) | tiêu đề, thân 90 ký tự, 2 radio có mô tả 70–110 ký tự, khối cảnh báo ≈ 200 ký tự (cả `vi`), 2 nút | cao ≈ 560–640 px, vượt 740 px khi có cảnh báo + bàn phím ảo | Dialog `max-height: calc(100dvh - 16px)`, phần nội dung **cuộn bên trong**, hàng nút **dính đáy** (`position: sticky; bottom: 0`, nền `--surface`, viền trên). Radio: nhãn đậm, mô tả `--text-muted` nằm dưới nhãn, cả khối là một vùng chạm ≥ 44 px |
+| Dialog D5 (Merge) | tiêu đề `Thêm dữ liệu trên thiết bị này vào tài khoản của bạn?` (54 ký tự → 3 dòng ở 20 px), email dài trong thân | OK | Email trong thân dùng `overflow-wrap: anywhere`; nút xếp dọc, rộng đầy |
+| Dialog D3 đã đăng nhập | tiêu đề `Thay thế dữ liệu trên mọi thiết bị của bạn?`, thân ≈ 260 ký tự | cuộn nhẹ | Dùng chung quy tắc cuộn nội dung + nút dính đáy với D4 |
+| Toast `vi` | `Đã đăng nhập. Tài khoản của bạn hiện có 6 mục tiêu, 25 lần ghi.` (≈ 64 ký tự) | 2–3 dòng | `max-width: calc(100vw - 32px)`, không `nowrap`. Toast lỗi đăng nhập dùng **bản ngắn** (`toast.signInCancelled/Failed`, ≤ 40 ký tự) + nút `Đến mục Tài khoản`; câu đầy đủ (`errors.AUTH_*`) nằm ở Alert trong card |
+| Ghi chú "theo tài khoản" (card Language, Reminders) | ≈ 110–190 ký tự, có icon 16 px | 3–5 dòng | `.hint` thường có icon đầu dòng (`flex`, `min-width: 0`); không `nowrap` |
+| Card Account (chưa đăng nhập): lời giải thích + dòng riêng tư | ≈ 160 + 60 ký tự | 5–6 dòng | Đặt nút Google **sau** lời giải thích, dòng riêng tư (`.hint`) **sau** nút; không tách thành tooltip |
+| Avatar chữ cái đầu | Tên bắt đầu bằng ký tự có dấu (`Đức`, `Ánh`), emoji, hoặc tên rỗng | 40 px | Lấy **grapheme đầu** (`Intl.Segmenter`, rơi về `Array.from(s)[0]`), viết hoa theo `toLocaleUpperCase(locale)`; tên rỗng → chữ cái đầu của email; không có gì → `?` |
+
+**Kiểm chứng** (M6-AC11, M7-AC15, M8-AC5): Playwright 360×740 ở `vi-VN` — Today (có LoginPromptBanner hoặc SyncIndicator), Settings (signed-out, signed-in với email 44 ký tự, expired), mở D4/D5/D3: `document.documentElement.scrollWidth <= clientWidth`. Mockup tham chiếu: `mockups/09-account.html` bật `Tiếng Việt`, ô "email dài" tick sẵn, mở ở 360 px.
+
 ---
 
 ## 4. Màn hình
@@ -245,26 +396,33 @@ Chuỗi `vi` thường dài hơn `en` khoảng 10–30 % (nhất là câu hướ
 Quy ước chung cho mọi màn hình:
 
 - **Loading** (lần đọc IndexedDB đầu tiên, thường < 100 ms): không hiện gì trong 150 ms đầu (tránh nháy), sau đó hiện Skeleton cùng hình dạng nội dung; vùng chứa có `aria-busy="true"`; một `role="status"` ẩn chứa chữ "Loading…". Review/Goal detail còn có loading cho chunk lazy: Skeleton của stat cards + khung chart.
-- **Offline**: app vẫn dùng bình thường. Khi `navigator.onLine === false` hiện `OfflineChip` nhỏ ở header: "Offline — saved on this device" (`role="status"`, không chặn). Không bao giờ chặn thao tác vì offline.
+- **Offline**: app vẫn dùng bình thường. Khi `navigator.onLine === false` hiện `OfflineChip` nhỏ ở header: "Offline — saved on this device" (`role="status"`, không chặn). Không bao giờ chặn thao tác vì offline. **(v2)** Khi đã đăng nhập, `SyncIndicator` thay `OfflineChip` trong StatusRow (xem 3.1): chữ `Offline · N changes waiting` vừa nói offline vừa nói số thay đổi chưa đồng bộ.
+- **(v2) Đồng bộ và tài khoản**: không màn hình nào chờ mạng hay chờ đồng bộ mới hiển thị; mọi ghi vào IndexedDB trước (FR-45). Lỗi cloud chỉ hiện ở `SyncIndicator` + card Account, không bao giờ làm đổi hay khoá form ghi thời gian. Màn hình mới của phase 2 **không có** (card Account nằm trong Settings, callback OAuth không phải màn).
 - **Lỗi lưu** (StorageError khi ghi): thông báo inline gần form "Couldn't save. Your changes are still in the form — try again." giữ nguyên giá trị đã nhập (M5-AC6).
 - **Không có quyền**: app không có phân quyền người dùng. Trạng thái "quyền" duy nhất là quyền Notification (xem S7).
 - Ngày/giờ/số hiển thị theo quy ước ở mục 7.1 (theo ngôn ngữ đang chọn).
 - **Ngôn ngữ**: mọi chuỗi trong khối *Copy* dưới đây là bản `en`; bản `vi` và **key i18n** của từng chuỗi nằm ở mục 7. Đổi ngôn ngữ trong Settings đổi ngay mọi màn (kể cả màn đang mở, toast đang hiện, `document.title`, `<html lang>`), không reload, không mất dữ liệu đang hiển thị hay giá trị đang nhập trong form (form đang mở giữ nguyên giá trị; chỉ nhãn, hint, lỗi đổi ngôn ngữ). Lỗi validate đang hiện được dịch lại theo ngôn ngữ mới (lưu mã lỗi, không lưu chuỗi).
 - Mỗi màn có trạng thái *default / loading / empty / error / success* như mô tả; trạng thái đó có đủ bản `vi` ở mục 7.
 
-### S1 — Today  (Milestone: M1; M2 timer + banner; M3 link ghi bù + banner backup; M4 chip streak; M5 phản hồi "+1%", empty/error đầy đủ. User story: US-02, US-03, US-04, US-09)
+### S1 — Today  (Milestone: M1; M2 timer + banner; M3 link ghi bù + banner backup; M4 chip streak; M5 phản hồi "+1%", empty/error đầy đủ; **M7 SyncIndicator trong StatusRow; M8 LoginPromptBanner**. User story: US-02, US-03, US-04, US-09, US-18, US-20)
 
 - **Mục đích:** Thấy ngay hôm nay còn thiếu gì và ghi thời gian trong vài giây. Primary action: `Log time` (lặp ở mỗi card goal; card đã đạt hạ xuống nút secondary).
 - **Layout (mobile 360 px):**
 
 ```text
 ┌──────────────────────────────────────┐
+│                      [☁ Synced 14:05]   <- StatusRow (M7, chỉ khi đã đăng nhập)
 │ Today                    [8-day streak]  <- chip từ M4
 │ Friday, October 9                    │
 │ 1 of 3 goals on target               │
 │ ┌ Banner (M2) ──────────────────────┐│  nền --info-soft, icon bell
 │ │ It's past 20:00 — 2 goals are not ││
 │ │ on target yet.                    ││
+│ └───────────────────────────────────┘│
+│ ┌ LoginPromptBanner (M8) ───────────┐│  chỉ khi chưa đăng nhập + đủ điều kiện FR-52
+│ │ ☁ Keep your progress safe         ││  nền --primary-soft; thay BackupBanner
+│ │ Sign in to back up your goals ... ││
+│ │ [G Sign in with Google] [Not now] ││
 │ └───────────────────────────────────┘│
 │ ┌ TimerCard (M2, chỉ khi đang chạy) ┐│  xem mockup 04
 │ └───────────────────────────────────┘│
@@ -283,7 +441,7 @@ Quy ước chung cho mọi màn hình:
 ```
   Desktop ≥ 1024 px: sidebar trái; cột nội dung 720 px căn giữa; nút `Log time` và `Start timer` nằm cạnh nhau, entry hiển thị một dòng.
 
-- **Component dùng:** AppShell, PageHeader, OfflineChip, Banner (ReminderBanner, BackupBanner), TimerCard, GoalCard (ProgressBar, PlusOnePill, Button), EntryForm, EntryRow, ConfirmInline, Toast, EmptyState, Skeleton.
+- **Component dùng:** AppShell (StatusRow: OfflineChip / SyncIndicator), PageHeader, Banner (ReminderBanner, BackupBanner, **LoginPromptBanner**), TimerCard, GoalCard (ProgressBar, PlusOnePill, Button), EntryForm, EntryRow, ConfirmInline, Toast, EmptyState, Skeleton.
 - **Trạng thái:**
   - *default*: các goal `active` (không archived), thứ tự theo `createdAt` tăng dần; goal đang có timer vẫn ở vị trí cũ (TimerCard ghim riêng ở đầu).
   - *loading*: 2 skeleton card.
@@ -294,6 +452,8 @@ Quy ước chung cho mọi màn hình:
   - *timer chạy* (M2): TimerCard ở đầu; mọi nút `Start timer` còn lại bị vô hiệu (`aria-disabled="true"`, mô tả "Stop the running timer first.").
   - *banner nhắc* (M2): hiện khi `shouldShowBanner` (qua giờ nhắc, nhắc đang bật, còn goal chưa đạt), không phụ thuộc quyền notification; biến mất ngay khi mọi goal đạt. Không có nút đóng.
   - *banner backup* (M3, A-12): nền trung tính, nằm dưới banner nhắc.
+  - *banner đăng nhập* (M8, FR-52, **LoginPromptBanner**): nền `--primary-soft`, nằm **dưới banner nhắc, trên TimerCard/danh sách goal**; **ưu tiên hơn BackupBanner** (khi cả hai đủ điều kiện chỉ hiện banner đăng nhập; sau "Not now" thì BackupBanner hiện lại). `<section aria-label="Sign-in suggestion">`, **không** phải dialog (không `role="dialog"`, không `aria-modal`), không tự lấy focus, không che nội dung, ghi entry/timer vẫn dùng bình thường. Gồm tiêu đề `Keep your progress safe`, một câu giải thích, nút `Sign in with Google` (nút Google, `returnTo = #/today`) và `Not now` (ghost). Offline hoặc đã đăng nhập hoặc cloud tắt hoặc hết phiên: không hiện.
+  - *StatusRow* (M7): khi đã đăng nhập, `SyncIndicator` luôn hiện ở đầu `<main>` (5 trạng thái, xem mục 5 và S7); chưa đăng nhập: không có gì (ngoài OfflineChip khi offline).
   - *success*: toast "Entry saved" (4 s, `role="status"`); M5: pill "+1%" xuất hiện kèm hiệu ứng nhẹ đúng một lần/goal/ngày.
   - *error*: lỗi trong form (xem mục 7.3); lỗi lưu storage inline; lỗi nặng → ErrorBoundary/S9.
   - *offline*: OfflineChip; mọi thứ khác không đổi.
@@ -304,6 +464,8 @@ Quy ước chung cho mọi màn hình:
   - `Edit` (entry) → thay dòng entry bằng EntryForm có giá trị sẵn; `Save changes`.
   - `Delete` (entry) → dòng đổi thành "Delete this entry?" + `Delete` (danger) / `Keep`; focus vào `Keep`.
   - `Start timer` → xem F3. `Create your first goal` → `#/goals/new`.
+  - (M8) `Sign in with Google` trong LoginPromptBanner → F9 (nút đổi thành `Signing in…`, rồi điều hướng sang Google). `Not now` → ghi nhận (ẩn 14 ngày, tối đa 3 lần), banner biến mất, toast `loginPrompt.snoozedToast`, **focus chuyển về `<h1>`** (phần tử có focus đã bị gỡ). Banner không có nút ✕ riêng ngoài `Not now`.
+  - (M7) `SyncIndicator` ở trạng thái lỗi: nút `Retry` chạy `syncNow('manual')`; ở trạng thái `expired`: chip là link tới `#/settings`.
 - **Copy:**
   - Tiêu đề trang: `Today`. Dòng ngày: `Friday, October 9`.
   - Tóm tắt: `{n} of {m} goals on target` (m = 1: `{n} of 1 goal on target`). Khi mọi goal đạt: `All {m} goals on target — a little better than yesterday.` (m = 1: `Goal on target — a little better than yesterday.`)
@@ -313,6 +475,7 @@ Quy ước chung cho mọi màn hình:
   - Nhãn entry: `Today's entries`; aria-label nút icon: `Edit entry: 20 min, Ch. 3`, `Delete entry: 20 min, Ch. 3`.
   - Empty: xem 7.4.
   - Link: `Missed a day? Log time for a past day`.
+  - (v2) Banner đăng nhập: tiêu đề `Keep your progress safe`; thân `Sign in to back up your goals and entries online and use them on all your devices. It's optional.`; nút `Sign in with Google`, `Not now`; toast sau `Not now`: `OK. You can sign in any time from Settings.` Chỉ báo đồng bộ: mục 5 (bảng trạng thái) và 7.7.3. Key: `loginPrompt.*`, `sync.indicator.*`.
 
 ### S2 — Goals  (Milestone: M1; tên goal thành link M3; Archive/Restore + nhóm Archived M5. User story: US-01, US-02, US-12)
 
@@ -485,10 +648,10 @@ Quy ước chung cho mọi màn hình:
   - Mobile: vùng heatmap tự cuộn tới tuần hiện tại khi mở.
 - **Copy:** `Review`, `Goal`, `All goals`, `Year`, `Time logged`, `Days on target`, `Current streak`, `Longest streak`, `Progress`, `Pace`, `Activity in {year}`, `Less`, `More`, `Last 12 weeks`, `Months of {year}`, `Pick a goal to see progress and pace.`, `{n} days` (`1 day`), pace: `{x} min ahead` / `{x} min behind` / `On pace` (≥ 60 phút: `{h} h {m} min ahead`), phụ đề card: Time logged `In {year}` (một goal thêm `Whole goal: {h} h`), Progress `{minutes} of {total} min`, Pace `Expected {n} min by today`. Heatmap tóm tắt (SR): `In {year} you logged time on {a} days and hit your target on {b} days. Longest streak: {c} days.` Tooltip/label ô: mục 7.5. Nút: `Retry`, `Create a goal`.
 
-### S7 — Settings  (Milestone: M1 [Language + Storage + About]; M2 [Reminders]; M3 [Backup]. User story: US-09, US-10, US-11, US-13, US-14)
+### S7 — Settings  (Milestone: M1 [Language + Storage + About]; M2 [Reminders]; M3 [Backup]; **M6 [Account, About mới]; M7 [đồng bộ, D3 đã đăng nhập]; M8 [gợi ý Backup/Storage]**. User story: US-09, US-10, US-11, US-13, US-14, US-15 … US-20)
 
-- **Mục đích:** Chọn ngôn ngữ, nhắc nhở, backup, thông tin lưu trữ. Primary action: không có (mỗi card có hành động riêng).
-- **Layout:** 5 card xếp dọc, mỗi card có h2. **Thứ tự card cố định: Language → Reminders → Backup → Storage → About.** Language đứng đầu vì (a) là thiết lập "toàn app" và người dùng lỡ vào nhầm ngôn ngữ cần tìm thấy nó ngay không phải cuộn, (b) tiêu đề card luôn song ngữ `Language / Ngôn ngữ` (cùng một chuỗi ở cả hai bản dịch) nên nhận ra được dù đang ở ngôn ngữ nào. Card chưa có ở milestone nào thì không hiện (M1: Language, Storage, About).
+- **Mục đích:** Chọn ngôn ngữ, **(v2) đăng nhập/đăng xuất và xem trạng thái đồng bộ**, nhắc nhở, backup, thông tin lưu trữ. Primary action: không có (mỗi card có hành động riêng; ở card Account chưa đăng nhập, nút Google là hành động chính của card).
+- **Layout:** 5 card xếp dọc (6 card khi cloud được cấu hình), mỗi card có h2. **Thứ tự card cố định: Language → Account (v2, chỉ khi cloud bật) → Reminders → Backup → Storage → About.** Account đứng ngay sau Language vì (a) Language vẫn đứng đầu theo lý do dưới; (b) giờ nhắc và ngôn ngữ giờ "theo tài khoản", nên người dùng thấy trạng thái đăng nhập ngay trước các thiết lập được đồng bộ; (c) card chưa đăng nhập luôn có nút (FR-54) và không cần cuộn nhiều để thấy. Language đứng đầu vì (a) là thiết lập "toàn app" và người dùng lỡ vào nhầm ngôn ngữ cần tìm thấy nó ngay không phải cuộn, (b) tiêu đề card luôn song ngữ `Language / Ngôn ngữ` (cùng một chuỗi ở cả hai bản dịch) nên nhận ra được dù đang ở ngôn ngữ nào. Card chưa có ở milestone nào thì không hiện (M1: Language, Storage, About).
 
 ```text
 ┌ Language / Ngôn ngữ ─────────────────┐ (M1)
@@ -497,6 +660,17 @@ Quy ước chung cho mọi màn hình:
 │ │  ● English     │   Tiếng Việt    │ │  mỗi nhãn bằng chính ngôn ngữ của nó
 │ └────────────────┴─────────────────┘ │
 │ hint: ô chọn ngày/giờ, hộp xin quyền theo ngôn ngữ trình duyệt
+│ ☁ (đã đăng nhập, M7) Saved to your account ...
+├ Account ─────────────────────────────┤ (M6; ẩn khi cloud chưa cấu hình) — chi tiết từng trạng thái bên dưới
+│ chưa đăng nhập: lời giải thích         │
+│ [ G  Sign in with Google ]             │
+│ dòng riêng tư                          │
+│ ── hoặc, đã đăng nhập ──               │
+│ (M) Minh Test                          │  avatar chữ cái đầu + tên
+│     minh.test@example.com              │  email
+│ Last synced   today at 14:05           │  (M7)
+│ Waiting to sync  0 changes             │  (M7)
+│ [Sync now] [Sign out]                  │
 ├ Reminders ───────────────────────────┤ (M2)
 │ [switch] Daily reminder              │
 │ Reminder time [20:00]                │
@@ -512,7 +686,7 @@ Quy ước chung cho mọi màn hình:
 ├ About ───────────────────────────────┤ (M1)
 └──────────────────────────────────────┘
 ```
-- **Component dùng:** PageHeader, LanguageSwitcher (SegmentedControl), Switch, TimeField, StatusChip, Banner, Alert, Button, ImportPreviewDialog (D3), Toast.
+- **Component dùng:** PageHeader, LanguageSwitcher (SegmentedControl), Switch, TimeField, StatusChip, Banner, Alert, Button, ImportPreviewDialog (D3), Toast; **(v2)** AccountCard (GoogleSignInButton, Avatar, SyncDetails), SignOutDialog (D4), MergeAccountDialog (D5), SettingsSyncNote, ExportSignInHint, StatusRow/SyncIndicator (ở AppShell).
 - **Trạng thái:**
   - *Language* (M1, FR-32 … FR-34): luôn có đúng một lựa chọn được chọn = **ngôn ngữ đang hiển thị** (kết quả `LocaleService.resolve`: lựa chọn đã lưu, nếu chưa có thì ngôn ngữ phát hiện từ trình duyệt). Hai lựa chọn: `English` (`lang="en"`) và `Tiếng Việt` (`lang="vi"`), **hiển thị bằng chính ngôn ngữ của nó ở cả hai chế độ** (nhãn không đổi khi đổi ngôn ngữ). Không có nút Save: chọn là áp dụng ngay. Trạng thái: *default* (một lựa chọn chọn sẵn), *focus* (vòng focus quanh lựa chọn), *hover*, *saving*: ghi kv gần như tức thì nên **không** có spinner; nếu ghi kv lỗi thì giao diện vẫn đổi ngôn ngữ cho phiên này và hiện Alert `settings.language.saveFailed` bên dưới control (lựa chọn không bền qua reload). *Loading/empty*: không áp dụng. *Offline*: không đổi. Chưa từng chọn thì chưa ghi gì vào kv (A-16); mô tả không nêu việc này để khỏi rối.
   - *Reminders*: switch tắt mặc định, giờ `20:00`; khi switch tắt, field giờ bị vô hiệu. **4 trạng thái quyền** (hiển thị bằng StatusChip có chữ + mô tả):
@@ -522,12 +696,86 @@ Quy ước chung cho mọi màn hình:
     - không hỗ trợ → chip `Not supported`; mô tả `This browser doesn't support notifications. You'll still see a reminder banner in the app.`
   - *Backup* (M3): `Last backup: Never` / `Last backup: 2026-10-09`; khi quá 30 ngày hoặc chưa từng và có goal: Banner `It's been {n} days since your last backup.` / `You haven't backed up yet.`; lỗi import hiện Alert (7.3) và không thay đổi dữ liệu; *loading* khi đang đọc/ghi file: nút vô hiệu + `Working…`; *success*: toast.
   - *Storage* (M1): `Protected` (persisted = true) — `Your browser won't clear this data automatically.`; `Not protected` — `Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.`; không hỗ trợ API → `Unknown` + `Your browser doesn't report storage protection. Export a backup now and then.`
-  - *offline*: chip Offline chung; không đổi gì khác.
+  - *offline*: chip Offline chung (đã đăng nhập: SyncIndicator); không đổi gì khác.
+  - **(v2) Card Account** (M6 trở đi; **không render** khi `AuthState = unavailable`, tức cloud chưa cấu hình — FR-38, và khi đó cũng không có D4/D5/SyncIndicator/banner/hint nào). Một card, 10 trạng thái (A1 … A10); bảng dưới là hợp đồng giao diện, mockup `09-account.html` là hình dung:
+
+| # | Trạng thái (`AuthState` + `SyncStatus`) | Nội dung card | Ghi chú / MS |
+| :- | :- | :- | :- |
+| A1 | `signed-out`, online | Lời giải thích `settings.account.descSignedOut`; **nút Google** `Sign in with Google`; dòng riêng tư `settings.account.privacyNote` (`.hint`) | Luôn có (FR-54), **không** có "Not now". M6 |
+| A2 | `signed-out`, offline | Như A1 nhưng nút Google `disabled`, thêm dòng `settings.account.offlineHint` nối bằng `aria-describedby` | M6 |
+| A3 | `signing-in` | Dòng trạng thái `settings.account.signingInStatus` có vòng xoay + `settings.account.signingInBody`; nút Google thay bằng bản `disabled` ghi `Signing in…` | Xuất hiện cả khi vừa bấm (trước khi rời app) và khi quay lại từ Google đang đổi code. M6 |
+| A4 | `signed-out` + `lastError` (`AUTH_CANCELLED` / `AUTH_FAILED`) | Alert danger (`role="alert"`) với `errors.AUTH_*` + nút `Dismiss` ghost, **trên** lời giải thích; nút Google vẫn dùng được ngay | Bấm Google lần nữa hoặc `Dismiss` xoá lỗi. Ở màn khác Settings: toast ngắn `toast.signInCancelled` / `toast.signInFailed` + nút `settings.account.goTo` (7.2). M6 |
+| A5 | `signed-in`, idle, `pending = 0` | Avatar + tên + email + `settings.account.provider`; `dl`: `Last synced` / `Waiting to sync = 0 changes`; dòng `settings.account.syncedInfo` (`.hint`); nút `Sync now` (secondary) + `Sign out` (secondary) | Chưa có M7: chỉ avatar/tên/email/provider + `Sign out` (M6) |
+| A6 | `signed-in`, `syncing` | Như A5; `Sync now` `aria-disabled`, nhãn `Syncing…` | M7 |
+| A7 | `signed-in`, `pending > 0` (online hoặc offline) | Như A5, `Waiting to sync = N changes`; offline: `Sync now` `disabled` + dòng `settings.account.offlineSync` | M7 |
+| A8 | `signed-in`, `error` (`SYNC_OFFLINE` / `SYNC_UNREACHABLE`) | Như A5 + Alert danger `errors.SYNC_*` + dòng `Trying again at {time}.` (`nextRetryAt`); `Sync now` bấm được (bỏ qua backoff) | M7. Không có Alert nếu chỉ offline (A7) |
+| A9 | `signed-in`, idle nhưng có hàng cloud bị bỏ (`SYNC_REMOTE_INVALID`) | Như A5 + dòng thông tin (icon info, `--text-muted`) `errors.SYNC_REMOTE_INVALID`; **không** đổi chỉ báo | M7 |
+| A10 | `expired` | Alert info (`role="status"`) `settings.account.expiredTitle` + `errors.AUTH_SESSION_EXPIRED` + dòng `Account: {email}`; nút Google `Sign in with Google` + `Sign out`; **không** có `Sync now`, `dl` | Dữ liệu cục bộ giữ nguyên. M6 (chỉ báo: M7) |
+
+**Loading** (SDK đang nạp khi có phiên lưu sẵn): hiện ngay A5 với email/tên đã lưu (`sync.account`), `Sync now` bị vô hiệu, **không** hiện A1 rồi đổi (tránh nháy). **Empty**: không áp dụng. **Quyền**: mỗi thiết bị một tài khoản (A-22); không có phân quyền khác.
+  - **(v2) Ghi chú "theo tài khoản của bạn"** (M7): khi `signed-in`, card **Language** và **Reminders** có thêm một dòng `.hint` đầu bằng icon đám mây-dấu-tích (`settings.language.syncNote` / `settings.reminders.syncNote`) nói giá trị này lưu vào tài khoản và áp cho thiết bị khác; chưa đăng nhập hoặc hết phiên: **không** hiện (không nhắc đăng nhập ở đây, tránh lặp). Khi một thiết lập được áp từ cloud: ngôn ngữ đổi tại chỗ, switch/giờ nhắc cập nhật ngay, toast `toast.prefsFromAccount`. Nếu nhắc được bật từ cloud mà thiết bị này chưa có quyền notification (`default`): chip `Not asked yet`, mô tả `settings.permission.defaultOnDesc`, nút `Allow notifications` (không tự xin quyền).
+  - **(v2) Backup / Storage / About theo trạng thái** (copy ở 7.7.5):
+
+| Thành phần | Cloud tắt | Cloud bật, chưa đăng nhập (và hết phiên) | Đã đăng nhập |
+| :- | :- | :- | :- |
+| Backup — mô tả | `settings.backup.desc` (như v1.1) | `settings.backup.descSignedOut` (M8) | `settings.backup.descSignedIn` (M7) |
+| Backup — hint dưới nút | `settings.backup.importHint` | như cột trái | `settings.backup.importHintSignedIn` |
+| Backup — sau Export | toast `Backup exported` | toast + **ExportSignInHint** (M8; tối đa 1 lần/30 ngày; không khi hết phiên) | toast |
+| Storage "Not protected" | `settings.storage.notProtectedDesc` | + câu `settings.storage.notProtectedSignIn` và nút `Go to Account` (M8) | như cột trái (không gợi ý) |
+| About — mô tả | `settings.about.desc` (như v1.1: "No account, no tracking") | `settings.about.descCloud` + `settings.about.privacy` (M6) | `settings.about.descSignedIn` + `settings.about.privacy` (M6) |
+
 - **Tương tác:**
   - *Language*: bấm/chạm một lựa chọn, hoặc dùng mũi tên Trái/Phải (radio group), Space chọn → `LocaleService.set` ghi kv, `i18next.changeLanguage`, `<html lang>`, `document.title` đổi **đồng bộ trong cùng khung hình**; toàn bộ chữ trên trang (kể cả h1 `Settings` → `Cài đặt`, tab bar, mô tả card, mọi card khác) đổi tại chỗ. Focus **giữ nguyên** trên lựa chọn vừa chọn (không nhảy về h1, không reload, không cuộn). Hiện toast `toast.languageChanged` bằng ngôn ngữ **mới** (`role="status"` để người dùng trình đọc màn hình nghe được rằng ngôn ngữ đã đổi). Chọn lại lựa chọn đang chọn: không làm gì, không toast. Toast, banner, form đang hiển thị ở màn khác sẽ dùng ngôn ngữ mới khi quay lại.
   - Switch → lưu ngay, lần đầu bật khi quyền `default` gọi `Notification.requestPermission()` đúng 1 lần; đổi giờ → lưu ngay (onBlur/onChange hợp lệ), toast `Reminder time saved`. `Allow notifications` → xin quyền. `Add reminder to calendar (.ics)` → tải `1percent-better-reminder.ics`, toast `Calendar file downloaded`. `Export backup (JSON)` → tải file, toast `Backup exported`. `Import backup…` → hộp chọn file → parse → D3 (hoặc Alert lỗi).
+  - **(v2) Account:** `Sign in with Google` → F9 (`returnTo = #/settings`; nút → `Signing in…`; điều hướng sang Google). `Dismiss` (Alert lỗi) → xoá lỗi, focus về nút Google. `Sync now` → `syncNow('manual')`: nút `Syncing…`; thành công → chỉ báo `Synced`, toast `toast.syncNowDone`; lỗi → Alert A8 (không toast). `Sign out` → mở D4 (focus ban đầu: lựa chọn Keep). Mọi nút trong card ≥ 44 px, thứ tự Tab: nút Google (hoặc `Sync now`, `Sign out`).
+  - **(v2) Sau khi quay về từ Google** (callback): app render `#/settings` ngay, focus vào `<h1>` như mọi lần đổi route; card ở A3 rồi A5 (hoặc A4); toast `toast.signedIn` (`role="status"`) cho người dùng screen reader. **Không** tự chuyển focus vào card, **không** cuộn.
+  - **(v2) Sau khi đóng D4 bằng "Sign out":** card chuyển sang A1, focus về **h2 "Account"** của card (`tabindex="-1"`), toast `toast.signedOutKept` / `toast.signedOutRemoved`.
+  - **(v2) Storage:** `Go to Account` cuộn tới card Account và focus nút Google (không đổi route, không dùng hash).
+  - **(v2) Export** (M8): sau khi tải xong, nếu `claimExportHint` thắng → ExportSignInHint xuất hiện **dưới** hai nút Export/Import (không lấy focus, không `role="alert"`; toast `Backup exported` đã đủ để SR biết việc đã xong). Nút trong hint = nút Google với `returnTo = #/settings`.
 - **Copy:** `Settings`; card `Language / Ngôn ngữ` (cùng một chuỗi ở `en` và `vi`), mô tả `Choose the language of menus, messages and dates. Your own goal names and notes stay as you wrote them.`, lựa chọn `English` / `Tiếng Việt`, hint `The date and time pickers and permission prompts follow your browser's language.`, toast `Language changed`; card `Reminders`, `Backup`, `Storage`, `About`; `Daily reminder`; mô tả switch `Get a nudge when you haven't hit your targets today.`; `Reminder time`; `Notification permission`; giới hạn: `Heads up: reminders are sent only while 1% Better is open (in a tab or an installed window, even in the background). To be reminded when the app is closed, add a daily event to your calendar.`; iOS: `On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).`; `Add reminder to calendar (.ics)`; phụ `Adds a repeating daily event at {time}.`; Backup mô tả `Your data lives only on this device. Export a backup now and then, or to move to another device.` và `Importing replaces everything currently on this device.`; nút `Export backup (JSON)`, `Import backup…`; About: `1% Better per Day` / `Everything you log stays on this device. No account, no tracking.`
 - **D3 — Import preview dialog** (M3): tiêu đề `Replace all data?`; nội dung `This backup has {5 goals, 23 entries}, exported {2026-10-09}. Importing replaces everything currently on this device ({a goals, b entries}). This can't be undone.`; nút `Replace all data` (danger), `Cancel` (focus ban đầu ở `Cancel`). Pluralization: `1 goal`, `1 entry`.
+- **(v2) Copy mới của S7** ở 7.7 (Account: 7.7.1; Backup/Storage/About/ghi chú: 7.7.5). Chuỗi cũ không đổi.
+- **D3 — biến thể đã đăng nhập** (M7, FR-51): cùng cấu trúc và cùng nút như D3, khác chữ. Tiêu đề `Replace data on all your devices?`; thân `This backup has {goals}, {entries}, exported {date}. Importing replaces everything currently on this device ({curGoals}, {curEntries}) and, once synced, everything in your account too — so it changes your other devices as well. This can't be undone.` Nếu đang offline thêm một dòng riêng `You're offline, so the change will reach your account when you're back online.` Nút `Replace all data` (danger, cùng key `import.confirm`), `Cancel` (focus ban đầu). Chọn biến thể theo `AuthState.kind === 'signed-in'`; `expired` dùng D3 chuẩn.
+- **D4 — Sign out dialog** (`SignOutDialog`; M6, cảnh báo chưa đồng bộ M7; FR-41). `<dialog>` + `showModal()`, bottom sheet < 640 px, hộp giữa 480 px từ 640 px; nội dung cuộn, hàng nút dính đáy (3.5).
+
+```text
+┌ Sign out? ───────────────────────────────────────┐
+│ You'll stop syncing on this device. Your data in │
+│ your account stays safe.                         │
+│ (M7, chỉ khi pending > 0)                        │
+│ ┌─ ⓘ 2 changes haven't synced to your account yet. │  khối cảnh báo, nền --info-soft
+│ │  We'll try to sync before signing you out.      │  (offline: câu khác — xem 7.7.2)
+│ └───────────────────────────────────────────────┘ │
+│ What should happen to the data on this device?   │  legend
+│ (•) Keep data on this device                     │  radio, mặc định + focus ban đầu
+│     Recommended. You can keep using 1% Better…   │
+│ ( ) Remove data from this device                 │
+│     Deletes your goals, entries and reminder …   │
+│ ┌ (hiện khi chọn Remove và pending > 0) ────────┐ │  role="status"
+│ │ If you remove the data from this device, …    │ │
+│ └───────────────────────────────────────────────┘ │
+│ [Sign out]                       [Cancel]        │  Remove: [Sign out and remove data] (danger)
+└──────────────────────────────────────────────────┘
+```
+  - *Mặc định:* lựa chọn **Keep** được chọn **và có focus** khi mở (khác D2/D3 vì lựa chọn mặc định là phương án an toàn). Nút xác nhận là `primary` khi Keep; đổi thành `danger` + nhãn `Sign out and remove data` khi chọn Remove. `Cancel`/Esc/click backdrop = đóng, không làm gì.
+  - *Busy:* sau khi xác nhận, hai nút và radio bị vô hiệu, nhãn nút xác nhận `Signing out…`, `aria-busy="true"` (tối đa ≈ 10 s nếu đang đồng bộ lần cuối). Dialog không đóng cho tới khi xong.
+  - *Cảnh báo chưa đồng bộ* (M7): chỉ khi `pending > 0`. Online: `auth.signOut.unsynced` + `auth.signOut.unsyncedOnline`. Offline: `auth.signOut.unsynced` + `auth.signOut.unsyncedOffline`. Chọn Remove (cả online lẫn offline): thêm khối `role="status"` `auth.signOut.unsyncedRemove`.
+  - *Đồng bộ lần cuối lỗi + đang chọn Remove* (M7): dialog **ở lại**, hiện Alert `role="alert"` `auth.signOut.syncFailed`, nhãn nút đổi thành `Remove anyway` (danger); người dùng có thể đổi sang Keep, Cancel, hoặc xác nhận lần nữa (xem OQ-D10). Với Keep, lỗi đồng bộ không chặn đăng xuất (thay đổi vẫn nằm trên máy, F10).
+  - *Lỗi xoá dữ liệu cục bộ* (hiếm): Alert `errors.WRITE_FAILED` trong dialog, dialog giữ mở.
+- **D5 — Merge account dialog** (`MergeAccountDialog`; M7; FR-47). Hiện đúng một lần sau khi đăng nhập khi thiết bị từng gắn tài khoản **khác** và còn dữ liệu cục bộ; đồng bộ tạm dừng cho tới khi chọn.
+
+```text
+┌ Add this device's data to your account? ─────────┐
+│ This device still has 6 goals, 25 entries from   │
+│ another account. If you continue, they'll be     │
+│ added to the account minh.test@example.com, next │
+│ to what's already there.                         │
+│ Cancel signs you out. Nothing is uploaded.       │  .hint
+│ [Add to account]                    [Cancel]     │  focus ban đầu: Cancel
+└──────────────────────────────────────────────────┘
+```
+  - Nút `Add to account` (primary), `Cancel` (secondary, **focus ban đầu**). Esc = `Cancel`. `Cancel` = đăng xuất giữ dữ liệu (không xoá, không đẩy gì), toast `toast.signedOutKept`. Số `{goals}`, `{entries}` đếm bản ghi **còn sống** trên máy (`format.goalsCount`/`entriesCount`). Dialog không chặn khi offline (xác nhận chỉ đánh dấu để đẩy lên khi có mạng).
+  - Sau `Add to account`: StatusRow `Syncing…` rồi `Synced`; toast `toast.mergeDone`.
 
 ### S8 — Not found  (Milestone: M1)
 
@@ -556,7 +804,7 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 
 | Component | Mục đích | Props / biến thể | Trạng thái | Dùng ở (milestone) |
 | :- | :- | :- | :- | :- |
-| `AppShell` | Khung: skip link, tab bar (< 1024) / sidebar (≥ 1024), vùng `<main id="main">`, vùng Toast, OfflineChip | `activeTab` | tab active, offline | tất cả (M1; tab Review từ M4) |
+| `AppShell` | Khung: skip link, tab bar (< 1024) / sidebar (≥ 1024), vùng `<main id="main">`, vùng Toast, **StatusRow** (OfflineChip hoặc SyncIndicator, 3.1) | `activeTab` | tab active, offline, (v2) đã đăng nhập | tất cả (M1; tab Review từ M4; StatusRow đồng bộ M7) |
 | `PageHeader` | `<h1>` + mô tả + vùng action | `title`, `subtitle?`, `actions?`, `back?` | — | tất cả |
 | `Button` | Hành động | `variant`: primary / secondary / ghost / danger / danger-ghost; `size`: md (44 px) / sm (44 px cao, padding nhỏ); `full` | default, hover, active, focus-visible, disabled, `aria-disabled`, busy | tất cả (M1) |
 | `IconButton` | Edit/Delete entry (icon + `aria-label`) | `icon`, `label` | như Button; vùng chạm 44×44 | Today, Day (M1) |
@@ -571,12 +819,12 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 | `GoalCard` | Card goal trên Today/Day | `goal`, `minutes`, `target`, `variant`: today / day; `timerRunning?` | idle, form-open, met, timer-running, timer-disabled | Today (M1; timer M2), Day (M3) |
 | `EntryForm` | Thêm/sửa entry | `mode`: add / edit; `defaultValues`; `onSubmit` | default, error theo field, saving (`Saving…`), disabled | Today, Day (M1), StopTimerDialog (M2) |
 | `EntryRow` | Một entry + Edit/Delete + xác nhận xoá inline | `entry`, `showSource?` | default, editing, confirming-delete | Today, Day, GoalCard (M1) |
-| `ConfirmDialog` | Xác nhận phá huỷ (D2, D3) | `title`, `body`, `confirmLabel`, `tone`, `initialFocus: cancel` | open, busy | Goals, Goal detail (M1), Settings (M3) |
+| `ConfirmDialog` | Xác nhận phá huỷ (D2, D3; **v2:** nền cho D4, D5) | `title`, `body`, `confirmLabel`, `tone`, `initialFocus: cancel`; **(v2)** `children` (radio, cảnh báo), `initialFocus: 'cancel' \| 'first-control'`, nội dung cuộn + hàng nút dính đáy | open, busy | Goals, Goal detail (M1), Settings (M3; D4/D5 M6–M7) |
 | `StopTimerDialog` | D1 | `elapsed`, `defaultMinutes`, `startedDate` | open, error, saving | Today (M2) |
 | `TimerCard` | Hiển thị timer đang chạy | `goal`, `startedAt` | running (cập nhật mỗi giây, `role="timer"`), stopping | Today (M2) |
-| `Banner` (`ReminderBanner`, `BackupBanner`) | Thông báo không chặn | tone: info / neutral / warning | — | Today (M2, M3), Settings (M3) |
+| `Banner` (`ReminderBanner`, `BackupBanner`, **`LoginPromptBanner`** v2) | Thông báo không chặn | tone: info / neutral / warning / **promo** (v2, nền `--primary-soft`, chỉ LoginPromptBanner) | — | Today (M2, M3, M8), Settings (M3) |
 | `Alert` | Lỗi/thành công inline (`role="alert"` / `status`) | tone: danger / success | — | Goal form, Settings import (M1/M3) |
-| `Toast` / `ToastRegion` | Phản hồi tạm 4 s (`role="status"`, `aria-live="polite"`), tối đa 1 toast hiển thị | `message`, `action?` | enter, exit | tất cả (M1) |
+| `Toast` / `ToastRegion` | Phản hồi tạm 4 s (`role="status"`, `aria-live="polite"`), tối đa 1 toast hiển thị | `message`, `action?`; **(v2)** `tone`: default / error (viền trái `--danger`, icon cảnh báo, 8 s, vẫn `role="status"`), dùng cho lỗi đăng nhập ở màn ngoài Settings | enter, exit | tất cả (M1; error + action M6) |
 | `UpdateToast` | `A new version is available.` + `Reload` (SW cập nhật) | — | persistent đến khi bấm | AppShell (M1) |
 | `OfflineChip` | Báo offline | — | hiện/ẩn theo `navigator.onLine` | AppShell (M1) |
 | `StatCard` | Một chỉ số | `label`, `value`, `sub?`, `progress?` | default, loading (skeleton), zero | Review, Goal detail (M4, M5) |
@@ -588,6 +836,29 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 | `EmptyState` | Trạng thái rỗng | `title`, `body`, `action?` | — | Today, Goals, Review, Day, Goal detail (M1 tối thiểu / M5 đủ) |
 | `ErrorState` | Lỗi có hành động | `title`, `body`, `action` | — | Not found, StorageError, Review/Detail lazy lỗi |
 | `Skeleton` | Placeholder loading | `lines`, `block` | tĩnh; nhấp nháy nhẹ (tắt khi reduced-motion) | mọi màn (M5 rà soát) |
+| `GoogleSignInButton` *(v2)* | Nút đăng nhập theo hướng dẫn thương hiệu Google (nền trắng/viền, logo G nhiều màu không đổi, chữ không đổi màu) | `onClick`, `busy`, `disabled`, `full` (< 640 px mặc định rộng đầy), `describedBy?` | default, hover (lớp phủ 8 % `--google-text`), active (12 %), focus-visible (vòng `--focus`), disabled (`opacity: .38`), busy (chữ `Signing in…`, `aria-busy`) | Account card, LoginPromptBanner, ExportSignInHint (M6; M8) |
+| `AccountCard` *(v2)* | Card Account trong Settings (A1 … A10 ở S7) | `auth: AuthState`, `sync: SyncStatus`, `online: boolean`, `lastError?` | A1 … A10 | Settings (M6; đồng bộ chi tiết M7) |
+| `Avatar` *(v2)* | Vòng tròn 40 px chứa chữ cái đầu (không tải ảnh từ Google, FR-42) | `name`, `email` | — (trang trí, `aria-hidden`) | AccountCard (M6) |
+| `SyncIndicator` *(v2)* | Chip trạng thái đồng bộ gọn ở StatusRow, có text cho SR | `status: SyncStatus`, `auth: AuthState`, `online`, `onRetry` | 6 trạng thái (bảng dưới) | AppShell, mọi màn (M7) |
+| `SignOutDialog` *(v2, D4)* | Hộp thoại đăng xuất Keep/Remove | `pending`, `online`, `onConfirm({ keepData })` | open, remove-selected, busy, sync-failed | Settings (M6; cảnh báo M7) |
+| `MergeAccountDialog` *(v2, D5)* | Xác nhận gộp dữ liệu máy vào tài khoản mới | `goals`, `entries`, `email`, `onConfirm`, `onCancel` | open, busy | AppShell (hiện sau đăng nhập; M7) |
+| `LoginPromptBanner` *(v2)* | Nhắc đăng nhập nhẹ nhàng trên Today | `onSignIn`, `onNotNow` | default, busy (nút Google đang đăng nhập) | Today (M8) |
+| `ExportSignInHint` *(v2)* | Gợi ý đăng nhập sau Export thành công | `onSignIn`, `online` | default, offline (nút vô hiệu + lý do) | Settings Backup (M8) |
+| `SettingsSyncNote` *(v2)* | Dòng `.hint` có icon "đã lưu vào tài khoản" ở Language/Reminders | `text` | — | Settings (M7) |
+
+**SyncIndicator — 6 trạng thái** (5 trạng thái của PRD FR-50 + `signing-in`; chưa đăng nhập hoặc cloud tắt = **ẩn**, không render). Ưu tiên khi nhiều điều kiện cùng đúng: `expired` > `signing-in` > `error` > `offline/pending` > `syncing` > `synced`.
+
+| Trạng thái | Điều kiện | Icon (SVG inline, 16 px) | Chữ hiển thị (`en`) | Kiểu | Tương tác |
+| :- | :- | :- | :- | :- | :- |
+| `synced` | signed-in, `idle`, `pending = 0`, online | đám mây + dấu tích, màu `--primary` | `Synced 14:05` (`Synced` nếu chưa có mốc) | nền `--surface`, viền `--border`, chữ `--text-muted` | không (chỉ trạng thái) |
+| `syncing` | `syncing` | hai mũi tên vòng, **xoay** 1 s tuyến tính (tắt khi `prefers-reduced-motion`; chữ `…` vẫn có) | `Syncing…` | như `synced`, chữ `--text` | không |
+| `pending` | `idle` với `pending > 0` (đang chờ lô 2 s hoặc backoff chưa hết), **hoặc** `offline` (mất mạng) | đám mây gạch chéo khi offline; đám mây + chấm khi online | online: `{n} change(s) waiting to sync`; offline: `Offline · {n} change(s) waiting` (không có thay đổi chờ: `Offline · all changes synced`) | nền `--surface-2`, viền `--border`, chữ `--text` | không |
+| `error` | `error` (SYNC_UNREACHABLE; lỗi khác khi online) | tam giác cảnh báo, `--on-danger-soft` | `Couldn't sync` + nút `Retry` | nền `--danger-soft`, chữ `--on-danger-soft` | nút `Retry` → `syncNow('manual')` |
+| `expired` | `AuthState = expired` | khoá mở / mũi tên người dùng, `--info` | `Sign in again to sync` | nền `--info-soft`, chữ `--info`; là **link** tới `#/settings` | link |
+| `signing-in` | `AuthState = signing-in` | như `syncing` (xoay) | `Signing in…` | như `syncing` | không |
+| *(ẩn)* | `signed-out`, `unavailable` | — | — | — | — |
+
+Chi tiết dùng chung: chip cao 32 px (`min-height`), padding ngang 12 px, bo `--r-full` (hoặc 16 px khi 2 dòng), chữ `--text-sm` 600, khoảng cách icon–chữ 6 px; `max-width: 100%`, `white-space: normal`. Chip tương tác (`error`, `expired`) có vùng bấm **≥ 44 px** nhờ `::after { inset: -6px 0 }` (không đổi chiều cao hiển thị). Mọi thay đổi trạng thái chỉ đổi chip tại chỗ (không nhảy bố cục). Text cho screen reader: xem mục 8.
 
 Quy tắc dùng chung:
 
@@ -595,6 +866,9 @@ Quy tắc dùng chung:
 - Chỉ **một** toast tại một thời điểm; toast mới thay toast cũ.
 - Dialog dùng phần tử `<dialog>` + `showModal()` (có sẵn focus trap, Esc đóng, `::backdrop`), trả focus về phần tử đã mở dialog (nếu phần tử đó không còn, về `<h1>` hoặc TimerCard).
 - Form: lỗi hiển thị dưới field bằng icon + chữ, `id` lỗi được nối vào `aria-describedby`; không đổi layout nhảy đột ngột (chừa chỗ cho hint).
+- **(v2) Nút Google** là nút duy nhất không dùng token `--primary`: theo hướng dẫn thương hiệu (nền trắng, viền xám, chữ `#1F1F1F`, logo G nhiều màu, không bóng đổ, không đổi màu/hình logo, không thêm viền quanh logo); bản tối dùng bộ màu "dark" của Google. Nhãn **chỉ** là `Sign in with Google` / `Đăng nhập bằng Google` (không viết thêm `bằng tài khoản`). Có thể có hai nút Google trên Settings (card Account + ExportSignInHint ở Backup, chỉ sau Export); nút trong ExportSignInHint chỉ là lối tắt, không thay thế nút của card. Khoảng cách giữa nút Google và nút kề ≥ 8 px.
+- **(v2) Dialog có radio (D4):** lựa chọn mặc định an toàn nhận focus ban đầu (ngoại lệ có chủ đích của quy tắc "focus ở Cancel"); Esc = Cancel; hàng nút dính đáy, nội dung cuộn trong dialog; khi mở dialog, phần còn lại của trang `inert` (do `showModal()` lo).
+- **(v2) Không bao giờ hiện hai banner đăng nhập/sao lưu cùng lúc** trên Today: thứ tự ưu tiên LoginPromptBanner > BackupBanner; ReminderBanner độc lập, luôn ở trên.
 
 ---
 
@@ -633,6 +907,11 @@ Cài đặt: một file `src/ui/styles/tokens.css` khai báo CSS custom properti
 | `--chart-actual` | = `--primary` | = `--primary` | đường You, cột nhấn |
 | `--chart-bar` | = `--heat-3` | = `--heat-3` | cột biểu đồ (kỳ hiện tại dùng `--primary`) |
 | `--scrim` | `rgba(20,28,24,.5)` | `rgba(0,0,0,.6)` | lớp phủ dialog |
+| `--google-bg` *(v2)* | `#FFFFFF` | `#131314` | nền nút Google (bộ màu chính thức của Google: theme "light" / "dark") |
+| `--google-border` *(v2)* | `#747775` | `#8E918F` | viền nút Google (≥ 3:1 so với `--surface`/`--primary-soft`) |
+| `--google-text` *(v2)* | `#1F1F1F` | `#E3E3E3` | chữ nút Google; lớp phủ hover/active = `--google-text` ở 8 % / 12 % |
+
+Phase 2 **không thêm** token màu nào khác: SyncIndicator, AccountCard, banner và dialog mới chỉ dùng token sẵn có (`--surface-2`, `--border`, `--primary`, `--primary-soft`/`--on-primary-soft`, `--info*`, `--danger*`). Màu amber `--plus-*` vẫn chỉ dành cho "+1%" (không dùng cho trạng thái đồng bộ/hết phiên). Logo chữ G của Google giữ bốn màu gốc (`#4285F4`, `#34A853`, `#FBBC05`, `#EA4335`) ở cả sáng lẫn tối, là ngoại lệ có chủ đích của quy tắc "chỉ dùng token".
 
 Quy tắc dùng màu: amber (`--plus-*`) **chỉ** dành cho pill "+1%" (giữ nó hiếm và có ý nghĩa); xanh `--primary` cho tiến độ, hành động chính và đường "You"; đỏ chỉ cho lỗi và hành động xoá; xanh dương `--info` cho banner thông tin và badge Upcoming. Không dùng màu làm thông tin duy nhất: luôn kèm chữ/icon/hình dạng.
 
@@ -660,7 +939,8 @@ Font hệ thống (NFR-01: không font ngoài): `--font: system-ui, -apple-syste
 | Shadow | `--shadow-1`: `0 1px 2px rgba(20,30,25,.06)` (card); `--shadow-2`: `0 12px 40px rgba(20,30,25,.22)` (dialog, toast) |
 | Kích thước | `--tap` 44 (vùng chạm tối thiểu), `--content-max` 960, `--nav-w` 232, `--tabbar-h` 56 |
 | Z-index | nav 20, toast 40, dialog 50 |
-| Motion | `--dur-fast` 120 ms, `--dur` 200 ms, easing `ease-out`; mọi animation tắt (`0.01ms`) khi `prefers-reduced-motion: reduce` |
+| Motion | `--dur-fast` 120 ms, `--dur` 200 ms, easing `ease-out`; mọi animation tắt (`0.01ms`) khi `prefers-reduced-motion: reduce`. **(v2)** vòng xoay đồng bộ/đăng nhập: `rotate` 1 s `linear infinite`, **tắt hẳn** (không xoay, giữ icon tĩnh) khi reduced-motion |
+| Kích thước phase 2 *(v2)* | `--chip-h` 32 (chiều cao SyncIndicator), avatar 40, nút Google `min-height` = `--tap` (44), logo G 20 (trong ô 20×20), khoảng logo–chữ 10, radio D4 vùng bấm ≥ 44 |
 | Breakpoint | `sm` 640, `lg` 1024 (xem 3.2) |
 
 Heatmap: ô 11 px + khoảng 2 px (mobile < 640 px; cuộn ngang trong vùng chứa), 13 px + 3 px (≥ 640 px; 53 cột = 845 px, vừa khít vùng nội dung 960 px ở ≥ 1024 px, tablet vẫn có thể cuộn); bo 2 px. Biến CSS `--cell`, `--gap`.
@@ -675,7 +955,7 @@ Heatmap: ô 11 px + khoảng 2 px (mobile < 640 px; cuộn ngang trong vùng ch�
 
 **Quy tắc key**
 
-1. Tên key theo thành phần/màn hình: `app.*`, `nav.*`, `common.*`, `unit.*`, `offline.*`, `update.*`, `format.*`, `toast.*`, `plusone.*`, `chart.*`, `errors.*`, `empty.*`, `today.*`, `goalCard.*`, `entry.*`, `goals.*`, `goal.form.*`, `goal.delete.*`, `goal.detail.*`, `goal.status.*`, `day.*`, `review.*`, `stat.*`, `heatmap.*`, `timer.*`, `reminder.*`, `backup.*`, `import.*`, `settings.*`, `notFound.*`, `storageError.*`, `errorBoundary.*`, `notification.*`, `ics.*`, `a11y.*`, `doc.*`. Không dùng tiền tố `screen.` (xem A-D14).
+1. Tên key theo thành phần/màn hình: `app.*`, `nav.*`, `common.*`, `unit.*`, `offline.*`, `update.*`, `format.*`, `toast.*`, `plusone.*`, `chart.*`, `errors.*`, `empty.*`, `today.*`, `goalCard.*`, `entry.*`, `goals.*`, `goal.form.*`, `goal.delete.*`, `goal.detail.*`, `goal.status.*`, `day.*`, `review.*`, `stat.*`, `heatmap.*`, `timer.*`, `reminder.*`, `backup.*`, `import.*`, `settings.*`, `notFound.*`, `storageError.*`, `errorBoundary.*`, `notification.*`, `ics.*`, `a11y.*`, `doc.*`; **(v2)** `auth.*` (nút đăng nhập, D4, D5), `sync.*` (SyncIndicator, thông báo cho SR), `loginPrompt.*`, `exportHint.*`; chuỗi của card Account nằm dưới `settings.account.*` (theo quy ước `settings.<card>.*` và M6-AC3; đây là nhóm `account.*` mà orchestrator nêu). Không dùng tiền tố `screen.` (xem A-D14).
 2. **Không key nào là tiền tố (theo dấu `.`) của key khác** (i18next không cho một khóa vừa là chuỗi vừa là object). Vì thế tiêu đề/nội dung/nút của một khối tách bằng hậu tố liền tên, không bằng dấu chấm: `empty.today.noGoals` (tiêu đề), `empty.today.noGoalsBody`, `empty.today.noGoalsAction`.
 3. Biến dùng cú pháp i18next `{{name}}`. Ngày, số, phút, giờ, phần trăm đã được `format.ts` định dạng theo locale **trước khi** truyền vào (`{{date}}` = `01/10/2026` ở `vi`). Tên goal/why/note truyền vào nguyên văn, không dịch.
 4. **Số nhiều:** key có biến `count` theo chuẩn i18next JSON v4: `key_one` / `key_other` cho `en`. `vi` chỉ có `key_other` (không chia số nhiều); trong bảng, dòng `key_one` ghi `vi` = `—` (không tạo key trong `vi.json`). Biến của `vi` `_other` phải **giống** biến của `en` `_other`. Cụm đếm được dùng lại trong câu khác (`1 goal`, `5 goals`, `1 entry`, `8 days`) lấy từ `format.goalsCount`, `format.entriesCount`, `format.daysCount`, rồi truyền vào câu dưới dạng biến chuỗi (`{{goals}}`, `{{days}}`); **không** ghép chuỗi bằng `+` trong UI.
@@ -709,6 +989,13 @@ Heatmap: ô 11 px + khoảng 2 px (mobile < 640 px; cuộn ngang trong vùng ch�
 | file | tệp | "tệp" thay "file", trừ tên loại (`.ics`, JSON) |
 | notification | thông báo | |
 | today / yesterday | hôm nay / hôm qua | |
+| sign in / sign out | đăng nhập / đăng xuất | nút: `Đăng nhập bằng Google`, `Đăng xuất` |
+| account | tài khoản | "tài khoản của bạn" = your account (Google/Supabase); không dùng "cloud", "đám mây" trong chuỗi |
+| sync / synced | đồng bộ / đã đồng bộ | `Đang đồng bộ…`, `Đã đồng bộ 14:05` |
+| change (pending sync) | thay đổi | `2 thay đổi đang chờ` |
+| device | thiết bị | "trên thiết bị này" (this device) |
+| Not now | Để sau | |
+| Google | Google | **không dịch**, không thêm dấu |
 
 - Giữ nguyên tiếng Anh: `JSON`, `.ics`, `iOS`, `iPhone`, `iPad`, `PWA`, `cookie`, `MB`, `1% Better`.
 - Số thập phân dùng dấu phẩy (`25,8%`), hàng nghìn dùng dấu chấm (`1.440`); các số có sẵn trong câu (ví dụ `1.440`, `10.000`, `1.827`) đã viết đúng theo quy ước này trong bảng.
@@ -732,7 +1019,9 @@ Mọi định dạng do `src/i18n/format.ts` (ARCH §5.8) sinh ra; developer **k
 | Phần trăm | `25.8%`, `+8.3% better` | `25,8%`, `Tốt hơn +8,3%` | key `format.percent` = `{{value}}%` |
 | Timer | `hh:mm:ss` (giống nhau) | giống `en` | `00:25:31` |
 | Giờ nhắc | 24h `HH:MM` (giống nhau) | giống `en` | `20:00` |
-| Số nhiều | `1 goal`, `2 goals`; `1 entry`, `23 entries`; `1 day`, `8 days` | `1 mục tiêu`, `2 mục tiêu`; `23 lần ghi`; `8 ngày` (không chia số nhiều) | qua `format.*Count` |
+| Số nhiều | `1 goal`, `2 goals`; `1 entry`, `23 entries`; `1 day`, `8 days`; **(v2)** `1 change`, `3 changes` | `1 mục tiêu`, `2 mục tiêu`; `23 lần ghi`; `8 ngày`; `3 thay đổi` (không chia số nhiều) | qua `format.*Count` |
+| **(v2)** Thời điểm đồng bộ — chỉ báo (`{{time}}` trong `sync.indicator.synced`) | hôm nay: `14:05`; ngày khác: ngày ngắn `YYYY-MM-DD` | hôm nay: `14:05`; ngày khác: `dd/MM/yyyy` | giờ 24h theo giờ cục bộ, cùng quy tắc "giờ nhắc" |
+| **(v2)** Thời điểm đồng bộ — card Account (`format.todayAt` / `format.dateAt`) | `today at 14:05`; `2026-10-08 at 09:30` | `hôm nay lúc 14:05`; `08/10/2026 lúc 09:30` | `format.ts` chọn key theo "cùng ngày cục bộ"; chưa từng đồng bộ: `settings.account.neverSynced` |
 
 ### 7.2 Chung: app, điều hướng, thành phần dùng lại, định dạng, toast
 
@@ -764,6 +1053,7 @@ Cột **MS** = milestone cần chuỗi đó (M1 = có ngay từ M1).
 | `common.keep` | M1 | nút (xác nhận xoá entry) | `Keep` | `Giữ lại` |
 | `common.retry` | M4 | nút | `Retry` | `Thử lại` |
 | `common.tryAgain` | M1 | nút ở StorageError | `Try again` | `Thử lại` |
+| `common.dismiss` | M6 | nút đóng Alert lỗi đăng nhập (v2) | `Dismiss` | `Đóng` |
 | `common.emptyValue` | M3 | ghi chú rỗng trong bảng | `—` | `—` (= en) |
 | `unit.min` | M1 | đơn vị sau số lớn ở card (`20/30` + đơn vị) | `min` | `phút` |
 | `unit.hour` | M1 | hậu tố field "Total hours" | `h` | `giờ` |
@@ -780,6 +1070,10 @@ Cột **MS** = milestone cần chuỗi đó (M1 = có ngay từ M1).
 | `format.entriesCount_other` | M1 | | `{{count}} entries` | `{{count}} lần ghi` |
 | `format.daysCount_one` | M1 | | `{{count}} day` | — |
 | `format.daysCount_other` | M1 | | `{{count}} days` | `{{count}} ngày` |
+| `format.changesCount_one` | M7 | số thay đổi chưa đồng bộ, dùng trong card Account và câu khác (v2) | `{{count}} change` | — |
+| `format.changesCount_other` | M7 | | `{{count}} changes` | `{{count}} thay đổi` |
+| `format.todayAt` | M7 | thời điểm đồng bộ gần nhất, cùng ngày cục bộ; `{{time}}` = `HH:MM` | `today at {{time}}` | `hôm nay lúc {{time}}` |
+| `format.dateAt` | M7 | ngày khác; `{{date}}` = ngày ngắn | `{{date}} at {{time}}` | `{{date}} lúc {{time}}` |
 | `toast.goalCreated` | M1 | sau tạo goal | `Goal created` | `Đã tạo mục tiêu` |
 | `toast.goalUpdated` | M1 | sau sửa goal | `Goal updated` | `Đã cập nhật mục tiêu` |
 | `toast.goalDeleted` | M1 | sau xóa goal | `Goal deleted` | `Đã xóa mục tiêu` |
@@ -794,6 +1088,14 @@ Cột **MS** = milestone cần chuỗi đó (M1 = có ngay từ M1).
 | `toast.icsDownloaded` | M2 | | `Calendar file downloaded` | `Đã tải tệp lịch` |
 | `toast.backupExported` | M3 | | `Backup exported` | `Đã xuất bản sao lưu` |
 | `toast.backupImported` | M3 | `{{goals}}`, `{{entries}}` = cụm từ `format.goalsCount` / `format.entriesCount` | `Backup imported: {{goals}}, {{entries}}` | `Đã nhập bản sao lưu: {{goals}}, {{entries}}` |
+| `toast.signedIn` | M6 | sau khi đăng nhập xong (v2); `{{email}}` nguyên văn | `Signed in as {{email}}` | `Đã đăng nhập: {{email}}` |
+| `toast.signedOutKept` | M6 | sau đăng xuất giữ dữ liệu; cũng sau `Cancel` ở D5 | `Signed out. Your data is still on this device.` | `Đã đăng xuất. Dữ liệu của bạn vẫn còn trên thiết bị này.` |
+| `toast.signedOutRemoved` | M6 | sau đăng xuất + xoá dữ liệu | `Signed out. Data removed from this device.` | `Đã đăng xuất. Dữ liệu đã được xóa khỏi thiết bị này.` |
+| `toast.signInCancelled` | M6 | lỗi `AUTH_CANCELLED` khi quay về màn **không phải** Settings (tone error, kèm nút `settings.account.goTo`) | `Sign-in was cancelled.` | `Đã hủy đăng nhập.` |
+| `toast.signInFailed` | M6 | lỗi `AUTH_FAILED` ở màn không phải Settings | `Couldn't sign you in.` | `Không đăng nhập được.` |
+| `toast.mergeDone` | M7 | sau lần đồng bộ đầu tiên có gộp dữ liệu; `{{goals}}`, `{{entries}}` = `format.goalsCount` / `entriesCount` của dữ liệu còn sống trên máy sau khi gộp | `Signed in. Your account now has {{goals}}, {{entries}}.` | `Đã đăng nhập. Tài khoản của bạn hiện có {{goals}}, {{entries}}.` |
+| `toast.prefsFromAccount` | M7 | khi giờ nhắc hoặc ngôn ngữ được áp từ cloud (hiện bằng ngôn ngữ **mới**) | `Settings updated from your account` | `Đã cập nhật cài đặt từ tài khoản của bạn` |
+| `toast.syncNowDone` | M7 | sau `Sync now` thành công | `Everything is up to date` | `Mọi thứ đã được cập nhật` |
 | `plusone.live` | M5 | vùng `aria-live` khi +1% | `+1% for {{goal}} today.` | `+1% cho {{goal}} hôm nay.` |
 
 ### 7.3 Thông báo lỗi và ánh xạ `src/ui/error-messages.ts`
@@ -819,6 +1121,9 @@ Nguyên tắc: nói rõ chuyện gì, và làm gì tiếp. **`src/ui/error-messa
 | code không có trong bảng | phòng hờ | `errors.UNKNOWN` |
 | `NOTIFICATIONS_UNSUPPORTED` / `NOTIFICATIONS_DENIED` | mô tả dưới chip quyền ở Settings | dùng đúng các key `errors.NOTIFICATIONS_*` bên dưới |
 | tóm tắt form có lỗi | đầu form | `goal.form.summary_one/_other` (mục 7.6) |
+| `AUTH_*`, `SYNC_*` (v2) | Alert/dòng trong card Account | `errors.<CODE>` (không có biến thể) |
+| `AUTH_CANCELLED` / `AUTH_FAILED` khi người dùng quay về màn **không phải** Settings (v2) | Toast tone error + nút `settings.account.goTo` | `toast.signInCancelled` / `toast.signInFailed` (bản ngắn); bản đầy đủ `errors.AUTH_*` vẫn nằm ở card Account (A4) |
+| lỗi đồng bộ khi đăng xuất + chọn Remove (v2) | Alert trong D4 | `auth.signOut.syncFailed` (7.7.2) |
 
 | Key | MS | Hiển thị ở | `en` | `vi` |
 | :- | :- | :- | :- | :- |
@@ -855,6 +1160,14 @@ Nguyên tắc: nói rõ chuyện gì, và làm gì tiếp. **`src/ui/error-messa
 | `errors.NOTIFICATIONS_UNSUPPORTED` | M2 | Settings | `This browser doesn't support notifications. You'll still see a reminder banner in the app.` | `Trình duyệt này không hỗ trợ thông báo. Bạn vẫn sẽ thấy lời nhắc ngay trong app.` |
 | `errors.NOTIFICATIONS_DENIED` | M2 | Settings | `Notifications are blocked for this site. Allow them in your browser's site settings, then come back. You'll still see a reminder banner in the app.` | `Thông báo đang bị chặn cho trang này. Hãy cho phép trong cài đặt trang web của trình duyệt rồi quay lại. Bạn vẫn sẽ thấy lời nhắc ngay trong app.` |
 | `errors.UNKNOWN` | M1 | phòng hờ khi gặp mã lỗi chưa biết | `Something went wrong. Please try again.` | `Đã xảy ra lỗi. Hãy thử lại.` |
+| `errors.AUTH_OFFLINE` | M6 | Alert A4 / mô tả nút đăng nhập khi gọi lúc offline | `You're offline. Connect to the internet, then sign in.` | `Bạn đang ngoại tuyến. Hãy kết nối mạng rồi đăng nhập.` |
+| `errors.AUTH_CANCELLED` | M6 | Alert A4 (người dùng huỷ ở Google) | `Sign-in was cancelled. You're not signed in, and nothing on this device changed.` | `Bạn đã hủy đăng nhập. Bạn chưa đăng nhập và không có gì trên thiết bị này bị thay đổi.` |
+| `errors.AUTH_FAILED` | M6 | Alert A4 (lỗi khác, gồm mở callback ở trình duyệt khác) | `Couldn't sign you in. Nothing on this device changed. Try again, and finish signing in in the same browser where you started.` | `Không đăng nhập được. Không có gì trên thiết bị này bị thay đổi. Hãy thử lại và hoàn tất đăng nhập trong cùng trình duyệt bạn đã bắt đầu.` |
+| `errors.AUTH_SESSION_EXPIRED` | M6 | Alert A10, và nội dung `aria-live` khi hết phiên | `Your sign-in expired. Sign in again to keep syncing. Your data, including changes that haven't synced yet, is kept on this device.` | `Phiên đăng nhập của bạn đã hết hạn. Hãy đăng nhập lại để tiếp tục đồng bộ. Dữ liệu của bạn, kể cả các thay đổi chưa đồng bộ, vẫn được giữ trên thiết bị này.` |
+| `errors.SYNC_OFFLINE` | M7 | Alert A8 (khi lỗi mạng giữa chu kỳ) | `You're offline. Your changes are saved on this device and will sync when you're back online.` | `Bạn đang ngoại tuyến. Thay đổi của bạn đã được lưu trên thiết bị này và sẽ được đồng bộ khi có mạng trở lại.` |
+| `errors.SYNC_UNREACHABLE` | M7 | Alert A8 | `Couldn't reach your account just now. Your changes are safe on this device. We'll try again soon, or you can tap Sync now.` | `Hiện chưa kết nối được tới tài khoản của bạn. Thay đổi của bạn vẫn an toàn trên thiết bị này. App sẽ tự thử lại, hoặc bạn có thể bấm Đồng bộ ngay.` |
+| `errors.SYNC_UNAUTHORIZED` | M7 | Alert (hiếm: trước khi `AuthState` kịp chuyển `expired`) | `Your sign-in is no longer valid. Sign in again to keep syncing. Your data on this device is safe.` | `Phiên đăng nhập không còn hợp lệ. Hãy đăng nhập lại để tiếp tục đồng bộ. Dữ liệu trên thiết bị này vẫn an toàn.` |
+| `errors.SYNC_REMOTE_INVALID` | M7 | dòng thông tin A9 (không phải lỗi chặn) | `Some items from your account couldn't be read and were skipped. Everything else is synced.` | `Một số mục từ tài khoản của bạn không đọc được nên đã bị bỏ qua. Mọi thứ còn lại đã được đồng bộ.` |
 
 ### 7.4 Empty state
 
@@ -1202,6 +1515,119 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 
 (StorageError dùng nút `common.tryAgain`; ErrorBoundary dùng `errorBoundary.reload` và `notFound.pageAction`.)
 
+### 7.7 Phase 2 — đăng nhập và đồng bộ (v2.0)
+
+Cùng quy tắc ở 7.0 (key, `{{biến}}`, `_one/_other`, giọng `vi`). **Không dịch "Google"**; email và tên lấy từ Google truyền nguyên văn. Các chuỗi dùng lại từ bảng cũ: `common.cancel`, `common.retry`, `settings.reminders.allow`, `errors.WRITE_FAILED`, `format.goalsCount`, `format.entriesCount`. Các chuỗi phase 2 nằm rải ở 7.2 (toast `signedIn` … `syncNowDone`, `format.changesCount`, `format.todayAt`, `format.dateAt`, `common.dismiss`) và 7.3 (`errors.AUTH_*`, `errors.SYNC_*`); bảng dưới là phần còn lại.
+
+#### 7.7.1 Card Account và nút đăng nhập (S7)
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `auth.signInGoogle` | M6 | nhãn nút Google (mọi nơi: card, banner, hint); **chỉ** chuỗi này | `Sign in with Google` | `Đăng nhập bằng Google` |
+| `auth.signingIn` | M6 | nhãn nút Google khi bận | `Signing in…` | `Đang đăng nhập…` |
+| `settings.account.title` | M6 | h2 card (A1 … A10) | `Account` | `Tài khoản` |
+| `settings.account.descSignedOut` | M6 | A1, lời giải thích cố định (FR-54) | `Sign in with Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.` | `Đăng nhập bằng Google để lưu một bản sao mục tiêu và lần ghi vào tài khoản của bạn và dùng trên mọi thiết bị. Bạn không cần tài khoản để dùng 1% Better.` |
+| `settings.account.privacyNote` | M6 | A1, `.hint` dưới nút | `From Google, the app only receives your name and email.` | `Từ Google, app chỉ nhận tên và email của bạn.` |
+| `settings.account.offlineHint` | M6 | A2, nối `aria-describedby` với nút đã vô hiệu | `You're offline. Connect to the internet to sign in.` | `Bạn đang ngoại tuyến. Hãy kết nối mạng để đăng nhập.` |
+| `settings.account.signingInStatus` | M6 | A3, dòng trạng thái (`role="status"`) | `Signing you in…` | `Đang đăng nhập cho bạn…` |
+| `settings.account.signingInBody` | M6 | A3 | `Finishing up. This only takes a moment.` | `Sắp xong. Chỉ mất một lát.` |
+| `settings.account.provider` | M6 | A5, dưới email | `Signed in with Google` | `Đã đăng nhập bằng Google` |
+| `settings.account.lastSynced` | M7 | A5, nhãn (`dt`) | `Last synced` | `Đồng bộ gần nhất` |
+| `settings.account.neverSynced` | M7 | A5, giá trị khi chưa có mốc | `Not yet` | `Chưa lần nào` |
+| `settings.account.pending` | M7 | A5, nhãn; giá trị = `format.changesCount` | `Waiting to sync` | `Đang chờ đồng bộ` |
+| `settings.account.syncedInfo` | M7 | A5, `.hint` | `Synced with this account: goals, entries, reminder settings and language. A running timer stays on the device where you started it.` | `Được đồng bộ với tài khoản này: mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ. Bộ đếm giờ đang chạy chỉ nằm trên thiết bị bạn bắt đầu.` |
+| `settings.account.syncNow` | M7 | nút | `Sync now` | `Đồng bộ ngay` |
+| `settings.account.offlineSync` | M7 | A7 offline, dưới nút `Sync now` đã vô hiệu | `You're offline. Changes are saved on this device and sync when you're back online.` | `Bạn đang ngoại tuyến. Thay đổi được lưu trên thiết bị này và sẽ đồng bộ khi có mạng trở lại.` |
+| `settings.account.nextRetry` | M7 | A8, `{{time}}` = `HH:MM` của `nextRetryAt` | `Trying again at {{time}}.` | `Sẽ thử lại lúc {{time}}.` |
+| `settings.account.signOut` | M6 | nút mở D4 | `Sign out` | `Đăng xuất` |
+| `settings.account.expiredTitle` | M6 | A10, dòng đậm đầu Alert | `Sign in again` | `Hãy đăng nhập lại` |
+| `settings.account.expiredAccount` | M6 | A10 | `Account: {{email}}` | `Tài khoản: {{email}}` |
+| `settings.account.goTo` | M6 | nút action của toast lỗi đăng nhập; nút ở card Storage (M8) | `Go to Account` | `Đến mục Tài khoản` |
+
+#### 7.7.2 Dialog D4 (Sign out), D5 (Merge), D3 đã đăng nhập
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `auth.signOut.title` | M6 | D4, tiêu đề | `Sign out?` | `Đăng xuất?` |
+| `auth.signOut.body` | M6 | D4, thân | `You'll stop syncing on this device. Your data in your account stays safe.` | `Thiết bị này sẽ ngừng đồng bộ. Dữ liệu trong tài khoản của bạn vẫn được giữ nguyên.` |
+| `auth.signOut.legend` | M6 | D4, legend của nhóm radio | `What should happen to the data on this device?` | `Dữ liệu trên thiết bị này sẽ được xử lý thế nào?` |
+| `auth.signOut.keep` | M6 | lựa chọn mặc định | `Keep data on this device` | `Giữ dữ liệu trên thiết bị này` |
+| `auth.signOut.keepDesc` | M6 | mô tả lựa chọn Keep | `Recommended. You can keep using 1% Better without an account.` | `Nên chọn. Bạn vẫn dùng 1% Better bình thường mà không cần tài khoản.` |
+| `auth.signOut.remove` | M6 | lựa chọn Remove | `Remove data from this device` | `Xóa dữ liệu khỏi thiết bị này` |
+| `auth.signOut.removeDesc` | M6 | mô tả lựa chọn Remove | `Deletes your goals, entries and reminder settings on this device. Choose this on a shared device. Your account keeps everything.` | `Xóa mục tiêu, lần ghi và cài đặt nhắc nhở trên thiết bị này. Hãy chọn khi dùng máy chung. Tài khoản của bạn vẫn giữ mọi thứ.` |
+| `auth.signOut.confirmKeep` | M6 | nút xác nhận khi Keep | `Sign out` | `Đăng xuất` |
+| `auth.signOut.confirmRemove` | M6 | nút xác nhận khi Remove (danger) | `Sign out and remove data` | `Đăng xuất và xóa dữ liệu` |
+| `auth.signOut.working` | M6 | nhãn nút xác nhận khi bận | `Signing out…` | `Đang đăng xuất…` |
+| `auth.signOut.unsynced_one` | M7 | khối cảnh báo, `pending = 1` | `1 change hasn't synced to your account yet.` | — |
+| `auth.signOut.unsynced_other` | M7 | `pending` ≥ 2 | `{{count}} changes haven't synced to your account yet.` | `{{count}} thay đổi chưa được đồng bộ vào tài khoản của bạn.` |
+| `auth.signOut.unsyncedOnline` | M7 | dòng dưới, đang online | `We'll try to sync before signing you out.` | `App sẽ thử đồng bộ trước khi đăng xuất.` |
+| `auth.signOut.unsyncedOffline` | M7 | dòng dưới, đang offline | `You're offline, so they can't sync right now. If you keep the data on this device, they'll sync when you sign in again with this account.` | `Bạn đang ngoại tuyến nên chưa đồng bộ được. Nếu giữ dữ liệu trên thiết bị này, các thay đổi sẽ được đồng bộ khi bạn đăng nhập lại bằng tài khoản này.` |
+| `auth.signOut.unsyncedRemove` | M7 | `role="status"`, hiện khi chọn Remove và `pending > 0` | `If you remove the data from this device, these changes will be lost.` | `Nếu xóa dữ liệu khỏi thiết bị này, các thay đổi đó sẽ mất.` |
+| `auth.signOut.syncFailed` | M7 | Alert trong D4 khi đồng bộ lần cuối lỗi mà đang chọn Remove | `Couldn't sync your changes. If you remove the data now, they will be lost.` | `Không đồng bộ được các thay đổi của bạn. Nếu xóa dữ liệu bây giờ, chúng sẽ mất.` |
+| `auth.signOut.removeAnyway` | M7 | nhãn nút xác nhận sau `syncFailed` | `Remove anyway` | `Vẫn xóa` |
+| `auth.merge.title` | M7 | D5, tiêu đề | `Add this device's data to your account?` | `Thêm dữ liệu trên thiết bị này vào tài khoản của bạn?` |
+| `auth.merge.body` | M7 | D5; `{{goals}}`, `{{entries}}` = cụm đếm; `{{email}}` nguyên văn | `This device still has {{goals}}, {{entries}} from another account. If you continue, they'll be added to the account {{email}}, next to what's already there.` | `Thiết bị này vẫn còn {{goals}}, {{entries}} từ một tài khoản khác. Nếu tiếp tục, chúng sẽ được thêm vào tài khoản {{email}}, cạnh những gì đã có.` |
+| `auth.merge.note` | M7 | D5, `.hint` | `Cancel signs you out. Nothing is uploaded.` | `Chọn Hủy sẽ đăng xuất. Không có gì được tải lên.` |
+| `auth.merge.confirm` | M7 | nút primary | `Add to account` | `Thêm vào tài khoản` |
+| `auth.merge.working` | M7 | nhãn nút khi bận | `Adding…` | `Đang thêm…` |
+| `import.titleSignedIn` | M7 | D3 đã đăng nhập, tiêu đề | `Replace data on all your devices?` | `Thay thế dữ liệu trên mọi thiết bị của bạn?` |
+| `import.bodySignedIn` | M7 | D3 đã đăng nhập; cùng biến với `import.body` | `This backup has {{goals}}, {{entries}}, exported {{date}}. Importing replaces everything currently on this device ({{curGoals}}, {{curEntries}}) and, once synced, everything in your account too, so it changes your other devices as well. This can't be undone.` | `Bản sao lưu này có {{goals}}, {{entries}}, xuất ngày {{date}}. Nhập sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này ({{curGoals}}, {{curEntries}}) và, sau khi đồng bộ, cả dữ liệu trong tài khoản của bạn, nên các thiết bị khác của bạn cũng thay đổi theo. Bạn không thể hoàn tác.` |
+| `import.offlineNote` | M7 | D3 đã đăng nhập, dòng thêm khi offline | `You're offline, so the change will reach your account when you're back online.` | `Bạn đang ngoại tuyến nên thay đổi sẽ đến tài khoản của bạn khi có mạng trở lại.` |
+
+(D3 đã đăng nhập dùng lại nút `import.confirm` / `common.cancel`.)
+
+#### 7.7.3 SyncIndicator (M7)
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `sync.indicator.label` | M7 | `aria-label` của nhóm StatusRow đồng bộ | `Sync status` | `Trạng thái đồng bộ` |
+| `sync.indicator.synced` | M7 | `synced`; `{{time}}` theo 7.1 | `Synced {{time}}` | `Đã đồng bộ {{time}}` |
+| `sync.indicator.syncedNoTime` | M7 | `synced` khi chưa có mốc | `Synced` | `Đã đồng bộ` |
+| `sync.indicator.syncing` | M7 | `syncing`; cũng là nhãn nút `Sync now` khi bận | `Syncing…` | `Đang đồng bộ…` |
+| `sync.indicator.signingIn` | M7 | `signing-in` | `Signing in…` | `Đang đăng nhập…` |
+| `sync.indicator.waiting_one` | M7 | `pending` online | `{{count}} change waiting to sync` | — |
+| `sync.indicator.waiting_other` | M7 | | `{{count}} changes waiting to sync` | `{{count}} thay đổi chờ đồng bộ` |
+| `sync.indicator.offline_one` | M7 | `pending` offline | `Offline · {{count}} change waiting` | — |
+| `sync.indicator.offline_other` | M7 | | `Offline · {{count}} changes waiting` | `Ngoại tuyến · {{count}} thay đổi đang chờ` |
+| `sync.indicator.offlineNone` | M7 | offline, `pending = 0` | `Offline · all changes synced` | `Ngoại tuyến · mọi thay đổi đã đồng bộ` |
+| `sync.indicator.error` | M7 | `error` | `Couldn't sync` | `Không đồng bộ được` |
+| `sync.indicator.retry` | M7 | nút trong chip lỗi | `Retry` | `Thử lại` |
+| `sync.indicator.retryAria` | M7 | `aria-label` nút Retry (chứa chữ hiển thị) | `Retry sync` | `Thử lại đồng bộ` |
+| `sync.indicator.expired` | M7 | `expired` (link tới Settings) | `Sign in again to sync` | `Đăng nhập lại để đồng bộ` |
+| `sync.announce.synced` | M7 | vùng `aria-live` ẩn, khi về `synced` sau lỗi/offline | `All changes are synced.` | `Mọi thay đổi đã được đồng bộ.` |
+| `sync.announce.offline` | M7 | khi chuyển sang offline | `You're offline. Changes will sync when you're back online.` | `Bạn đang ngoại tuyến. Thay đổi sẽ được đồng bộ khi có mạng trở lại.` |
+| `sync.announce.error` | M7 | khi chuyển sang `error` | `Sync failed. Your changes are safe on this device and will be retried.` | `Đồng bộ không thành công. Thay đổi của bạn vẫn an toàn trên thiết bị này và sẽ được thử lại.` |
+| `sync.announce.expired` | M7 | khi chuyển sang `expired` | `Your sign-in expired. Sign in again to keep syncing.` | `Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục đồng bộ.` |
+
+#### 7.7.4 Nhắc đăng nhập (M8)
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `loginPrompt.label` | M8 | `aria-label` của banner | `Sign-in suggestion` | `Gợi ý đăng nhập` |
+| `loginPrompt.title` | M8 | tiêu đề đậm | `Keep your progress safe` | `Giữ tiến trình của bạn an toàn` |
+| `loginPrompt.body` | M8 | thân | `Sign in to back up your goals and entries online and use them on all your devices. It's optional.` | `Đăng nhập để sao lưu mục tiêu và lần ghi lên tài khoản và dùng trên mọi thiết bị. Việc này không bắt buộc.` |
+| `loginPrompt.notNow` | M8 | nút ghost | `Not now` | `Để sau` |
+| `loginPrompt.snoozedToast` | M8 | toast sau `Not now` | `OK. You can sign in any time from Settings.` | `Được rồi. Bạn có thể đăng nhập bất cứ lúc nào trong Cài đặt.` |
+| `exportHint.label` | M8 | `aria-label` khối hint | `Automatic backup` | `Sao lưu tự động` |
+| `exportHint.text` | M8 | thân hint (không có tiêu đề) | `Backup downloaded. To keep a copy automatically, sign in with Google: your goals and entries then sync to your account.` | `Đã tải bản sao lưu. Để có thêm một bản sao tự động, hãy đăng nhập bằng Google: mục tiêu và lần ghi của bạn sẽ được đồng bộ vào tài khoản.` |
+
+#### 7.7.5 Settings: ghi chú "theo tài khoản", Backup, Storage, About
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `settings.language.syncNote` | M7 | card Language, chỉ khi `signed-in` | `Saved to your account and used on your other devices.` | `Được lưu vào tài khoản của bạn và dùng cho các thiết bị khác của bạn.` |
+| `settings.reminders.syncNote` | M7 | card Reminders, chỉ khi `signed-in` | `Reminder on/off and time are saved to your account and used on your other devices. Notification permission is set separately on each device.` | `Việc bật/tắt và giờ nhắc được lưu vào tài khoản của bạn và dùng cho các thiết bị khác. Quyền thông báo được đặt riêng trên từng thiết bị.` |
+| `settings.permission.defaultOnDesc` | M7 | quyền `default` mà nhắc đã bật (từ cloud) | `Reminders are on, but this device hasn't allowed notifications yet. Allow them to get a notification; you'll still see the reminder banner in the app.` | `Nhắc nhở đang bật nhưng thiết bị này chưa cho phép thông báo. Hãy cho phép để nhận thông báo; bạn vẫn sẽ thấy lời nhắc ngay trong app.` |
+| `settings.backup.descSignedIn` | M7 | mô tả Backup khi đã đăng nhập | `Your data is saved on this device and synced to your account. A backup file is an extra copy you keep yourself.` | `Dữ liệu của bạn được lưu trên thiết bị này và đồng bộ vào tài khoản. Tệp sao lưu là một bản sao bạn tự giữ.` |
+| `settings.backup.descSignedOut` | M8 | cloud bật, chưa đăng nhập (hoặc hết phiên) | `Your data lives on this device. Sign in to keep a copy in your account too, or export a backup file now and then.` | `Dữ liệu của bạn nằm trên thiết bị này. Hãy đăng nhập để có thêm một bản sao trong tài khoản, hoặc thỉnh thoảng xuất tệp sao lưu.` |
+| `settings.backup.importHintSignedIn` | M7 | hint dưới nút khi đã đăng nhập | `Importing replaces everything on this device and in your account.` | `Nhập sao lưu sẽ thay thế toàn bộ dữ liệu trên thiết bị này và trong tài khoản của bạn.` |
+| `settings.storage.notProtectedSignIn` | M8 | nối sau `notProtectedDesc` khi cloud bật + chưa đăng nhập | `Signing in also keeps a copy of your data in your account.` | `Đăng nhập cũng giúp giữ một bản sao dữ liệu trong tài khoản của bạn.` |
+| `settings.about.descCloud` | M6 | About khi cloud bật, chưa đăng nhập/hết phiên (thay `settings.about.desc`) | `Everything you log is saved on this device first. Signing in is optional, and there's no tracking.` | `Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước. Đăng nhập là tùy chọn và không có theo dõi.` |
+| `settings.about.descSignedIn` | M6 | About khi đã đăng nhập | `Everything you log is saved on this device first and synced to your account. There's no tracking.` | `Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước, rồi đồng bộ vào tài khoản của bạn. Không có theo dõi.` |
+| `settings.about.privacy` | M6 | About, `.hint`, khi cloud bật (cả hai trạng thái) | `If you sign in, your goals, entries, reminder settings and language are stored in this app's database (Supabase) under your account. Other people who use the app can't see them.` | `Nếu bạn đăng nhập, mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ của bạn được lưu trong cơ sở dữ liệu của app (Supabase) dưới tài khoản của bạn. Những người khác dùng app không xem được chúng.` |
+
+Khi cloud tắt, toàn bộ 7.7 không được dùng và `settings.about.desc` (`No account, no tracking.`) giữ nguyên như v1.1 (FR-38).
+
 ---
 
 ## 8. Accessibility
@@ -1268,11 +1694,67 @@ Ngoại lệ có chủ đích: các mức nhạt của heatmap (`--heat-0..2`) k
 - Bản `vi` không làm giảm tương phản (cùng token) và không cần cỡ chữ lớn hơn; dấu thanh tiếng Việt được chừa chỗ theo mục 3.4 (quy tắc 5). Người dùng phóng chữ 200 %: các hàng nút tự xuống dòng, không cắt chữ (mục 3.4).
 - Màu không phải kênh duy nhất: badge có chữ, lỗi có icon + chữ, pace có chữ "ahead/behind", tab active có vạch/đậm.
 
+### 8.1 Phase 2 — đăng nhập và đồng bộ (v2.0)
+
+Kiểm bằng `@axe-core/playwright` (0 serious/critical) ở `en` và `vi`, sáng và tối, cho Today (có banner hoặc chỉ báo), Settings (A1, A5, A10), D3 (đã đăng nhập), D4, D5; và kiểm bàn phím thủ công theo danh sách dưới.
+
+**Tương phản (tính tay, QC xác nhận bằng axe):**
+
+| Cặp | Sáng | Tối |
+| :- | :- | :- |
+| Chữ nút Google (`--google-text`) trên `--google-bg` | ≈ 16.8:1 | ≈ 14.5:1 |
+| Viền nút Google (`--google-border`) trên `--surface` / `--primary-soft` (non-text ≥ 3:1) | ≈ 4.8:1 / ≈ 4.1:1 | ≈ 5.2:1 / ≈ 4.4:1 |
+| SyncIndicator `synced`: `--text-muted` trên `--surface`; icon `--primary` (non-text) | ≈ 6.3:1; ≈ 5.0:1 | ≈ 7.2:1; ≈ 7.3:1 |
+| `pending`: `--text` trên `--surface-2` | ≈ 13:1 | ≈ 12:1 |
+| `error`: `--on-danger-soft` trên `--danger-soft` | ≈ 5.5:1 | > 7:1 |
+| `expired`: `--info` trên `--info-soft` | ≈ 6.9:1 | > 7:1 |
+| LoginPromptBanner: `--on-primary-soft` trên `--primary-soft` (mọi chữ trong banner dùng màu này, kể cả thân; không dùng `--text-muted` trên nền này) | ≈ 7.4:1 | > 7:1 |
+
+**SyncIndicator (FR-50, US-18)**
+
+- StatusRow có `role="group"` + `aria-label` = `sync.indicator.label`; chữ hiển thị của chip chính là tên truy cập (icon `aria-hidden`). Đọc được bằng cách duyệt (virtual cursor) ở mọi lúc.
+- **Thông báo thay đổi trạng thái** qua một vùng riêng, luôn có trong DOM: `<div class="sr-only" role="status" aria-live="polite" aria-atomic="true">`. Chỉ đặt nội dung (key `sync.announce.*`) khi chuyển **vào** `error`, `offline` (mất mạng), `expired`, hoặc **trở lại** `synced` sau một trong ba trạng thái đó. **Không** thông báo `syncing`, `waiting`, và không thông báo `synced` thường kỳ hay lần render đầu (tránh nói liên tục). Gom thay đổi trong 1 s (debounce); không lặp lại cùng một thông báo liên tiếp. Chip không có `aria-live` riêng (tránh đọc đôi), không bao giờ chiếm focus.
+- Chip `error`: nút `Retry` là `<button>` có `aria-label` = `sync.indicator.retryAria` (chứa chữ hiển thị — WCAG 2.5.3). Chip `expired` là `<a href="#/settings">` có tên là chữ hiển thị.
+- Vòng xoay là SVG `aria-hidden`; reduced-motion: không xoay, chữ `Syncing…` vẫn đủ nghĩa.
+
+**Card Account và nút Google**
+
+- Card là `<section aria-labelledby>` với h2 `Account`. Avatar `aria-hidden="true"`; tên và email là chữ thường (không gắn `lang`). Chi tiết đồng bộ là `<dl>` (nhãn `dt`, giá trị `dd`); `Last synced` hiển thị thời điểm bằng chữ (`today at 14:05`).
+- Nút Google: `<button>` thật, chữ hiển thị là tên truy cập, logo `aria-hidden`; vô hiệu khi offline bằng `disabled` **và** `aria-describedby` trỏ `settings.account.offlineHint` (hiển thị luôn, không chỉ khi hover). `busy`: `aria-busy="true"`, chữ `Signing in…`. Focus-visible dùng vòng `--focus` 2 px, offset 2 px (không bị bo/cắt bởi viền nút).
+- A3 `signing-in`: dòng trạng thái là `role="status"`; A4 (lỗi đăng nhập) là `role="alert"` (người dùng vừa thao tác xong nên cần nghe ngay); A10 (hết phiên) là `role="status"` (không ngắt), vì `sync.announce.expired` đã thông báo.
+- `Sync now`: khi bận dùng `aria-disabled="true"` (vẫn focus được, không mất vị trí focus), nhãn `Syncing…`; khi offline dùng `disabled` + `aria-describedby` trỏ `settings.account.offlineSync`. Kết quả thành công do toast `role="status"` đọc.
+
+**Focus**
+
+- **Sau callback OAuth:** app render màn `returnTo` và focus vào `<h1>` như mọi lần đổi route (không cuộn, không nhảy vào card). Kết quả được thông báo bằng toast `role="status"` (thành công) hoặc Alert `role="alert"` trong card / toast lỗi (thất bại). Nếu callback xảy ra ngay lúc tải trang, focus ban đầu vẫn là `<h1>`.
+- **Sau "Sign out" (D4 đóng):** focus về h2 của card Account (`tabindex="-1"`) vì nút "Sign out" đã biến mất; sau `Cancel`/Esc: về nút "Sign out" đã mở dialog.
+- **Sau "Not now":** focus về `<h1>` của Today. **Sau `Dismiss` (Alert lỗi):** focus về nút Google.
+- **Sau D5:** `Add to account` → focus về `<h1>`; `Cancel` → như đăng xuất (h2 của card Account nếu đang ở Settings, ngược lại `<h1>`).
+- **Storage → `Go to Account`:** focus chuyển vào nút Google của card Account (đích di chuyển rõ ràng; không dùng hash).
+
+**Dialog D4, D5, D3 đã đăng nhập**
+
+- Cùng cơ chế `<dialog>` + `showModal()` (focus trap, Esc, `inert` nền, trả focus). `aria-labelledby` = tiêu đề; `aria-describedby` = đoạn thân (D4: thân + khối cảnh báo chưa đồng bộ nếu có).
+- D4: nhóm radio là `<fieldset>` + `<legend>` (`auth.signOut.legend`); mỗi radio có nhãn + mô tả nối `aria-describedby`; **focus ban đầu ở radio Keep (đã chọn)**; phím mũi tên đổi lựa chọn; vùng `role="status"` cho cảnh báo "Remove + chưa đồng bộ" luôn có trong DOM (rỗng khi không áp dụng) để việc nội dung xuất hiện được đọc; Alert `syncFailed` là `role="alert"`; khi bận: `aria-busy="true"`, mọi control `disabled`, tránh đóng bằng Esc cho tới khi xong.
+- D5: focus ban đầu ở `Cancel`; thân nêu rõ số lượng và email (không chỉ dùng màu); Esc = `Cancel`.
+- Hàng nút dính đáy không che nội dung khi phóng chữ 200 % (nội dung cuộn trong dialog, thanh cuộn nhận focus bàn phím nhờ `tabindex="0"` trên vùng cuộn nếu nội dung tràn).
+
+**LoginPromptBanner và ExportSignInHint**
+
+- Banner: `<section aria-label>` (`loginPrompt.label`), **không** `role="dialog"`/`alertdialog`, không `aria-live` (không ngắt người dùng đang ghi), không tự lấy focus; Tab tới được theo thứ tự đọc ngay sau banner nhắc. Hai nút ≥ 44 px, cách nhau ≥ 8 px. Nút "Not now" có tên truy cập là chính chữ hiển thị.
+- ExportSignInHint: `<div role="group" aria-label>` (`exportHint.label`), không live; toast `Backup exported` đã thông báo việc Export.
+
+**Khác**
+
+- Ghi chú "theo tài khoản" (Language, Reminders) là chữ tĩnh, icon `aria-hidden`; khi giờ nhắc/ngôn ngữ được áp từ cloud, toast `toast.prefsFromAccount` (`role="status"`, ngôn ngữ mới) báo thay đổi; `<html lang>` và `document.title` đổi đồng bộ như FR-32.
+- Màu không phải kênh duy nhất ở mọi trạng thái đồng bộ (icon khác nhau + chữ khác nhau); hết phiên/lỗi không chỉ dựa vào đỏ/xanh dương.
+- Logo Google chỉ là hình trang trí kèm chữ "Google" trong nhãn nút; không có `alt` riêng.
+
 ---
 
 ## 9. Interface spec (cho CLI/API/bot)
 
-Không áp dụng — app có giao diện đồ hoạ (PWA). Các "giao diện" không phải màn hình đã có đặc tả ở nơi khác: payload notification (`ARCHITECTURE.md` §5.6; copy `en`/`vi` ở mục 7.5: `notification.*`), file `.ics` (§5.7; `ics.summary`, `ics.alarm` ở mục 7.5), file backup (§5.5; tên file và nội dung JSON không dịch).
+Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đăng nhập/đồng ý của Google và URL callback `?auth=callback` là giao diện **ngoài** app (không thiết kế ở đây; contract ở `ARCHITECTURE.md` §5.9); lỗi quay về từ callback đã có copy (`errors.AUTH_*`). Các "giao diện" không phải màn hình đã có đặc tả ở nơi khác: payload notification (`ARCHITECTURE.md` §5.6; copy `en`/`vi` ở mục 7.5: `notification.*`), file `.ics` (§5.7; `ics.summary`, `ics.alarm` ở mục 7.5), file backup (§5.5; tên file và nội dung JSON không dịch).
 
 ---
 
@@ -1298,6 +1780,23 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). Các "giao diện" 
 - **A-D18 (i18n).** Lỗi đang hiện trong form được lưu dưới dạng mã lỗi và dịch lại khi đổi ngôn ngữ; giá trị người dùng đang nhập không bị reset khi đổi ngôn ngữ (đổi ngôn ngữ chỉ xảy ra ở Settings nên thực tế form chỉ giữ lại nếu người dùng quay về).
 - **A-D19 (i18n).** Thêm so với v1 để đủ chuỗi cho i18n (không thêm tính năng): `toast.languageChanged`, card Language (`settings.language.*`), `errors.UNKNOWN`, `errors.WRITE_FAILED` (đã có chữ nhưng chưa có key), `doc.title`, `nav.label`, `a11y.required`, các `aria-label`/chữ ẩn đã có sẵn trong mockup (`entry.form.label*`, `goalCard.progress*`, `timer.elapsedLabel`, `reminder.bannerLabel`, `today.goalsLabel`, `day.navLabel`, `day.goalsLabel`), `chart.bar.monthlySummary` và tiêu đề cột bảng ẩn, `goal.detail.table*`, `goal.detail.tooltip/label*`, `timer.*` của D1 (đã có trong mockup 04). Sửa nhẹ `en` cho đúng ngữ pháp số ít: `goal.delete.body_one` (`its 1 entry`, bản v1 chung `{n} entries`).
 
+**Assumptions của phase 2 (v2.0)**
+
+- **A-D20.** Chỉ báo đồng bộ nằm trong một **StatusRow** ở đầu `<main>` (thay chỗ `OfflineChip`), không thêm thanh header/app bar mới: app v1 không có header trên mobile và thêm một thanh cố định sẽ làm mất chiều cao và đổi bố cục mọi màn. Chip canh phải; `OfflineChip` canh trái. Khi chưa đăng nhập/cloud tắt, hàng không tồn tại (bố cục v1 không đổi).
+- **A-D21.** SyncIndicator có **6** trạng thái hiển thị: 5 trạng thái của PRD FR-50 (`synced`, `syncing`, `pending/offline`, `error`, `expired` = "cần đăng nhập lại") + `signing-in` (khi quay về từ Google ở màn không phải Settings); `signed-out`/`unavailable` ẩn. `pending` (online, đang chờ lô 2 s hoặc backoff) và `offline` dùng cùng kiểu, khác chữ. PRD FR-50 thắng cách gom "5 trạng thái" trong yêu cầu của orchestrator.
+- **A-D22.** Card Account đứng **thứ hai** (sau Language, trước Reminders). Key của card là `settings.account.*` (quy ước `settings.<card>.*`, khớp M6-AC3); nhóm `account.*` trong yêu cầu của orchestrator chính là nhóm này. Dialog dùng `auth.signOut.*`, `auth.merge.*`.
+- **A-D23.** Nút Google theo hướng dẫn thương hiệu (nền trắng/viền, G nhiều màu; tối: `#131314`/viền `#8E918F`), nhưng dùng **font hệ thống** thay Roboto (không tải font ngoài, NFR-01), `min-height` 44 px thay 40 px (vùng chạm), chữ 15 px/600 như các nút khác. Nhãn đúng cụm hướng dẫn của Google: `Sign in with Google` / `Đăng nhập bằng Google`. Theme của nút theo hệ điều hành (như toàn app), không dùng biến thể "neutral".
+- **A-D24.** Card Language/Reminders chỉ nói "theo tài khoản" khi **đã đăng nhập**; chưa đăng nhập hoặc hết phiên không hiện gì thêm (không nhắc đăng nhập ở đây, tránh lặp ngoài FR-52/53/54).
+- **A-D25.** Lỗi đăng nhập quay về màn **ngoài Settings** (chỉ xảy ra từ banner Today ở M8): toast ngắn tone error (8 s) kèm nút `Go to Account`; lỗi đầy đủ nằm ở Alert trong card, tồn tại đến khi người dùng bấm `Dismiss`, bấm đăng nhập lại, hoặc reload. Toast tone `error` + `action` là mở rộng nhỏ của `Toast` (M6-T5).
+- **A-D26.** D4 giữ mở và hỏi lại ("Remove anyway") khi đã chọn Remove mà đồng bộ lần cuối không đẩy hết thay đổi — chống mất dữ liệu âm thầm; ARCH §5.9 nói lỗi mạng "không chặn việc xoá phiên", điều đó vẫn đúng với Keep. Xem OQ-D10.
+- **A-D27.** `expired` được coi như "chưa đăng nhập" ở Backup, D3, Storage, About (dữ liệu chỉ nằm trên máy cho tới khi đăng nhập lại), nhưng **không** hiện LoginPromptBanner/ExportSignInHint (card Account và chip `Sign in again to sync` đã lo, M8-AC1).
+- **A-D28.** `toast.mergeDone` đếm bản ghi **còn sống trên máy sau lần đồng bộ đầu** (chính là những gì tài khoản có sau khi gộp); chỉ hiện khi lần đồng bộ đầu có đẩy hoặc kéo ít nhất một bản ghi; ngược lại chỉ có `toast.signedIn`. Toast mới thay toast cũ (quy tắc một toast).
+- **A-D29.** Avatar lấy grapheme đầu của `name` (rơi về `email`, rồi `?`), nền `--primary-soft`, chữ `--on-primary-soft`, không ảnh Google (FR-42).
+- **A-D30.** `settings.about.privacy` nói "Những người khác dùng app không xem được chúng" — đúng với RLS; **không** nói "chỉ bạn xem được" vì chủ project Supabase có thể đọc bảng qua Dashboard. Xem OQ-D11.
+- **A-D31.** Chip `synced` hiện giờ `HH:MM` nếu cùng ngày cục bộ, ngày ngắn nếu khác ngày (`2026-10-08` / `08/10/2026`); card Account hiện câu đầy đủ `today at 14:05`. Không dùng "2 minutes ago" vì cần tự cập nhật theo giờ (gây re-render và thông báo SR).
+- **A-D32.** Mockup có nút đổi sáng/tối (`data-theme`) và bộ chọn trạng thái chỉ để duyệt thiết kế; **app thật vẫn chỉ theo hệ điều hành** (A-D2). Token tối giữ nguyên giá trị.
+- **A-D33.** Khi có phiên lưu sẵn nhưng SDK chưa nạp xong, card Account hiện thẳng A5 với `sync.account` đã lưu (nút `Sync now` vô hiệu) để không nháy A1 → A5 (ARCH §5.9 "Lazy-load").
+
 ---
 
 ## 11. Open questions
@@ -1311,6 +1810,11 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). Các "giao diện" 
 - **OQ-D7 (cho planner/QC, thông tin).** (a) Parity test (M1-AC17) phải so `vi` `_other` với `en` `_other` và bỏ qua `_one` (vi không có); biến `{{count}}` có mặt ở cả hai `_other`. (b) Các dòng đánh dấu `(= en)` ở mục 7 (`app.name`, `settings.language.title`, `settings.language.option.*`, `+1%`, `{{n}}/280`…) cần được miễn trong test "không lẫn tiếng Anh" (NFR-11c). (c) `settings.language.title` = `Language / Ngôn ngữ` chứa chữ tiếng Việt ở bản `en` và chữ tiếng Anh ở bản `vi` có chủ đích.
 - **OQ-D8 (cho planner/developer, thông tin).** Tên thứ/tháng ngắn của `Intl` `vi-VN` (`Th 2`, `thg 10`) khác nhau giữa các phiên bản ICU và có thể rộng hơn nhãn `en`; heatmap/biểu đồ phải chịu được (mục 3.4). Nếu QC thấy nhãn đè nhau ở 360 px, dùng dạng số (`T2`, `10`) cho nhãn trục ở < 640 px, chi tiết đầy đủ vẫn có ở tooltip/bảng ẩn.
 - **OQ-D9 (cho planner, nhỏ).** `LocaleService` chưa có API cho biết ngôn ngữ hiện tại là "đã chọn" hay "đang theo trình duyệt"; thiết kế không cần (Language chỉ hiện ngôn ngữ đang dùng). Nếu sau này muốn thêm tuỳ chọn "Theo trình duyệt" thì cần quyết định ở plan.
+- **OQ-D10 (cho planner, M7, quan trọng với dữ liệu).** Thiết kế D4 (A-D26): khi người dùng chọn **Remove data** mà đồng bộ lần cuối không đẩy hết thay đổi (offline, lỗi, hết 10 s), dialog **ở lại** và hỏi lại bằng nút `Remove anyway`. ARCH §5.9 hiện nói lỗi mạng không chặn đăng xuất; TASKS M7-AC12 chỉ kiểm nhánh Keep. Cần planner xác nhận (thêm một AC nhỏ cho nhánh Remove + còn thay đổi chờ) hoặc bỏ bước hỏi lại (khi đó chỉ còn khối cảnh báo `auth.signOut.unsyncedRemove`, người dùng bấm `Sign out and remove data` là xoá luôn). Mặc định thiết kế: có hỏi lại.
+- **OQ-D11 (cho user, quyền riêng tư).** Chuỗi `settings.about.privacy` nói dữ liệu được lưu trong cơ sở dữ liệu của app (Supabase) và "người khác dùng app không xem được"; thực tế chủ project (anh) đọc được mọi hàng trong Dashboard. Giữ cách nói trung thực này hay muốn nêu rõ "chủ app có thể truy cập kỹ thuật"? (Có thể đổi chữ sau mà không đụng layout.)
+- **OQ-D12 (cho planner, nhỏ).** `ExportSignInHint` (FR-53) dùng "lượt" 30 ngày qua `claimExportHint` ngay khi Export thành công; nếu lúc đó offline thì nút đăng nhập bị vô hiệu và lượt bị tiêu. Đề xuất: chỉ `claim` khi `online`. Thiết kế hiện hiển thị cả khi offline (nút vô hiệu + lý do) để khớp FR-53 nguyên văn.
+- **OQ-D13 (cho planner/developer, thông tin).** Để dựng đúng, M6/M7 cần hiển thị được: `AuthState.signed-out.lastError` (có thể xoá bằng `Dismiss`), `SyncStatus.nextRetryAt`, số bản ghi `skippedInvalid` (chỉ cần cờ có/không cho A9), số goal/entry còn sống sau lần đồng bộ đầu (cho `toast.mergeDone`), và email/tên đã lưu trong kv `sync.account` (cho `expired`). Nếu một trong các dữ liệu này không có trong `AuthState`/`SyncStatus`, báo lại để chỉnh thiết kế thay vì tự suy ra.
+- **OQ-D14 (cho planner, nhỏ).** Phase 2 chưa có cách để người dùng đã đăng nhập xem hoặc xoá dữ liệu cloud/tài khoản trong app (OQ-09 đã quyết "để Later"). Thiết kế không thêm; chỉ nêu trong `settings.about.privacy` và README rằng dữ liệu nằm ở Supabase.
 
 ---
 
@@ -1324,3 +1828,12 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). Các "giao diện" 
   - Mockup: thêm `01-today.vi.html` (Today bản `vi`); `08-settings.html` thêm card Language (bản `en`) ở đầu; `index.html` thêm liên kết.
   - Sửa nhẹ `en`: `goal.delete.body_one` ("its 1 entry"). Thêm `errors.UNKNOWN`, `toast.languageChanged`, `chart.bar.monthlySummary` và các aria-label đã có trong mockup nhưng chưa có key (A-D19).
   - Assumptions A-D11 (sửa), A-D13 … A-D19 (mới); Open questions OQ-D5 (cập nhật), OQ-D6 … OQ-D9 (mới).
+- 2026-10-12 — **v2.0** (mode `revise`, phase 2: đăng nhập Google tuỳ chọn + đồng bộ cloud; PRD v2.1 FR-37 … FR-55, ARCH v2.1, TASKS v2.1 M6/M7/M8). Cập nhật tại chỗ, giữ nguyên token và bố cục phase 1; build không cấu hình cloud giống hệt v1.1.
+  - §1: nguyên tắc 5 sửa nhẹ ("trên máy bạn trước"), thêm nguyên tắc 6 (tài khoản là lựa chọn, không phải cánh cổng). §2: thêm F9 đăng nhập, F10 đăng xuất (D4), F11 gộp lần đầu / đổi tài khoản (D5), F12 hết phiên, F13 đồng bộ nền + chỉ báo, F14 nhắc đăng nhập; F7 ghi chú D3 đã đăng nhập.
+  - §3: 3.1 thêm **StatusRow** (SyncIndicator thay OfflineChip khi đã đăng nhập) và ghi chú callback không phải route; 3.3 thêm hàng M6/M7/M8; **3.5 mới**: rủi ro 360 px cho thành phần phase 2 (email/tên dài, chuỗi `vi`, dialog cuộn + nút dính đáy).
+  - §4: S1 thêm LoginPromptBanner (M8) và StatusRow (M7); S7 thêm card **Account** (thứ tự Language → Account → Reminders …; 10 trạng thái A1 … A10), ghi chú "theo tài khoản" ở Language/Reminders, Backup/Storage/About theo trạng thái (bảng 3 cột), tương tác/focus, D3 biến thể đã đăng nhập, **D4** (đăng xuất Keep/Remove), **D5** (gộp tài khoản).
+  - §5: component mới `GoogleSignInButton`, `AccountCard`, `Avatar`, `SyncIndicator` (bảng 6 trạng thái), `SignOutDialog`, `MergeAccountDialog`, `LoginPromptBanner`, `ExportSignInHint`, `SettingsSyncNote`; sửa `AppShell`, `Banner` (tone `promo`), `Toast` (tone `error` + action), `ConfirmDialog`. §6: 3 token Google (`--google-bg/-border/-text`), `--chip-h`, motion vòng xoay; không thêm màu khác.
+  - §7: **97 key logic mới** (101 dòng `en`; `vi` đủ 97, `_one` không có `vi`), cả `en` và `vi`: 7.2 (+12: `format.changesCount/todayAt/dateAt`, `common.dismiss`, 8 toast), 7.3 (+8: `errors.AUTH_*` 4, `errors.SYNC_*` 4), 7.7.1 Account (+20), 7.7.2 D4/D5/D3 (+24), 7.7.3 SyncIndicator (+16), 7.7.4 nhắc đăng nhập (+7), 7.7.5 Settings (+10); 7.0 thêm tiền tố key, thuật ngữ (đăng nhập, tài khoản, đồng bộ, thay đổi, thiết bị, "Để sau"; "Google" không dịch); 7.1 thêm định dạng thời điểm đồng bộ.
+  - §8.1 mới: a11y phase 2 (tương phản, vùng `aria-live` riêng cho trạng thái đồng bộ, focus sau callback/đăng xuất/Not now, dialog D4/D5, banner không modal, nút Google). §9: ghi chú trang Google/callback là ngoài app.
+  - Mockup: `08-settings.html` (card Account + bộ chọn trạng thái, ghi chú đồng bộ, Backup/Storage/About theo trạng thái, D3/D4/D5 preview), `01-today.html` + `01-today.vi.html` (LoginPromptBanner, SyncIndicator, bộ chọn trạng thái), **`09-account.html` mới** (bảng tham chiếu mọi trạng thái, đổi `en`/`vi`, sáng/tối, email dài); `index.html` thêm liên kết. Tất cả có nút sáng/tối.
+  - Assumptions A-D20 … A-D33; Open questions OQ-D10 … OQ-D14.
