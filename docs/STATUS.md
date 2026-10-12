@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** qc scope final (phase 2; report docs/qc/report-final-phase2.md) → tổng kết → user U0 + U8 → push/deploy
+**Next step:** user làm U0 (export backup trên bản Pages cũ) và U8 (GitHub Secrets VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY) → orchestrator push main → kiểm bản Pages (card Account, logo) → user U10 (NOT VERIFIED thật)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -50,7 +50,7 @@
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
 | M7 | PASS (round 2) | docs/qc/report-M7-r2.md | 19/19 AC đạt; 4 dispute đã re-target, M6-D1 FIXED |
-| Final QC (phase 2) | DOING | | |
+| Final QC (phase 2) | PASS (round 1) | docs/qc/report-final-phase2.md | 109 AC M1–M8 0 FAIL; 2 clone sạch cache nguội xanh; Playwright 568/568 ×2; bundle 239,8 kB (ngưỡng 250, tải lạnh Today 247,3 kB sát ngưỡng final-nfr) |
 
 ## Backlog (defect Minor, đề xuất chưa làm)
 | ID | Mô tả | Nguồn |
@@ -73,9 +73,14 @@
 | M7-P1 | (FIXED trong M8, 7 chuỗi dev đề xuất NOT IN DESIGN — designer duyệt) Key copy riêng cho hàng trên máy bị cloud từ chối; dọn tombstone đã sync; `npm run check` trên máy có .env.local ra bản cloud ON | QC M7 r1/r2 |
 | M8-D1 | Mốc lastDismissedAt/lastExportHintAt ở tương lai (đồng hồ máy từng sai) làm banner/hint im hàng chục năm (login-prompt.ts isSnoozed) — clamp mốc > now | QC M8 r1 |
 | M8-P1 | OQ-D12 (hint export chỉ khi online) planner/designer chốt; README còn "(used from M7)"; exportBackup không catch quanh claimExportHint | QC M8 r1 |
+| F2-R1 | Bundle sát ngưỡng: tải lạnh #/today 247,3 kB / 250 kB — tách chunk schemas (zod 34 kB) hoặc xét lại ngưỡng trước khi thêm tính năng | Final QC phase 2 |
 | M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
-## Tổng kết (2026-10-10)
+## Tổng kết phase 2 (2026-10-13)
+- M6 Auth (PASS r1), M7 Sync (PASS r2), M8 Login prompts (PASS r1), Final QC phase 2 PASS. Unit 1160, Playwright 568 (chromium + cloud mock), bundle 239,8 kB gzip. Logo product đã gắn (icon PWA, favicon, brand mark).
+- Chưa push/deploy: chờ user U0 (backup) + U8 (GitHub Secrets). NOT VERIFIED thật (U10): docs/qc/report-final-phase2.md §8. Backlog: §9 + bảng Backlog.
+
+## Tổng kết phase 1 (2026-10-10)
 - 5 milestone + Final QC đều PASS. Unit 686, e2e 347, bundle 214,9 kB gzip (≤ 250). Chạy: `npm ci && npm run e2e:install && npm run check && npm run test:e2e`; dùng: `npm run build && npm run preview` → http://localhost:4173.
 - 2026-10-11: đã push lên GitHub và deploy GitHub Pages (Settings → Pages → Source: GitHub Actions; repo đổi sang public vì Pages private cần GitHub Pro). Kiểm trên bản deploy: Today render, SW đăng ký, manifest đúng sub-path, 0 lỗi console. NOT VERIFIED: docs/qc/report-final-r2.md §8. Backlog Minor: §9 + bảng Backlog ở trên.
 
