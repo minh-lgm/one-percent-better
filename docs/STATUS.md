@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** qc M6 round 1 (report docs/qc/report-M6-r1.md)
+**Next step:** developer M7 mode build → qc M7 round 1; user làm U7 (.env.local) và thử đăng nhập thật (NV-1)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -46,8 +46,8 @@
 | Plan v2.1 (phase 2) | DONE (duyệt 2026-10-12) | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
 | M8 | TODO | | |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
-| M6 | DOING — dev DONE (commit 934db28), chờ QC r1 | docs/handoff/dev-M6.md | SQL migration đã có, user có thể chạy U6 |
-| M7 | TODO | | |
+| M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập thật, NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
+| M7 | DOING — developer build | | |
 | Final QC (phase 2) | TODO | | |
 
 ## Backlog (defect Minor, đề xuất chưa làm)
@@ -65,6 +65,8 @@
 | M4-D5 | Vitest chạy 2 process song song có test chạm timeout 5 s (Review/Day/Heatmap 2–3 s); chạy tuần tự ổn định | QC M4 r2 |
 | M4-P1 | DESIGN §6 nói heatmap vừa ở ≥1024 px nhưng 1024–1191 px vẫn cuộn trong hộp (sidebar 232 px) — designer sửa câu chữ; nhãn giá trị trên cột chart chưa có | QC M4 r1/r2 |
 | M5-P1 | Trục Y curve hiện `+0.0%` (mockup `+0%`); focusHeading dùng requestAnimationFrame; lỗi import vượt giới hạn dùng chung IMPORT_INVALID_SCHEMA (nên có câu riêng) | QC M5 r1/r2 |
+| M6-D1 | Replay `?auth=callback&code=…` cũ/giả khi đang có phiên hợp lệ → card kẹt "Sign in again" tới khi reload; M7 sẽ làm sync tạm dừng (auth-service completeCallback). Test QC có test.fail | QC M6 r1 |
+| M6-P1 | DESIGN §7.7.5 cần thêm key `settings.about.privacyLink`; ESLint chưa chặn dynamic import @supabase trong src/ui; PKCE verifier còn trong localStorage tới khi sign-out; dist cloud-off vẫn chứa chunk SDK không dùng; privacy.html nói sync trước khi M7 có | QC M6 r1 |
 | M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
 ## Tổng kết (2026-10-10)
