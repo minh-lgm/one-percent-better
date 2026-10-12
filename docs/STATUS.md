@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** developer M7 mode build → qc M7 round 1; user làm U7 (.env.local) và thử đăng nhập thật (NV-1)
+**Next step:** RESUME M7 — developer mode build tiếp từ docs/handoff/dev-M7.md (WIP checkpoint, commit `wip(M7)`), rồi commit feat(brand) tích hợp logo (icon đã tạo sẵn, xem Quyết định 2026-10-12; nếu scratchpad mất thì tạo lại từ logo/ bằng PowerShell System.Drawing) → qc M7 round 1 → M8 → Final QC phase 2 → U8
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -48,7 +48,7 @@
 | M8 | TODO | | |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
-| M7 | DOING — developer build | | |
+| M7 | DOING — WIP checkpoint (user tắt máy 2026-10-12); T1–T4 gần xong, T5 UI đang làm, T6 e2e + handoff chưa | docs/handoff/dev-M7.md (WIP) | Resume: developer mới đọc handoff WIP |
 | Final QC (phase 2) | TODO | | |
 
 ## Backlog (defect Minor, đề xuất chưa làm)
