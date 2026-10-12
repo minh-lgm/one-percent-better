@@ -163,11 +163,16 @@ test.describe('M1 QC flows', () => {
     await dlg.getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByTestId('goal-row')).toHaveCount(1);
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    // M7 round 2: wait for showModal() to finish before Escape (race fixed; was flaky on the pre-fix tree too)
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Cancel' })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByTestId('goal-row')).toHaveCount(1);
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: 'Delete goal' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByTestId('goal-row')).toHaveCount(0);
     await page.goto(`${ORIGIN}/#/today`);
     await expect(page.getByRole('heading', { name: 'Start with one small goal' })).toBeVisible();

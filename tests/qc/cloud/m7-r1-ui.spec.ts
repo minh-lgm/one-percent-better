@@ -131,7 +131,6 @@ test.describe('QC M7: SyncIndicator states (DESIGN §5) and the polite live regi
   });
 
   test('offline with nothing waiting -> back online: "All changes are synced." is announced (DESIGN 8.1)', async ({ page, context }) => {
-    test.fail(true, 'M7-D3: the announcement is armed on the first `synced` render and cancelled by the transient `syncing` that the online trigger starts 2 ms later');
     await createGoal(page, { name: 'Read', targetValue: 30, ...LONG });
     await signInAsMinh(page);
     await expectSyncState(page, 'synced');

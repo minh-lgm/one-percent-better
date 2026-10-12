@@ -40,16 +40,6 @@ function backupPayload(mutate: (file: { goals: Array<Record<string, unknown>>; e
   return { name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) };
 }
 
-/** Import an in-memory backup through the real UI (Settings -> file -> D3 -> confirm). */
-async function importPayload(page: Page, payload: { name: string; mimeType: string; buffer: Buffer }, confirmLabel: string): Promise<void> {
-  await gotoHash(page, '/settings');
-  await page.getByTestId('import-file').setInputFiles(payload);
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: confirmLabel }).click();
-  await expect(dialog).toBeHidden();
-}
-
 /** All console messages and page errors of a page (token/secret leak checks). */
 function collectConsole(page: Page): { all: string[]; errors: string[] } {
   const all: string[] = [];
@@ -103,7 +93,6 @@ test.describe('QC M7: consent when the account changes (FR-47, D5)', () => {
   });
 
   test('session expired, then the person signs in as ANOTHER Google account: D5 asks first, nothing is uploaded to u2 until "Add to account"', async ({ page, mock }) => {
-    test.fail(true, 'M7-D2: a sync cycle started for the stored u1 session pushes the pending rows with the NEW u2 token before D5 is answered');
     await createGoal(page, { name: 'Read', targetValue: 30, ...LONG });
     await signInAsMinh(page);
     await expectSyncState(page, 'synced');
@@ -145,7 +134,6 @@ test.describe('QC M6-D1 follow-up: a replayed callback must not pause sync', () 
 
 test.describe('QC M7: sign-in feedback when the first sync fails (DESIGN F9/F11, A-D28)', () => {
   test('device with data signs in while the cloud answers 500: some confirmation toast is shown (signedIn), not silence', async ({ page, mock }) => {
-    test.fail(true, 'M7-D4: AuthFeedback drops "Signed in as ..." because a merge toast was expected; the merge cycle fails, so no toast is shown at all');
     await createGoal(page, { name: 'Read', targetValue: 30, ...LONG });
     await mock.fail('rest', 500, 1000);
     await gotoHash(page, '/settings');
@@ -460,18 +448,78 @@ test.describe('QC M7: the client never leaks tokens or talks to a third party', 
   });
 });
 
-test.describe('QC M7: a row the cloud would refuse must not freeze sync (poison pill)', () => {
-  test('an imported backup whose goal id is 65-200 characters (accepted by the importer, refused by the cloud: id <= 64) still lets the other goals sync', async ({ page, mock }) => {
-    test.fail(true, 'M7-D1: importer accepts ids up to 200 chars, cloud/mapper allow 64; the push of that row fails for ever and blocks all sync');
+/** Phase-1 data path: goal + entry whose id is longer than the cloud accepts, written straight into IndexedDB (dirty, live). */
+async function plantLongId(page: Page, id: string): Promise<void> {
+  await page.evaluate(
+    (longId) =>
+      new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('one-percent-better');
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction(['goals', 'entries'], 'readwrite');
+          const stamp = '2026-10-08T01:00:00.000Z';
+          tx.objectStore('goals').put({ id: longId, name: 'Legacy id', why: '', targetType: 'daily', targetMinutes: 10, startDate: '2026-10-01', endDate: '2026-10-31', archived: false, createdAt: stamp, updatedAt: stamp, deletedAt: null, dirty: 1 });
+          tx.objectStore('entries').put({ id: 'legacy-e1', goalId: longId, date: '2026-10-08', minutes: 10, note: '', source: 'manual', createdAt: stamp, updatedAt: stamp, deletedAt: null, dirty: 1 });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    id,
+  );
+}
+
+test.describe('QC M7 (round 2): a row the cloud would refuse must not freeze sync (poison pill)', () => {
+  test('the importer now refuses ids over 64 characters up front (same limit as the cloud) and changes nothing', async ({ page }) => {
+    await createGoal(page, { name: 'Keep me', targetValue: 30, ...LONG });
     const longId = 'x'.repeat(70);
     const payload = backupPayload((f) => {
       const g = f.goals[0]!;
       for (const e of f.entries) if (e.goalId === g.id) e.goalId = longId;
       g.id = longId;
     });
-    await importPayload(page, payload, EN.import.confirm);
+    await gotoHash(page, '/settings');
+    await page.getByTestId('import-file').setInputFiles(payload);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByText(EN.errors.IMPORT_INVALID_SCHEMA)).toBeVisible();
+    await gotoHash(page, '/goals');
+    await expect(page.getByRole('heading', { level: 3, name: 'Keep me' })).toBeVisible();
+  });
+
+  test('legacy local data with a 70-char goal id (written straight to IndexedDB, as phase 1 allowed): the other goals sync, the row is flagged dirty=2, not counted, never blocks', async ({ page, mock }) => {
+    await importBackup(page);
+    await plantLongId(page, 'x'.repeat(70));
     await signInAsMinh(page);
-    await expect.poll(async () => (await mock.liveRows('u1')).goals.length, { timeout: 25_000, message: 'the 4 well-formed goals should reach the account' }).toBeGreaterThanOrEqual(4);
+    await expect.poll(async () => (await mock.liveRows('u1')).goals.length, { timeout: 25_000, message: 'the 5 well-formed goals should reach the account' }).toBe(5);
     await expectSyncState(page, 'synced', 25_000);
+    await expect.poll(() => pendingCount(page)).toBe(0);
+    expect((await mock.liveRows('u1')).entries).toHaveLength(23);
+    // raw device state: the long-id rows are kept and flagged 2, everything else is clean (0)
+    const raw = await page.evaluate(
+      () =>
+        new Promise<{ goals: Array<{ id: string; dirty: number }>; entries: Array<{ id: string; dirty: number }> }>((resolve, reject) => {
+          const req = indexedDB.open('one-percent-better');
+          req.onerror = () => reject(req.error);
+          req.onsuccess = () => {
+            const tx = req.result.transaction(['goals', 'entries'], 'readonly');
+            const g = tx.objectStore('goals').getAll();
+            const e = tx.objectStore('entries').getAll();
+            tx.oncomplete = () => {
+              req.result.close();
+              resolve({ goals: g.result, entries: e.result });
+            };
+          };
+        }),
+    );
+    expect(raw.goals.find((g) => g.id.length === 70)?.dirty).toBe(2);
+    expect(raw.entries.find((e) => e.id === 'legacy-e1')?.dirty).toBe(2);
+    expect(raw.goals.filter((g) => g.id.length !== 70).every((g) => g.dirty === 0)).toBe(true);
+    expect(raw.entries.filter((e) => e.id !== 'legacy-e1').every((e) => e.dirty === 0)).toBe(true);
+    await gotoHash(page, '/settings');
+    await expect(page.getByTestId('remote-invalid')).toContainText(EN.errors.SYNC_REMOTE_INVALID);
+    await expect(page.getByTestId('sync-error')).toHaveCount(0);
   });
 });

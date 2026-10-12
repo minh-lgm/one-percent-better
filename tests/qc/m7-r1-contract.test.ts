@@ -20,7 +20,7 @@ describe('QC: every row the importer accepts must be pushable (SQL: id/goal_id 1
     for (const e of s.entries) expect(entryRowSchema.safeParse(entryToRow({ ...e, deletedAt: null }, 'u')).success, e.id).toBe(true);
   });
 
-  it.fails('M7-D1: a goal id longer than 64 characters is accepted by the importer but refused by the cloud schema', () => {
+  it('M7-D1 (fixed in r2): the importer refuses a goal id longer than 64 characters (same limit as the cloud schema)', () => {
     const s = sample();
     const longId = 'x'.repeat(65);
     const g = { ...s.goals[0]!, id: longId };
@@ -30,7 +30,7 @@ describe('QC: every row the importer accepts must be pushable (SQL: id/goal_id 1
     expect(parsed.ok).toBe(false);
   });
 
-  it.fails('M7-D1: an entry id longer than 64 characters is accepted by the importer but refused by the cloud schema', () => {
+  it('M7-D1 (fixed in r2): the importer refuses an entry id longer than 64 characters (same limit as the cloud schema)', () => {
     const s = sample();
     const parsed = parse({ ...s, entries: [{ ...s.entries[0]!, id: 'e'.repeat(65) }, ...s.entries.slice(1)] });
     expect(parsed.ok).toBe(false);
