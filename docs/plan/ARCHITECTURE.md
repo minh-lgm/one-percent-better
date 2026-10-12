@@ -147,6 +147,7 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `data/dexie/*-repo.ts` (sửa) | data | Lọc bản ghi đã xoá ở mọi truy vấn; xoá = xoá mềm; ghi = `dirty = 1`; entry của goal đã xoá không trả ra | dexie, domain/sync | M7 |
 | `data/dexie/local-data-repo.ts` | data | `LocalDataRepository.clearUserData()` (một transaction: `goals`, `entries`, kv trừ `locale`, `loginPrompt`), `countLive()` | dexie | M6 |
 | `data/dexie/sync-store.ts` | data | `LocalSyncStore`: `getDirty`, `applyRemote` (một transaction/lô), `markAllDirty`, `watchPendingCount`, `tombstoneOrphanEntries` | dexie, domain/sync | M7 |
+| `data/dexie/prefs-repo.ts` (v2.1) | data | `SyncedPrefsRepository`: ghi nhóm nhắc nhở (kv `settings`) hoặc ngôn ngữ (kv `locale`) **cùng** mốc đồng bộ (kv `prefsSync`) trong một transaction; `getDirty`, `applyRemote` theo nhóm (LWW), `markAllDirty`, `watch` | dexie, domain/sync | M7 |
 | `integration/supabase/supabase-client.ts` | integration | **Chỉ file này (và cùng thư mục) import `@supabase/supabase-js`.** `createSupabase(cloud)` với `auth: { flowType: 'pkce', detectSessionInUrl: false, persistSession: true, autoRefreshToken: true, storageKey: 'opb-auth' }`; export `SupabaseAuthPort`, `SupabaseRemoteStore` | `@supabase/supabase-js` | M6 (Auth), M7 (Remote) |
 | `integration/supabase/mapper.ts` | integration | Hàng SQL (`snake_case`, `timestamptz`, `date`) ↔ bản ghi app (`camelCase`, ISO `…Z` có ms); validate hàng kéo về bằng zod; hàm thuần | zod, domain | M7 |
 | `integration/supabase/loader.ts` | integration | `loadSupabase(cloud) = () => import('./supabase-client')` (memo một lần); `hasStoredSession(storage)` đọc `localStorage['opb-auth']` **không** nạp SDK | — | M6 |
@@ -275,7 +276,18 @@ interface LoginPromptState {                               // kv key 'loginPromp
   lastExportHintAt: ISODateTime | null;
 }
 
-type KvKey = 'settings' | 'activeTimer' | 'locale' | 'sync' | 'loginPrompt';
+// v2.1 — tuỳ chọn người dùng được đồng bộ (FR-55). Giá trị vẫn nằm ở chỗ cũ
+// (settings.reminderEnabled/reminderTime trong kv 'settings', ngôn ngữ trong kv 'locale');
+// kv 'prefsSync' chỉ giữ mốc đồng bộ của từng nhóm.
+type PrefGroup = 'reminder' | 'locale';
+interface PrefGroupMeta { updatedAt: ISODateTime | null; dirty: SyncFlag }   // updatedAt null = thiết bị chưa từng chọn
+interface PrefsSyncState { reminder: PrefGroupMeta; locale: PrefGroupMeta }  // kv key 'prefsSync'
+interface RemotePrefs {                                                      // một hàng bảng `settings` trên cloud
+  reminder: { enabled: boolean; time: string; updatedAt: ISODateTime } | null;
+  locale:   { value: Locale; updatedAt: ISODateTime } | null;
+}
+
+type KvKey = 'settings' | 'activeTimer' | 'locale' | 'sync' | 'loginPrompt' | 'prefsSync';
 ```
 
 ### 4.2 Dexie schema v2 (M7)
@@ -286,14 +298,15 @@ type KvKey = 'settings' | 'activeTimer' | 'locale' | 'sync' | 'loginPrompt';
 | `entries` | `id, goalId, date, [goalId+date]` | `id, goalId, date, [goalId+date], dirty` | Như trên |
 | `kv` | `key` | `key` | Thêm key `sync`, `loginPrompt` (không cần đổi schema) |
 
-`db.version(2).stores({...}).upgrade(tx => …)`: mọi goal/entry hiện có → `deletedAt = null`, `dirty = 1` (chưa từng lên cloud, nên lần đăng nhập đầu sẽ đẩy hết = gộp, FR-47). kv không đổi. Dexie chạy `upgrade` trong transaction `versionchange`: lỗi giữa chừng → IndexedDB rollback về v1 nguyên vẹn, `openDatabase` ném `StorageError` (NFR-14). Dexie lưu version IndexedDB = version × 10 (v1 = 10, v2 = 20); test dựng DB v1 bằng API thô phải dùng version 10.
+`db.version(2).stores({...}).upgrade(tx => …)`: mọi goal/entry hiện có → `deletedAt = null`, `dirty = 1` (chưa từng lên cloud, nên lần đăng nhập đầu sẽ đẩy hết = gộp, FR-47). kv giữ nguyên giá trị; thêm kv `prefsSync` (v2.1, A-36): nhóm `locale` = `{ updatedAt: '1970-01-01T00:00:00.000Z', dirty: 1 }` nếu kv `locale` hợp lệ đã tồn tại, ngược lại `{ updatedAt: null, dirty: 0 }`; nhóm `reminder` = mốc 1970 + `dirty: 1` nếu `settings.reminderEnabled === true` hoặc `reminderTime !== '20:00'`, ngược lại `{ updatedAt: null, dirty: 0 }`. Dexie chạy `upgrade` trong transaction `versionchange`: lỗi giữa chừng → IndexedDB rollback về v1 nguyên vẹn, `openDatabase` ném `StorageError` (NFR-14). Dexie lưu version IndexedDB = version × 10 (v1 = 10, v2 = 20); test dựng DB v1 bằng API thô phải dùng version 10.
 
 **Quy tắc chung cho mọi repository Dexie từ v2 (ADR-20):**
 
 - **Đọc:** mọi `get*`/`watch*`/`sumMinutes`/`exportAll` bỏ qua hàng có `deletedAt != null`; entry chỉ trả ra nếu goal của nó còn sống (lọc theo tập id goal sống, đọc trong cùng truy vấn/transaction). Trả về **kiểu domain** (bỏ `deletedAt`, `dirty`).
 - **Ghi** (`put`, `saveTimerEntry`, `replaceAll`): ghi hàng với `deletedAt = null`, `dirty = 1`.
 - **Xoá** (`EntryRepository.delete`, `GoalRepository.deleteWithEntries`): xoá mềm: `deletedAt = updatedAt = nextUpdatedAt(clock(), hàng.updatedAt)`, `dirty = 1`; goal xoá kèm mọi entry còn sống của nó, cùng một transaction như phase 1. Repository nhận `clock: () => Date` qua constructor (mặc định `() => new Date()`).
-- `replaceAll` (import): xoá mềm mọi goal/entry còn sống không có trong file, `bulkPut` bản ghi trong file (`dirty = 1`, `deletedAt = null`), giữ kv `locale`, `sync`, `loginPrompt`; vẫn một transaction (M3-AC7/AC9 giữ nguyên vì repository trả kiểu domain).
+- `replaceAll` (import): xoá mềm mọi goal/entry còn sống không có trong file, `bulkPut` bản ghi trong file (`dirty = 1`, `deletedAt = null`), giữ kv `locale`, `sync`, `loginPrompt`; v2.1: đặt `prefsSync.reminder = { updatedAt: clock(), dirty: 1 }` (A-37), không đụng `prefsSync.locale`; vẫn một transaction (M3-AC7/AC9 giữ nguyên vì repository trả kiểu domain).
+- `clearUserData` (đăng xuất "xoá dữ liệu", v2.1): xoá thêm kv `prefsSync` (giữ kv `locale` để giao diện không đổi ngôn ngữ, nhưng máy trở về "chưa từng chọn" với tài khoản, A-37).
 - **`nextUpdatedAt(now, previous)`** (`domain/sync.ts`): `now ≥ previous` → `now`; ngược lại `previous + 1 ms`. `GoalService.update`/`setArchived`, `EntryService.update` dùng hàm này thay cho `now.toISOString()` (với đồng hồ cố định trong test hiện có, kết quả không đổi).
 
 ### 4.3 Schema cloud (Supabase Postgres, M6) — `supabase/migrations/20261012000000_cloud_sync.sql`
@@ -377,22 +390,101 @@ create policy entries_update_own on public.entries for update to authenticated
 -- Explicit Data API grants (Supabase no longer auto-exposes new public tables; applied to all projects from 2026-10-30).
 revoke all on public.goals, public.entries from anon, authenticated;
 grant select, insert, update on public.goals, public.entries to authenticated;
+
+-- v2.1: synced user preferences (FR-55). One row per user, two independent LWW groups.
+create table public.settings (
+  user_id             uuid primary key default auth.uid() references auth.users (id) on delete cascade,
+  reminder_enabled    boolean,
+  reminder_time       text check (reminder_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+  reminder_updated_at timestamptz,
+  locale              text check (locale in ('en', 'vi')),
+  locale_updated_at   timestamptz,
+  server_updated_at   timestamptz not null default clock_timestamp(),
+  -- a group is either fully set or fully empty
+  check ((reminder_enabled is null) = (reminder_time is null)
+     and (reminder_enabled is null) = (reminder_updated_at is null)),
+  check ((locale is null) = (locale_updated_at is null))
+);
+
+create or replace function public.settings_before_write() returns trigger
+language plpgsql set search_path = '' as $$
+declare
+  changed boolean := false;
+begin
+  if tg_op = 'INSERT' then
+    new.user_id := auth.uid();
+    new.server_updated_at := clock_timestamp();
+    return new;
+  end if;
+  new.user_id := old.user_id;
+  -- reminder group: take incoming only if strictly newer (tie -> server)
+  if new.reminder_updated_at is not null
+     and (old.reminder_updated_at is null or new.reminder_updated_at > old.reminder_updated_at) then
+    changed := true;
+  else
+    new.reminder_enabled := old.reminder_enabled;
+    new.reminder_time := old.reminder_time;
+    new.reminder_updated_at := old.reminder_updated_at;
+  end if;
+  -- locale group
+  if new.locale_updated_at is not null
+     and (old.locale_updated_at is null or new.locale_updated_at > old.locale_updated_at) then
+    changed := true;
+  else
+    new.locale := old.locale;
+    new.locale_updated_at := old.locale_updated_at;
+  end if;
+  if not changed then
+    return null;                                   -- nothing newer: keep the row untouched
+  end if;
+  new.server_updated_at := clock_timestamp();
+  return new;
+end $$;
+
+create trigger settings_before_write before insert or update on public.settings
+  for each row execute function public.settings_before_write();
+
+alter table public.settings enable row level security;
+create policy settings_select_own on public.settings for select to authenticated
+  using ((select auth.uid()) = user_id);
+create policy settings_insert_own on public.settings for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+create policy settings_update_own on public.settings for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+revoke all on public.settings from anon, authenticated;
+grant select, insert, update on public.settings to authenticated;
 ```
+
+Bảng `settings` (v2.1) nằm trong **cùng** file migration (user chỉ chạy SQL một lần ở U6). Client đẩy bằng upsert `onConflict: 'user_id'`, gửi `null` cho nhóm không `dirty` (trigger giữ giá trị cũ của nhóm đó). Không có `lastReminderDate`, `plusOneShown`, `lastBackupAt`, timer trong bảng.
 
 Ghi chú: developer được chỉnh cú pháp cho chạy đúng trên Supabase local/hosted nhưng **không** được nới quyền (thêm grant cho `anon`, thêm DELETE, tắt RLS) hay đổi quy tắc LWW mà không cập nhật plan. Client gửi `user_id` = id phiên trong upsert (để `onConflict: 'user_id,id'` khớp khoá); trigger và RLS bảo đảm không ghi được hàng của người khác.
 
-### 4.4 Cái gì được đồng bộ (FR-44, ADR-22)
+### 4.4 Cái gì được đồng bộ (FR-44, FR-55, ADR-22, ADR-25)
 
-| Dữ liệu | Nơi lưu | Đồng bộ | Lý do |
-| :- | :- | :- | :- |
-| Goal (mọi field, gồm `archived`), Entry (gồm `source`) | `goals`, `entries` | **Có** | Là "target và process" user muốn giữ |
-| Bản ghi đã xoá (`deletedAt`) | như trên | **Có** (tombstone) | Xoá lan truyền (FR-48) |
-| `locale` | kv | Không | Thiết lập thiết bị (ADR-12) |
-| `settings.reminderEnabled`, `reminderTime` | kv `settings` | Không | Quyền notification theo thiết bị; OQ-07 |
-| `settings.lastReminderDate`, `plusOneShown` | kv `settings` | Không | Trạng thái hiển thị của từng thiết bị (claim nguyên tử cục bộ, ADR-15) |
-| `settings.lastBackupAt` | kv `settings` | Không | Backup là file trên thiết bị đó |
-| `activeTimer` | kv | Không | Timer chạy trên một thiết bị; entry sau Save mới đồng bộ |
-| `sync`, `loginPrompt` | kv | Không | Metadata cục bộ |
+| Dữ liệu | Nơi lưu cục bộ | Bảng cloud | Đồng bộ | Lý do |
+| :- | :- | :- | :- | :- |
+| Goal (mọi field, gồm `archived`), Entry (gồm `source`) | `goals`, `entries` | `goals`, `entries` | **Có** (LWW theo bản ghi) | Là "target và process" user muốn giữ |
+| Bản ghi đã xoá (`deletedAt`) | như trên | như trên | **Có** (tombstone) | Xoá lan truyền (FR-48) |
+| `locale` (v2.1) | kv `locale` + mốc ở kv `prefsSync.locale` | `settings.locale`, `locale_updated_at` | **Có** (nhóm "locale", LWW riêng) | Quyết định user 2026-10-12 (OQ-07) |
+| `settings.reminderEnabled` + `reminderTime` (v2.1) | kv `settings` + mốc ở kv `prefsSync.reminder` | `settings.reminder_enabled`, `reminder_time`, `reminder_updated_at` | **Có** (nhóm "reminder", LWW riêng) | Quyết định user 2026-10-12 (OQ-07) |
+| `settings.lastReminderDate`, `plusOneShown` | kv `settings` | — | Không | Trạng thái hiển thị của từng thiết bị (claim nguyên tử cục bộ, ADR-15) |
+| `settings.lastBackupAt` | kv `settings` | — | Không | Backup là file trên thiết bị đó |
+| `activeTimer` | kv | — | Không | Timer chạy trên một thiết bị; entry sau Save mới đồng bộ |
+| Quyền notification, trạng thái persist storage | trình duyệt | — | Không | Theo thiết bị |
+| `sync`, `loginPrompt`, `prefsSync` | kv | — | Không | Metadata cục bộ |
+
+**Quy tắc nhóm tuỳ chọn (FR-55)** — `resolvePrefGroup(local: PrefGroupMeta, remote: { updatedAt } | null)` trong `domain/sync.ts`:
+
+| Thiết bị (`local.updatedAt`) | Cloud (nhóm) | Kết quả |
+| :- | :- | :- |
+| `null` (chưa từng chọn) | có giá trị | **áp cloud** (cloud thắng), `local.updatedAt = remote.updatedAt`, `dirty = 0` |
+| có giá trị, `dirty = 1` | không có (`null`) | giữ local, đẩy lên |
+| `null` | không có | không làm gì (thiết bị giữ mặc định: nhắc tắt/20:00, ngôn ngữ theo trình duyệt) |
+| có giá trị | có giá trị, `remote ≥ local` | áp cloud, `dirty = 0` (bằng nhau → cloud thắng) |
+| có giá trị | có giá trị, `remote < local` | giữ local (còn `dirty = 1` thì đẩy) |
+
+Áp nhóm `locale` từ cloud: ghi kv `locale` → `LocaleService.watch` phát → container gọi `setLocale(i18n, locale)` ngay (đổi `<html lang>`, `document.title`, toàn app, không reload). Áp nhóm `reminder`: ghi `settings.reminderEnabled/reminderTime` (giữ nguyên các field khác của `settings`) → Settings và scheduler đọc giá trị mới; **không** gọi `Notification.requestPermission()`.
 | Phiên Supabase | `localStorage['opb-auth']` (+ `opb-auth-code-verifier` trong lúc đăng nhập) | — | Do SDK quản lý (A-26) |
 
 ## 5. Interface contract
@@ -477,7 +569,7 @@ interface BackupRepository {                              // M3
 // M6
 interface LocalDataRepository {
   /** Một transaction rw trên goals + entries + kv: xoá cứng mọi goal/entry (kể cả tombstone),
-   *  kv 'settings', 'activeTimer', 'sync'. Giữ kv 'locale', 'loginPrompt'. Lỗi → rollback. */
+   *  kv 'settings', 'activeTimer', 'sync', 'prefsSync' (v2.1). Giữ kv 'locale', 'loginPrompt'. Lỗi → rollback. */
   clearUserData(): Promise<void>;
   /** Số goal/entry còn sống (cho hộp thoại gộp/đăng xuất). */
   countLive(): Promise<{ goals: number; entries: number }>;
@@ -499,7 +591,23 @@ interface LocalSyncStore {
   /** Xoá mềm entry còn sống mà goal đã bị xoá mềm (dọn cuối chu kỳ). */
   tombstoneOrphanEntries(now: Date): Promise<number>;
   countDirty(): Promise<number>;
-  watchPendingCount(): Subscribable<number>;
+  watchPendingCount(): Subscribable<number>;   // v2.1: cộng thêm số nhóm tuỳ chọn đang dirty
+}
+
+// M7 (v2.1) — tuỳ chọn người dùng đồng bộ (FR-55)
+interface SyncedPrefsRepository {
+  /** MỘT transaction rw trên kv: cập nhật settings.reminderEnabled/reminderTime (giữ field khác)
+   *  + prefsSync.reminder = { updatedAt: nextUpdatedAt(now, cũ), dirty: 1 }. Trả Settings mới. */
+  setReminder(patch: { reminderEnabled?: boolean; reminderTime?: string }, now: Date): Promise<Settings>;
+  /** MỘT transaction rw: kv 'locale' = locale + prefsSync.locale = { updatedAt: nextUpdatedAt(now, cũ), dirty: 1 }. */
+  setLocale(locale: Locale, now: Date): Promise<void>;
+  /** Nhóm đang dirty (null nếu không có nhóm nào). */
+  getDirty(): Promise<RemotePrefs | null>;
+  /** MỘT transaction rw: resolvePrefGroup cho từng nhóm; trả nhóm nào đã đổi giá trị cục bộ. */
+  applyRemote(remote: RemotePrefs | null): Promise<{ reminderChanged: boolean; localeChanged: Locale | null }>;
+  /** Đổi sang tài khoản khác (FR-47): nhóm có updatedAt ≠ null → dirty = 1. */
+  markAllDirty(): Promise<void>;
+  watchState(): Subscribable<PrefsSyncState>;
 }
 ```
 
@@ -522,8 +630,9 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 | `BackupService` | developer chọn (nhận `BackupRepository`, `SettingsService` hoặc `KvRepository`) | `export(now) → {fileName, json}`, `parse(text, sizeBytes) → Result<BackupPreview>`, `import(parsed, now)` | M3 |
 | `StatsService` | developer chọn (repository qua constructor) | `goalStats(goalId, year, today)`, `overallStats(year, today)`, `curve(goalId, today)` | M4/M5 |
 | `AuthService` (v2.0) | `(deps: { loadAuth: () => Promise<AuthPort>; storedSession: () => boolean; local: LocalDataRepository; kv: KvRepository; connectivity: { isOnline(): boolean }; returnTo: ReturnToStore })` | `state()`, `watch() → Subscribable<AuthState>`; `init()` (có phiên lưu sẵn → nạp port, `getSession`; không có → `signed-out`, **không** nạp port); `signIn(returnTo: string) → Result<void>` (offline → `AUTH_OFFLINE`; lưu `returnTo`; `port.signInWithGoogle(redirectUrl)` điều hướng đi); `completeCallback(cb) → Result<AuthSession>` (`error` → `AUTH_CANCELLED` nếu `access_denied`, ngược lại `AUTH_FAILED`; `code` → `port.exchangeCode(code)`); `signOut({ keepData }) → Result<void>` (M7: gọi `SyncService.finalSyncBeforeSignOut` trước); phản ứng `AuthEvent` `session-expired` → `expired`. Ghi `sync.account`, `sync.userId` khi đăng nhập | M6 |
-| `SyncService` (v2.0) | `(deps: { local: LocalSyncStore; loadRemote: () => Promise<RemoteStore>; kv: KvRepository; auth: { currentUserId(): string \| null }; locks: LockPort; clock: () => Date; batchSize?: number /* 500 */ })` | `syncNow(reason) → Promise<SyncOutcome>` (single-flight trong tab + `LockPort` giữa tab); `watchStatus() → Subscribable<SyncStatus>`; `prepareFirstSignIn(userId) → 'merge-silently' \| 'confirm-merge' \| 'same-user'`; `confirmMerge()` (`markAllDirty` + reset cursor); `finalSyncBeforeSignOut() → { pending: number }`; `reset()` (xoá cursor/userId khi đăng xuất). Lỗi mạng/HTTP ánh xạ thành `SyncErrorCode`, không ném ra ngoài | M7 |
+| `SyncService` (v2.0; v2.1 thêm `prefs: SyncedPrefsRepository`) | `(deps: { local: LocalSyncStore; prefs: SyncedPrefsRepository; loadRemote: () => Promise<RemoteStore>; kv: KvRepository; auth: { currentUserId(): string \| null }; locks: LockPort; clock: () => Date; batchSize?: number /* 500 */ })` | `syncNow(reason) → Promise<SyncOutcome>` (single-flight trong tab + `LockPort` giữa tab); `watchStatus() → Subscribable<SyncStatus>`; `prepareFirstSignIn(userId) → 'merge-silently' \| 'confirm-merge' \| 'same-user'`; `confirmMerge()` (`markAllDirty` + reset cursor); `finalSyncBeforeSignOut() → { pending: number }`; `reset()` (xoá cursor/userId khi đăng xuất). Lỗi mạng/HTTP ánh xạ thành `SyncErrorCode`, không ném ra ngoài | M7 |
 | `LoginPromptService` (v2.0) | `(kv: KvRepository, goals: GoalRepository, entries: EntryRepository)` | `state(now, ctx: { configured; signedIn; online }) → { banner: boolean; exportHint: boolean }`, `dismiss(now)`, `claimExportHint(now) → boolean` (qua `kv.update`, nguyên tử) | M8 |
+| `SettingsService`, `LocaleService` (sửa v2.1) | thêm tham số tuỳ chọn `prefs?: SyncedPrefsRepository` (như `kv` tuỳ chọn của `GoalService`) | Có `prefs`: `setReminderEnabled`/`setReminderTime` đi qua `prefs.setReminder(patch, now)`, `LocaleService.set` đi qua `prefs.setLocale(locale, now)` (luôn ghi mốc, kể cả khi chưa đăng nhập: lựa chọn của người dùng là "đã chọn"). Không có `prefs` (test cũ) → hành vi M1/M2. `claimReminderDay`, `claimPlusOne`, `update({ lastBackupAt })` không đụng `prefsSync` | M7 |
 | `BackupService` (sửa v2.0) | thêm tham số tuỳ chọn `isSignedIn: () => boolean` | `import(preview, now)`: khi đã đăng nhập, đặt `updatedAt = nextUpdatedAt(now, …)` cho mọi goal/entry trong file trước `replaceAll` (A-29); chưa đăng nhập → như M3 | M7 |
 
 `AuthState = { kind: 'unavailable' } | { kind: 'signed-out'; lastError?: AuthErrorCode } | { kind: 'signing-in' } | { kind: 'signed-in'; userId; email; name } | { kind: 'expired'; email }`.
@@ -681,6 +790,10 @@ interface RemoteStore {
   /** Keyset: server_updated_at > c.serverUpdatedAt − 120 s, hoặc (= và id > c.id) …; order by server_updated_at, id; limit. */
   pull(table: 'goals' | 'entries', cursor: PullCursor | null, limit: number):
     Promise<{ rows: SyncRecord<Goal>[] | SyncRecord<LogEntry>[]; next: PullCursor | null; hasMore: boolean; skippedInvalid: number }>;
+  /** v2.1: upsert hàng `settings` của user (onConflict 'user_id'); nhóm null = không gửi (trigger giữ cũ). Trả hàng chuẩn sau ghi. */
+  pushPrefs(prefs: RemotePrefs): Promise<RemotePrefs>;
+  /** v2.1: đọc hàng `settings` của user; chưa có hàng → null. Hàng sai schema → nhóm đó coi như null + skippedInvalid. */
+  pullPrefs(): Promise<RemotePrefs | null>;
 }
 // Lỗi: ném RemoteError { code: 'SYNC_OFFLINE' | 'SYNC_UNREACHABLE' | 'SYNC_UNAUTHORIZED' }.
 ```
@@ -690,13 +803,14 @@ interface RemoteStore {
 1. **Push:** lặp `local.getDirty(500)` → `remote.push` → `remote.fetchByIds(id vừa đẩy)` → `local.applyRemote(bản chuẩn)` (bản của mình được nhận → `dirty = 0`; server giữ bản mới hơn → ghi đè local, `dirty = 0`; local đã sửa tiếp trong lúc đẩy → giữ `dirty = 1`) cho tới khi hết dirty hoặc đã lặp 20 lô (phần còn lại để chu kỳ sau).
 2. **Pull:** `goals` rồi `entries`, mỗi bảng lặp `remote.pull(cursor, 500)` → `local.applyRemote` → ghi `cursor` mới vào kv `sync` **sau** khi áp xong lô (crash giữa chừng thì kéo lại, idempotent).
 3. **Dọn:** `local.tombstoneOrphanEntries(now)` (entry còn sống của goal đã xoá → xoá mềm, `dirty = 1`, đẩy ở chu kỳ sau).
+3b. **Tuỳ chọn (v2.1, FR-55):** `prefs.getDirty()` khác null → `remote.pushPrefs(dirty)` → `prefs.applyRemote(hàng trả về)`; ngược lại `remote.pullPrefs()` → `prefs.applyRemote(...)`. Bảng chỉ một hàng nên luôn đọc lại toàn hàng mỗi chu kỳ (không cần con trỏ). `localeChanged` → (qua watch kv `locale`) container gọi `setLocale` ngay.
 4. Ghi `lastSyncedAt`, xoá `lastError`; trạng thái `idle`. Lỗi ở bước nào → `lastError`, trạng thái `offline`/`error`, hẹn thử lại theo backoff 30 s, 60 s, 2 phút, 4 phút, 8 phút, 15 phút (trần); `syncNow('manual')` bỏ qua backoff.
 
 **Con trỏ kéo:** theo `server_updated_at` do server đặt (không theo `updatedAt` của client, vì đồng hồ client lệch); lùi 120 s mỗi lần kéo để không sót hàng của transaction commit muộn; áp lại hàng trùng là vô hại (LWW idempotent).
 
 **Trigger** (`app/sync-scheduler.ts`, FR-46): sau `signed-in`; khởi động có phiên; `online`; `visibilitychange` → `visible`; `watchPendingCount` tăng → debounce 2000 ms; interval `VITE_SYNC_INTERVAL_MS` (mặc định 300000, khoảng 60000–3600000) chỉ khi `document.visibilityState === 'visible'`. Trigger đến khi đang chạy được ghi nhớ và chạy thêm một lần (như reminder scheduler).
 
-**Gộp khi đăng nhập (FR-47):** `prepareFirstSignIn(userId)`: `sync.lastUserId` null hoặc bằng `userId` → `merge-silently`/`same-user` (bản ghi tạo khi chưa đăng nhập đã có `dirty = 1` nên chu kỳ đầu tự đẩy lên = gộp); khác `userId` và `countLive() > 0` → `confirm-merge` (UI hiện hộp thoại; "Add to account" → `confirmMerge()` = `markAllDirty()` + reset cursor; "Cancel" → `AuthService.signOut({ keepData: true })`).
+**Gộp khi đăng nhập (FR-47):** `prepareFirstSignIn(userId)`: `sync.lastUserId` null hoặc bằng `userId` → `merge-silently`/`same-user` (bản ghi tạo khi chưa đăng nhập đã có `dirty = 1` nên chu kỳ đầu tự đẩy lên = gộp; nhóm tuỳ chọn đã chọn trên máy cũng `dirty = 1` và đi theo bảng quy tắc §4.4); khác `userId` và `countLive() > 0` → `confirm-merge` (UI hiện hộp thoại; "Add to account" → `confirmMerge()` = `markAllDirty()` + `prefs.markAllDirty()` + reset cursor; "Cancel" → `AuthService.signOut({ keepData: true })`).
 
 **Ánh xạ hàng (`integration/supabase/mapper.ts`):** `snake_case` ↔ `camelCase`; `timestamptz` → `new Date(v).toISOString()` (luôn dạng `YYYY-MM-DDTHH:mm:ss.sssZ`); `date` giữ `YYYY-MM-DD`; zod kiểm từng hàng theo giới hạn domain (độ dài, khoảng phút, enum), hàng sai → bỏ qua và đếm `skippedInvalid` (NFR-05).
 
@@ -710,6 +824,7 @@ Server Node `http`, cổng `54321`, dữ liệu trong bộ nhớ, CORS cho mọi
 | `POST /auth/v1/token?grant_type=pkce` | Kiểm `auth_code` + `code_verifier` (SHA-256 base64url khớp challenge), dùng một lần; trả session (`access_token` JWT ký HS256 bằng secret giả, `refresh_token`, `expires_in`, `expires_at`, `user` có `id`, `email`, `user_metadata.full_name`) |
 | `POST /auth/v1/token?grant_type=refresh_token` | Đổi refresh token; có công tắc test để trả `400 invalid_grant` (mô phỏng phiên bị thu hồi) |
 | `GET /auth/v1/user`, `POST /auth/v1/logout` | Theo session |
+| `GET/POST /rest/v1/settings` (v2.1) | Một hàng/user, upsert theo `user_id`, **cùng quy tắc với trigger `settings_before_write`** (LWW theo từng nhóm, nhóm null giữ cũ, tie → server) |
 | `GET/POST /rest/v1/goals`, `/rest/v1/entries` | Tập con PostgREST mà `SupabaseRemoteStore` dùng (upsert `Prefer: resolution=merge-duplicates`, `select`, `in`, `gt`/`gte`/`eq`, `or`, `order`, `limit`); **cùng quy tắc với trigger SQL** (LWW, tie → server, `server_updated_at` tăng dần) và lọc theo `sub` của JWT (mô phỏng RLS) |
 | `/__test/reset`, `/__test/rows?user=`, `/__test/seed`, `/__test/fail?status=500&times=n`, `/__test/log` | Chỉ cho test: reset dữ liệu, đọc/ghi hàng, ép lỗi, xem log request (kích thước lô, số lần exchange) |
 
@@ -834,7 +949,10 @@ Quy ước test: mỗi test e2e dùng browser context mới (IndexedDB sạch); 
 | Hợp đồng `RemoteStore` | `src/services/remote-store.contract.ts` (hàm `describeRemoteStoreContract(factory)`) | Chạy với `FakeRemoteStore` và `SupabaseRemoteStore` → mock server (khởi động trong `beforeAll`, cổng ngẫu nhiên) trong `npm test`; chạy thêm với Supabase local trong `npm run test:db` | `npm test`, `npm run test:db` |
 | Migration Dexie | Vitest + fake-indexeddb | Dựng DB v1 (schema v1 chép trong test) có S1 + timer + settings + locale → mở bằng `AppDatabase` v2 → dữ liệu domain deep-equal, `dirty = 1`, `deletedAt = null` | `npm test` |
 | SQL/RLS | Vitest (`tests/db/**`, config riêng) + `@supabase/supabase-js` + Supabase local (Docker) | Áp migration, RLS (A không thấy/ghi được hàng B; `anon` bị từ chối), trigger LWW, không DELETE được | `npm run test:db` (thiếu Docker/`SUPABASE_TEST_URL` → in "skipped: Supabase local not running" và exit 0; QC ghi NOT VERIFIED) |
-| Tĩnh (SQL) | Vitest đọc file migration | Có `enable row level security` cho cả hai bảng, không có `grant … to anon`, không có `for delete` policy | `npm test` |
+| Tĩnh (SQL) | Vitest đọc file migration | Có `enable row level security` cho cả ba bảng (`goals`, `entries`, `settings` — v2.1), không có `grant … to anon`, không có `for delete` policy, có trigger `sync_before_write` và `settings_before_write` | `npm test` |
+| Tuỳ chọn đồng bộ (v2.1) | Vitest (unit + service + hai thiết bị) | Bảng quy tắc `resolvePrefGroup` (§4.4), `SyncedPrefsRepository` (transaction, migration mốc 1970), LWW theo nhóm (đổi locale ở A + đổi giờ nhắc ở B không ghi đè nhau); hợp đồng `pushPrefs`/`pullPrefs` cho Fake + mock | `npm test` |
+
+**Môi trường hiện tại không có Docker (quyết định 2026-10-12, OQ-08):** `npm run test:db` sẽ in "skipped" và exit 0 trên máy user/QC; mọi AC SQL/RLS chạy trên Postgres thật là `NOT VERIFIED` và được kiểm tay ở U10. Dev/QC **không** phải cài Docker; bộ test `tests/db/**` vẫn được viết để chạy được khi có Docker sau này.
 | E2E chuẩn | Playwright project `chromium` (như cũ) trên build `--mode e2e` (cloud **tắt**) cổng 4173 | Toàn bộ spec M1–M5 + kiểm "không có Account card" | `npm run test:e2e` |
 | E2E cloud | Playwright project `cloud`: build `--mode cloud-e2e` với `BASE_PATH=/one-percent-better/`, `outDir: dist-cloud-e2e`, preview cổng 4174; mock Supabase cổng 54321 (đều là `webServer`) | `e2e/cloud/**`, `tests/qc/cloud/**`: đăng nhập PKCE qua sub-path, lazy-load, phiên bền/offline/hết hạn, đăng xuất, đồng bộ hai thiết bị (hai browser context), xoá lan truyền, offline → online, lỗi 500/401, import khi đã đăng nhập, nhắc đăng nhập, `vi-VN`, axe, 360 px, request chỉ tới {4174, 54321}. Mỗi test gọi `/__test/reset` (hoặc dùng user riêng) | `npm run test:e2e` (chạy cả hai project) |
 
@@ -897,6 +1015,8 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | Token phiên trong `localStorage` bị đọc qua XSS | Thấp | Cao | Giữ NFR-05 (không render HTML từ dữ liệu, kể cả dữ liệu kéo từ cloud); không thêm script bên thứ ba; CSP bằng `<meta>` để Later |
 | Mock Supabase lệch hành vi thật (E2E xanh nhưng production lỗi) | Trung bình | Trung bình | Bộ test hợp đồng chạy cả với Supabase local; giữ mock tối thiểu theo đúng request SDK gửi; kiểm thủ công trên project thật (U10) trước khi coi phase 2 xong |
 | Existing E2E (347 test) bị ảnh hưởng khi máy QC có `.env.local` thật | Trung bình | Trung bình | Build E2E chuẩn dùng `--mode e2e` + `.env.e2e` ép cloud tắt; spec cloud tách project riêng |
+| (v2.1) Nhắc được bật từ máy khác nhưng máy này chưa cấp quyền notification → người dùng tưởng sẽ có notification | Trung bình | Thấp | Banner trong app vẫn hoạt động (FR-15); Settings hiện chip quyền + nút "Allow notifications"; không tự xin quyền |
+| (v2.1) Thiết bị mới ghi đè ngôn ngữ/giờ nhắc của tài khoản bằng giá trị mặc định | Thấp | Thấp | Mốc `null` = chưa chọn → cloud luôn thắng; chỉ thao tác của người dùng mới đặt mốc; test bảng quy tắc §4.4 |
 | Nhiều tab cùng đồng bộ gây request trùng | Trung bình | Thấp | Web Locks (`opb-sync`), không hỗ trợ thì chạy song song vẫn đúng (LWW idempotent, `applyRemote` trong transaction) |
 
 ## 11. Quyết định kiến trúc
@@ -949,7 +1069,7 @@ Bối cảnh: FR-14 cho tối đa 1 notification/ngày; cách cũ "gửi xong m�
 **ADR-16 — Lưu timer là một transaction trên `goals` + `entries` + `kv` (M3).**
 Bối cảnh: `TimerService.save` hiện gọi `EntryService.add` (ghi `entries`) rồi `kv.delete('activeTimer')` ở hai transaction riêng; hai tab bấm Save cùng lúc đều thấy timer và tạo 2 entry; đây cũng là ghi đa bảng chưa nguyên tử (NFR-04). Lựa chọn: interface `TimerRepository.saveTimerEntry(expected, entry, maxDayMinutes)` (§5.2): trong một transaction `rw` kiểm `activeTimer` còn đúng là timer đã đọc (goalId + startedAt), goal còn tồn tại, tổng phút ngày còn trong giới hạn, rồi ghi entry và xoá `activeTimer`. Validate field/ngày vẫn ở domain/`EntryService` trước khi vào transaction; các điều kiện có thể bị tab khác làm đổi được kiểm lại trong transaction. Hệ quả: hai Save đồng thời (cùng tab hay khác tab) → đúng 1 entry, lần còn lại `TIMER_NOT_RUNNING`; Save đua Discard → tối đa 1 entry; repository mới phải giữ bảo đảm này (ràng buộc §5.2). `Mutex` trong `TimerService` giữ nguyên (rẻ, giữ thứ tự trong tab). Implementation Dexie không được await promise ngoài Dexie trong transaction.
 
-**Ghi chú v2.0 cho ADR cũ.** ADR-01: tombstone (`deletedAt`) và `dirty` được thêm ở M7 (ADR-20), interface repository giữ nguyên. ADR-08: import vẫn "thay thế toàn bộ", nay thực hiện bằng xoá mềm để lan truyền lên cloud. ADR-10: service worker precache cả chunk lazy (Recharts, Supabase) sau khi cài — đã chấp nhận ngày 2026-10-10 (offline-first); ngân sách 250 KB chỉ áp cho tải trang ban đầu. ADR-12: `locale` vẫn là thiết lập thiết bị, không đồng bộ.
+**Ghi chú v2.0 cho ADR cũ.** ADR-01: tombstone (`deletedAt`) và `dirty` được thêm ở M7 (ADR-20), interface repository giữ nguyên. ADR-08: import vẫn "thay thế toàn bộ", nay thực hiện bằng xoá mềm để lan truyền lên cloud. ADR-10: service worker precache cả chunk lazy (Recharts, Supabase) sau khi cài — đã chấp nhận ngày 2026-10-10 (offline-first); ngân sách 250 KB chỉ áp cho tải trang ban đầu. ADR-12: `locale` vẫn lưu ở kv riêng, không có trong file backup, import không ghi đè; **v2.1:** khi đã đăng nhập, `locale` được đồng bộ qua bảng `settings` (ADR-25).
 
 **ADR-17 — Supabase làm backend tuỳ chọn, bật theo cấu hình build (v2.0).**
 Bối cảnh: user muốn lưu goal/quá trình trên cloud nhưng login phải tuỳ chọn; chưa có backend; app là static site trên GitHub Pages. Lựa chọn: Supabase gói Free (Auth Google + Postgres + RLS + PostgREST), client gọi trực tiếp, không server riêng; bật khi có `VITE_SUPABASE_URL` + key hợp lệ lúc build, ngược lại `cloud = null` và app giống phase 1. Hệ quả: không phải vận hành server; bảo mật dựa hoàn toàn vào RLS + grant (phải test); push code trước khi user setup là an toàn; phụ thuộc giới hạn Free (tạm dừng khi không hoạt động, A-31).
@@ -967,7 +1087,10 @@ Bối cảnh: app phải chạy đủ khi offline/không đăng nhập; cần bi
 Bối cảnh: một người dùng, vài thiết bị, xung đột hiếm; cần đơn giản, kiểm chứng được. Lựa chọn: so `updatedAt` (thời điểm, không so chuỗi); server (trigger `sync_before_write`) nhận bản đến khi `updatedAt` **lớn hơn** bản đang có, client (`resolveIncoming`) nhận bản server khi `updatedAt` **lớn hơn hoặc bằng** (nên bằng nhau thì cả hai theo server); xoá là một lần sửa; `nextUpdatedAt` chống lệch đồng hồ cục bộ; con trỏ kéo theo `server_updated_at` với cửa sổ lùi 120 s; sau mỗi lần đẩy đọc lại bản chuẩn theo id để thiết bị biết khi nó thua. Hệ quả: hội tụ bảo đảm (mọi bên áp cùng một thứ tự toàn phần); sửa đồng thời khác field vẫn mất một bên (chấp nhận, A-24); goal đã xoá có thể sống lại nếu có bản sửa mới hơn; không cần RPC riêng.
 
 **ADR-22 — Chỉ đồng bộ goal và entry (v2.0).**
-Bối cảnh: user nêu "target và process"; thiết lập như giờ nhắc, quyền notification, ngôn ngữ, timer gắn với thiết bị; đồng bộ blob settings sinh xung đột khó hiểu. Lựa chọn: bảng `goals`, `entries`; kv giữ nguyên cục bộ (§4.4). Hệ quả: schema đơn giản; muốn đồng bộ thêm thiết lập thì thêm bảng `user_settings` (Later, OQ-07).
+Bối cảnh: user nêu "target và process"; thiết lập như giờ nhắc, quyền notification, ngôn ngữ, timer gắn với thiết bị; đồng bộ blob settings sinh xung đột khó hiểu. Lựa chọn: bảng `goals`, `entries`; kv giữ nguyên cục bộ (§4.4). Hệ quả: schema đơn giản; muốn đồng bộ thêm thiết lập thì thêm bảng `user_settings` (Later, OQ-07). **Thay thế một phần bởi ADR-25 (v2.1):** user quyết định đồng bộ cả nhắc nhở và ngôn ngữ; phần còn lại của ADR này (không đồng bộ trạng thái riêng của thiết bị) vẫn giữ.
+
+**ADR-25 — Đồng bộ tuỳ chọn người dùng: một hàng `settings`/user, hai nhóm LWW độc lập (v2.1).**
+Bối cảnh: OQ-07 — user muốn giờ nhắc/bật-tắt nhắc và ngôn ngữ theo tài khoản. LWW cả hàng sẽ làm máy B (offline, chỉ đổi giờ nhắc) ghi đè ngôn ngữ mới của máy A bằng giá trị cũ của B. Thiết bị mới với giá trị mặc định không được ghi đè lựa chọn có sẵn trên cloud. Lựa chọn: bảng `settings` (PK `user_id`) với nhóm `reminder` (`reminder_enabled`, `reminder_time`, `reminder_updated_at`) và nhóm `locale` (`locale`, `locale_updated_at`); trigger `settings_before_write` áp LWW **theo nhóm** (nhóm gửi `null` hoặc không mới hơn → giữ cũ; tie → server); cục bộ giữ giá trị ở chỗ cũ (kv `settings`, kv `locale`) và mốc ở kv `prefsSync`, ghi cùng transaction qua `SyncedPrefsRepository`; "chưa từng chọn" = mốc `null` → cloud thắng; lựa chọn từ phase 1 mang mốc 1970 (A-36). Hệ quả: không cần con trỏ (một hàng); không thêm field vào kiểu `Settings`/file backup; thêm một kv key; trạng thái riêng của thiết bị (`lastReminderDate`, `plusOneShown`, `lastBackupAt`, timer, quyền notification) vẫn cục bộ; bật nhắc từ cloud không tự xin quyền (cần cử chỉ người dùng).
 
 **ADR-23 — Kiểm thử không cần project thật: Fake + mock HTTP + Supabase local tuỳ chọn (v2.0).**
 Bối cảnh: QC/dev không có tài khoản Supabase/Google thật; Docker có thể không có. Lựa chọn: interface `AuthPort`/`RemoteStore`/`LockPort` cho service test; mock Supabase Node (OAuth PKCE + tập con PostgREST + RLS giả) cho E2E trên sub-path; một bộ test hợp đồng `RemoteStore` chạy với Fake, mock, và Supabase local (`npm run test:db`, cần Docker). Hệ quả: CI/QC chạy được toàn bộ test mặc định; độ tin cậy với Supabase thật phụ thuộc test hợp đồng + kiểm thủ công (danh sách NOT VERIFIED rõ ràng ở TASKS).
@@ -982,3 +1105,4 @@ Bối cảnh: user chốt "merge, không xoá"; máy dùng chung cần xoá đư
 - 2026-10-09 — v1.2 (mode `revise`, feedback Gate 2: song ngữ en/vi): §1 thêm luồng i18n; §2 thêm `i18next` 26.4.2 + `react-i18next` 17.0.16 và `Intl` (loại language detector plugin, tự viết, FormatJS, Lingui); §3 thêm component `src/i18n/*`, `LocaleService`, `bootstrap.ts`, `useT`/`useFormat`, `error-messages.ts`, sửa `domain/reminder.ts` (trả dữ liệu, không sinh chữ) và `domain/ics.ts` (nhận chuỗi đã dịch), mở rộng quy tắc phụ thuộc và thêm quy tắc chuỗi hiển thị (lint + test); §4 kv key `locale`; §5.2 `KvKey`; §5.3 `LocaleService`, `ReminderService` nhận `Translator`; §5.4 ánh xạ mã lỗi → key `errors.*`; §5.5 import giữ `locale`; §5.6 body notification theo locale; §5.7 `.ics` UTF-8, SUMMARY/DESCRIPTION theo locale; thêm §5.8 i18n contract; §6 thư mục `src/i18n/`, helper test; §8 chiến lược test i18n; §10 thêm 5 rủi ro; §11 thêm ADR-11 … ADR-13.
 - 2026-10-10 — v1.3 (mode `revise`, ghi nhận deviation M1–M2 đã PASS QC, chuẩn bị M3): §3 thêm `settings-service`, `mutex`, `notification-port`, `app/reminder-scheduler`, cập nhật mô tả `data/*`; quy tắc lint tách lớp bỏ qua `*.test.ts(x)`. §5.2 `KvRepository.update` (nguyên tử, ADR-14), `EntryRepository.getById` (M3), interface mới `TimerRepository.saveTimerEntry` + `SaveTimerEntryOutcome` (M3), `BackupData`, ràng buộc nguyên tử cho mọi implementation repository. §5.3 thêm cột Constructor; `DomainError.params`; `GoalService` tham số `kv` tuỳ chọn; `EntryService` dùng `getById` + tách `prepareAdd` (M3); `TimerService` (`current`, `stop` chỉ xem trước, `Mutex`, `save` nguyên tử ở M3); thêm `SettingsService` (claim/release ngày nhắc), `NotificationPort`; `ReminderService.check` claim-trước-gửi; ghi nhận scheduler chạy bù trigger, `Today.pendingTimer` + cờ `GoalCard` hạ bởi effect, banner tính ở UI. §5.6 thứ tự claim → show → release. §6 thêm file. §10 thêm rủi ro ghi đua nhiều tab. §11 thêm ADR-14 … ADR-16. Không đổi phạm vi, không đổi mã lỗi.
 - 2026-10-12 — v2.0 (mode `revise`, phase 2: đăng nhập Google tuỳ chọn + đồng bộ offline-first qua Supabase). §1 thêm sơ đồ và luồng phase 2; §2 thêm Supabase, `@supabase/supabase-js` 2.117.3 (lazy), Supabase CLI 2.120.0 qua npx, mock Supabase Node; §3 thêm component phase 2 (AuthPort/AuthService, RemoteStore/SyncService, LoginPromptService, LockPort, Dexie v2, LocalSyncStore, LocalDataRepository, integration/supabase, auth-callback, sync-scheduler, UI mới) và quy tắc lint `@supabase/*`; §4 thêm 4.1 kiểu sync + kv `sync`/`loginPrompt`, 4.2 Dexie v2 + quy tắc xoá mềm/`dirty`/`nextUpdatedAt`, 4.3 SQL migration (bảng, trigger LWW, RLS, grant), 4.4 bảng cái gì đồng bộ; §5.1 callback `?auth=callback`; §5.2 `LocalDataRepository`, `LocalSyncStore`; §5.3 `AuthService`, `SyncService`, `LoginPromptService`, sửa `BackupService`; §5.4 mã `AUTH_*`, `SYNC_*`; §5.5 export/import với tombstone; thêm §5.9 Auth contract, §5.10 Sync protocol, §5.11 mock Supabase; §6 thư mục mới; §7 biến `VITE_SUPABASE_*`, `VITE_SYNC_INTERVAL_MS`, biến test DB, secrets Actions; §8 chiến lược test auth/sync (Fake, hai thiết bị, hợp đồng, migration, SQL/RLS, project E2E `cloud`); §9 lệnh `build:e2e`, `build:cloud-e2e`, `preview:cloud-e2e`, `mock:supabase`, `db:*`, `test:db`; §10 thêm 12 rủi ro; §11 ghi chú ADR-01/08/10/12, thêm ADR-17 … ADR-24. Không đổi contract M1–M5 ngoài hành vi xoá mềm/lọc tombstone ở repository (chữ ký giữ nguyên).
+- 2026-10-12 — v2.1 (mode `revise`, trả lời OQ-06 … OQ-09 sau Gate 1 phase 2). OQ-07 → đồng bộ nhắc nhở + ngôn ngữ: §3 thêm `data/dexie/prefs-repo.ts`; §4.1 thêm `PrefGroup`, `PrefsSyncState`, `RemotePrefs`, kv `prefsSync`; §4.2 migration đặt mốc tuỳ chọn (A-36), `replaceAll` đánh dấu nhóm reminder (A-37), `clearUserData` xoá `prefsSync`; §4.3 thêm bảng `settings` + trigger `settings_before_write` (LWW theo nhóm) + RLS + grant vào cùng file migration; §4.4 bảng đồng bộ viết lại + bảng quy tắc `resolvePrefGroup` + cách áp locale/reminder; §5.2 `SyncedPrefsRepository`; §5.3 `SettingsService`/`LocaleService` nhận `prefs` tuỳ chọn, `SyncService` nhận `prefs`; §5.10 `pushPrefs`/`pullPrefs` + bước 3b, gộp tài khoản đánh dấu tuỳ chọn; §5.11 mock `/rest/v1/settings`; §8 test tuỳ chọn + ghi chú không có Docker (OQ-08); §10 thêm 2 rủi ro; §11 ghi chú ADR-12, ADR-22, thêm ADR-25. OQ-06 (không giới hạn đăng nhập), OQ-09 (không nút xoá cloud): không đổi kiến trúc.
