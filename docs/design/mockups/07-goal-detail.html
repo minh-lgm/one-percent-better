@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Read — Goal detail — 1% Better (mockup S4)</title>
+<title>Đọc sách — Goal detail — 1% Better (mockup S4, v3)</title>
 <style>
 :root{color-scheme:light dark;
 --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -14,6 +14,7 @@
 --danger:#B3261E;--on-danger:#FFFFFF;--danger-soft:#FCE9E7;--on-danger-soft:#8C1D18;
 --info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;
 --heat-0:#E7E5DC;--heat-1:#BFE3CC;--heat-2:#82C69C;--heat-3:#3FA06A;--heat-4:#1F7A4D;
+--chart-zero:var(--text-muted);
 --scrim:rgba(20,28,24,.5);--shadow-1:0 1px 2px rgba(20,30,25,.06);--shadow-2:0 12px 40px rgba(20,30,25,.22);
 --r-sm:6px;--r-md:10px;--r-lg:16px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:56px;--content-max:960px}
 @media (prefers-color-scheme:dark){:root{
@@ -71,6 +72,9 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 .seg input:checked+span{background:var(--primary);color:var(--on-primary)}
 .seg input:focus-visible+span{outline:2px solid var(--focus);outline-offset:-4px}
 .mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+.mock-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-bottom:12px;padding:12px;border:1px dashed var(--border-input);border-radius:var(--r-md);font-size:14px;line-height:20px}
+.mock-bar label.f{display:grid;gap:4px;font-weight:600;color:var(--text-muted);min-width:0}
+.mock-bar select{min-height:var(--tap);max-width:100%;padding:0 10px;border:1px solid var(--border-input);border-radius:var(--r-md);background:var(--surface);color:var(--text);font:400 15px/20px var(--font)}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 /* screen-specific */
 .back{margin-left:-12px}
@@ -81,22 +85,29 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 .gd-actions{display:flex;flex-wrap:wrap;gap:8px}
 .section{margin-bottom:16px}
 .hl-label{font-weight:600}
-.hl{font-size:40px;line-height:44px;font-weight:700;color:var(--primary);margin:4px 0;font-variant-numeric:tabular-nums}
+.hl{font-size:40px;line-height:44px;font-weight:700;color:var(--primary);margin:4px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.hl.neg{color:var(--text)}
 .chart-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
 #curve{margin-top:8px;position:relative}
 #curve svg{display:block;max-width:100%}
 .cv .gl{stroke:var(--border);stroke-width:1}
+.cv .zero{stroke:var(--chart-zero);stroke-width:1.5}
 .cv .tx{fill:var(--text-muted);font:11px var(--font)}
+.cv .tx0{fill:var(--text);font:700 11px var(--font)}
 .cv .tm{stroke:var(--text-muted);stroke-width:1;stroke-dasharray:2 3}
 .cv .dotA{fill:var(--primary);stroke:var(--surface);stroke-width:2}
+.cv .dotL{fill:var(--primary);stroke:var(--surface);stroke-width:1.5}
 .cv .dotI{fill:var(--surface);stroke:var(--text-muted);stroke-width:2}
 .cv .lblI{fill:var(--text-muted);font:600 12px var(--font)}
 .cv .lblY{fill:var(--primary);font:700 12px var(--font)}
 .line-ideal{fill:none;stroke:var(--text-muted);stroke-width:2;stroke-dasharray:6 5}
 .line-you{fill:none;stroke:var(--primary);stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}
+.line-zero{stroke:var(--chart-zero);stroke-width:1.5}
+.cv .cursor{stroke:var(--text-muted);stroke-width:1}
+#plot{border-radius:var(--r-sm)}
 .legend{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:8px;font-size:14px}
 .legend li{display:flex;align-items:center;gap:8px}
-.ctip{position:absolute;pointer-events:none;background:var(--text);color:var(--bg);padding:6px 10px;border-radius:var(--r-sm);font-size:13px;line-height:18px;white-space:nowrap;transform:translate(-50%,-100%);z-index:5}
+.ctip{position:absolute;pointer-events:none;background:var(--text);color:var(--bg);padding:6px 10px;border-radius:var(--r-sm);font-size:13px;line-height:18px;white-space:normal;width:max-content;max-width:min(280px,calc(100% - 16px));transform:translate(-50%,-100%);z-index:5}
 details summary{cursor:pointer;min-height:var(--tap);display:flex;align-items:center;font-weight:600;color:var(--primary)}
 .tbl-wrap{max-height:320px;overflow:auto;margin-top:4px}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
@@ -125,145 +136,403 @@ th{color:var(--text-muted);font-weight:600}
 <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
 <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
 </defs></svg>
-<a class="skip" href="#main">Skip to content</a>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
 
-<nav class="nav" aria-label="Main">
+<nav class="nav" data-i18n-aria="navLabel" aria-label="Main">
   <a class="brand" href="01-today.html" aria-label="1% Better per Day"><span class="mark" aria-hidden="true">1%</span><span>Better per Day</span></a>
-  <a class="item" href="01-today.html"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span>Today</span></a>
-  <a class="item" href="02-goals.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span>Goals</span></a>
-  <a class="item" href="06-review.html"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span>Review</span></a>
-  <a class="item" href="08-settings.html"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></a>
+  <a class="item" href="01-today.html"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span data-i18n="navToday">Today</span></a>
+  <a class="item" href="02-goals.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span data-i18n="navGoals">Goals</span></a>
+  <a class="item" href="06-review.html"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span data-i18n="navReview">Review</span></a>
+  <a class="item" href="08-settings.html"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span data-i18n="navSettings">Settings</span></a>
 </nav>
 
 <div class="content">
 <main id="main" class="wide" tabindex="-1">
-  <a class="btn ghost back" href="02-goals.html"><svg class="ic" aria-hidden="true"><use href="#i-left"/></svg>Goals</a>
+  <div class="mock-bar" role="group" aria-label="Mockup controls (not part of the app)">
+    <label class="f">Scenario
+      <select id="scen">
+        <option value="r1">R1 — real data, today 2026-10-13 (5 → 10 → 14 → 27 min)</option>
+        <option value="r1next">R1 — next day, nothing logged yet (flat line)</option>
+        <option value="r1part">R1 — next day, 3 min logged so far (goes down)</option>
+        <option value="r3">R3 — going down (5 → 3 min)</option>
+        <option value="r4">R4 — extreme (1 → 1,440 min)</option>
+        <option value="one">One logged day only</option>
+        <option value="empty">No entries yet</option>
+      </select>
+    </label>
+    <fieldset style="border:0;margin:0;padding:0;min-width:0">
+      <legend class="small muted" style="font-weight:600;padding:0 0 4px">Language</legend>
+      <div class="seg"><label><input type="radio" name="lang" value="en" checked><span lang="en">English</span></label><label><input type="radio" name="lang" value="vi"><span lang="vi">Tiếng Việt</span></label></div>
+    </fieldset>
+  </div>
+
+  <a class="btn ghost back" href="02-goals.html"><svg class="ic" aria-hidden="true"><use href="#i-left"/></svg><span data-i18n="navGoals">Goals</span></a>
 
   <header class="gd-head">
     <div>
-      <div class="top"><h1>Read</h1><span class="badge ok">Active</span></div>
-      <p class="why">"Be smarter"</p>
-      <p class="muted small num" style="margin-top:4px">2026-10-01 – 2026-10-31 · 30 min/day</p>
+      <div class="top"><h1>Đọc sách</h1><span class="badge ok" data-i18n="active">Active</span></div>
+      <p class="muted small num" style="margin-top:4px" id="meta"></p>
     </div>
     <div class="gd-actions">
-      <a class="btn secondary" href="03-goal-form.html">Edit</a>
-      <button class="btn secondary" type="button">Archive</button>
-      <button class="btn danger-ghost" type="button">Delete</button>
+      <a class="btn secondary" href="03-goal-form.html" data-i18n="edit">Edit</a>
+      <button class="btn secondary" type="button" data-i18n="archive">Archive</button>
+      <button class="btn danger-ghost" type="button" data-i18n="delete">Delete</button>
     </div>
   </header>
 
   <section class="card section" aria-labelledby="hl">
-    <p class="hl-label muted small">Your 1% curve</p>
-    <p id="hl" class="hl">+8.3% better</p>
-    <p class="muted">Day 9 of 31 · 8 days on target · 1.01^8 = 1.083</p>
+    <p class="hl-label muted small" data-i18n="eyebrow">Your 1% curve</p>
+    <p id="hl" class="hl"></p>
+    <p class="muted" id="sub1"></p>
+    <p class="muted" id="sub2"></p>
   </section>
 
   <section class="card section" aria-labelledby="ch-h">
     <div class="chart-head">
-      <h2 id="ch-h">Ideal vs. you</h2>
+      <h2 id="ch-h" data-i18n="chartTitle">Ideal vs. you</h2>
       <fieldset style="border:0;margin:0;padding:0;min-width:0">
-        <legend class="sr-only">Range</legend>
-        <div class="seg"><label><input type="radio" name="range" value="whole" checked><span>Whole period</span></label><label><input type="radio" name="range" value="sofar"><span>So far</span></label></div>
+        <legend class="sr-only" data-i18n="rangeLegend">Range</legend>
+        <div class="seg"><label><input type="radio" name="range" value="whole" checked><span data-i18n="rangeWhole">Whole period</span></label><label><input type="radio" name="range" value="sofar"><span data-i18n="rangeSoFar">So far</span></label></div>
       </fieldset>
     </div>
-    <figure class="cv" style="margin:0" role="img" aria-labelledby="fig-cap" aria-describedby="curve-sum">
-      <figcaption id="fig-cap" class="sr-only">Line chart comparing the ideal 1% a day curve with your progress</figcaption>
-      <div id="curve"></div>
+    <figure class="cv" style="margin:0">
+      <figcaption id="fig-cap" class="sr-only"></figcaption>
+      <div id="plot" tabindex="0" role="img" aria-label="" aria-describedby="curve-sum"><div id="curve"></div></div>
     </figure>
-    <ul class="legend" aria-hidden="false">
-      <li><svg width="34" height="10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" class="line-ideal"/></svg>Ideal (+1% every day)</li>
-      <li><svg width="34" height="10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" class="line-you"/></svg>You (+1% on days you hit your target)</li>
+    <ul class="legend">
+      <li><svg width="34" height="10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" class="line-ideal"/></svg><span data-i18n="legendIdeal"></span></li>
+      <li><svg width="34" height="10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" class="line-you"/></svg><span data-i18n="legendYou"></span></li>
+      <li><svg width="34" height="10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" class="line-zero"/></svg><span data-i18n="legendZero"></span></li>
     </ul>
-    <p id="curve-sum" style="margin-top:8px">Day 9 of 31: you are +8.3% better. The ideal line is +9.4%. You hit your target on 8 of 9 days.</p>
-    <p class="muted small" style="margin-top:4px">Each day on target multiplies your line by 1.01. Days you miss never take anything away.</p>
+    <p id="curve-sum" style="margin-top:8px"></p>
+    <p class="muted small" style="margin-top:4px" data-i18n="chartNote"></p>
     <details>
-      <summary>Show data as table</summary>
+      <summary data-i18n="showTable">Show data as table</summary>
       <div class="tbl-wrap"><table id="curve-table"></table></div>
     </details>
   </section>
 
   <div class="stats">
-    <div class="card stat"><div class="label">Progress</div><div class="value">25.8%</div><div class="sub">240 of 930 min</div>
-      <div class="progress" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25.8"><span style="width:25.8%"></span></div></div>
-    <div class="card stat text-value"><div class="label">Pace</div><div class="value">30 min behind</div><div class="sub">Expected 270 min by today</div></div>
-    <div class="card stat"><div class="label">Current streak</div><div class="value">8 days</div></div>
-    <div class="card stat"><div class="label">Longest streak</div><div class="value">8 days</div></div>
+    <div class="card stat"><div class="label" data-i18n="progress">Progress</div><div class="value" id="st-prog"></div><div class="sub" id="st-prog-sub"></div>
+      <div class="progress" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" id="st-bar"><span></span></div></div>
+    <div class="card stat text-value"><div class="label" data-i18n="pace">Pace</div><div class="value" id="st-pace"></div><div class="sub" id="st-pace-sub"></div></div>
+    <div class="card stat"><div class="label" data-i18n="curStreak">Current streak</div><div class="value" id="st-cur"></div></div>
+    <div class="card stat"><div class="label" data-i18n="longStreak">Longest streak</div><div class="value" id="st-long"></div></div>
   </div>
 
   <section class="card section" aria-labelledby="hist-h">
-    <h2 id="hist-h">History</h2>
+    <h2 id="hist-h" data-i18n="historyTitle">History</h2>
     <table class="hist" style="margin-top:8px">
-      <thead><tr><th scope="col">Date</th><th scope="col">Minutes</th><th scope="col">Note</th><th scope="col">Source</th></tr></thead>
-      <tbody>
-        <tr><td><a href="05-day.html">2026-10-08</a></td><td>30 min</td><td class="note">Ch. 8</td><td class="src">Manual</td></tr>
-        <tr><td><a href="05-day.html">2026-10-07</a></td><td>30 min</td><td class="note">—</td><td class="src">Timer</td></tr>
-        <tr><td><a href="05-day.html">2026-10-06</a></td><td>30 min</td><td class="note">Ch. 6</td><td class="src">Manual</td></tr>
-        <tr><td><a href="05-day.html">2026-10-05</a></td><td>30 min</td><td class="note">—</td><td class="src">Manual</td></tr>
-        <tr><td><a href="05-day.html">2026-10-04</a></td><td>30 min</td><td class="note">Ch. 4</td><td class="src">Manual</td></tr>
-        <tr><td><a href="05-day.html">2026-10-03</a></td><td>30 min</td><td class="note">—</td><td class="src">Manual</td></tr>
-        <tr><td><a href="05-day.html">2026-10-02</a></td><td>30 min</td><td class="note">Ch. 2</td><td class="src">Manual</td></tr>
-        <tr><td><a href="05-day.html">2026-10-01</a></td><td>30 min</td><td class="note">—</td><td class="src">Manual</td></tr>
-      </tbody>
+      <thead><tr><th scope="col" data-i18n="colDate">Date</th><th scope="col" data-i18n="colMinutes">Minutes</th><th scope="col" data-i18n="colNote">Note</th><th scope="col" data-i18n="colSource">Source</th></tr></thead>
+      <tbody id="hist-body"></tbody>
     </table>
   </section>
 
-  <aside class="mock-note">Mockup S4 Goal detail (M3: header, info, History; M5: headline, curve, stats, Archive). Dataset S1 "Read" at 2026-10-09: ideal 1.01^9 = +9.4%, you 1.01^8 = +8.3%. Below 640 px the History rows stack (date + minutes on the first line, note + source underneath). The real chart is a Recharts line chart with the same look: Ideal = dashed grey, You = solid green stepped line, today marker with direct labels. Keyboard users get the text summary and the "Show data as table" fallback. Hover the chart for a tooltip.</aside>
+  <aside class="mock-note">Mockup S4 Goal detail, v3.0 (M9). Goal "Đọc sách": daily target 30 min, 2026-10-10 to 2026-12-31 (83 days) with the user's real entries 5, 10, 14, 27 min. The "You" line is the minutes of the latest logged day divided by the minutes of the first logged day (each logged day compared with the previous logged day, multiplied together); days with no time stay flat; it can go below the 0% line. The Ideal line is still +1% a day from the start date. The Y axis is linear and fits both lines (it grows to include negatives), with a solid 0% reference line; labels at 10,000% and above are compact. Use the Scenario select to see the states and the Language switch to check Vietnamese copy at 360 px. Both controls are mockup-only. Hover the chart or focus it and use the arrow keys to read a day. The real chart is a Recharts line chart with the same look. Spec: DESIGN.md S4, 7.1 and 7.6.4.</aside>
 </main>
 </div>
 
 <script>
 (function () {
   'use strict';
-  var MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var N = 31, T = 8, startD = new Date(2026, 9, 1);
-  var hit = [1,1,1,1,1,1,1,1,0]; // Oct 1-8 on target, Oct 9 not yet
-  var ideal = [], actual = [], n = 0, i;
-  for (i = 0; i < N; i++) ideal.push((Math.pow(1.01, i + 1) - 1) * 100);
-  hit.forEach(function (h) { n += h; actual.push((Math.pow(1.01, n) - 1) * 100); });
-  var lab = function (k) { var d = new Date(startD); d.setDate(d.getDate() + k); return MS[d.getMonth()] + ' ' + d.getDate(); };
-  var fmt = function (v) { return '+' + v.toFixed(1) + '%'; };
-  var el = document.getElementById('curve');
+  var lang = 'en', scen = 'r1', cursor = null;
+  var LOC = { en: 'en-US', vi: 'vi-VN' };
+  var START = Date.UTC(2026, 9, 10), TOTAL = 83, DAILY = 30, MINUS = '−', TIMES = '×';
+
+  /* Copy: verbatim from DESIGN.md 7.6.4 (+ shell strings from 7.2 / 7.6.x) */
+  var S = {
+    en: {
+      skip: 'Skip to content', navLabel: 'Main', navToday: 'Today', navGoals: 'Goals', navReview: 'Review', navSettings: 'Settings',
+      active: 'Active', edit: 'Edit', archive: 'Archive', delete: 'Delete',
+      eyebrow: 'Your 1% curve',
+      headline: '{{value}}% better', headlineDown: '{{value}}% vs your first day',
+      subDay: 'Day {{k}} of {{total}}',
+      subToday: 'Today: {{minutes}}, {{change}}% vs {{prevDate}} ({{prevMinutes}}). ' + TIMES + '{{factor}} since {{firstDate}} ({{firstMinutes}}).',
+      subEarlier: 'Last logged {{date}}: {{minutes}}, {{change}}% vs {{prevDate}} ({{prevMinutes}}). ' + TIMES + '{{factor}} since {{firstDate}} ({{firstMinutes}}).',
+      subStart: 'Starting point: {{minutes}} on {{date}}. Your line moves once you log on another day.',
+      emptyCurve: 'Your line starts on the first day you log time. That day is your starting point (0%).',
+      chartTitle: 'Ideal vs. you', rangeLegend: 'Range', rangeWhole: 'Whole period', rangeSoFar: 'So far',
+      chartCaption: 'Line chart comparing the ideal +1% a day curve with how your logged time changes from day to day',
+      legendIdeal: 'Ideal (+1% every day)', legendYou: 'You (vs. previous logged day, compounded)', legendZero: '0% = your first logged day',
+      chartSummary: 'Day {{k}} of {{total}}: your line is {{x}}% compared with your first logged day. The ideal line is {{y}}%.',
+      chartSummaryEmpty: 'Day {{k}} of {{total}}: nothing logged yet. The ideal line is {{y}}%.',
+      chartNote: 'Each day you log is compared with your previous logged day, and the changes multiply from your first day. Days without time keep the line flat. Logging less than before moves it down.',
+      tooltipChange: '{{date}} · {{minutes}}, {{change}}% vs previous logged day · You {{you}}% since your first day · Ideal {{ideal}}%',
+      tooltipBase: '{{date}} · {{minutes}}, your first logged day · You {{you}}% · Ideal {{ideal}}%',
+      tooltipFlat: '{{date}} · Nothing logged, the line stays flat · You {{you}}% · Ideal {{ideal}}%',
+      tooltipIdeal: '{{date}} · Ideal {{ideal}}%',
+      labelIdeal: 'Ideal {{value}}%', labelYou: 'You {{value}}%',
+      showTable: 'Show data as table', tableDate: 'Date', tableIdeal: 'Ideal', tableYou: 'You', tableMinutes: 'Minutes', tableChange: 'vs previous logged day',
+      progress: 'Progress', progressSub: '{{current}} of {{total}} min', pace: 'Pace', paceAhead: '{{value}} ahead', paceBehind: '{{value}} behind', paceOn: 'On pace', paceExpected: 'Expected {{n}} min by today',
+      curStreak: 'Current streak', longStreak: 'Longest streak', day1: '{{n}} day', dayN: '{{n}} days',
+      historyTitle: 'History', colDate: 'Date', colMinutes: 'Minutes', colNote: 'Note', colSource: 'Source', manual: 'Manual',
+      minutes: '{{n}} min', duration: '{{h}} h {{m}} min', durationH: '{{h}} h', perDay: '{{n}} min/day'
+    },
+    vi: {
+      skip: 'Chuyển đến nội dung chính', navLabel: 'Chính', navToday: 'Hôm nay', navGoals: 'Mục tiêu', navReview: 'Tổng kết', navSettings: 'Cài đặt',
+      active: 'Đang chạy', edit: 'Sửa', archive: 'Lưu trữ', delete: 'Xóa',
+      eyebrow: 'Đường cong 1% của bạn',
+      headline: 'Tốt hơn {{value}}%', headlineDown: '{{value}}% so với ngày đầu',
+      subDay: 'Ngày {{k}}/{{total}}',
+      subToday: 'Hôm nay: {{minutes}}, {{change}}% so với {{prevDate}} ({{prevMinutes}}). ' + TIMES + '{{factor}} kể từ {{firstDate}} ({{firstMinutes}}).',
+      subEarlier: 'Lần ghi gần nhất {{date}}: {{minutes}}, {{change}}% so với {{prevDate}} ({{prevMinutes}}). ' + TIMES + '{{factor}} kể từ {{firstDate}} ({{firstMinutes}}).',
+      subStart: 'Điểm xuất phát: {{minutes}} vào {{date}}. Đường của bạn sẽ di chuyển khi bạn ghi thêm vào một ngày khác.',
+      emptyCurve: 'Đường của bạn bắt đầu từ ngày đầu tiên bạn ghi thời gian. Ngày đó là điểm xuất phát (0%).',
+      chartTitle: 'Lý tưởng và thực tế', rangeLegend: 'Phạm vi', rangeWhole: 'Cả giai đoạn', rangeSoFar: 'Đến nay',
+      chartCaption: 'Biểu đồ đường so sánh đường lý tưởng +1% mỗi ngày với mức thay đổi thời gian bạn ghi qua từng ngày',
+      legendIdeal: 'Lý tưởng (+1% mỗi ngày)', legendYou: 'Bạn (so với ngày có ghi trước, nhân dồn)', legendZero: '0% = ngày có ghi đầu tiên',
+      chartSummary: 'Ngày {{k}}/{{total}}: đường của bạn ở mức {{x}}% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức {{y}}%.',
+      chartSummaryEmpty: 'Ngày {{k}}/{{total}}: chưa ghi gì. Đường lý tưởng ở mức {{y}}%.',
+      chartNote: 'Mỗi ngày bạn ghi được so với ngày có ghi trước đó, và các thay đổi được nhân dồn từ ngày đầu tiên. Ngày không ghi thời gian thì đường đi ngang. Ghi ít hơn trước thì đường đi xuống.',
+      tooltipChange: '{{date}} · {{minutes}}, {{change}}% so với ngày có ghi trước · Bạn {{you}}% so với ngày đầu · Lý tưởng {{ideal}}%',
+      tooltipBase: '{{date}} · {{minutes}}, ngày có ghi đầu tiên · Bạn {{you}}% · Lý tưởng {{ideal}}%',
+      tooltipFlat: '{{date}} · Không ghi thời gian, đường đi ngang · Bạn {{you}}% · Lý tưởng {{ideal}}%',
+      tooltipIdeal: '{{date}} · Lý tưởng {{ideal}}%',
+      labelIdeal: 'Lý tưởng {{value}}%', labelYou: 'Bạn {{value}}%',
+      showTable: 'Xem dữ liệu dạng bảng', tableDate: 'Ngày', tableIdeal: 'Lý tưởng', tableYou: 'Bạn', tableMinutes: 'Số phút', tableChange: 'So với ngày có ghi trước',
+      progress: 'Tiến độ', progressSub: '{{current}}/{{total}} phút', pace: 'Nhịp độ', paceAhead: 'Nhanh {{value}}', paceBehind: 'Chậm {{value}}', paceOn: 'Đúng nhịp', paceExpected: 'Dự kiến {{n}} phút tính đến hôm nay',
+      curStreak: 'Chuỗi hiện tại', longStreak: 'Chuỗi dài nhất', day1: '{{n}} ngày', dayN: '{{n}} ngày',
+      historyTitle: 'Lịch sử', colDate: 'Ngày', colMinutes: 'Số phút', colNote: 'Ghi chú', colSource: 'Nguồn', manual: 'Thủ công',
+      minutes: '{{n}} phút', duration: '{{h}} giờ {{m}} phút', durationH: '{{h}} giờ', perDay: '{{n}} phút/ngày'
+    }
+  };
+  function t(k, v) {
+    var s = S[lang][k], n;
+    if (v) for (n in v) s = s.split('{{' + n + '}}').join(v[n]);
+    return s;
+  }
+
+  /* Scenarios: offsets from 2026-10-10 -> minutes. today = offset of "today". */
+  var E1 = { 0: 5, 1: 10, 2: 14, 3: 27 };
+  var SC = {
+    r1: { today: 3, e: E1 },
+    r1next: { today: 4, e: E1 },
+    r1part: { today: 4, e: { 0: 5, 1: 10, 2: 14, 3: 27, 4: 3 } },
+    r3: { today: 1, e: { 0: 5, 1: 3 } },
+    r4: { today: 1, e: { 0: 1, 1: 1440 } },
+    one: { today: 3, e: { 0: 5 } },
+    empty: { today: 3, e: {} }
+  };
+
+  /* Formatters (what src/i18n/format.ts must produce) */
+  function nf(min, max) { return new Intl.NumberFormat(LOC[lang], { minimumFractionDigits: min, maximumFractionDigits: max }); }
+  function signed1(v) { return (v < 0 ? MINUS : '+') + nf(1, 1).format(Math.abs(v)); }
+  function factor(v) {
+    return v >= 1 ? nf(0, 2).format(v) : new Intl.NumberFormat(LOC[lang], { maximumSignificantDigits: 2 }).format(v);
+  }
+  function mins(n) { return t('minutes', { n: nf(0, 0).format(n) }); }
+  function duration(n) {
+    if (n < 60) return mins(n);
+    var h = Math.floor(n / 60), m = n % 60;
+    return m ? t('duration', { h: nf(0, 0).format(h), m: m }) : t('durationH', { h: nf(0, 0).format(h) });
+  }
+  function days(n) { return t(n === 1 ? 'day1' : 'dayN', { n: nf(0, 0).format(n) }); }
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function dt(i) { return new Date(START + i * 864e5); }
+  function dShort(i) { return new Intl.DateTimeFormat(LOC[lang], { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(dt(i)); }
+  function dLong(i) {
+    var d = dt(i);
+    return lang === 'vi' ? p2(d.getUTCDate()) + '/' + p2(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear()
+      : d.getUTCFullYear() + '-' + p2(d.getUTCMonth() + 1) + '-' + p2(d.getUTCDate());
+  }
+  function axis(v) {
+    if (v === 0) return '0%';
+    var a = Math.abs(v), s = v < 0 ? MINUS : '+';
+    var body = a >= 10000 ? new Intl.NumberFormat(LOC[lang], { notation: 'compact', maximumFractionDigits: 0 }).format(a) : nf(0, 0).format(a);
+    return s + body + '%';
+  }
+
+  /* Domain model: ARCH 4.5 */
+  function pct(a, b) {
+    var y = (a - b) * 1000 / b, r = (y < 0 ? -1 : 1) * Math.round(Math.abs(y)) / 10;
+    return r === 0 ? 0 : r;
+  }
+  function idealPct(k) { return Math.round((Math.pow(1.01, k) - 1) * 1000) / 10; }
+  function curve(sc) {
+    var T = sc.today, m = [], i, f = -1, logged = [], act = [], lastL = -1;
+    for (i = 0; i <= T; i++) m.push(sc.e[i] || 0);
+    for (i = 0; i <= T; i++) if (m[i] > 0) { f = i; break; }
+    for (i = 0; i <= T; i++) {
+      var isL = m[i] > 0, change = null;
+      if (isL) { if (lastL >= 0) change = pct(m[i], m[lastL]); lastL = i; logged.push(i); }
+      var val = 1, per = 0;
+      if (f >= 0 && i >= f) { val = m[lastL] / m[f]; per = pct(m[lastL], m[f]); }
+      act.push({ i: i, minutes: m[i], logged: isL, value: val, percent: per, change: change });
+    }
+    var latest = logged.length ? logged[logged.length - 1] : -1;
+    var previous = logged.length > 1 ? logged[logged.length - 2] : -1;
+    var ideal = [];
+    for (i = 0; i < TOTAL; i++) ideal.push(idealPct(i + 1));
+    return { T: T, m: m, f: f, act: act, latest: latest, previous: previous, ideal: ideal,
+      headline: act[T].percent, factor: act[T].value, baseline: f };
+  }
+  function nice(x) {
+    var p = Math.pow(10, Math.floor(Math.log10(x))), mm = x / p;
+    return Math.max(1, (mm <= 1 ? 1 : mm <= 2 ? 2 : mm <= 5 ? 5 : 10) * p);
+  }
+  function yDomain(ideal, you) {
+    var mn = 0, mx = 1;
+    you.forEach(function (v) { mn = Math.min(mn, v); mx = Math.max(mx, v); });
+    ideal.forEach(function (v) { mx = Math.max(mx, v); });
+    var pad = (mx - mn) * 0.05, lo = mn < 0 ? mn - pad : 0, hi = mx + pad, step = nice((hi - lo) / 5);
+    return { lo: Math.floor(lo / step) * step, hi: Math.ceil(hi / step) * step, step: step };
+  }
+
+  /* Rendering */
+  var el = document.getElementById('curve'), plot = document.getElementById('plot');
+  var C, geo = null;
+
+  function tipText(k) {
+    var a = C.act[k], base = { date: dShort(k), ideal: signed1(C.ideal[k]) };
+    if (k > C.T || C.f < 0) return t('tooltipIdeal', base);
+    base.minutes = mins(a.minutes); base.you = signed1(a.percent);
+    if (a.logged) { if (a.change !== null) { base.change = signed1(a.change); return t('tooltipChange', base); } return t('tooltipBase', base); }
+    return t('tooltipFlat', base);
+  }
 
   function draw() {
-    var view = document.querySelector('input[name=range]:checked').value, last = view === 'sofar' ? T : N - 1;
-    var W = Math.max(el.clientWidth, 260), H = W < 520 ? 240 : 320, ml = 46, mr = 18, mt = 22, mb = 30;
-    var yMax = ideal[last], steps = [1, 2, 5, 10, 20, 50, 100], step = 100;
-    for (var s = 0; s < steps.length; s++) if (yMax / steps[s] <= 5) { step = steps[s]; break; }
-    var top = Math.ceil(yMax / step) * step, pw = W - ml - mr, ph = H - mt - mb;
-    var x = function (k) { return ml + pw * k / last; }, y = function (v) { return mt + ph * (1 - v / top); };
-    var o = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true" focusable="false">';
-    for (var t = 0; t <= top; t += step) o += '<line class="gl" x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(t) + '" y2="' + y(t) + '"/><text class="tx" x="' + (ml - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end">+' + t + '%</text>';
+    var view = document.querySelector('input[name=range]:checked').value;
+    var last = view === 'sofar' ? Math.max(C.T, 1) : TOTAL - 1, T = C.T, i, v;
+    var hasYou = C.f >= 0, vis = Math.min(T, last);
+    var idealVis = C.ideal.slice(0, last + 1), youVis = [];
+    if (hasYou) for (i = 0; i <= vis; i++) youVis.push(C.act[i].percent);
+    var dom = yDomain(idealVis, youVis), ticks = [];
+    for (v = Math.ceil(dom.lo / dom.step) * dom.step; v <= dom.hi + 1e-9; v += dom.step) ticks.push(Math.round(v * 1e6) / 1e6);
+    var longest = 0;
+    ticks.forEach(function (tv) { longest = Math.max(longest, axis(tv).length); });
+    var W = Math.max(el.clientWidth, 260), H = W < 520 ? 240 : 320, ml = Math.max(44, Math.round(longest * 6.6 + 14)), mr = 18, mt = 22, mb = 30;
+    var pw = W - ml - mr, ph = H - mt - mb;
+    var x = function (k) { return ml + pw * k / last; }, y = function (val) { return mt + ph * (1 - (val - dom.lo) / (dom.hi - dom.lo)); };
+    var o = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true" focusable="false" class="cv">';
+    ticks.forEach(function (tv) {
+      if (tv === 0) return;
+      o += '<line class="gl" x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(tv) + '" y2="' + y(tv) + '"/>';
+      o += '<text class="tx" x="' + (ml - 8) + '" y="' + (y(tv) + 4) + '" text-anchor="end">' + axis(tv) + '</text>';
+    });
+    o += '<line class="zero" x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(0) + '" y2="' + y(0) + '"/>';
+    o += '<text class="tx0" x="' + (ml - 8) + '" y="' + (y(0) + 4) + '" text-anchor="end">0%</text>';
     var cnt = Math.max(2, Math.floor(pw / 72)), ts = Math.max(1, Math.ceil(last / (cnt - 1)));
-    for (i = 0; i <= last; i += ts) o += '<text class="tx" x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + lab(i) + '</text>';
+    for (i = 0; i <= last; i += ts) o += '<text class="tx" x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + dShort(i) + '</text>';
     var d = '';
-    for (i = 0; i <= last; i++) d += (i ? ' L' : 'M') + x(i).toFixed(1) + ' ' + y(ideal[i]).toFixed(1);
+    for (i = 0; i <= last; i++) d += (i ? ' L' : 'M') + x(i).toFixed(1) + ' ' + y(C.ideal[i]).toFixed(1);
     o += '<path class="line-ideal" d="' + d + '"/>';
-    d = 'M' + x(0).toFixed(1) + ' ' + y(actual[0]).toFixed(1);
-    for (i = 1; i <= T && i <= last; i++) d += ' L' + x(i).toFixed(1) + ' ' + y(actual[i - 1]).toFixed(1) + ' L' + x(i).toFixed(1) + ' ' + y(actual[i]).toFixed(1);
-    o += '<path class="line-you" d="' + d + '"/>';
-    o += '<line class="tm" x1="' + x(T) + '" x2="' + x(T) + '" y1="' + mt + '" y2="' + (mt + ph) + '"/>';
-    o += '<circle class="dotI" cx="' + x(T) + '" cy="' + y(ideal[T]) + '" r="4.5"/><circle class="dotA" cx="' + x(T) + '" cy="' + y(actual[T]) + '" r="5.5"/>';
-    var end = x(T) > W * 0.7, ax = end ? x(T) - 12 : x(T) + 12, anc = end ? 'end' : 'start';
-    o += '<text class="lblI" x="' + ax + '" y="' + (y(ideal[T]) - 8) + '" text-anchor="' + anc + '">Ideal ' + fmt(ideal[T]) + '</text>';
-    o += '<text class="lblY" x="' + ax + '" y="' + (y(actual[T]) + 20) + '" text-anchor="' + anc + '">You ' + fmt(actual[T]) + '</text>';
+    if (hasYou) {
+      d = 'M' + x(0).toFixed(1) + ' ' + y(C.act[0].percent).toFixed(1);
+      for (i = 1; i <= vis; i++) d += ' L' + x(i).toFixed(1) + ' ' + y(C.act[i - 1].percent).toFixed(1) + ' L' + x(i).toFixed(1) + ' ' + y(C.act[i].percent).toFixed(1);
+      o += '<path class="line-you" d="' + d + '"/>';
+      if (vis + 1 <= 45) for (i = 0; i <= vis; i++) if (C.act[i].logged && i !== vis) o += '<circle class="dotL" cx="' + x(i) + '" cy="' + y(C.act[i].percent) + '" r="3"/>';
+    }
+    if (T <= last) o += '<line class="tm" x1="' + x(T) + '" x2="' + x(T) + '" y1="' + mt + '" y2="' + (mt + ph) + '"/>';
+    var e = Math.min(T, last), yI = y(C.ideal[e]), yY = hasYou ? y(C.act[e].percent) : null;
+    o += '<circle class="dotI" cx="' + x(e) + '" cy="' + yI + '" r="4.5"/>';
+    if (hasYou) o += '<circle class="dotA" cx="' + x(e) + '" cy="' + yY + '" r="5.5"/>';
+    var end = x(e) > W * 0.7, ax = end ? x(e) - 12 : x(e) + 12, anc = end ? 'end' : 'start';
+    var clampY = function (yy) { return Math.min(Math.max(yy, mt + 10), mt + ph - 2); };
+    var above = function (yy) { return yy - 9 < mt + 8 ? yy + 19 : yy - 9; };
+    var yIl = above(yI), yYl = hasYou ? above(yY) : null;
+    if (hasYou && Math.abs(yI - yY) < 24) { if (yI < yY) { yIl = yI - 9; yYl = yY + 19; } else { yYl = yY - 9; yIl = yI + 19; } }
+    o += '<text class="lblI" x="' + ax + '" y="' + clampY(yIl) + '" text-anchor="' + anc + '">' + t('labelIdeal', { value: signed1(C.ideal[e]) }) + '</text>';
+    if (hasYou) o += '<text class="lblY" x="' + ax + '" y="' + clampY(yYl) + '" text-anchor="' + anc + '">' + t('labelYou', { value: signed1(C.act[e].percent) }) + '</text>';
+    o += '<line class="cursor" id="cur" y1="' + mt + '" y2="' + (mt + ph) + '" style="display:none"/>';
     o += '<rect id="hit" x="' + ml + '" y="' + mt + '" width="' + pw + '" height="' + ph + '" fill="transparent"/></svg><div class="ctip" id="ctip" hidden></div>';
     el.innerHTML = o;
-    var hitEl = document.getElementById('hit'), tip = document.getElementById('ctip');
-    hitEl.addEventListener('mousemove', function (e) {
-      var r = hitEl.getBoundingClientRect(), k = Math.max(0, Math.min(last, Math.round((e.clientX - r.left) / r.width * last)));
-      tip.textContent = lab(k) + ' · Ideal ' + fmt(ideal[k]) + (k <= T ? ' · You ' + fmt(actual[k]) : '');
-      var b = el.getBoundingClientRect();
-      tip.style.left = Math.min(Math.max(x(k), 90), W - 90) + 'px'; tip.style.top = (y(ideal[k]) - 10) + 'px'; tip.hidden = false;
+    geo = { last: last, x: x, y: y, ml: ml, pw: pw, W: W, mt: mt, e: e };
+    var hitEl = document.getElementById('hit');
+    hitEl.addEventListener('mousemove', function (ev) {
+      var r = hitEl.getBoundingClientRect();
+      show(Math.max(0, Math.min(last, Math.round((ev.clientX - r.left) / r.width * last))));
     });
-    hitEl.addEventListener('mouseleave', function () { tip.hidden = true; });
+    hitEl.addEventListener('mouseleave', hide);
+    cursor = null;
+    document.getElementById('fig-cap').textContent = t('chartCaption');
+    plot.setAttribute('aria-label', t('chartCaption'));
+    fillTable(last);
   }
-  var rows = '<thead><tr><th scope="col">Date</th><th scope="col">Ideal</th><th scope="col">You</th></tr></thead><tbody>';
-  for (i = 0; i < N; i++) rows += '<tr><td>2026-10-' + (i + 1 < 10 ? '0' : '') + (i + 1) + '</td><td>' + fmt(ideal[i]) + '</td><td>' + (i <= T ? fmt(actual[i]) : '—') + '</td></tr>';
-  document.getElementById('curve-table').innerHTML = rows + '</tbody>';
-  var radios = document.querySelectorAll('input[name=range]');
-  for (i = 0; i < radios.length; i++) radios[i].addEventListener('change', draw);
+  function show(k) {
+    var tip = document.getElementById('ctip'), cur = document.getElementById('cur');
+    var ys = geo.y(C.ideal[k]);
+    if (C.f >= 0 && k <= C.T) ys = Math.min(ys, geo.y(C.act[k].percent));
+    tip.textContent = tipText(k);
+    tip.style.left = Math.min(Math.max(geo.x(k), 150), geo.W - 150) + 'px';
+    tip.style.top = (ys - 10) + 'px'; tip.hidden = false;
+    cur.setAttribute('x1', geo.x(k)); cur.setAttribute('x2', geo.x(k)); cur.style.display = '';
+  }
+  function hide() {
+    var tip = document.getElementById('ctip'), cur = document.getElementById('cur');
+    if (tip) tip.hidden = true; if (cur) cur.style.display = 'none';
+  }
+  plot.addEventListener('keydown', function (ev) {
+    if (!geo) return;
+    var k = cursor === null ? geo.e : cursor;
+    if (ev.key === 'ArrowLeft') k = Math.max(0, k - 1);
+    else if (ev.key === 'ArrowRight') k = Math.min(geo.last, k + 1);
+    else if (ev.key === 'Home') k = 0;
+    else if (ev.key === 'End') k = geo.last;
+    else if (ev.key === 'Escape') { hide(); return; }
+    else return;
+    ev.preventDefault(); cursor = k; show(k); plot.setAttribute('aria-label', tipText(k));
+  });
+  plot.addEventListener('blur', hide);
+
+  function fillTable(last) {
+    var rows = '<thead><tr><th scope="col">' + t('tableDate') + '</th><th scope="col">' + t('tableIdeal') + '</th><th scope="col">' + t('tableYou') + '</th><th scope="col">' + t('tableMinutes') + '</th><th scope="col">' + t('tableChange') + '</th></tr></thead><tbody>';
+    for (var i = 0; i <= last; i++) {
+      var has = C.f >= 0 && i <= C.T, a = C.act[i];
+      rows += '<tr><td>' + dLong(i) + '</td><td>' + signed1(C.ideal[i]) + '%</td><td>' + (has ? signed1(a.percent) + '%' : '—') + '</td><td>' + (has ? nf(0, 0).format(a.minutes) : '—') + '</td><td>' + (has && a.change !== null ? signed1(a.change) + '%' : '—') + '</td></tr>';
+    }
+    document.getElementById('curve-table').innerHTML = rows + '</tbody>';
+  }
+
+  function render() {
+    var sc = SC[scen], i, g = document.getElementById.bind(document);
+    C = curve(sc);
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(function (n) { n.textContent = t(n.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function (n) { n.setAttribute('aria-label', t(n.getAttribute('data-i18n-aria'))); });
+    g('meta').textContent = dLong(0) + ' – ' + dLong(TOTAL - 1) + ' · ' + t('perDay', { n: DAILY });
+    /* headline + subtitle */
+    var hl = g('hl'), neg = C.headline < 0;
+    hl.textContent = t(neg ? 'headlineDown' : 'headline', { value: signed1(C.headline) });
+    hl.className = 'hl' + (neg ? ' neg' : '');
+    g('sub1').textContent = t('subDay', { k: nf(0, 0).format(C.T + 1), total: nf(0, 0).format(TOTAL) });
+    var s2;
+    if (C.f < 0) s2 = t('emptyCurve');
+    else if (C.previous < 0) s2 = t('subStart', { minutes: mins(C.m[C.latest]), date: dShort(C.latest) });
+    else {
+      var vars = { minutes: mins(C.m[C.latest]), change: signed1(C.act[C.latest].change), prevDate: dShort(C.previous), prevMinutes: mins(C.m[C.previous]),
+        factor: factor(C.factor), firstDate: dShort(C.f), firstMinutes: mins(C.m[C.f]), date: dShort(C.latest) };
+      s2 = t(C.latest === C.T ? 'subToday' : 'subEarlier', vars);
+    }
+    g('sub2').textContent = s2;
+    /* summary */
+    var sv = { k: nf(0, 0).format(C.T + 1), total: nf(0, 0).format(TOTAL), x: signed1(C.headline), y: signed1(C.ideal[C.T]) };
+    g('curve-sum').textContent = t(C.f < 0 ? 'chartSummaryEmpty' : 'chartSummary', sv);
+    /* stats */
+    var logged = 0, exp, diff, cur = 0, longest = 0, run = 0, met = function (j) { return (sc.e[j] || 0) >= DAILY; };
+    for (i = 0; i <= C.T; i++) logged += sc.e[i] || 0;
+    var pr = Math.min(100, logged / (DAILY * TOTAL) * 100);
+    g('st-prog').textContent = nf(1, 1).format(pr) + '%';
+    g('st-prog-sub').textContent = t('progressSub', { current: nf(0, 0).format(logged), total: nf(0, 0).format(DAILY * TOTAL) });
+    g('st-bar').setAttribute('aria-valuenow', pr.toFixed(1)); g('st-bar').firstChild.style.width = pr + '%';
+    exp = DAILY * (C.T + 1); diff = logged - exp;
+    g('st-pace').textContent = diff === 0 ? t('paceOn') : t(diff > 0 ? 'paceAhead' : 'paceBehind', { value: duration(Math.abs(diff)) });
+    g('st-pace-sub').textContent = t('paceExpected', { n: nf(0, 0).format(exp) });
+    for (i = 0; i <= C.T; i++) { run = met(i) ? run + 1 : 0; longest = Math.max(longest, run); }
+    i = met(C.T) ? C.T : C.T - 1; while (i >= 0 && met(i)) { cur++; i--; }
+    g('st-cur').textContent = days(cur); g('st-long').textContent = days(longest);
+    /* history, newest first */
+    var h = '';
+    for (i = C.T; i >= 0; i--) if (sc.e[i]) h += '<tr><td><a href="05-day.html">' + dLong(i) + '</a></td><td>' + mins(sc.e[i]) + '</td><td class="note">—</td><td class="src">' + t('manual') + '</td></tr>';
+    g('hist-body').innerHTML = h;
+    document.title = 'Đọc sách — ' + (lang === 'vi' ? 'Chi tiết mục tiêu' : 'Goal detail') + ' — 1% Better (mockup S4, v3)';
+    draw();
+  }
+
+  document.getElementById('scen').addEventListener('change', function (ev) { scen = ev.target.value; render(); });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=lang]'), function (r) { r.addEventListener('change', function () { lang = r.value; render(); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=range]'), function (r) { r.addEventListener('change', draw); });
   var rz; window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(draw, 120); });
-  draw();
+  render();
 })();
 </script>
 </body>

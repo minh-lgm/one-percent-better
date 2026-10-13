@@ -1,6 +1,6 @@
 # Design — 1% Better per Day
 
-Phiên bản: **v2.0** (mode `revise`, 2026-10-12: phase 2 — đăng nhập Google tuỳ chọn + đồng bộ cloud; PRD v2.1, ARCHITECTURE v2.1, TASKS v2.1). Trước đó v1.1 (2026-10-09, thêm tiếng Việt). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`. **Phase 2 chỉ thêm, không đổi** token, bố cục và copy của phase 1; app build không cấu hình cloud (FR-38) giống hệt thiết kế v1.1.
+Phiên bản: **v3.0** (mode `revise`, 2026-10-13: phase 3 — đường cong "Bạn" tính theo phút so với ngày có ghi trước, FR-27 v3.0; PRD v3.0, ARCHITECTURE v3.0 §4.5, TASKS v3.0 M9). **v3.0 chỉ đổi Goal detail (S4)**: headline, phụ đề, biểu đồ đường cong, bảng dữ liệu, chú thích và các key `goal.detail.*` / `empty.detail.curve` (xem Changelog); mọi màn khác, token màu/cỡ chữ, bố cục và copy giữ nguyên. Trước đó v2.0 (2026-10-12: phase 2 — đăng nhập Google tuỳ chọn + đồng bộ cloud; app build không cấu hình cloud giống hệt v1.1) và v1.1 (2026-10-09, thêm tiếng Việt). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
 Loại app: **GUI** (PWA một người dùng, mobile-first 360 px, dùng tốt trên desktop 1440 px). **UI song ngữ English (`en`) / Tiếng Việt (`vi`)**: mặc định theo `navigator.language`, đổi trong Settings (FR-32 … FR-36). Tài liệu bằng tiếng Việt. **Nguồn sự thật của mọi chuỗi UI là mục 7 (bảng key `en` / `vi`); developer copy nguyên văn từ đó vào `en.json` / `vi.json`.** Các khối "Copy" trong mục 4 là bản `en` để đọc nhanh theo ngữ cảnh; nếu lệch với mục 7 thì mục 7 thắng.
 
 Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 px, tự theo sáng/tối của hệ thống): xem `docs/design/mockups/index.html`. Các mockup viết bằng `en`; riêng Today có thêm bản `vi`.
@@ -14,7 +14,7 @@ Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 p
 | `mockups/04-timer.html` | S1 khi timer chạy + D1 Stop dialog | M2 |
 | `mockups/05-day.html` | S5 Day (ghi bù) | M3 |
 | `mockups/06-review.html` | S6 Review (heatmap, streak, thống kê, biểu đồ tuần/tháng; đổi được All goals / Read) | M4 |
-| `mockups/07-goal-detail.html` | S4 Goal detail với đường cong 1% | M3 (lịch sử) / M5 (đầy đủ) |
+| `mockups/07-goal-detail.html` | S4 Goal detail với đường cong 1%. **v3:** dữ liệu thật của user (R1: 5 → 10 → 14 → 27 phút = +440,0%), nút đổi `English` / `Tiếng Việt`, bộ chọn 7 tình huống (R1, R1 sang ngày chưa ghi, hôm nay ghi dở, R3 đi xuống, R4 cực trị, chỉ một ngày có ghi, chưa có entry), thang Y tự co giãn + đường 0% | M3 (lịch sử) / M5 (đầy đủ) / M9 (đường cong v3) |
 | `mockups/08-settings.html` | S7 Settings (ngôn ngữ, **card Account (v2)**, nhắc nhở, backup, storage, about). **v2:** bộ chọn trạng thái tài khoản (chưa đăng nhập / đang đăng nhập / đã đăng nhập / hết phiên / ngoại tuyến), ghi chú "theo tài khoản", Backup/Storage/About theo trạng thái, D3 biến thể đã đăng nhập | M1–M3; M6 (Account, About); M7 (đồng bộ, D3); M8 (gợi ý Backup/Storage) |
 | `mockups/09-account.html` | **Mới (v2):** bảng tham chiếu mọi trạng thái của card Account, nút Google, SyncIndicator, LoginPromptBanner, ExportSignInHint, dialog D3 (đã đăng nhập), D4, D5. Có nút đổi `English` / `Tiếng Việt` (bản `vi` đầy đủ để kiểm 360 px) và sáng/tối | M6, M7, M8 |
 
@@ -25,8 +25,8 @@ Mockup dùng một đoạn JS nhỏ inline: (a) sinh heatmap/biểu đồ từ d
 ## 1. Nguyên tắc thiết kế
 
 1. **Ghi nhanh hơn nghĩ.** Việc lặp lại nhiều nhất (ghi thời gian hôm nay) làm được ngay trên Today, tối đa 3 thao tác: bấm `Log time` → nhập phút → `Save entry` (PRD §8). Không điều hướng sang màn khác để ghi.
-2. **Khích lệ nhẹ, không phô trương.** "+1%" là một viên thuốc (pill) nhỏ màu hổ phách, chỉ xuất hiện khi goal đạt chỉ tiêu ngày. Không confetti, không âm thanh, không điểm/huy hiệu (PRD non-goal). Ngày chưa đạt **không dùng màu đỏ** và không có chữ "failed"/"missed" (A-02: ngày lỡ không trừ). Đỏ chỉ dành cho lỗi và hành động phá huỷ.
-3. **Số liệu trung thực.** Đường cong lý tưởng 1.01^k và đường thực tế 1.01^n vẽ cùng một thang đo; hiển thị đúng con số (một chữ số thập phân), có chú thích cách tính. Heatmap/biểu đồ luôn có bản text tương đương.
+2. **Khích lệ nhẹ, không phô trương.** "+1%" là một viên thuốc (pill) nhỏ màu hổ phách, chỉ xuất hiện khi goal đạt chỉ tiêu ngày. Không confetti, không âm thanh, không điểm/huy hiệu (PRD non-goal). Ngày chưa đạt **không dùng màu đỏ** và không có chữ "failed"/"missed". **(v3.0)** Đường "Bạn" giờ có thể đi xuống (FR-27 v3.0; A-02 cũ "ngày lỡ không trừ" chỉ còn đúng với ngày 0 phút, vốn đi ngang): số âm vẫn **không đỏ**, không có chữ "worse"/"failed"; headline âm đổi sang màu chữ thường `--text` và nói trung tính "so với ngày đầu". Đỏ chỉ dành cho lỗi và hành động phá huỷ.
+3. **Số liệu trung thực.** **(v3.0)** Đường lý tưởng 1.01^k và đường "Bạn" (phút của ngày có ghi gần nhất so với ngày đầu có ghi, nhân dồn từ mỗi ngày so với ngày có ghi trước) vẽ cùng một thang tuyến tính **tự co giãn theo cả hai** và luôn có vạch 0%; hiển thị đúng con số (một chữ số thập phân, có dấu `+`/`−`), có chú thích cách tính và đúng số phút làm nên con số đó. Heatmap/biểu đồ luôn có bản text tương đương.
 4. **Mobile-first, desktop rộng rãi.** Cùng nội dung, khác bố cục: thanh tab dưới (< 1024 px) → sidebar trái (≥ 1024 px); Review và Goal detail tận dụng chiều rộng để thấy cả heatmap năm.
 5. **Dữ liệu của bạn, nằm trên máy bạn trước.** Giọng điệu bình tĩnh, nói rõ giới hạn thật (nhắc nhở chỉ khi app mở, cần backup, trình duyệt có thể dọn dữ liệu). Không dọa, không đổ lỗi người dùng.
 6. **(Phase 2) Tài khoản là một lựa chọn, không phải một cánh cổng.** Đăng nhập Google chỉ thêm một bản sao an toàn trên cloud; app không bao giờ chặn, không hỏi lặp, không làm chậm việc ghi thời gian vì chưa đăng nhập hoặc vì mất mạng. Mọi chỗ nhắc đăng nhập đều là banner/dòng chữ có "Not now" hoặc có thể bỏ qua, không phải dialog. Mọi nơi nói về dữ liệu phải nói **đúng nơi dữ liệu đang nằm** (chỉ trên máy này / máy này + tài khoản của bạn) và trạng thái đồng bộ phải luôn đọc được, kể cả bằng screen reader.
@@ -107,7 +107,7 @@ Sửa/xoá entry: từ danh sách entry dưới card: `Edit` → form inline có
    --> heatmap + stat cards + 2 biểu đồ cột
    --> bấm ô heatmap (quá khứ/hôm nay) --> [Day] (F4)
    --> (chọn 1 goal) link "Open goal" --> [Goal detail]
-[Goals] bấm tên goal --> [Goal detail]: headline "+X% better", đường cong Ideal vs You, stat, lịch sử
+[Goals] bấm tên goal --> [Goal detail]: headline "+X% better" (âm: "−X% vs your first day"), đường cong Ideal vs You, stat, lịch sử
  (!) chunk biểu đồ không tải được (offline chưa precache) --> ErrorState "Couldn't load this view" + "Retry"
 ```
 
@@ -319,6 +319,7 @@ Không có thanh cuộn ngang ở `documentElement` ở 360–1440 px (NFR-06). 
 | **M6** *(v2)* | `GoogleSignInButton`; `AccountCard` trong Settings (ẩn khi cloud chưa cấu hình; signed-out, offline, signing-in, signed-in cơ bản [avatar, tên, email, "Sign out"], expired, Alert lỗi `AUTH_*`); `SignOutDialog` (D4, chưa có cảnh báo đồng bộ); `Toast` biến thể lỗi có `action`; card About mới (`settings.about.descCloud/descSignedIn/privacy`); thứ tự card Language → **Account** → Reminders → Backup → Storage → About; chuỗi `settings.account.*`, `auth.signOut.*` (trừ cảnh báo), `auth.signInGoogle`, `errors.AUTH_*`, toast `signedIn/signedOutKept/signedOutRemoved` |
 | **M7** *(v2)* | `SyncIndicator` + StatusRow trong AppShell (5 trạng thái + signing-in); chi tiết đồng bộ trong `AccountCard` (Last synced, Waiting to sync, "Sync now", Alert lỗi `SYNC_*`, dòng `SYNC_REMOTE_INVALID`); `MergeAccountDialog` (D5); cảnh báo chưa đồng bộ trong D4; D3 biến thể đã đăng nhập; ghi chú "theo tài khoản" ở card Language và Reminders + biến thể quyền `default` khi nhắc đã bật từ cloud; mô tả Backup khi đã đăng nhập; toast `mergeDone`, `prefsFromAccount`, `syncNowDone`; chuỗi `sync.*`, `auth.merge.*`, `import.*SignedIn`, `errors.SYNC_*` |
 | **M8** *(v2)* | `LoginPromptBanner` (Today); `ExportSignInHint` (card Backup); gợi ý đăng nhập ở card Storage "Not protected"; mô tả Backup khi chưa đăng nhập; chuỗi `loginPrompt.*`, `exportHint.*`, `settings.backup.descSignedOut`, `settings.storage.notProtectedSignIn` (+ nút dùng `settings.account.goTo`) |
+| **M9** *(v3)* | Chỉ Goal detail (S4), không màn nào khác: headline có dấu + biến thể âm (`goal.detail.headlineDown`, màu `--text`), phụ đề 2 dòng (`subDay` + `subToday`/`subEarlier`/`subStart`/`empty.detail.curve`), `CurveChart` v3 (đường "Bạn" `stepAfter`, vạch 0%, thang Y theo `curveYDomain`, nhãn trục có dấu + compact, nhãn trực tiếp không đè nhau, tooltip 4 biến thể, chấm nhỏ ở ngày có ghi), legend 3 mục, chú thích mới, tóm tắt SR 2 biến thể, bảng dữ liệu 5 cột; formatter có dấu (`+`/`−` U+2212) và `f.factor` (`×5.4`). Chuỗi: mục 7.6.4 (cột MS = M9) và `empty.detail.curve` |
 
 ### 3.4 Bố cục với chuỗi tiếng Việt (rà 360 px)
 
@@ -361,6 +362,10 @@ Chuỗi `vi` thường dài hơn `en` khoảng 10–30 % (nhất là câu hướ
 | Toast `Đã nhập bản sao lưu: 5 mục tiêu, 23 lần ghi` | 43 ký tự | ≈ 330 px > 296 | Toast `max-width: calc(100vw - 32px)`, chữ xuống dòng, không `nowrap` |
 | Chip Offline `Ngoại tuyến — lưu trên thiết bị` | 31 ký tự | ≈ 230 px | Cho xuống dòng, không cắt |
 | Lịch sử Goal detail (< 640 px xếp chồng) | cột `Số phút`, `Ghi chú`, `Nguồn`; nguồn `Thủ công` / `Đếm giờ` | OK | Giữ cách xếp chồng hiện tại |
+| **(v3)** Goal detail: headline cực trị `Tốt hơn +143.900,0%` / `−99,9% so với ngày đầu` (40 px đậm) | 19–24 ký tự | ≈ 400–520 px > 294 | Headline `overflow-wrap: anywhere`, không `nowrap`, không chiều cao cố định; xuống 2 dòng là chấp nhận được. Không giảm cỡ chữ (quy tắc 4). Phải không cuộn ngang (M9-AC3) |
+| **(v3)** Goal detail: phụ đề `Hôm nay: 27 phút, +92,9% so với 12 thg 10 (14 phút). ×5,4 kể từ 10 thg 10 (5 phút).` | ≈ 100 ký tự | 3 dòng ở 294 px | Một `<p>` thường, tự xuống dòng; dòng `Ngày 4/83` đứng riêng phía trên nên không bao giờ bị đẩy mất |
+| **(v3)** Goal detail: nhãn trục Y `+143.900%` → compact `+144 N%`; tooltip dài (≈ 110 ký tự) | ≤ 8 ký tự; tooltip ≤ 280 px | OK | Lề trái trục tính theo nhãn dài nhất (≈ 6,6 px/ký tự + 14); tooltip `white-space: normal; max-width: min(280px, 100% - 16px)` |
+| **(v3)** Goal detail: bảng dữ liệu 5 cột (`Ngày`, `Lý tưởng`, `Bạn`, `Số phút`, `So với ngày có ghi trước`) | tiêu đề cột 4–24 ký tự | rộng hơn 294 px | Bảng nằm trong `.tbl-wrap` (đã `overflow: auto`) nên cuộn ngang **trong** vùng bảng; tiêu đề cột được xuống dòng; `document.scrollWidth` không đổi |
 
 **Kiểm chứng** (NFR-11e, M1-AC18): Playwright viewport 360×740 ở `vi-VN`, `document.documentElement.scrollWidth <= clientWidth` trên Today (có form mở), Goals (đủ 3 nhóm), Goal form (có lỗi ở mọi field), Settings; từ M4 thêm Review (ngoại lệ `.heatmap-scroll`). Mockup tham chiếu: `mockups/01-today.vi.html` (mở ở 360 px, so với `01-today.html`).
 
@@ -536,47 +541,66 @@ Quy ước chung cho mọi màn hình:
 - **Tương tác:** Chọn "On a specific date" → hiện DateField "End date" (mặc định = Start date); đổi Start date → nhãn "This year — ends {YYYY-12-31}" cập nhật theo năm của Start date. Đổi loại chỉ tiêu → đổi nhãn/đơn vị field số, giữ giá trị nếu hợp lệ. `Save goal` → validate (zod) → lưu. `Cancel`/Back → `#/goals` (hỏi xác nhận nếu form đã sửa? **không**, giữ đơn giản; xem Assumptions).
 - **Copy:** nhãn `Name`, `Why (optional)`, `Target`, `Minutes per day`, `Total hours`, `Start date`, `Ends`, `This year — ends {date}`, `On a specific date`, `End date`; placeholder Name `e.g. Read`, Why `Why does this matter to you?`; nút `Save goal`, `Save changes`, `Cancel`; counter `{n}/60`, `{n}/280`. Thông báo lỗi: bảng 7.3.
 
-### S4 — Goal detail  (Milestone: M3 bản cơ bản [thông tin + lịch sử]; M5 đầy đủ [headline, đường cong, stat, archive]. User story: US-08, FR-18, FR-27, FR-28)
+### S4 — Goal detail  (Milestone: M3 bản cơ bản [thông tin + lịch sử]; M5 đầy đủ [headline, đường cong, stat, archive]; **M9 đường cong v3** [headline có dấu, phụ đề, biểu đồ, bảng, chú thích, copy]. User story: US-08, FR-18, FR-27 (v3.0), FR-28)
 
-- **Mục đích:** Một goal trong một trang: lý do, tiến độ, và hình dung "1% mỗi ngày". Primary action: không có hành động nổi bật (trang đọc); `Edit` là secondary.
-- **Layout:**
+- **Mục đích:** Một goal trong một trang: lý do, tiến độ, và hình dung "mỗi ngày tốt hơn một chút". Primary action: không có hành động nổi bật (trang đọc); `Edit` là secondary.
+- **Layout (v3, dữ liệu thật của user R1 tại 2026-10-13, `en`):**
 
 ```text
 ┌────────────────────────────────────────────────────┐
 │ ‹ Goals                                            │
-│ Read                    [Active]  [Edit][Archive][Delete]
-│ "Be smarter"                                       │  why (blockquote)
-│ 2026-10-01 – 2026-10-31 · 30 min/day               │
+│ Đọc sách                [Active]  [Edit][Archive][Delete]
+│ 2026-10-10 – 2026-12-31 · 30 min/day               │
 │                                                    │
-│ +8.3% better                         (display 40px)│  headline
-│ Day 9 of 31 · 8 days on target · 1.01⁸ = 1.083     │
+│ Your 1% curve                        (eyebrow)     │
+│ +440.0% better                       (display 40px)│  headline
+│ Day 4 of 83                                        │  phụ đề dòng 1
+│ Today: 27 min, +92.9% vs Oct 12 (14 min). ×5.4 since Oct 10 (5 min).   dòng 2
 │ ┌ CurveChart ────────────────────────────────────┐ │
-│ │  (Ideal: nét đứt xám, You: nét liền xanh, bậc thang) │
+│ │ +500% ┤                          ┌── You       │ │
+│ │ +400% ┤                     ┌────┘             │ │
+│ │ +200% ┤              ┌──────┘                  │ │
+│ │    0% ┼━━━━━━━━━━━━ (vạch 0%, đậm) ━━━━━━━━━━━ │ │  Ideal nét đứt sát 0%
 │ └────────────────────────────────────────────────┘ │
-│ Legend: - - Ideal (+1% a day)   ── You             │
-│ Chart summary (text) · [Range: Whole period|So far]│
-│ [Progress 25.8%] [Pace 30 min behind] [Streak 8] [Longest 8]
+│ Legend: - - Ideal (+1% every day)  ── You (vs. previous logged day, compounded)  ━ 0% = your first logged day
+│ Chart summary (text) · Chart note (muted) · [Range: Whole period|So far]
+│ [Progress 2.2%] [Pace …] [Streak 0] [Longest …]    │
 │ History (newest first): date | minutes | note | source
 └────────────────────────────────────────────────────┘
 ```
-  M3 chỉ có: tiêu đề, why, khoảng thời gian, chỉ tiêu, nút Edit/Delete, History. M5 thêm headline, chart, stat, Archive.
+  M3 chỉ có: tiêu đề, why, khoảng thời gian, chỉ tiêu, nút Edit/Delete, History. M5 thêm headline, chart, stat, Archive. **M9 đổi định nghĩa số liệu của headline/phụ đề/chart (FR-27 v3.0); Stat card (Progress, Pace, streak), History, nút giữ nguyên.** Thứ tự các khối không đổi so với M5.
+
+**Cách đọc con số (để copy có nghĩa).** "Bạn" = phút của **ngày có ghi gần nhất** ÷ phút của **ngày đầu tiên có ghi** (baseline). Ngày đầu có ghi = 0% ; mỗi ngày có ghi sau đó được so với ngày có ghi liền trước và các tỉ lệ nhân dồn; ngày 0 phút đi ngang; ngày ghi ít hơn ngày trước thì đường đi xuống (có thể xuống dưới 0%). Chỉ tiêu ngày (`dailyTarget`) **không** ảnh hưởng đường này (A-42). Hôm nay đang ghi dở tính ngay (A-39, OQ-11): hôm qua 27 phút, sáng nay mới 3 phút thì headline tụt xuống `−40.0%` rồi tăng lại khi ghi thêm.
 - **Component dùng:** PageHeader, Badge, CurveChart (Recharts lazy), StatCard, HistoryTable, Button, ConfirmDialog, EmptyState, Skeleton, ErrorState.
 - **Trạng thái:**
   - *default*: như layout. Chiều rộng 960 px; chart 320 px cao ở desktop, 240 px ở mobile.
   - *loading*: skeleton headline + khung chart (chunk lazy), `aria-busy`.
-  - *empty — chưa có entry*: headline `+0.0% better`, chart chỉ có đường Ideal, dòng `Your line starts rising on the first day you hit your target.`; History: EmptyState nhỏ `No entries yet` / `Time you log for this goal will show up here.`
-  - *upcoming*: headline `+0.0% better`, dòng `Starts {date}. Your line will appear once the goal begins.`; chỉ đường Ideal.
-  - *ended*: Actual dừng ở `endDate`; badge `Ended`.
+  - *empty — chưa có entry* (`baseline = null`): headline `+0.0% better`; phụ đề dòng 1 `Day {k} of {total}`, dòng 2 là `empty.detail.curve` (thay cho câu số liệu); chart **chỉ có đường Ideal + vạch 0%** (đường "Bạn" không vẽ, không nhãn "Bạn", cột "Bạn"/`Số phút`/`So với…` của bảng ghi `—`); tóm tắt dùng `goal.detail.chartSummaryEmpty`; History: EmptyState nhỏ `No entries yet` / `Time you log for this goal will show up here.`
+  - *một ngày có ghi* (`baseline = latest`, `previous = null`): headline `+0.0% better`; dòng 2 là `goal.detail.subStart` (điểm xuất phát, có phút + ngày, **không** có `×`); chart vẽ đường "Bạn" đi ngang trên 0% từ ngày có ghi tới hôm nay.
+  - *nhiều ngày có ghi* (`previous ≠ null`): headline theo dấu (`headline` khi ≥ 0, `headlineDown` khi < 0); dòng 2 là `goal.detail.subToday` nếu `latest.date` = hôm nay, ngược lại `goal.detail.subEarlier` (đường đi ngang, headline giữ nguyên giá trị ngày có ghi gần nhất — A-39).
+  - *đi xuống* (headline < 0, vd. R3: 5 → 3 phút): headline `−40.0% vs your first day` màu `--text` (không đỏ, không xanh); đường "Bạn" xuống dưới vạch 0%; trục Y có nhãn âm.
+  - *upcoming*: headline `+0.0% better`, dòng `Starts {date}. Your line will appear once the goal begins.` (`goal.detail.upcoming`, **không đổi**); chỉ đường Ideal; không có `subDay`.
+  - *ended*: Actual dừng ở `endDate` (nên `latest.date` < hôm nay → `subEarlier`); badge `Ended`; `Day {k} of {total}` có k = `elapsedDays` ≤ total.
   - *archived*: badge `Archived`, nút `Restore` thay `Archive`.
   - *error*: chunk lazy lỗi → ErrorState `Couldn't load this view` + `Retry`; id không tồn tại → Not found.
   - *offline*: bình thường (chunk đã precache).
   - Mặc định **Range**: `Whole period` nếu khoảng ≤ 120 ngày, ngược lại `So far` (đọc Assumptions A-D4). Control chỉ lọc dữ liệu hiển thị.
-- **Tương tác:** `Edit` → form; `Delete` → D2 (xong về `#/goals`); `Archive` → toast; bấm ngày trong History → `#/day/:date` (M3); hover/focus trên chart hiện tooltip `Oct 9 · Ideal +9.4% · You +8.3%`; bàn phím: chart focus được, mũi tên trái/phải di chuyển điểm đọc; vùng `details` "Show data as table" có bảng đầy đủ.
-- **Copy:**
-  - Headline: `+{x}% better` (x một chữ số thập phân). Phụ đề: `Day {k} of {periodDays} · {n} days on target · 1.01^{n} = {value}` (value 3 chữ số thập phân; hiển thị mũ bằng ký tự `^` trong text thuần để SR đọc được, đồ hoạ có thể dùng `<sup>`).
-  - Chú thích dưới chart: `Each day on target multiplies your line by 1.01. Days you miss never take anything away.`
-  - Legend: `Ideal (+1% every day)`, `You (+1% on days you hit your target)`.
-  - Tóm tắt cho SR (hiện luôn dưới chart): `Day {k} of {periodDays}: you are +{x}% better. The ideal line is +{y}%. You hit your target on {n} of {k} days.`
+- **Tương tác:** `Edit` → form; `Delete` → D2 (xong về `#/goals`); `Archive` → toast; bấm ngày trong History → `#/day/:date` (M3); hover/focus trên chart hiện tooltip (v3, R1, ngày 12/10): `Oct 12 · 14 min, +40.0% vs previous logged day · You +180.0% since your first day · Ideal +3.0%`; bàn phím: chart focus được, mũi tên trái/phải di chuyển điểm đọc (mỗi lần một ngày, đọc cùng chuỗi tooltip); vùng `details` "Show data as table" có bảng đầy đủ. Đổi `Range` → vẽ lại với miền Y tính lại theo các điểm đang hiển thị.
+- **Biểu đồ v3 — quy tắc vẽ (M9-T3).**
+  1. **Đường "Bạn"**: nét liền dày `--chart-actual`, kiểu **bậc thang `stepAfter`** (giữ giá trị tới ngày kế rồi nhảy tại ngày có ghi; ngày 0 phút là đoạn ngang, ngày ghi ít hơn là bậc đi xuống). Vẽ mọi điểm `ActualPoint` (trước baseline là 0%); **không vẽ** khi `baseline = null`. Chấm nhỏ (r = 3) ở mỗi ngày **có ghi** khi số điểm "Bạn" đang hiển thị ≤ 45; chấm lớn (r = 5,5) ở hôm nay / ngày cuối. **Đường Ideal**: nét đứt xám, tuyến tính, như M5.
+  2. **Vạch 0%** (mức ngày đầu có ghi): đường ngang liền 1,5 px `--chart-zero`, luôn hiện (miền luôn chứa 0 vì `yMin ≤ 0 < yMax`); nhãn trục `0%`. Là mốc đọc "trên hay dưới ngày đầu"; có mục legend riêng (`goal.detail.legendZero`). Các vạch lưới khác 1 px `--border`.
+  3. **Thang Y** (giữ control Range A-D4): tuyến tính, miền = `curveYDomain(ideal%, you%)` của **các điểm đang hiển thị**; không giới hạn cứng, không thang log. **Đầu dưới chỉ nới (5 %) khi có giá trị âm**; nếu "Bạn" không bao giờ dưới 0 thì `yMin = 0` đúng (không chừa khoảng trống dưới vạch 0%, nếu không R1 sẽ có cả một bậc `−100%` vô nghĩa) — vẫn nằm trong dung sai của M9-AC2 (xem OQ-D17). Vạch/nhãn: bước "đẹp" (1, 2, 5 × 10ⁿ), **không nhỏ hơn 1 (đơn vị %)** để nhãn luôn là số nguyên, 4–6 vạch, luôn có 0.
+  4. **Nhãn trục Y** = % số nguyên **có dấu**: `+100%`, `0%` (không dấu), `−50%` (U+2212). |v| < 10.000: có nhóm hàng nghìn (`+1,000%` / `+1.000%`); |v| ≥ 10.000: `Intl.NumberFormat` `notation: 'compact'` — `en` `+144K%`, `vi` `+144 N%` (dùng đúng kết quả của Intl, không tự ghép), tối đa 8 ký tự. Lề trái chừa theo nhãn dài nhất (≈ 6,6 px × số ký tự + 14 px, tối thiểu 44 px).
+  5. **Nhãn trực tiếp tại điểm cuối** (`goal.detail.labelIdeal`, `labelYou`): mặc định mỗi nhãn nằm ngay **trên** chấm của nó (chuyển xuống dưới chấm nếu sẽ chạm đỉnh vùng vẽ); nếu hai chấm cách nhau < 24 px thì nhãn của series cao hơn ở trên chấm, nhãn của series thấp hơn ở dưới chấm — hai nhãn không bao giờ đè nhau, kể cả khi "Bạn" thấp hơn Ideal. Kẹp trong vùng vẽ; nhãn nằm bên phải chấm, neo phải (nằm bên trái chấm) nếu x > 70 % chiều rộng.
+  6. **Trục X**: nhãn ngày ngắn không năm (~ mỗi 72 px), như M5. Chiều cao 240 px (mobile) / 320 px (desktop).
+  7. **Hệ quả đã chấp nhận (ARCH §4.5)**: khi "Bạn" vượt xa Ideal (R1: +440% so với +4,1%) Ideal nằm sát vạch 0% — đúng thực tế, giá trị đọc ở nhãn trực tiếp, tooltip và bảng. Goal dài vẫn mặc định `So far` để Ideal không nuốt thang.
+- **Copy:** mục 7.6.4 là nguồn; dưới đây là bản `en` với R1 / R3 (số đã qua formatter, mục 7.1).
+  - Headline: `+440.0% better` (≥ 0, màu `--primary`); `−40.0% vs your first day` (< 0, màu `--text`). Dấu nằm trong `{{value}}`, template không có `+` cứng.
+  - Phụ đề: dòng 1 `Day 4 of 83`; dòng 2 (nhiều ngày có ghi, hôm nay có ghi) `Today: 27 min, +92.9% vs Oct 12 (14 min). ×5.4 since Oct 10 (5 min).`; (ngày có ghi gần nhất là quá khứ) `Last logged Oct 13: 27 min, +92.9% vs Oct 12 (14 min). ×5.4 since Oct 10 (5 min).`; (một ngày có ghi) `Starting point: 5 min on Oct 10. Your line moves once you log on another day.`; (chưa có entry) `Your line starts on the first day you log time. That day is your starting point (0%).`. Hệ số `×N` dùng `f.factor`, ký tự `×` (U+00D7) nằm trong template, ví dụ `×0.6` khi thấp hơn ngày đầu.
+  - Chú thích dưới chart: `Each day you log is compared with your previous logged day, and the changes multiply from your first day. Days without time keep the line flat. Logging less than before moves it down.`
+  - Legend: `Ideal (+1% every day)`, `You (vs. previous logged day, compounded)`, `0% = your first logged day`.
+  - Tóm tắt cho SR (hiện luôn dưới chart): `Day 4 of 83: your line is +440.0% compared with your first logged day. The ideal line is +4.1%.`; chưa có entry: `Day 4 of 83: nothing logged yet. The ideal line is +4.1%.`
+  - Bảng dữ liệu: cột `Date`, `Ideal`, `You`, `Minutes`, `vs previous logged day`. Hàng 2026-10-13: `+4.1%`, `+440.0%`, `27`, `+92.9%`. Ngày không ghi: `Minutes` = `0`, cột so sánh `—`; ngày tương lai (Whole period): `You`, `Minutes`, so sánh đều `—`.
   - Stat: `Progress` (`25.8%`, phụ `240 of 930 min`), `Pace` (`30 min behind`, phụ `Expected 270 min by today`), `Current streak` (`8 days`), `Longest streak` (`8 days`).
   - History: tiêu đề `History`; cột `Date`, `Minutes`, `Note`, `Source`; nguồn `Manual` / `Timer`; ngày dạng `YYYY-MM-DD`; ghi chú rỗng hiển thị `—`.
   - Nút: `Edit`, `Archive`, `Restore`, `Delete`, `Retry`; toggle `Whole period` / `So far`; `Show data as table`.
@@ -830,7 +854,7 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 | `StatCard` | Một chỉ số | `label`, `value`, `sub?`, `progress?` | default, loading (skeleton), zero | Review, Goal detail (M4, M5) |
 | `Heatmap` | Lưới năm 53×7 | `year`, `cells`, `mode`: goal / all, `onSelect` | cell levels 0–4, today, future, outside; focus; tooltip | Review (M4) |
 | `BarChart` | Cột tuần/tháng (Recharts, lazy) | `series`, `unit`, `title` | default, empty (text), loading | Review (M4) |
-| `CurveChart` | Đường Ideal vs You (Recharts, lazy) | `ideal[]`, `actual[]`, `today`, `range` | default, empty-actual, upcoming | Goal detail (M5) |
+| `CurveChart` | Đường Ideal vs You (Recharts, lazy). **v3:** "You" = `ActualPoint.percent` (bậc thang, đi xuống được), vạch 0%, thang Y theo `curveYDomain`, nhãn trục có dấu/compact, tooltip 4 biến thể, bảng 5 cột (S4 "Biểu đồ v3") | `ideal[]`, `actual[]` (`ActualPoint` v3: `minutes`, `logged`, `percent`, `changePercent`), `today`, `range` | default, empty-actual (`baseline = null`: chỉ Ideal + vạch 0%), negative, flat (ngày cuối không ghi), upcoming | Goal detail (M5; v3 M9) |
 | `HistoryTable` | Lịch sử entry | `entries` | default, empty | Goal detail (M3) |
 | `DateNav` | Điều hướng ngày | `date`, `today` | next vô hiệu ở hôm nay | Day (M3) |
 | `EmptyState` | Trạng thái rỗng | `title`, `body`, `action?` | — | Today, Goals, Review, Day, Goal detail (M1 tối thiểu / M5 đủ) |
@@ -906,6 +930,7 @@ Cài đặt: một file `src/ui/styles/tokens.css` khai báo CSS custom properti
 | `--chart-ideal` | = `--text-muted` | = `--text-muted` | đường Ideal (nét đứt) |
 | `--chart-actual` | = `--primary` | = `--primary` | đường You, cột nhấn |
 | `--chart-bar` | = `--heat-3` | = `--heat-3` | cột biểu đồ (kỳ hiện tại dùng `--primary`) |
+| `--chart-zero` *(v3)* | = `--text-muted` | = `--text-muted` | vạch tham chiếu 0% của CurveChart (liền, 1,5 px; tương phản ≥ 3:1 với `--surface`). Không thêm giá trị màu mới |
 | `--scrim` | `rgba(20,28,24,.5)` | `rgba(0,0,0,.6)` | lớp phủ dialog |
 | `--google-bg` *(v2)* | `#FFFFFF` | `#131314` | nền nút Google (bộ màu chính thức của Google: theme "light" / "dark") |
 | `--google-border` *(v2)* | `#747775` | `#8E918F` | viền nút Google (≥ 3:1 so với `--surface`/`--primary-soft`) |
@@ -928,7 +953,7 @@ Font hệ thống (NFR-01: không font ngoài): `--font: system-ui, -apple-syste
 | `--text-xl` | 20 / 28 | 600–700 | tiêu đề dialog |
 | `--text-2xl` | 24 / 30 | 700 | số lớn trên card (`20/30`), giá trị StatCard |
 | `--text-h1` | 24 / 30 (28 / 34 ở ≥ 1024) | 700 | h1 |
-| `--text-display` | 40 / 44 | 700 | timer `hh:mm:ss`, headline `+8.3% better` |
+| `--text-display` | 40 / 44 | 700 | timer `hh:mm:ss`, headline `+440.0% better` (Goal detail; được phép xuống dòng, mục 3.4) |
 
 ### 6.3 Khoảng cách, bo góc, đổ bóng, z-index, chuyển động
 
@@ -1016,7 +1041,11 @@ Mọi định dạng do `src/i18n/format.ts` (ARCH §5.8) sinh ra; developer **k
 | Phút | `{n} min`; card Today `{a}/{b} min` | `{n} phút`; `{a}/{b} phút` | `20/30 min` → `20/30 phút` |
 | Thời lượng dài | `< 60`: `{n} min`; `≥ 60`: `{h} h {m} min` (bỏ phần 0) | `{n} phút`; `{h} giờ {m} phút` (bỏ phần 0) | `2 h 40 min` → `2 giờ 40 phút` |
 | Tổng giờ (thống kê) | `{x.x} h` | `{x,x} giờ` | `4.0 h` → `4,0 giờ` |
-| Phần trăm | `25.8%`, `+8.3% better` | `25,8%`, `Tốt hơn +8,3%` | key `format.percent` = `{{value}}%` |
+| Phần trăm | `25.8%`, `+440.0% better` | `25,8%`, `Tốt hơn +440,0%` | key `format.percent` = `{{value}}%` |
+| **(v3)** Phần trăm **có dấu** (mọi % của đường cong: headline, "Bạn", Ideal, so với ngày trước, nhãn, tooltip, bảng, tóm tắt) | `+440.0%`, `+0.0%`, `−40.0%`, `+143,900.0%`, `+92.9%` | `+440,0%`, `+0,0%`, `−40,0%`, `+143.900,0%`, `+92,9%` | Một formatter (tên do developer đặt, vd. `signed1`): 1 chữ số thập phân, nhóm hàng nghìn theo locale, `+` khi ≥ 0 (kể cả `+0.0`), `−` khi < 0, `−0` → `+0.0`. **Template trong bảng key không chứa `+` cứng**: dấu nằm trong `{{value}}`/`{{x}}`… để không ra `++`. Giá trị đã được làm tròn theo `pct` (ARCH §4.5) trước khi định dạng |
+| **(v3)** Dấu trừ | `−` **U+2212** (không dùng `-` ASCII) | `−` U+2212 | Chốt một loại cho cả app để trình đọc màn hình đọc là "trừ" và độ rộng khớp với `+`. `Intl` trả `-` ASCII ở `en-US` và `vi-VN` nên formatter phải thay thủ công `-` → `−`. Test chấp nhận cả hai (`/[-−]/`) nhưng code chỉ sinh U+2212 |
+| **(v3)** Hệ số `×N` (`f.factor`) | `×5.4`, `×2.8`, `×0.6`, `×1,440` | `×5,4`, `×2,8`, `×0,6`, `×1.440` | `×` = U+00D7, nằm trong template (`×{{factor}}`), không có khoảng trắng sau `×`; số do `f.factor` (ARCH §4.5: ≥ 1 tối đa 2 chữ số thập phân bỏ số 0 thừa; < 1 hai chữ số có nghĩa) |
+| **(v3)** Nhãn trục Y của CurveChart | `+500%`, `0%`, `−50%`, `+1,000%`, `+144K%` | `+500%`, `0%`, `−50%`, `+1.000%`, `+144 N%` | Số nguyên có dấu; zero không dấu; |v| ≥ 10.000 → `Intl` compact (xem S4 "Biểu đồ v3") |
 | Timer | `hh:mm:ss` (giống nhau) | giống `en` | `00:25:31` |
 | Giờ nhắc | 24h `HH:MM` (giống nhau) | giống `en` | `20:00` |
 | Số nhiều | `1 goal`, `2 goals`; `1 entry`, `23 entries`; `1 day`, `8 days`; **(v2)** `1 change`, `3 changes` | `1 mục tiêu`, `2 mục tiêu`; `23 lần ghi`; `8 ngày`; `3 thay đổi` (không chia số nhiều) | qua `format.*Count` |
@@ -1190,7 +1219,7 @@ Quy ước key (luật 2, mục 7.0): `<key>` = tiêu đề, `<key>Body` = nội
 | `empty.reviewYear` | M4 | Review (có goal, chưa entry trong năm) — dòng chữ | `No time logged in {{year}} yet.` | `Năm {{year}} chưa có thời gian nào được ghi.` |
 | `empty.detail.history` | M3 | Goal detail — tiêu đề | `No entries yet` | `Chưa có lần ghi nào` |
 | `empty.detail.historyBody` | M3 | — nội dung | `Time you log for this goal will show up here.` | `Thời gian bạn ghi cho mục tiêu này sẽ hiện ở đây.` |
-| `empty.detail.curve` | M5 | Goal detail (chưa entry) — dòng chữ | `Your line starts rising on the first day you hit your target.` | `Đường của bạn bắt đầu đi lên từ ngày đầu tiên bạn đạt chỉ tiêu.` |
+| `empty.detail.curve` | M9 *(sửa v3: chuỗi mới)* | Goal detail (chưa entry) — dòng 2 của phụ đề, thay câu số liệu | `Your line starts on the first day you log time. That day is your starting point (0%).` | `Đường của bạn bắt đầu từ ngày đầu tiên bạn ghi thời gian. Ngày đó là điểm xuất phát (0%).` |
 | `empty.day.noGoals` | M3 | Day — tiêu đề | `No goals were running on this day` | `Không có mục tiêu nào đang chạy trong ngày này` |
 | `empty.day.noGoalsBody` | M3 | — nội dung | `Goals show up here on the days they're active.` | `Mục tiêu sẽ hiện ở đây vào những ngày chúng đang chạy.` |
 | `empty.day.noGoalsAction` | M3 | — nút | `View goals` | `Xem mục tiêu` |
@@ -1350,27 +1379,45 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | Key | MS | Ngữ cảnh | `en` | `vi` |
 | :- | :- | :- | :- | :- |
 | `goal.detail.eyebrow` | M5 | nhãn nhỏ trên headline | `Your 1% curve` | `Đường cong 1% của bạn` |
-| `goal.detail.headline` | M5 | `{{value}}` = `decimal1` | `+{{value}}% better` | `Tốt hơn +{{value}}%` |
-| `goal.detail.headlineSub_one` | M5 | `{{k}}` ngày đã trôi, `{{total}}` tổng, `{{value}}` 3 chữ số thập phân | `Day {{k}} of {{total}} · {{count}} day on target · 1.01^{{count}} = {{value}}` | — |
-| `goal.detail.headlineSub_other` | M5 | | `Day {{k}} of {{total}} · {{count}} days on target · 1.01^{{count}} = {{value}}` | `Ngày {{k}}/{{total}} · {{count}} ngày đạt chỉ tiêu · 1,01^{{count}} = {{value}}` |
+| `goal.detail.headline` | M9 *(sửa: dấu nằm trong `{{value}}`)* | headline khi `headlinePercent` ≥ 0 (kể cả `+0.0`); `{{value}}` = % **có dấu** (7.1), vd. `+440.0`; màu `--primary` | `{{value}}% better` | `Tốt hơn {{value}}%` |
+| `goal.detail.headlineDown` | M9 *(mới)* | headline khi `headlinePercent` < 0; `{{value}}` = % có dấu, vd. `−40.0`; màu `--text` (không đỏ) | `{{value}}% vs your first day` | `{{value}}% so với ngày đầu` |
+| `goal.detail.subDay` | M9 *(mới)* | phụ đề dòng 1 (mọi trạng thái trừ upcoming); `{{k}}` = `elapsedDays`, `{{total}}` = `periodDays` | `Day {{k}} of {{total}}` | `Ngày {{k}}/{{total}}` |
+| `goal.detail.subToday` | M9 *(mới)* | phụ đề dòng 2: ≥ 2 ngày có ghi và `latest.date` = hôm nay. `{{minutes}}`, `{{prevMinutes}}`, `{{firstMinutes}}` = `format.minutes`; `{{change}}` = `latestChangePercent` có dấu (7.1); `{{prevDate}}`, `{{firstDate}}` = ngày ngắn không năm (`Oct 12` / `12 thg 10`); `{{factor}}` = `f.factor(actualFactor)` | `Today: {{minutes}}, {{change}}% vs {{prevDate}} ({{prevMinutes}}). ×{{factor}} since {{firstDate}} ({{firstMinutes}}).` | `Hôm nay: {{minutes}}, {{change}}% so với {{prevDate}} ({{prevMinutes}}). ×{{factor}} kể từ {{firstDate}} ({{firstMinutes}}).` |
+| `goal.detail.subEarlier` | M9 *(mới)* | phụ đề dòng 2: ≥ 2 ngày có ghi và `latest.date` ≠ hôm nay (đường đi ngang, goal đã kết thúc…); thêm `{{date}}` = ngày ngắn không năm của `latest.date`; các biến khác như `subToday` | `Last logged {{date}}: {{minutes}}, {{change}}% vs {{prevDate}} ({{prevMinutes}}). ×{{factor}} since {{firstDate}} ({{firstMinutes}}).` | `Lần ghi gần nhất {{date}}: {{minutes}}, {{change}}% so với {{prevDate}} ({{prevMinutes}}). ×{{factor}} kể từ {{firstDate}} ({{firstMinutes}}).` |
+| `goal.detail.subStart` | M9 *(mới)* | phụ đề dòng 2: chỉ một ngày có ghi (`previous = null`); `{{minutes}}` = `format.minutes`, `{{date}}` = ngày ngắn không năm. **Không chứa `×`** | `Starting point: {{minutes}} on {{date}}. Your line moves once you log on another day.` | `Điểm xuất phát: {{minutes}} vào {{date}}. Đường của bạn sẽ di chuyển khi bạn ghi thêm vào một ngày khác.` |
 | `goal.detail.chartTitle` | M5 | h2 | `Ideal vs. you` | `Lý tưởng và thực tế` |
 | `goal.detail.rangeLegend` | M5 | legend ẩn | `Range` | `Phạm vi` |
 | `goal.detail.rangeWhole` | M5 | lựa chọn | `Whole period` | `Cả giai đoạn` |
 | `goal.detail.rangeSoFar` | M5 | lựa chọn | `So far` | `Đến nay` |
-| `goal.detail.chartCaption` | M5 | `figcaption` ẩn | `Line chart comparing the ideal 1% a day curve with your progress` | `Biểu đồ đường so sánh đường cong lý tưởng 1% mỗi ngày với tiến độ thực tế của bạn` |
+| `goal.detail.chartCaption` | M9 *(sửa chữ)* | `figcaption` ẩn | `Line chart comparing the ideal +1% a day curve with how your logged time changes from day to day` | `Biểu đồ đường so sánh đường lý tưởng +1% mỗi ngày với mức thay đổi thời gian bạn ghi qua từng ngày` |
 | `goal.detail.legendIdeal` | M5 | legend | `Ideal (+1% every day)` | `Lý tưởng (+1% mỗi ngày)` |
-| `goal.detail.legendYou` | M5 | legend | `You (+1% on days you hit your target)` | `Bạn (+1% vào ngày đạt chỉ tiêu)` |
-| `goal.detail.chartSummary` | M5 | tóm tắt hiển thị dưới chart (SR) | `Day {{k}} of {{total}}: you are +{{x}}% better. The ideal line is +{{y}}%. You hit your target on {{n}} of {{k}} days.` | `Ngày {{k}}/{{total}}: bạn đã tốt hơn +{{x}}%. Đường lý tưởng là +{{y}}%. Bạn đạt chỉ tiêu {{n}}/{{k}} ngày.` |
-| `goal.detail.chartNote` | M5 | chú thích | `Each day on target multiplies your line by 1.01. Days you miss never take anything away.` | `Mỗi ngày đạt chỉ tiêu, đường của bạn được nhân với 1,01. Ngày bỏ lỡ không bao giờ bị trừ đi.` |
-| `goal.detail.tooltip` | M5 | tooltip; `{{date}}` = ngày ngắn không năm | `{{date}} · Ideal +{{ideal}}% · You +{{you}}%` | `{{date}} · Lý tưởng +{{ideal}}% · Bạn +{{you}}%` |
-| `goal.detail.tooltipIdeal` | M5 | tooltip cho ngày tương lai (chỉ đường Ideal) | `{{date}} · Ideal +{{ideal}}%` | `{{date}} · Lý tưởng +{{ideal}}%` |
-| `goal.detail.labelIdeal` | M5 | nhãn trực tiếp tại điểm hôm nay | `Ideal +{{value}}%` | `Lý tưởng +{{value}}%` |
-| `goal.detail.labelYou` | M5 | | `You +{{value}}%` | `Bạn +{{value}}%` |
+| `goal.detail.legendYou` | M9 *(sửa chữ)* | legend; bỏ "+1% vào ngày đạt chỉ tiêu" | `You (vs. previous logged day, compounded)` | `Bạn (so với ngày có ghi trước, nhân dồn)` |
+| `goal.detail.legendZero` | M9 *(mới)* | legend mục 3 (mẫu nét: vạch 0% liền, đậm) | `0% = your first logged day` | `0% = ngày có ghi đầu tiên` |
+| `goal.detail.chartSummary` | M9 *(sửa: bỏ `{{n}}`, dấu trong `{{x}}`/`{{y}}`)* | tóm tắt hiển thị dưới chart (SR) khi có ≥ 1 ngày có ghi; `{{x}}` = `headlinePercent` có dấu, `{{y}}` = `idealPercent` có dấu | `Day {{k}} of {{total}}: your line is {{x}}% compared with your first logged day. The ideal line is {{y}}%.` | `Ngày {{k}}/{{total}}: đường của bạn ở mức {{x}}% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức {{y}}%.` |
+| `goal.detail.chartSummaryEmpty` | M9 *(mới)* | như trên khi chưa có entry (`baseline = null`) | `Day {{k}} of {{total}}: nothing logged yet. The ideal line is {{y}}%.` | `Ngày {{k}}/{{total}}: chưa ghi gì. Đường lý tưởng ở mức {{y}}%.` |
+| `goal.detail.chartNote` | M9 *(sửa chữ)* | chú thích dưới chart (giải thích: so với ngày có ghi trước, nhân dồn, ngày trống đi ngang, có thể đi xuống) | `Each day you log is compared with your previous logged day, and the changes multiply from your first day. Days without time keep the line flat. Logging less than before moves it down.` | `Mỗi ngày bạn ghi được so với ngày có ghi trước đó, và các thay đổi được nhân dồn từ ngày đầu tiên. Ngày không ghi thời gian thì đường đi ngang. Ghi ít hơn trước thì đường đi xuống.` |
+| `goal.detail.tooltipChange` | M9 *(mới; thay `tooltip`)* | tooltip / đọc bằng phím: ngày có ghi và `changePercent` ≠ null; `{{date}}` = ngày ngắn không năm, `{{minutes}}` = `format.minutes`, `{{change}}`, `{{you}}`, `{{ideal}}` = % có dấu | `{{date}} · {{minutes}}, {{change}}% vs previous logged day · You {{you}}% since your first day · Ideal {{ideal}}%` | `{{date}} · {{minutes}}, {{change}}% so với ngày có ghi trước · Bạn {{you}}% so với ngày đầu · Lý tưởng {{ideal}}%` |
+| `goal.detail.tooltipBase` | M9 *(mới)* | tooltip: ngày đầu tiên có ghi (`logged`, `changePercent` = null) | `{{date}} · {{minutes}}, your first logged day · You {{you}}% · Ideal {{ideal}}%` | `{{date}} · {{minutes}}, ngày có ghi đầu tiên · Bạn {{you}}% · Lý tưởng {{ideal}}%` |
+| `goal.detail.tooltipFlat` | M9 *(mới)* | tooltip: ngày không ghi (`logged` = false), đã tới hạn (có điểm "Bạn") | `{{date}} · Nothing logged, the line stays flat · You {{you}}% · Ideal {{ideal}}%` | `{{date}} · Không ghi thời gian, đường đi ngang · Bạn {{you}}% · Lý tưởng {{ideal}}%` |
+| `goal.detail.tooltipIdeal` | M9 *(sửa: dấu trong `{{ideal}}`)* | tooltip cho ngày tương lai hoặc khi chưa có entry (chỉ đường Ideal) | `{{date}} · Ideal {{ideal}}%` | `{{date}} · Lý tưởng {{ideal}}%` |
+| `goal.detail.labelIdeal` | M9 *(sửa: dấu trong `{{value}}`)* | nhãn trực tiếp tại điểm cuối | `Ideal {{value}}%` | `Lý tưởng {{value}}%` |
+| `goal.detail.labelYou` | M9 *(sửa: dấu trong `{{value}}`)* | nhãn trực tiếp tại điểm cuối ("Bạn" có thể âm: `You −40.0%`) | `You {{value}}%` | `Bạn {{value}}%` |
 | `goal.detail.showTable` | M5 | `<summary>` của `<details>` | `Show data as table` | `Xem dữ liệu dạng bảng` |
 | `goal.detail.tableDate` | M5 | cột bảng chart | `Date` | `Ngày` |
 | `goal.detail.tableIdeal` | M5 | | `Ideal` | `Lý tưởng` |
 | `goal.detail.tableYou` | M5 | | `You` | `Bạn` |
+| `goal.detail.tableMinutes` | M9 *(mới)* | cột số phút của ngày (số nguyên, không đơn vị) | `Minutes` | `Số phút` |
+| `goal.detail.tableChange` | M9 *(mới)* | cột `changePercent` (có dấu; `—` khi null) | `vs previous logged day` | `So với ngày có ghi trước` |
 | `goal.detail.upcoming` | M5 | goal chưa bắt đầu | `Starts {{date}}. Your line will appear once the goal begins.` | `Bắt đầu {{date}}. Đường của bạn sẽ xuất hiện khi mục tiêu bắt đầu.` |
+
+**Tóm tắt thay đổi key của Goal detail ở v3.0 (M9).** Developer áp dụng đúng danh sách này vào `en.json` / `vi.json`:
+
+- **Key mới (12):** `goal.detail.headlineDown`, `goal.detail.subDay`, `goal.detail.subToday`, `goal.detail.subEarlier`, `goal.detail.subStart`, `goal.detail.legendZero`, `goal.detail.chartSummaryEmpty`, `goal.detail.tooltipChange`, `goal.detail.tooltipBase`, `goal.detail.tooltipFlat`, `goal.detail.tableMinutes`, `goal.detail.tableChange`.
+- **Key sửa chữ/biến (9):** `goal.detail.headline`, `goal.detail.chartCaption`, `goal.detail.legendYou`, `goal.detail.chartSummary`, `goal.detail.chartNote`, `goal.detail.tooltipIdeal`, `goal.detail.labelIdeal`, `goal.detail.labelYou`, `empty.detail.curve`. (Các key này giữ nguyên tên.)
+- **Key bị bỏ (3) — xoá khỏi cả `en.json` và `vi.json`, không còn được tham chiếu trong `src`:** `goal.detail.headlineSub_one`, `goal.detail.headlineSub_other`, `goal.detail.tooltip`.
+- **Giữ nguyên:** `goal.detail.eyebrow` (`Your 1% curve`), `chartTitle`, `rangeLegend`, `rangeWhole`, `rangeSoFar`, `legendIdeal`, `showTable`, `tableDate`, `tableIdeal`, `tableYou`, `upcoming`, và mọi key `goal.detail.*` khác (lịch sử, nút, `stat.*`).
+- **Quy tắc tham số:** mọi `{{…}}` là % của đường cong (`value`, `x`, `y`, `change`, `you`, `ideal`) đã được formatter có dấu sinh ra (7.1) — template không chứa `+`/`−` cứng. `{{minutes}}`, `{{prevMinutes}}`, `{{firstMinutes}}` = kết quả `format.minutes` (`27 min` / `27 phút`). Ngày ngắn không năm lấy từ `Intl`, không gõ tay. Số nhiều: không dùng (câu số liệu không đổi dạng theo số).
+- **Biến thể nào dùng khi nào** (cho `GoalDetail`): `baseline = null` → `empty.detail.curve` + `chartSummaryEmpty`; `previous = null` → `subStart`; ngược lại `latest.date = hôm nay` → `subToday`, còn lại `subEarlier`. Headline: `headlinePercent ≥ 0` → `headline`, `< 0` → `headlineDown`. Tooltip: ngày > `lastElapsedDay` hoặc `baseline = null` → `tooltipIdeal`; `logged` và `changePercent ≠ null` → `tooltipChange`; `logged` và là baseline → `tooltipBase`; còn lại → `tooltipFlat`.
 | `goal.detail.historyTitle` | M3 | h2 | `History` | `Lịch sử` |
 | `goal.detail.colDate` | M3 | cột | `Date` | `Ngày` |
 | `goal.detail.colMinutes` | M3 | cột | `Minutes` | `Số phút` |
@@ -1680,7 +1727,8 @@ Ngoại lệ có chủ đích: các mức nhạt của heatmap (`--heat-0..2`) k
 
 - Mỗi biểu đồ nằm trong `<figure>` có `<figcaption>` và tóm tắt text hiển thị (7.5 / S4); SVG của Recharts đặt `aria-hidden` hoặc `role="img"` + `aria-label` bằng tóm tắt ngắn.
 - Có bảng dữ liệu tương đương: BarChart — bảng ẩn visually (`.sr-only`) với `caption`; CurveChart — `<details>` "Show data as table" hiển thị được cho mọi người.
-- Phân biệt hai đường Ideal/You không dựa vào màu: Ideal nét đứt mảnh + màu xám; You nét liền dày + màu xanh + marker tròn tại hôm nay; legend có mẫu nét; nhãn trực tiếp tại điểm hôm nay (`Ideal +9.4%`, `You +8.3%`).
+- Phân biệt hai đường Ideal/You không dựa vào màu: Ideal nét đứt mảnh + màu xám; You nét liền dày + màu xanh + marker tròn tại hôm nay; legend có mẫu nét; nhãn trực tiếp tại điểm hôm nay (v3: `Ideal +4.1%`, `You +440.0%`; "Bạn" có thể là `You −40.0%`).
+- **(v3) Đường cong có số âm:** (a) dấu luôn là **chữ** (`+`, `−` U+2212) chứ không chỉ vị trí/màu; headline âm có cả chữ `so với ngày đầu`, nên không phụ thuộc màu `--text` vs `--primary`; (b) vạch 0% là nét liền đậm 1,5 px, phân biệt với lưới 1 px và Ideal nét đứt, tương phản ≥ 3:1; (c) mọi giá trị của chart đều có ở tóm tắt text (hiện luôn), tooltip (hover **và** focus/phím mũi tên, chuỗi `goal.detail.tooltip*`) và bảng 5 cột; (d) tooltip **không** là live region (tránh đọc dồn khi rê chuột); khi dùng phím mũi tên, chuỗi tooltip của ngày đang đọc được gán cho vùng chart đang focus (`role="img"`, `aria-describedby` trỏ tóm tắt) để SR đọc đúng một lần mỗi bước; (e) khi đổi Range, miền Y đổi nhưng focus ở lại control Range và tóm tắt không đổi; (f) `U+2212` được trình đọc phổ biến đọc là "trừ"/"minus", `-` ASCII dễ bị đọc là "gạch ngang"; vì thế code chỉ sinh `−`; (g) headline cực trị (`Tốt hơn +143.900,0%`) xuống dòng được, không cắt, phóng chữ 200 % không tràn.
 - Cột biểu đồ có nhãn giá trị khi đủ chỗ, tooltip khi hover/focus.
 
 **Khác**
@@ -1763,7 +1811,7 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **A-D1.** Màn Review ở chế độ **All goals** không hiển thị `Progress` và `Pace` (PRD FR-24 và AC M4-AC5 chỉ định nghĩa số liệu này theo từng goal; tổng hợp nhiều goal có chỉ tiêu và khoảng khác nhau dễ gây hiểu sai). Thay bằng gợi ý chọn một goal. Cần planner/user xác nhận (xem Open questions).
 - **A-D2.** Giao diện sáng/tối **tự theo hệ điều hành**, không có công tắc trong MVP (không có trong PRD). Token tối đã định nghĩa sẵn.
 - **A-D3.** Không dùng thư viện UI (Tailwind/MUI): CSS thuần với custom properties, vì `ARCHITECTURE.md` không chọn UI framework. Developer có thể dùng CSS Modules hoặc một file global; chỉ cần đúng token.
-- **A-D4.** Biểu đồ đường cong có control **Range** (`Whole period` / `So far`) để khỏi bị đường Ideal "ăn" hết thang đo với goal dài (1.01^365 ≈ ×37.8; 1.01^1827 ≈ ×7,9·10^7). Mặc định `So far` khi khoảng > 120 ngày, ngược lại `Whole period`. Đây là điều khiển phụ, chỉ lọc dữ liệu đã có; thang Y luôn tuyến tính.
+- **A-D4.** Biểu đồ đường cong có control **Range** (`Whole period` / `So far`) để khỏi bị đường Ideal "ăn" hết thang đo với goal dài (1.01^365 ≈ ×37.8; 1.01^1827 ≈ ×7,9·10^7). Mặc định `So far` khi khoảng > 120 ngày, ngược lại `Whole period`. Đây là điều khiển phụ, chỉ lọc dữ liệu đã có; thang Y luôn tuyến tính. **(v3.0)** Giữ nguyên quy tắc và mặc định; thay đổi duy nhất: miền Y không còn bắt đầu cứng ở 0 mà theo `curveYDomain` của các điểm đang hiển thị sau khi lọc (kể cả giá trị âm của "Bạn"), nên đổi Range có thể đổi cả hai đầu trục. Với R1 (83 ngày ≤ 120) mặc định vẫn là `Whole period`: "Bạn" chiếm 4 ngày đầu, Ideal leo tới ≈ +128,4 % ở cuối.
 - **A-D5.** Xoá entry có xác nhận inline (`Delete this entry?` → `Delete`/`Keep`) vì vùng chạm Edit/Delete nằm sát nhau trên điện thoại. Xoá goal dùng dialog (D2).
 - **A-D6.** Đóng dialog Stop (Esc hoặc `Keep running`) **không** dừng/huỷ timer: dialog chỉ là bước xác nhận; timer chỉ kết thúc khi `Save entry` hoặc `Discard session` (khớp `TimerService.stop` chỉ tính số phút, `save`/`discard` mới xoá `activeTimer`).
 - **A-D7.** Entry chỉ sửa được `minutes` và `note` (theo `EntryService.update`); muốn chuyển entry sang ngày khác thì xoá và thêm lại ở Day đúng ngày.
@@ -1797,6 +1845,16 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **A-D32.** Mockup có nút đổi sáng/tối (`data-theme`) và bộ chọn trạng thái chỉ để duyệt thiết kế; **app thật vẫn chỉ theo hệ điều hành** (A-D2). Token tối giữ nguyên giá trị.
 - **A-D33.** Khi có phiên lưu sẵn nhưng SDK chưa nạp xong, card Account hiện thẳng A5 với `sync.account` đã lưu (nút `Sync now` vô hiệu) để không nháy A1 → A5 (ARCH §5.9 "Lazy-load").
 
+**Assumptions của phase 3 (v3.0, Goal detail M9)**
+
+- **A-D34.** Headline âm nói trung tính `−40.0% vs your first day` / `−40,0% so với ngày đầu` (không "worse"/"thấp hơn"/"tệ hơn"), màu `--text`, không đỏ: đường đi xuống là thông tin, không phải lỗi (nguyên tắc 2). "Ngày đầu" = ngày đầu tiên **có ghi** (baseline); ngày cụ thể luôn có ở phụ đề (`{{firstDate}}`).
+- **A-D35.** Mọi % của đường cong đi qua một formatter có dấu; template bảng key **không** có `+`/`−` cứng (khác M5: `+{{value}}% better`). Vì vậy `goal.detail.headline`, `tooltipIdeal`, `labelIdeal`, `labelYou` đổi chuỗi dù hiển thị giống cũ khi dương. Dấu trừ chốt là **U+2212** (7.1).
+- **A-D36.** Phụ đề tách 2 dòng: `subDay` (`Day 4 of 83`) luôn có chỗ, `sub…` (câu số liệu) xuống dòng tự do. Câu số liệu nêu bằng "ngày + phút" cả ba mốc (gần nhất, trước đó, đầu tiên) để người dùng tự đối chiếu được con số `+92.9%` và `×5.4` với dữ liệu họ đã nhập. Khi ngày có ghi gần nhất không phải hôm nay, câu mở đầu đổi từ `Today:` sang `Last logged {date}:` thay vì thêm câu giải thích riêng (chú thích dưới chart đã nói "ngày không ghi đi ngang").
+- **A-D37.** "Bạn" vẽ **bậc thang `stepAfter`** (không nội suy xiên) vì giá trị thật chỉ đổi tại ngày có ghi; ngày 0 phút là đoạn ngang đúng nghĩa FR-27. Phần trước baseline vẽ ở 0% (đúng dữ liệu `ActualPoint`); không có entry nào (`baseline = null`) thì không vẽ "Bạn" để khỏi có một đường xanh khi chưa làm gì (hành vi M5 "chỉ Ideal" được giữ).
+- **A-D38.** Đường Ideal gốc ở `startDate` (+1,0 % tại ngày 1) còn "Bạn" gốc ở ngày đầu có ghi (0 %): hai gốc khác nhau là chủ ý (PRD A-40). Vạch 0% có legend riêng `0% = your first logged day` để người đọc không hiểu nhầm là gốc chung.
+- **A-D39.** Tooltip có 4 biến thể (có thay đổi / ngày đầu / không ghi / chỉ Ideal) thay vì một chuỗi chung với phần "Bạn" bỏ trống, để mỗi biến thể là một câu đọc được bằng SR và dịch được độc lập.
+- **A-D40.** Nhãn trục `vi` compact lấy từ `Intl` `vi-VN` (`144 N` = nghìn). Nếu QC thấy khó hiểu thì phương án thay là bỏ compact ở `vi` (chấp nhận nhãn dài hơn, `+143.900%`, cần lề trái ≈ 66 px) — cần planner đổi ARCH §4.5, designer không tự đổi.
+
 ---
 
 ## 11. Open questions
@@ -1805,7 +1863,7 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **OQ-D2 (cho user, nhỏ).** Control `Range` trên đường cong (A-D4) là phần thêm ngoài PRD để biểu đồ dùng được với goal dài. Duyệt hay bỏ (bỏ thì goal "This year" sẽ thấy đường You gần như phẳng ở đầu năm)?
 - **OQ-D3 (cho planner).** PRD chưa có luồng "đóng banner nhắc" hay "tắt nhắc hôm nay". Thiết kế không thêm (A-D9). Nếu muốn, thêm FR.
 - **OQ-D4 (cho planner, thông tin).** TASKS M1-AC7 mô tả "xoá entry" không nhắc bước xác nhận; thiết kế có xác nhận inline (A-D5) nên e2e cần thêm một cú bấm `Delete`.
-- **OQ-D5 (cho planner, thông tin).** Quy ước hiển thị mà các AC đang tham chiếu và thiết kế đã thống nhất: Today `20/30`, timer `00:01:05`, Stop điền sẵn `26`, khoảng goal `2026-10-01 – 2026-10-31`, `30 min/day`, `25.8%`, `+8.3% better`, preview import `5 goals, 23 entries`, notification body `3 goals left today: Read 0/30 min, …` (các giá trị này là của `en`; `vi` xem 7.1).
+- **OQ-D5 (cho planner, thông tin).** Quy ước hiển thị mà các AC đang tham chiếu và thiết kế đã thống nhất: Today `20/30`, timer `00:01:05`, Stop điền sẵn `26`, khoảng goal `2026-10-01 – 2026-10-31`, `30 min/day`, `25.8%`, ~~`+8.3% better`~~ (v3.0: `+0.0% better` cho S1 "Read", `+440.0% better` cho R1), preview import `5 goals, 23 entries`, notification body `3 goals left today: Read 0/30 min, …` (các giá trị này là của `en`; `vi` xem 7.1).
 - **OQ-D6 (cho user, quan trọng với i18n).** Bạn có muốn người bản ngữ xem lại bản dịch `vi` và thuật ngữ trong 7.0 trước khi developer M1 copy vào `vi.json` không (A-D16)? Mặc định: dùng nguyên văn như hiện tại; sửa chữ sau này chỉ là thay đổi trong `vi.json`.
 - **OQ-D7 (cho planner/QC, thông tin).** (a) Parity test (M1-AC17) phải so `vi` `_other` với `en` `_other` và bỏ qua `_one` (vi không có); biến `{{count}}` có mặt ở cả hai `_other`. (b) Các dòng đánh dấu `(= en)` ở mục 7 (`app.name`, `settings.language.title`, `settings.language.option.*`, `+1%`, `{{n}}/280`…) cần được miễn trong test "không lẫn tiếng Anh" (NFR-11c). (c) `settings.language.title` = `Language / Ngôn ngữ` chứa chữ tiếng Việt ở bản `en` và chữ tiếng Anh ở bản `vi` có chủ đích.
 - **OQ-D8 (cho planner/developer, thông tin).** Tên thứ/tháng ngắn của `Intl` `vi-VN` (`Th 2`, `thg 10`) khác nhau giữa các phiên bản ICU và có thể rộng hơn nhãn `en`; heatmap/biểu đồ phải chịu được (mục 3.4). Nếu QC thấy nhãn đè nhau ở 360 px, dùng dạng số (`T2`, `10`) cho nhãn trục ở < 640 px, chi tiết đầy đủ vẫn có ở tooltip/bảng ẩn.
@@ -1815,6 +1873,9 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **OQ-D12 (cho planner, nhỏ).** `ExportSignInHint` (FR-53) dùng "lượt" 30 ngày qua `claimExportHint` ngay khi Export thành công; nếu lúc đó offline thì nút đăng nhập bị vô hiệu và lượt bị tiêu. Đề xuất: chỉ `claim` khi `online`. Thiết kế hiện hiển thị cả khi offline (nút vô hiệu + lý do) để khớp FR-53 nguyên văn.
 - **OQ-D13 (cho planner/developer, thông tin).** Để dựng đúng, M6/M7 cần hiển thị được: `AuthState.signed-out.lastError` (có thể xoá bằng `Dismiss`), `SyncStatus.nextRetryAt`, số bản ghi `skippedInvalid` (chỉ cần cờ có/không cho A9), số goal/entry còn sống sau lần đồng bộ đầu (cho `toast.mergeDone`), và email/tên đã lưu trong kv `sync.account` (cho `expired`). Nếu một trong các dữ liệu này không có trong `AuthState`/`SyncStatus`, báo lại để chỉnh thiết kế thay vì tự suy ra.
 - **OQ-D14 (cho planner, nhỏ).** Phase 2 chưa có cách để người dùng đã đăng nhập xem hoặc xoá dữ liệu cloud/tài khoản trong app (OQ-09 đã quyết "để Later"). Thiết kế không thêm; chỉ nêu trong `settings.about.privacy` và README rằng dữ liệu nằm ở Supabase.
+- **OQ-D15 (cho planner/developer, thông tin, M9).** Ánh xạ copy ↔ AC để khỏi tìm: M9-AC4 (phụ đề chứa `27`, `14`, `+92.9%`, `×5.4`, `5`) = `goal.detail.subToday`; M9-AC6(2) (một ngày có ghi, không `×`) = `subStart`; M9-AC6(1) = `empty.detail.curve` + `chartSummaryEmpty`; M9-AC6(3)/M9-AC5 (headline âm chứa `40.0` / `40,0`) = `goal.detail.headlineDown`; "key headline" trong M9-AC4/AC5 = `goal.detail.headline` (≥ 0), còn `< 0` là `headlineDown` (hai key, chọn theo dấu `headlinePercent`). Tooltip ngày baseline cần `baseline.date` (đã có trong `CurveData`) để chọn `tooltipBase`; không cần trường mới.
+- **OQ-D17 (cho planner, nhỏ, M9).** ARCH §4.5 viết "mỗi đầu nới thêm 5 % của `yMax − yMin`". Với R1 (không giá trị âm) áp dụng nguyên văn cho đầu dưới cho `yMin = −22` rồi làm tròn ra `−100` (bậc đẹp = 100): một dải trống ~1/6 chiều cao dưới vạch 0%. Mockup và S4 yêu cầu **không nới đầu dưới khi min của "Bạn" ≥ 0** (`yMin = 0`); vẫn thoả `yMin ∈ [−0.25·S, 0]` của M9-AC2 nên không cần đổi AC, chỉ cần dòng chữ ở ARCH §4.5 và `curveYDomain` theo đó. Nếu planner muốn giữ nguyên văn thì báo lại để designer chỉnh mockup.
+- **OQ-D16 (cho user, nhỏ, M9).** Headline âm đang là `−40.0% vs your first day` / `−40,0% so với ngày đầu` (A-D34). Muốn câu khác (ví dụ `40.0% below your first day` / `Thấp hơn ngày đầu 40,0%`) thì chỉ cần đổi hai chuỗi `goal.detail.headlineDown`, không đụng layout hay logic.
 
 ---
 
@@ -1837,3 +1898,9 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
   - §8.1 mới: a11y phase 2 (tương phản, vùng `aria-live` riêng cho trạng thái đồng bộ, focus sau callback/đăng xuất/Not now, dialog D4/D5, banner không modal, nút Google). §9: ghi chú trang Google/callback là ngoài app.
   - Mockup: `08-settings.html` (card Account + bộ chọn trạng thái, ghi chú đồng bộ, Backup/Storage/About theo trạng thái, D3/D4/D5 preview), `01-today.html` + `01-today.vi.html` (LoginPromptBanner, SyncIndicator, bộ chọn trạng thái), **`09-account.html` mới** (bảng tham chiếu mọi trạng thái, đổi `en`/`vi`, sáng/tối, email dài); `index.html` thêm liên kết. Tất cả có nút sáng/tối.
   - Assumptions A-D20 … A-D33; Open questions OQ-D10 … OQ-D14.
+- 2026-10-13 — **v3.0** (mode `revise`, phase 3: đường cong "Bạn" = phút ngày có ghi gần nhất ÷ phút ngày đầu có ghi, nhân dồn so với ngày có ghi trước; user duyệt Gate 1; PRD v3.0 FR-27/A-39…A-43, ARCH §4.5, TASKS M9). Chỉ đổi Goal detail; token màu, bố cục và mọi màn khác không đổi.
+  - §S4: layout, trạng thái (chưa entry / một ngày có ghi / nhiều ngày / đi xuống / upcoming / ended), "Cách đọc con số", **quy tắc biểu đồ v3** (bậc thang `stepAfter`, vạch 0%, thang Y theo `curveYDomain` kể cả âm, nhãn trục có dấu + compact ≥ 10.000, nhãn trực tiếp không đè nhau, tooltip, chấm ngày có ghi), copy mẫu R1/R3. A-D4 (Range) giữ nguyên, chỉ thêm ghi chú miền Y không còn bắt đầu cứng ở 0.
+  - §1 nguyên tắc 2, 3 sửa (đường đi xuống nhưng không đỏ; thang tự co giãn); §3.3 thêm hàng M9; §3.4 thêm 4 dòng rủi ro 360 px (headline cực trị, phụ đề, nhãn trục/tooltip, bảng 5 cột); §5 `CurveChart`; §6 thêm token `--chart-zero` (= `--text-muted`) và cập nhật ví dụ `--text-display`.
+  - §7.1: định dạng % có dấu, **dấu trừ chốt U+2212**, hệ số `×N`, nhãn trục Y. §7.6.4: **12 key mới** (`goal.detail.headlineDown`, `subDay`, `subToday`, `subEarlier`, `subStart`, `legendZero`, `chartSummaryEmpty`, `tooltipChange`, `tooltipBase`, `tooltipFlat`, `tableMinutes`, `tableChange`), **9 key sửa** (`goal.detail.headline`, `chartCaption`, `legendYou`, `chartSummary`, `chartNote`, `tooltipIdeal`, `labelIdeal`, `labelYou`, `empty.detail.curve`), **3 key bỏ** (`goal.detail.headlineSub_one`, `headlineSub_other`, `tooltip`); đủ `en` và `vi`, cột MS = M9.
+  - §8: a11y đường cong có số âm (dấu bằng chữ, vạch 0%, tooltip không live region, U+2212). Mockup `07-goal-detail.html` viết lại: dữ liệu R1, đổi `English`/`Tiếng Việt`, 7 tình huống (R1, R1 sang ngày không ghi, hôm nay ghi dở, R3 đi xuống, R4 cực trị, một ngày có ghi, chưa có entry), Range, bảng 5 cột; `index.html` cập nhật mô tả.
+  - Assumptions A-D34 … A-D40; Open questions OQ-D15 (ánh xạ copy ↔ AC), OQ-D16 (câu headline âm), OQ-D17 (đầu dưới trục Y không nới khi không có số âm, lệch nhẹ chữ ARCH §4.5, trong dung sai AC). Không phát hiện luồng PRD thiếu.
