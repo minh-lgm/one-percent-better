@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-13 (phase 2 đã deploy lên Pages; chờ U10)
-**Next step:** user làm U10 (kiểm tay NV-1…NV-7 trên bản Pages đã deploy phase 2; mục (4) curl RLS đã PASS) → gửi kết quả để cập nhật STATUS
+**Next step:** user làm nốt U10 (3)(4) đã PASS; còn (1) điện thoại/PWA, (2) sync 2 máy, (5) offline rồi bật mạng, (6) Gmail khác → gửi kết quả để cập nhật STATUS
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -78,7 +78,7 @@
 
 ## Tổng kết phase 2 (2026-10-13)
 - M6 Auth (PASS r1), M7 Sync (PASS r2), M8 Login prompts (PASS r1), Final QC phase 2 PASS. Unit 1160, Playwright 568 (chromium + cloud mock), bundle 239,8 kB gzip. Logo product đã gắn (icon PWA, favicon, brand mark).
-- 2026-10-13: user xong U0 + U8 → push main (01283dc), workflow run 38332523929 success, Pages deploy phase 2. Kiểm trên bản deploy: bundle có cloud config, card Account + nút Sign in with Google hiện, logo (brand mark, favicon, icon PWA) 200, SW đăng ký, privacy.html 200, 0 lỗi console. U10 (4)(6-curl): anon select/insert `goals`/`entries`/`settings` → 42501 permission denied (RLS + grant đúng). Còn lại U10 (1)(2)(3)(5)(6) user kiểm tay: docs/qc/report-final-phase2.md §8. Backlog: §9 + bảng Backlog.
+- 2026-10-13: user xong U0 + U8 → push main (01283dc), workflow run 38332523929 success, Pages deploy phase 2. Kiểm trên bản deploy: bundle có cloud config, card Account + nút Sign in with Google hiện, logo (brand mark, favicon, icon PWA) 200, SW đăng ký, privacy.html 200, 0 lỗi console. U10 (4)(6-curl): anon select/insert `goals`/`entries`/`settings` → 42501 permission denied (RLS + grant đúng). U10 (3) user xác nhận 2026-10-13: Table Editor 3 bảng `goals`/`entries`/`settings` đều có hàng mang `user_id` của user (→ NV-1 đăng nhập thật trên Pages laptop + push lần đầu OK). Còn lại U10 (1 điện thoại/PWA)(2)(5)(6 Gmail khác) user kiểm tay: docs/qc/report-final-phase2.md §8. Backlog: §9 + bảng Backlog.
 
 ## Tổng kết phase 1 (2026-10-10)
 - 5 milestone + Final QC đều PASS. Unit 686, e2e 347, bundle 214,9 kB gzip (≤ 250). Chạy: `npm ci && npm run e2e:install && npm run check && npm run test:e2e`; dùng: `npm run build && npm run preview` → http://localhost:4173.
