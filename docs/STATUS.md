@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-13 (phase 2 đã deploy lên Pages; chờ U10)
-**Next step:** planner `mode: revise` (phase 3, M9: đổi định nghĩa đường cong 1%) → Gate 1 → designer revise copy → developer M9 → qc → gửi kết quả để cập nhật STATUS
+**Next step:** designer `mode: revise` v3 (copy Goal detail M9) → developer M9 build → qc M9 round 1 → gửi kết quả để cập nhật STATUS
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -21,6 +21,7 @@
 - 2026-10-12 — User cung cấp logo (logo/1_percent_better_per_day.svg, 1,9 MB bọc PNG, nền trắng) và yêu cầu chèn vào product → orchestrator tạo bộ icon (PWA 192/512/maskable, apple-touch 180, favicon svg/32, brand mark 96) trong scratchpad; developer tích hợp sau M7 (commit feat(brand)); `logo/` đưa vào .gitignore. 2026-10-13: user thêm bản transparent (logo/1_percent_better_transparent.png 32-bit alpha) → icon tạo lại: PWA/apple-touch nền trắng, favicon + brand mark trong suốt (brand mark đặt trên ô trắng bo góc ở cả 2 theme)
 - 2026-10-12 — (orchestrator, dev-M7 WIP OQ) (1) 3 test QC cũ (m1-domain, m3-r1-domain ×2) assert hard-delete mâu thuẫn xoá mềm ADR-20 → QC M7 round 1 re-target sang xoá mềm (tombstone + deletedAt), không tính là defect. (2) AC7: đăng nhập lại cùng tài khoản ngay sau Sign out Keep → không hỏi D5; sau khi đã gộp sang tài khoản khác thì quay lại hỏi D5 (deviation D7) → chấp nhận, planner ghi nhận ở lần revise sau
 - 2026-10-13 — Phase 3: user xem Goal detail thật và nói đường cong 1% hiện tại sai ý. Định nghĩa mới cho "Bạn" (FR-27): so **số phút hôm nay với ngày trước** (vd hôm qua 5, hôm nay 6 → +20%), **nhân dồn từ ngày đầu** (headline = tích các tỉ lệ ngày, tức phút của ngày có ghi gần nhất / phút ngày đầu có ghi; dữ liệu thật của user: 5→10→14→27 phút = +440%); **ngày không ghi (0 phút) thì đi ngang +0%** (không trừ, ngày kế so với ngày có ghi gần nhất). Đường lý tưởng vẫn +1% mỗi ngày. Orchestrator đã hỏi 2 câu (headline, ngày 0 phút) → trả lời như trên. Giao planner `mode: revise` → M9
+- 2026-10-13 — Gate 1 phase 3: duyệt plan v3.0 (M9). OQ-11 (hôm nay đang ghi dở có tính ngay?) → **Tính ngay** (= A-39, giữ nguyên plan). Designer revise v3 → developer M9 → qc
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
@@ -47,6 +48,9 @@
 | M5 | PASS (round 2) | docs/qc/report-M5-r2.md | AC9 Firefox/Safari/iOS, screen reader NOT VERIFIED | Dispute M3-D3: orchestrator chọn giữ fix, QC re-target tests/qc/m3-r1.spec.ts:638 |
 | Final QC (phase 1) | PASS (round 2) | docs/qc/report-final-r2.md | r1 FAIL F-D1 (Vitest cache lạnh) → fix 5a73e18 → r2 PASS trên 2 clone sạch |
 | Plan v2.1 (phase 2) | DONE (duyệt 2026-10-12) | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
+| Plan v3.0 (phase 3) | DONE (duyệt 2026-10-13) | docs/plan/ (FR-27 v3, ARCH §4.5, ADR-26, TASKS M9) | M9: 5 task, 8 AC; dataset R1 (dữ liệu thật user), R3, R4; bảng test M5 bị thay thế |
+| Design v3 | DOING — designer revise | | copy Goal detail: headline âm, phụ đề mới, chartNote, legend, tooltip, empty.detail.curve |
+| M9 | TODO | | |
 | M8 | PASS (round 1) | docs/qc/report-M8-r1.md | M7-D5, M7-P1 FIXED |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
