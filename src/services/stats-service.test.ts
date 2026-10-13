@@ -180,15 +180,18 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
   });
 });
 
-describe('StatsService.curve (M5-T1, M5-AC1)', () => {
-  it('returns the S1 "Read" curve: 31 ideal points, 9 actual points, headline 8.3; unknown goal → undefined', async () => {
+// M5-AC1 superseded by M9-AC1 / M9-AC2 (FR-27 v3.0): headline = minutes of the last logged day vs the first.
+describe('StatsService.curve (M9-T1, M9-AC1/AC2)', () => {
+  it('returns the S1 "Read" curve: 31 ideal points, 9 actual points, headline 0 (30 min every logged day), loggedDays 8; unknown goal → undefined', async () => {
     await seedS1();
     const c = (await service.curve('g1', TODAY))!;
     expect(c.ideal).toHaveLength(31);
     expect(c.actual).toHaveLength(9);
-    expect(c.headlinePercent).toBe(8.3);
+    expect(c.headlinePercent).toBe(0);
     expect(c.idealPercent).toBe(9.4);
-    expect(c.daysOnTarget).toBe(8);
+    expect(c.loggedDays).toBe(8);
+    expect(c.baseline).toEqual({ date: '2026-10-01', minutes: 30 });
+    expect(c.latest).toEqual({ date: '2026-10-08', minutes: 30 });
     expect(await service.curve('nope', TODAY)).toBeUndefined();
     const g4 = (await service.curve('g4', TODAY))!;
     expect(g4.actual).toEqual([]);

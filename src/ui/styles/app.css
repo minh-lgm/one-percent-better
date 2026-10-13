@@ -1560,6 +1560,18 @@ table.hist {
   stroke-width: 3.5;
   stroke-linecap: round;
 }
+/* v3 (DESIGN S4): headline below the first logged day is plain text, not red; 0 % line swatch. */
+.hl.hl-down {
+  color: var(--text);
+}
+.hl-day {
+  margin: 0;
+}
+.line-zero {
+  fill: none;
+  stroke: var(--chart-zero);
+  stroke-width: 1.5;
+}
 .legend {
   display: flex;
   flex-wrap: wrap;

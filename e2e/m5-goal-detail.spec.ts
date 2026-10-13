@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () => {
-  test('M5-AC2: Read (S1) shows why, period, target, 25.8 %, streak 8/8, "+8.3% better", two curve series, 8 history rows; chart chunks only on this page or Review', async ({ page }) => {
+  test('M5-AC2: Read (S1) shows why, period, target, 25.8 %, streak 8/8, "+0.0% better" (v3), two curve series, 8 history rows; chart chunks only on this page or Review', async ({ page }) => {
     const scripts: string[] = [];
     const external: string[] = [];
     page.on('request', (req) => {
@@ -42,18 +42,21 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
     await expect(page.locator('.gd-head')).toContainText('30 min/day');
     await expect(page.getByText(EN.goal.status.active, { exact: true })).toBeVisible();
 
-    await expect(headline(page)).toHaveText('+8.3% better');
-    await expect(page.getByTestId('headline-sub')).toHaveText(/Day 9 of 31 · 8 days on target · 1\.01\^8 = 1\.083/);
-    await expect(page.getByTestId('curve-summary')).toHaveText('Day 9 of 31: you are +8.3% better. The ideal line is +9.4%. You hit your target on 8 of 9 days.');
+    // M5-AC2 superseded by M9-AC4 (FR-27 v3.0): 30 min on every logged day → +0.0% vs the first logged day.
+    await expect(headline(page)).toHaveText('+0.0% better');
+    await expect(page.getByTestId('headline-day')).toHaveText('Day 9 of 31');
+    await expect(page.getByTestId('headline-sub')).toHaveText('Last logged Oct 8: 30 min, +0.0% vs Oct 7 (30 min). ×1 since Oct 1 (30 min).');
+    await expect(page.getByTestId('curve-summary')).toHaveText('Day 9 of 31: your line is +0.0% compared with your first logged day. The ideal line is +9.4%.');
     const chart = page.getByTestId('curve-chart');
     await expect(chart).toBeVisible();
     await expect(chart.locator('.recharts-line')).toHaveCount(2);
     await expect(chart.locator('.recharts-line-curve[stroke-dasharray]')).toHaveCount(1);
     await expect(chart.locator('.recharts-reference-dot')).toHaveCount(2);
     await expect(chart).toContainText('Ideal +9.4%');
-    await expect(chart).toContainText('You +8.3%');
+    await expect(chart).toContainText('You +0.0%');
     await expect(page.getByTestId('curve-legend')).toContainText(EN.goal.detail.legendIdeal);
     await expect(page.getByTestId('curve-legend')).toContainText(EN.goal.detail.legendYou);
+    await expect(page.getByTestId('curve-legend')).toContainText(EN.goal.detail.legendZero);
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeWhole })).toBeChecked();
     // M5-D3: both Range segments fit their label with padding (no clipped text).
     for (const seg of await page.locator('.seg.range span').all()) {
@@ -78,14 +81,16 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
     await expect(page.locator('.chart-tip')).toContainText(/Ideal \+\d+\.\d%/);
     await chart.focus();
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 9 · Ideal +9.4% · You +8.3%');
+    // M5-AC2 superseded by M9-AC4 (FR-27 v3.0): tooltip variants (flat day / change vs previous logged day).
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 9 · Nothing logged, the line stays flat · You +0.0% · Ideal +9.4%');
     await page.keyboard.press('ArrowLeft');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 8 · Ideal +8.3% · You +8.3%');
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 8 · 30 min, +0.0% vs previous logged day · You +0.0% since your first day · Ideal +8.3%');
     await page.keyboard.press('End');
     await expect(page.getByTestId('curve-reading')).toHaveText('Oct 31 · Ideal +36.1%');
     await page.getByText(EN.goal.detail.showTable).click();
     await expect(page.getByTestId('curve-table').locator('tbody tr')).toHaveCount(31);
-    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(8)).toContainText('+8.3%');
+    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(8).locator('td')).toHaveText(['+9.4%', '+0.0%', '0', '—']);
+    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(7).locator('td')).toHaveText(['+8.3%', '+0.0%', '30', '+0.0%']);
     await expect(page.getByTestId('curve-table').locator('tbody tr').nth(30)).toContainText('—');
     await page.getByRole('radio', { name: EN.goal.detail.rangeSoFar }).check();
     await expect(page.getByTestId('curve-table').locator('tbody tr')).toHaveCount(9);
@@ -170,7 +175,7 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
 
     await gotoHash(page, '/goals/g3');
     await expect(page.getByText(EN.goal.status.archived, { exact: true })).toBeVisible();
-    await expect(headline(page)).toHaveText('+1.0% better');
+    await expect(headline(page)).toHaveText('+0.0% better'); // M5-AC4 value superseded by M9-AC2 (one logged day → 0)
     await page.getByRole('button', { name: EN.goals.restore }).click();
     await expect(toast(page)).toHaveText(EN.toast.goalRestored);
     await expect(page.getByText(EN.goal.status.active, { exact: true })).toBeVisible();
@@ -211,9 +216,11 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
     await createGoal(page, { name: 'Read', why: 'Be smarter', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' });
     await page.getByRole('link', { name: 'Read', exact: true }).click();
     await expect(headline(page)).toHaveText('+0.0% better');
-    await expect(page.getByTestId('curve-empty')).toHaveText(EN.empty.detail.curve);
+    // M5-AC5 superseded by M9-AC6 (FR-27 v3.0): empty.detail.curve is the subtitle; only the Ideal line is drawn.
+    await expect(page.getByTestId('headline-sub')).toHaveText(EN.empty.detail.curve);
     await expect(page.getByRole('heading', { level: 3, name: EN.empty.detail.history })).toBeVisible();
-    await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
+    await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(1);
+    await expect(page.getByTestId('curve-chart').locator('.recharts-reference-line.zero-line')).toHaveCount(1);
     // Upcoming goal: only the ideal line and the "Starts …" line.
     await createGoal(page, { name: 'Later', targetValue: 10, startDate: '2026-11-01', endDate: '2026-11-30' });
     await page.getByRole('link', { name: 'Later', exact: true }).click();

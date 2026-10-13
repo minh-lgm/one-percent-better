@@ -1,6 +1,6 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { curve } from '../../domain/curve';
+import { curve, growthPercent } from '../../domain/curve';
 import { toISODate, yearOf } from '../../domain/dates';
 import { dailyTarget, goalStatus } from '../../domain/goal';
 import { goalStats } from '../../domain/stats';
@@ -52,7 +52,7 @@ class ChunkBoundary extends Component<{ fallback: ReactNode; children: ReactNode
   }
 }
 
-/** S4 — Goal detail `#/goals/:id` (FR-18, FR-27, FR-28, FR-30). */
+/** S4 — Goal detail `#/goals/:id` (FR-18, FR-27 v3.0, FR-28, FR-30). */
 export function GoalDetail() {
   const { id = '' } = useParams<{ id: string }>();
   const { t } = useT();
@@ -156,8 +156,8 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
 
   const deleteBody = pending ? (pending.entryCount === 0 ? t('goal.delete.bodyNoEntries') : t('goal.delete.body', { count: pending.entryCount })) : '';
   const archiveErrorText = archiveError === null ? null : archiveError === 'write' ? t('errors.WRITE_FAILED') : (({ key, params }) => t(key, params))(errorMessage(archiveError, f));
-  const pct = (v: number) => t('format.percent', { value: `+${f.decimal1(v)}` });
   const days = (n: number) => t('format.daysCount', { count: n });
+  const dash = t('common.emptyValue');
   const durationOf = (minutes: number) => (minutes < 60 ? f.minutes(minutes) : f.duration(minutes));
 
   let body: ReactNode;
@@ -168,13 +168,46 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
   } else {
     const { curve: c, stats } = model;
     const upcoming = c.elapsedDays === 0;
-    const noEntries = (entries.data?.length ?? 0) === 0;
     const visibleCount = range === 'sofar' && !upcoming ? c.elapsedDays : c.periodDays;
     const ideal = c.ideal.slice(0, visibleCount);
-    const headline = t('goal.detail.headline', { value: f.decimal1(c.headlinePercent) });
+    // v3 (FR-27, DESIGN S4 / 7.6.4 "Biến thể nào dùng khi nào"): every % goes through the signed formatter.
+    const down = c.headlinePercent < 0;
+    const headline = t(down ? 'goal.detail.headlineDown' : 'goal.detail.headline', { value: f.signed1(c.headlinePercent) });
+    const dayOf = { k: f.number(c.elapsedDays), total: f.number(c.periodDays) };
     const summary = upcoming
       ? t('goal.detail.upcoming', { date: f.dateShort(goal.startDate) })
-      : t('goal.detail.chartSummary', { k: f.number(c.elapsedDays), total: f.number(c.periodDays), x: f.decimal1(c.headlinePercent), y: f.decimal1(c.idealPercent), n: f.number(c.daysOnTarget) });
+      : c.baseline === null
+        ? t('goal.detail.chartSummaryEmpty', { ...dayOf, y: f.signed1(c.idealPercent) })
+        : t('goal.detail.chartSummary', { ...dayOf, x: f.signed1(c.headlinePercent), y: f.signed1(c.idealPercent) });
+    let subVariant: 'upcoming' | 'empty' | 'start' | 'today' | 'earlier';
+    let subText: string;
+    if (upcoming) {
+      subVariant = 'upcoming';
+      subText = t('goal.detail.upcoming', { date: f.dateShort(goal.startDate) });
+    } else if (!c.baseline || !c.latest) {
+      subVariant = 'empty';
+      subText = t('empty.detail.curve');
+    } else if (!c.previous || c.latestChangePercent === null) {
+      subVariant = 'start';
+      subText = t('goal.detail.subStart', { minutes: f.minutes(c.baseline.minutes), date: f.dateMonthDay(c.baseline.date) });
+    } else {
+      const params = {
+        minutes: f.minutes(c.latest.minutes),
+        change: f.signed1(c.latestChangePercent),
+        prevDate: f.dateMonthDay(c.previous.date),
+        prevMinutes: f.minutes(c.previous.minutes),
+        factor: f.factor(c.actualFactor),
+        firstDate: f.dateMonthDay(c.baseline.date),
+        firstMinutes: f.minutes(c.baseline.minutes),
+      };
+      if (c.latest.date === today) {
+        subVariant = 'today';
+        subText = t('goal.detail.subToday', params);
+      } else {
+        subVariant = 'earlier';
+        subText = t('goal.detail.subEarlier', { ...params, date: f.dateMonthDay(c.latest.date) });
+      }
+    }
     let paceText = t('stat.paceOnTrack');
     if (stats.pace > 0) paceText = t('stat.paceAhead', { value: durationOf(stats.pace) });
     else if (stats.pace < 0) paceText = t('stat.paceBehind', { value: durationOf(-stats.pace) });
@@ -184,13 +217,16 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
       <>
         <section className="card section headline-card" aria-labelledby="hl">
           <p className="hl-label muted small">{t('goal.detail.eyebrow')}</p>
-          <p id="hl" className="hl num" data-testid="headline">
+          <p id="hl" className={down ? 'hl hl-down num' : 'hl num'} data-testid="headline" data-sign={down ? 'negative' : 'positive'}>
             {headline}
           </p>
-          <p className="muted num" data-testid="headline-sub">
-            {upcoming
-              ? t('goal.detail.upcoming', { date: f.dateShort(goal.startDate) })
-              : t('goal.detail.headlineSub', { k: f.number(c.elapsedDays), total: f.number(c.periodDays), count: c.daysOnTarget, value: f.decimal3(c.actualFactor) })}
+          {upcoming ? null : (
+            <p className="muted num hl-day" data-testid="headline-day">
+              {t('goal.detail.subDay', dayOf)}
+            </p>
+          )}
+          <p className="muted num" data-testid="headline-sub" data-variant={subVariant}>
+            {subText}
           </p>
         </section>
 
@@ -235,16 +271,19 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
               </svg>
               {t('goal.detail.legendYou')}
             </li>
+            <li>
+              <svg width="34" height="10" aria-hidden="true" focusable="false">
+                <line x1="1" y1="5" x2="33" y2="5" className="line-zero" />
+              </svg>
+              {t('goal.detail.legendZero')}
+            </li>
           </ul>
           <p className="curve-summary num" data-testid="curve-summary">
             {summary}
           </p>
-          {noEntries && !upcoming ? (
-            <p className="muted small" data-testid="curve-empty">
-              {t('empty.detail.curve')}
-            </p>
-          ) : null}
-          <p className="muted small">{t('goal.detail.chartNote')}</p>
+          <p className="muted small" data-testid="curve-note">
+            {t('goal.detail.chartNote')}
+          </p>
           {/* The data table is only mounted while open; its scroll box is focusable (axe scrollable-region-focusable). */}
           <details className="curve-table" onToggle={(e) => setTableOpen((e.currentTarget as HTMLDetailsElement).open)}>
             <summary>{t('goal.detail.showTable')}</summary>
@@ -256,16 +295,21 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
                       <th scope="col">{t('goal.detail.tableDate')}</th>
                       <th scope="col">{t('goal.detail.tableIdeal')}</th>
                       <th scope="col">{t('goal.detail.tableYou')}</th>
+                      <th scope="col">{t('goal.detail.tableMinutes')}</th>
+                      <th scope="col">{t('goal.detail.tableChange')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {ideal.map((p, i) => {
-                      const a = c.actual[i];
+                      // Future days and the "nothing logged yet" state show "—" in the You columns (DESIGN S4).
+                      const a = c.baseline ? c.actual[i] : undefined;
                       return (
                         <tr key={p.date}>
                           <th scope="row">{f.dateShort(p.date)}</th>
-                          <td>{pct((p.value - 1) * 100)}</td>
-                          <td>{a ? pct((a.value - 1) * 100) : t('common.emptyValue')}</td>
+                          <td>{t('format.percent', { value: f.signed1(growthPercent(p.value)) })}</td>
+                          <td>{a ? t('format.percent', { value: f.signed1(a.percent) }) : dash}</td>
+                          <td>{a ? f.number(a.minutes) : dash}</td>
+                          <td>{a && a.changePercent !== null ? t('format.percent', { value: f.signed1(a.changePercent) }) : dash}</td>
                         </tr>
                       );
                     })}

@@ -39,10 +39,18 @@ export interface Formatters {
   number(n: number): string;
   /** `15.5` / `15,5`. */
   decimal1(n: number): string;
-  /** `1.083` / `1,083` (curve factor, M5). */
-  decimal3(n: number): string;
   /** `25.8%` / `25,8%`. */
   percent1(n: number): string;
+  /**
+   * v3 curve percent with an explicit sign (DESIGN §7.1): one decimal, grouped, `+` when ≥ 0
+   * (`+0.0`, also for −0), `−` (U+2212) when < 0: `+440.0`, `−40.0`, `+143,900.0` / `+143.900,0`.
+   * The `%` comes from the surrounding copy (`{{value}}%`).
+   */
+  signed1(n: number): string;
+  /** `×N` factor body (ARCH §4.5): ≥ 1 → at most 2 decimals without trailing zeros (`5.4`, `1,440`); < 1 → 2 significant digits (`0.6`, `0.00069`). */
+  factor(n: number): string;
+  /** CurveChart Y-axis label: `0%`, `+500%`, `−50%`, `+1,000%`; |v| ≥ 10,000 → Intl compact (`+144K%` / `+144 N%`). */
+  axisPercent(n: number): string;
   /** `20 min` / `20 phút`. */
   minutes(n: number): string;
   /** `2 h 40 min`, `2 h`, `45 min`. */
@@ -56,6 +64,9 @@ export interface Formatters {
   /** v2 Account card: `today at 14:05` / `2026-10-08 at 09:30` (`format.todayAt` / `format.dateAt`). */
   syncedAt(date: string | Date, now: Date): string;
 }
+
+/** Minus sign for the curve copy (DESIGN §7.1: U+2212, not the ASCII hyphen). */
+export const MINUS = '\u2212';
 
 const cache = new Map<string, Intl.DateTimeFormat | Intl.NumberFormat>();
 const pluralRules = new Map<string, Intl.PluralRules>();
@@ -118,7 +129,9 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
 
   const number = (n: number) => nf(tag, { maximumFractionDigits: 0 }).format(n);
   const decimal1 = (n: number) => nf(tag, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
-  const decimal3 = (n: number) => nf(tag, { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(n);
+  // Intl prints an ASCII hyphen-minus; the curve copy uses U+2212 so it reads as "minus" and lines up with "+".
+  const signed = (n: number, body: (abs: number) => string) => (n < 0 ? `${MINUS}${body(-n)}` : `+${body(Math.abs(n))}`); // Math.abs: −0 → 0
+  const signed1 = (n: number) => signed(n, decimal1);
   const dateShort = (date: string | Date) => {
     const d = isoToLocalDate(date);
     if (locale === 'en') return toIso(d);
@@ -161,9 +174,17 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
     },
     number,
     decimal1,
-    decimal3,
     percent1(n) {
       return t('format.percent', { value: decimal1(n) });
+    },
+    signed1,
+    factor(n) {
+      return n >= 1 ? nf(tag, { maximumFractionDigits: 2 }).format(n) : nf(tag, { maximumSignificantDigits: 2 }).format(n);
+    },
+    axisPercent(n) {
+      if (n === 0) return t('format.percent', { value: '0' });
+      const body = (abs: number) => (abs >= 10_000 ? nf(tag, { notation: 'compact', maximumFractionDigits: 0 }).format(abs) : number(abs));
+      return t('format.percent', { value: signed(n, body) });
     },
     minutes(n) {
       return t('format.minutes', { n: number(n) });

@@ -65,3 +65,37 @@ export function datasetS1(): { goals: Goal[]; entries: LogEntry[] } {
 
 export const FIXED_NOW = new Date('2026-10-09T10:00:00+07:00');
 export const TODAY = '2026-10-09';
+
+// ---- Phase 3 (M9, FR-27 v3.0): datasets R1 / R3 / R4 (TASKS "Phase 3") ----
+
+/** Clock for the R-datasets: 2026-10-13 10:00 Asia/Ho_Chi_Minh. */
+export const FIXED_NOW_R1 = new Date('2026-10-13T10:00:00+07:00');
+export const TODAY_R1 = '2026-10-13';
+
+const R_STAMP = '2026-10-10T01:00:00.000Z';
+
+function goalR(): Goal {
+  return buildGoal({ id: 'r1', name: 'Đọc sách', why: '', targetType: 'daily', targetMinutes: 30, startDate: '2026-10-10', endDate: '2026-12-31', createdAt: R_STAMP, updatedAt: R_STAMP });
+}
+
+function entriesR(days: Array<[date: string, minutes: number]>): LogEntry[] {
+  return days.map(([date, minutes], i) => buildEntry({ id: `e-r-${i + 1}`, goalId: 'r1', date, minutes, note: '', source: 'manual', createdAt: `${date}T02:00:00.000Z`, updatedAt: `${date}T02:00:00.000Z` }));
+}
+
+/**
+ * Dataset R1 — the user's real data: "Đọc sách", 30 min/day, 2026-10-10 → 2026-12-31 (83 days);
+ * 5 → 10 → 14 → 27 minutes on 10-10 … 10-13. Oracle (ARCH §4.5): +440.0 %, ×5.4, today +92.9 % vs 14.
+ */
+export function datasetR1(): { goals: Goal[]; entries: LogEntry[] } {
+  return { goals: [goalR()], entries: entriesR([['2026-10-10', 5], ['2026-10-11', 10], ['2026-10-12', 14], ['2026-10-13', 27]]) };
+}
+
+/** Dataset R3 — going down: 5 then 3 minutes (clock 2026-10-11) → −40.0 %. */
+export function datasetR3(): { goals: Goal[]; entries: LogEntry[] } {
+  return { goals: [goalR()], entries: entriesR([['2026-10-10', 5], ['2026-10-11', 3]]) };
+}
+
+/** Dataset R4 — extreme: 1 minute then 1440 minutes as two entries of 720 (clock 2026-10-11) → +143900.0 %. */
+export function datasetR4(): { goals: Goal[]; entries: LogEntry[] } {
+  return { goals: [goalR()], entries: entriesR([['2026-10-10', 1], ['2026-10-11', 720], ['2026-10-11', 720]]) };
+}

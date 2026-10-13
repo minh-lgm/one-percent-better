@@ -62,10 +62,12 @@ test.describe('M5 full journey, offline, keyboard, a11y (M5-AC7, M5-AC8, M5-AC11
     await expect(page.locator('[data-date="2026-10-08"]')).toHaveClass(/\bl[1-4]\b/);
     await expect(page.getByTestId('stat-current')).toContainText('2 days');
 
-    // Goal detail: headline grew to +2.0 % (two days on target).
+    // Goal detail: two logged days with the same 30 minutes → +0.0% (M5-AC7 superseded by M9-AC7, FR-27 v3.0).
     await gotoHash(page, `/goals/${id}`);
-    await expect(page.getByTestId('headline')).toHaveText('+2.0% better');
-    await expect(page.getByTestId('headline-sub')).toHaveText(/Day 9 of 31 · 2 days on target · 1\.01\^2 = 1\.020/);
+    await expect(page.getByTestId('headline')).toHaveText('+0.0% better');
+    await expect(page.getByTestId('headline-day')).toHaveText('Day 9 of 31');
+    await expect(page.getByTestId('headline-sub')).toHaveText('Today: 30 min, +0.0% vs Oct 8 (30 min). ×1 since Oct 8 (30 min).');
+    await expect(page.getByTestId('headline-sub')).toContainText('30');
     await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
     await expect(page.getByTestId('history-row')).toHaveCount(2);
     await expect(page.getByTestId('history-row').nth(0)).toContainText(EN.entry.source.timer);
@@ -93,7 +95,7 @@ test.describe('M5 full journey, offline, keyboard, a11y (M5-AC7, M5-AC8, M5-AC11
     await expectAmount(page2, 'Read', '30/30');
     await expect(page2.getByTestId('plus-one-live')).toHaveAttribute('data-count', '0'); // plusOneShown travels with the backup
     await gotoHash(page2, `/goals/${id}`);
-    await expect(page2.getByTestId('headline')).toHaveText('+2.0% better');
+    await expect(page2.getByTestId('headline')).toHaveText('+0.0% better'); // M9-AC7
     await expect(page2.getByTestId('history-row')).toHaveCount(2);
 
     // Offline: every screen (including the lazy ones) opens from the precache and logging still works.
@@ -108,7 +110,7 @@ test.describe('M5 full journey, offline, keyboard, a11y (M5-AC7, M5-AC8, M5-AC11
     await gotoHash(page2, '/review');
     await expect(page2.getByTestId('chart-weekly').locator('svg.recharts-surface')).toBeVisible();
     await gotoHash(page2, `/goals/${id}`);
-    await expect(page2.getByTestId('headline')).toHaveText('+2.0% better');
+    await expect(page2.getByTestId('headline')).toHaveText('+0.0% better'); // M9-AC7
     await expect(page2.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
     await gotoHash(page2, '/today');
     await logTime(page2, 'Read', 5);

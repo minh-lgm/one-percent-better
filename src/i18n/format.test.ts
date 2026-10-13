@@ -109,3 +109,54 @@ describe('v2 sync time formats (DESIGN §7.1)', () => {
     expect(vi.syncedAt(yesterday, now)).toBe('08/10/2026 lúc 09:30');
   });
 });
+
+describe('M9 (FR-27 v3.0, DESIGN §7.1): signed1, factor, axisPercent', () => {
+  const en = formatters('en');
+  const vi = formatters('vi');
+  const MINUS = '−';
+
+  it('signed1: + when ≥ 0 (incl. −0), U+2212 minus when < 0, one decimal, grouped by locale', () => {
+    expect(en.signed1(440)).toBe('+440.0');
+    expect(en.signed1(0)).toBe('+0.0');
+    expect(en.signed1(-0)).toBe('+0.0');
+    expect(en.signed1(-40)).toBe(`${MINUS}40.0`);
+    expect(en.signed1(92.9)).toBe('+92.9');
+    expect(en.signed1(143900)).toBe('+143,900.0');
+    expect(en.signed1(-99.9)).toBe(`${MINUS}99.9`);
+    expect(vi.signed1(440)).toBe('+440,0');
+    expect(vi.signed1(-40)).toBe(`${MINUS}40,0`);
+    expect(vi.signed1(143900)).toBe('+143.900,0');
+    expect(en.signed1(-40)).not.toContain('-');
+  });
+
+  it('factor: ≥ 1 → up to 2 decimals without trailing zeros; < 1 → 2 significant digits', () => {
+    expect(en.factor(5.4)).toBe('5.4');
+    expect(en.factor(2.8)).toBe('2.8');
+    expect(en.factor(1)).toBe('1');
+    expect(en.factor(1440)).toBe('1,440');
+    expect(en.factor(1.2345)).toBe('1.23');
+    expect(en.factor(0.6)).toBe('0.6');
+    expect(en.factor(1 / 1440)).toBe('0.00069');
+    expect(vi.factor(5.4)).toBe('5,4');
+    expect(vi.factor(0.6)).toBe('0,6');
+    expect(vi.factor(1440)).toBe('1.440');
+  });
+
+  it('axisPercent: 0% without sign, signed integers with grouping, Intl compact from 10,000, ≤ 8 characters', () => {
+    expect(en.axisPercent(0)).toBe('0%');
+    expect(en.axisPercent(500)).toBe('+500%');
+    expect(en.axisPercent(-50)).toBe(`${MINUS}50%`);
+    expect(en.axisPercent(1000)).toBe('+1,000%');
+    expect(vi.axisPercent(1000)).toBe('+1.000%');
+    expect(vi.axisPercent(-50)).toBe(`${MINUS}50%`);
+    const compactEn = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 }).format(143900);
+    const compactVi = new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 0 }).format(143900);
+    expect(en.axisPercent(143900)).toBe(`+${compactEn}%`);
+    expect(vi.axisPercent(143900)).toBe(`+${compactVi}%`);
+    expect(en.axisPercent(143900)).toMatch(/^\+144K%$/);
+    for (const v of [0, 1, -5, 500, 9999, 10000, 143900, 160000, 79_000_000]) {
+      expect(en.axisPercent(v).length).toBeLessThanOrEqual(8);
+      expect(vi.axisPercent(v).length).toBeLessThanOrEqual(8);
+    }
+  });
+});
