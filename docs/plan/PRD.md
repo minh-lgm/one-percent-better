@@ -9,7 +9,7 @@
 1. Đặt một hoặc nhiều mục tiêu có chỉ tiêu thời gian rõ ràng (phút/ngày hoặc tổng giờ trong một khoảng thời gian).
 2. Ghi lại thời gian thực hiện mỗi ngày nhanh nhất có thể (nhập tay hoặc bấm timer).
 3. Nhìn lại quá trình: heatmap cả năm, streak, tổng giờ, % tiến độ, biểu đồ tuần/tháng.
-4. Thấy được ý nghĩa "1% mỗi ngày": mỗi ngày đạt chỉ tiêu là một "+1%", so sánh đường cong lý tưởng 1.01^n với thực tế.
+4. Thấy được ý nghĩa "1% mỗi ngày": so sánh đường cong lý tưởng 1.01^k (+1% mỗi ngày) với thực tế. **(v3.0)** Thực tế = số phút của mỗi ngày so với ngày có ghi liền trước, nhân dồn từ ngày đầu tiên có ghi (vd. hôm qua 5 phút, hôm nay 6 phút → +20%); phản hồi "+1%" trên Today vẫn là dấu hiệu đạt chỉ tiêu ngày.
 5. Được nhắc mỗi ngày nếu chưa làm.
 6. **(Phase 2, v2.0)** Tuỳ chọn đăng nhập bằng Google để goal và entry được lưu lên cloud (Supabase) và đồng bộ giữa các thiết bị, không mất khi đổi máy hoặc trình duyệt xoá dữ liệu. Không đăng nhập thì app vẫn chạy đầy đủ như phase 1.
 
@@ -30,7 +30,7 @@
 - Quản lý nhiều goal cùng lúc: tên, lý do (why), chỉ tiêu (phút/ngày hoặc tổng giờ), khoảng thời gian (ngày bắt đầu → hạn chót hoặc "trong năm").
 - Ghi thời gian theo ngày: nhập tay (phút + ghi chú) hoặc timer start/stop; sửa/xoá; ghi bù ngày đã qua.
 - Review: heatmap kiểu GitHub cho cả năm, streak hiện tại/dài nhất, tổng giờ, % tiến độ so với chỉ tiêu, biểu đồ tuần/tháng.
-- Đường cong 1%: 1.01^n lý tưởng so với thực tế cho từng goal.
+- Đường cong 1%: lý tưởng 1.01^k so với thực tế cho từng goal (v3.0: thực tế = số phút ngày này so với ngày có ghi trước đó, nhân dồn từ ngày đầu có ghi; FR-27).
 - Nhắc nhở hằng ngày bằng web notification (best-effort, xem giới hạn ở mục 6 và 10) + banner trong app.
 - Lưu cục bộ (IndexedDB), export/import JSON để backup và chuyển thiết bị.
 - PWA: cài được như app trên điện thoại và máy tính, chạy offline.
@@ -64,7 +64,7 @@
 | US-05 | người dùng | ghi bù hoặc sửa cho ngày hôm trước | dữ liệu đúng dù tôi quên ghi | Must |
 | US-06 | người dùng | xem heatmap cả năm và streak | thấy được sự đều đặn và không muốn đứt chuỗi | Must |
 | US-07 | người dùng | xem tổng giờ, % tiến độ và biểu đồ tuần/tháng | biết mình đang nhanh hay chậm so với chỉ tiêu | Must |
-| US-08 | người dùng | thấy đường cong 1.01^n so với thực tế | có động lực từ ý tưởng "1% mỗi ngày" | Must |
+| US-08 | người dùng | thấy mỗi ngày tôi làm nhiều hơn hay ít hơn ngày trước bao nhiêu %, cộng dồn từ ngày đầu, đặt cạnh đường lý tưởng +1% mỗi ngày (v3.0) | có động lực từ ý tưởng "1% better per day" | Must |
 | US-09 | người dùng | được nhắc mỗi ngày nếu chưa đạt chỉ tiêu | không quên làm | Must |
 | US-10 | người dùng | export/import dữ liệu ra file JSON | không mất dữ liệu và chuyển được sang máy khác | Must |
 | US-11 | người dùng | cài app lên màn hình chính và dùng offline | mở nhanh như app thật, không cần mạng | Must |
@@ -108,7 +108,7 @@
 | FR-24 | Thống kê: tổng giờ (trong năm đang xem và trong khoảng của goal), % tiến độ so với tổng chỉ tiêu, số phút đi trước/chậm hơn so với tiến độ kỳ vọng tới hôm nay. | Must | M4 |
 | FR-25 | Biểu đồ cột: 12 tuần gần nhất (tổng phút/tuần) và 12 tháng của năm đang xem (tổng phút/tháng). | Must | M4 |
 | FR-26 | Bấm một ô heatmap mở màn hình Day của ngày đó để xem/ghi bù. | Should | M4 |
-| FR-27 | Đường cong 1% trên trang chi tiết goal: lý tưởng `1.01^k` (k = số ngày đã trôi qua trong khoảng) và thực tế `1.01^n` (n = số ngày đạt chỉ tiêu tính tới ngày đó); dòng tiêu đề "+X% better" với X = (1.01^n − 1) × 100. | Must | M5 |
+| FR-27 | **(định nghĩa v3.0, quyết định user 2026-10-13; thay định nghĩa M5 "1.01^n ngày đạt chỉ tiêu")** Đường cong 1% trên trang chi tiết goal, hai đường: **lý tưởng** `1.01^k` (k = thứ tự ngày trong khoảng, `startDate` là 1; không đổi) và **thực tế** ("Bạn"). Gọi `m(d)` = tổng phút mọi entry của goal trong ngày d. Thực tế so số phút mỗi ngày có ghi với **ngày có ghi liền trước** (tỉ lệ `m(d) / m(ngày có ghi trước)`) và **nhân dồn từ ngày đầu tiên có ghi**; vì tích các tỉ lệ rút gọn, giá trị tại ngày d = `m(ngày có ghi gần nhất ≤ d) / m(ngày đầu tiên có ghi)`. Ngày đầu tiên có ghi và mọi ngày trước nó = 1 (+0%). Ngày không ghi (0 phút) **đi ngang** (giữ giá trị, không trừ). Đường thực tế có thể đi xuống (ngày sau ít phút hơn ngày trước). Không phụ thuộc chỉ tiêu ngày. Dòng tiêu đề "+X%" với X = (giá trị thực tế tại ngày cuối đã trôi qua − 1) × 100, 1 chữ số thập phân, có dấu (âm khi thấp hơn ngày đầu). Trang hiển thị thêm số phút ngày có ghi gần nhất và % so với ngày có ghi trước đó, hệ số ×N từ ngày đầu. Công thức, làm tròn, hiển thị: ARCHITECTURE §4.5. Ví dụ dữ liệu thật của user: 10/10 5 phút, 11/10 10, 12/10 14, 13/10 27 → +0%, +100%, +180%, +440% (×5,4). | Must | M5 (v3.0: M9) |
 | FR-28 | Trang chi tiết goal: why, khoảng thời gian, chỉ tiêu, tiến độ, streak, đường cong 1%, lịch sử entry. | Must | M5 |
 | FR-29 | Phản hồi "+1%" trên Today đúng một lần khi một entry làm goal vừa đạt chỉ tiêu hôm nay. | Should | M5 |
 | FR-30 | Archive/unarchive goal: goal archived ẩn khỏi Today và không tính vào nhắc nhở, dữ liệu giữ nguyên. | Should | M5 |
@@ -142,6 +142,9 @@
 | FR-53 | **Nhắc đăng nhập khi export:** khi cloud được cấu hình và chưa đăng nhập, sau khi Export thành công, card Backup hiện một dòng gợi ý có nút đăng nhập (đăng nhập để sao lưu tự động); tối đa 1 lần mỗi 30 ngày. | Must | M8 |
 | FR-54 | **Lối vào cố định và copy cập nhật:** card Account (chưa đăng nhập) luôn có lời giải thích + nút đăng nhập, không có "Not now"; card Storage ở trạng thái "Not protected" gợi ý đăng nhập; mô tả card Backup và About đổi theo trạng thái đăng nhập. | Must | M8 (About: M6) |
 | FR-55 | **(v2.1) Đồng bộ tuỳ chọn người dùng:** hai nhóm, mỗi nhóm last-write-wins **riêng** theo thời điểm người dùng đổi trên thiết bị: (1) **nhắc nhở** = `reminderEnabled` + `reminderTime` (đổi một trong hai là đổi cả nhóm); (2) **ngôn ngữ** = `locale`. Quy tắc: (a) thiết bị **chưa từng chọn** nhóm đó (dùng mặc định: nhắc tắt/20:00, ngôn ngữ theo trình duyệt) mà cloud đã có giá trị → **cloud thắng**, áp vào thiết bị; (b) thiết bị **đã chọn** mà cloud chưa có → thiết bị đẩy lên; (c) cả hai đã có → bản đổi sau cùng thắng, bằng nhau → cloud thắng; (d) cả hai chưa có → không ghi gì, thiết bị giữ mặc định. Áp từ cloud: ngôn ngữ đổi ngay trên toàn app không cần reload (như FR-32); Settings hiện giờ nhắc/công tắc mới ngay. Bật nhắc từ cloud **không** tự xin quyền notification (trình duyệt cần thao tác người dùng): thiết bị chưa có quyền vẫn hiện banner nhắc (FR-15) và Settings hiện nút "Allow notifications". Ngôn ngữ chọn từ trước khi có đồng bộ (bản phase 1) được coi là cũ hơn mọi lựa chọn trên cloud. Chưa đăng nhập: hành vi như FR-13, FR-32 … FR-34. | Must | M7 |
+
+**Phase 3 — Đổi định nghĩa đường cong "Bạn" (v3.0, M9).** Không thêm FR mới: **FR-27** được viết lại (định nghĩa so phút với ngày có ghi trước, nhân dồn); FR-28 giữ nguyên danh sách nội dung Goal detail. FR-35, FR-36 áp dụng cho mọi chuỗi mới/sửa (copy `en`/`vi` do designer chốt trong DESIGN.md bản revise v3). **Không đổi:** Tiến độ, Nhịp độ (pace), streak, ngày đạt chỉ tiêu, phản hồi "+1%" trên Today (FR-29), heatmap, thống kê Review, đồng bộ, backup (đường cong là giá trị suy ra, không lưu).
+
 ## 6. Yêu cầu phi chức năng
 
 | ID | Yêu cầu | Đo bằng |
@@ -195,7 +198,7 @@
 ## 9. Assumptions
 
 - A-01: Ngày tính theo **múi giờ cục bộ** của thiết bị, lưu dạng chuỗi `YYYY-MM-DD`. Tuần bắt đầu thứ Hai (ISO).
-- A-02: "+1%" chỉ cộng cho ngày đạt chỉ tiêu; ngày không đạt **không trừ** (đường thực tế = 1.01^n, không nhân 0.99 cho ngày lỡ).
+- A-02: ~~"+1%" chỉ cộng cho ngày đạt chỉ tiêu; ngày không đạt **không trừ** (đường thực tế = 1.01^n, không nhân 0.99 cho ngày lỡ).~~ **Thay bởi FR-27 v3.0 (2026-10-13):** đường thực tế = tỉ lệ số phút so với ngày có ghi trước, nhân dồn; ngày 0 phút đi ngang (không trừ). Phản hồi "+1%" trên Today (FR-29) vẫn chỉ xuất hiện khi đạt chỉ tiêu ngày.
 - A-03: Thống kê luôn tính theo chỉ tiêu **hiện tại** của goal (không lưu lịch sử thay đổi chỉ tiêu).
 - A-04: Mọi ngày trong khoảng của goal đều là ngày cần làm (không có ngày nghỉ).
 - A-05: Timer qua nửa đêm: toàn bộ thời gian ghi vào ngày bắt đầu. Số phút = làm tròn tới phút gần nhất.
@@ -232,12 +235,17 @@
 - A-36 (v2.1): Dữ liệu phase 1 khi nâng lên v2: `locale` đã lưu, hoặc thiết lập nhắc khác mặc định (bật, hoặc giờ ≠ 20:00), được coi là "đã chọn" với mốc `1970-01-01T00:00:00.000Z` (cũ hơn mọi giá trị trên cloud): tài khoản chưa có giá trị thì đẩy lên, đã có thì cloud thắng.
 - A-37 (v2.1): Import file backup (chứa `reminderEnabled`, `reminderTime`) được coi là người dùng đổi nhóm nhắc nhở tại thời điểm import (đồng bộ lên nếu đã đăng nhập); import vẫn không chạm ngôn ngữ (FR-34). Đăng xuất "xoá dữ liệu" giữ ngôn ngữ đang hiển thị nhưng xoá mốc đồng bộ của nó (máy trở về trạng thái "chưa từng chọn" với tài khoản).
 - A-38 (v2.1): Không giới hạn ai đăng nhập (OQ-06). Google OAuth consent screen phải ở trạng thái **In production** (Publish) để mọi Gmail đăng nhập được; scope cơ bản không cần Google xác minh. Mỗi tài khoản chỉ thấy dữ liệu của mình (RLS); quota gói Free dùng chung cho mọi tài khoản (chấp nhận).
+- A-39 (v3.0): "Hôm nay" được tính ngay khi có entry (giá trị trực tiếp, không chờ hết ngày): ghi 3 phút buổi sáng sau một ngày 27 phút thì headline giảm ngay, ghi thêm thì tăng lại. Hôm nay chưa ghi gì thì headline = giá trị ngày có ghi gần nhất (đi ngang). Xem OQ-11.
+- A-40 (v3.0): Đường lý tưởng vẫn tính từ `startDate` (k = 1 tại `startDate`, giá trị 1.01), không dời theo ngày đầu tiên có ghi; đường thực tế bằng 1 (+0%) từ `startDate` tới hết ngày đầu tiên có ghi. Hai đường có gốc khác nhau là chấp nhận (user chốt "đường lý tưởng giữ nguyên").
+- A-41 (v3.0): Chỉ ngày trong `[startDate, min(today, endDate)]` được tính; entry ngoài khoảng (có thể có sau khi đồng bộ, A-25) bị bỏ qua trong đường cong. Nhiều entry trong ngày được cộng lại (ADR-04). Giá trị thực tế không giới hạn trên/dưới nhân tạo; với dữ liệu nhập hợp lệ (1–1440 phút/ngày) nó nằm trong `[1/1440, 1440]`, tức headline từ −99,9% tới +143.900,0%.
+- A-42 (v3.0): Đường cong không phụ thuộc chỉ tiêu ngày (`dailyTarget`). Đổi chỉ tiêu không làm đổi đường cong; chỉ tiêu vẫn quyết định "+1%" trên Today, ngày đạt, streak, tiến độ, pace.
+- A-43 (v3.0): Dòng tiêu đề và mọi nhãn % của đường thực tế hiển thị **có dấu** (`+` khi ≥ 0, `−` khi < 0); câu chữ cho trường hợp âm (vd. "thấp hơn ngày đầu") do designer chốt.
 
 ## 10. Open questions
 
 - OQ-01: Chấp nhận giới hạn nhắc nhở của MVP (chỉ đảm bảo khi app đang mở + phương án file `.ics`) hay muốn nhắc tin cậy khi app đóng? Phương án sau cần một push server nhỏ (Web Push + VAPID) — trái với quyết định "không server". **Giả định hiện tại:** chấp nhận giới hạn.
 - OQ-02: **Đã quyết (2026-10-11):** GitHub Pages `https://minh-lgm.github.io/one-percent-better/`, deploy bằng GitHub Actions khi push `main`, `BASE_PATH=/one-percent-better/`.
-- OQ-03: Đường cong thực tế có muốn chế độ "khắt khe" (ngày lỡ nhân 0.99, minh hoạ 0.99^365 ≈ 0.03) không? **Giả định:** không trong MVP, đưa vào Later.
+- OQ-03: Đường cong thực tế có muốn chế độ "khắt khe" (ngày lỡ nhân 0.99, minh hoạ 0.99^365 ≈ 0.03) không? **Giả định:** không trong MVP, đưa vào Later. **v3.0:** đã quyết theo hướng khác (2026-10-13): ngày 0 phút đi ngang +0% (FR-27); chế độ khắt khe chỉ còn là ý tưởng Later.
 - OQ-04: **Đã quyết (2026-10-09, Gate 2, user yêu cầu):** UI song ngữ Anh/Việt trong MVP. Hai ngôn ngữ `en`, `vi`; mặc định lần đầu theo `navigator.language` (bắt đầu bằng "vi" → `vi`, còn lại `en`); đổi trong Settings, lưu cục bộ trong kv store, còn sau reload; mọi chuỗi UI (label, nút, lỗi, thông báo, notification, nội dung `.ics`, aria-label) đều dịch; ngày/giờ/số định dạng theo locale; tên goal và ghi chú của người dùng không dịch; không dùng dịch vụ dịch ngoài, mọi chuỗi nằm trong code. Xem FR-32 … FR-36, NFR-11, A-15 … A-19.
 - OQ-05: Có cần chỉ tiêu theo tuần (vd. 3 giờ/tuần) hoặc chọn ngày trong tuần không? **Giả định:** không trong MVP.
 - OQ-06: **Đã quyết (2026-10-12):** không giới hạn, ai có Gmail cũng đăng nhập được (A-38). Tắt "Allow new users to sign up" chỉ còn là ghi chú tuỳ chọn cho sau này (TASKS U9).
@@ -245,6 +253,7 @@
 - OQ-08: **Đã quyết (2026-10-12):** máy không có Docker Desktop. `npm run test:db` sẽ báo skipped; test RLS/trigger/SQL tự động là `NOT VERIFIED`, user kiểm thủ công trên project thật theo U10. Không yêu cầu dev/QC cài Docker.
 - OQ-09: **Đã quyết (2026-10-12):** không có nút xoá dữ liệu cloud/xoá tài khoản trong app; user xoá trong Supabase Dashboard; để Later.
 - OQ-10: Tên biến key: Supabase đang thay `anon` key (JWT `eyJ…`) bằng **publishable key** (`sb_publishable_…`), key cũ dự kiến ngừng cuối 2026. Plan dùng `VITE_SUPABASE_PUBLISHABLE_KEY` và vẫn nhận `VITE_SUPABASE_ANON_KEY` làm dự phòng. Không cần user trả lời; chỉ cần dán đúng key loại publishable khi làm U6/U7.
+- OQ-11 (v3.0): Ngày hôm nay **đang ghi dở** có được so ngay với ngày có ghi trước không? Vd. hôm qua 27 phút, sáng nay mới bấm timer 3 phút → headline lập tức tụt từ +440% xuống −40% (3/5) cho tới khi ghi thêm. **Giả định (A-39):** có, tính trực tiếp (đơn giản, đúng định nghĩa "so với hôm qua"). Phương án khác: hôm nay chỉ được tính khi số phút đã ≥ ngày có ghi trước hoặc khi hết ngày (trước đó đường dừng ở ngày có ghi trước). Đổi sang phương án này chỉ sửa domain M9-T1 + 2 AC.
 
 ## Changelog
 
@@ -253,3 +262,4 @@
 - 2026-10-09 — v1.2 (mode `revise`, feedback Gate 2: thêm tiếng Việt): OQ-04 chuyển thành quyết định (song ngữ en/vi). Thêm Goal song ngữ, US-14, FR-32 … FR-36 (chọn ngôn ngữ, mặc định theo trình duyệt, lưu kv, phạm vi dịch, định dạng theo locale), NFR-11 (chất lượng bản dịch, cấm hardcode chuỗi), A-15 … A-19. Sửa Non-goals (bỏ "chỉ tiếng Anh"), §7 (ngôn ngữ UI), NFR-03 (ngân sách bundle gồm i18n), NFR-08 (`<html lang>`). Không đổi FR-01 … FR-31.
 - 2026-10-12 — v2.0 (mode `revise`, phase 2: đăng nhập tuỳ chọn Google + đồng bộ cloud Supabase offline-first, theo quyết định user 2026-10-12). §1 thêm mục tiêu 6 và bài toán phase 2; §2 tài khoản tuỳ chọn, nhiều thiết bị, app công khai trên GitHub Pages; §3 Goals thêm phạm vi phase 2, Non-goals viết lại (bỏ "không tài khoản/sync", thêm provider khác, realtime, đồng bộ thiết lập thiết bị, xoá cloud trong app, agent không deploy); §4 thêm US-15 … US-20; §5 thêm FR-37 … FR-54 (M6: FR-37 … FR-43; M7: FR-44 … FR-51; M8: FR-52 … FR-54); §6 sửa NFR-01 (request ngoài chỉ tới Supabase/Google khi đăng nhập), NFR-03 (SDK Supabase lazy; ghi nhận quyết định precache 2026-10-10), NFR-05 (RLS, key, PKCE, validate dữ liệu cloud), NFR-09, NFR-10; thêm NFR-12 … NFR-17; §7 thêm card Account và thành phần mới; §8 thêm chỉ số v2.0; §9 sửa A-11, thêm A-20 … A-34; §10 OQ-02 đã quyết, thêm OQ-06 … OQ-10. Không đổi FR-01 … FR-36.
 - 2026-10-12 — v2.1 (mode `revise`, trả lời OQ sau Gate 1 phase 2). §2: ai có Gmail cũng đăng nhập được. §3 Non-goals: bỏ "không đồng bộ ngôn ngữ/nhắc nhở", thêm "không whitelist email". §5: FR-34 thêm ghi chú đồng bộ khi đăng nhập; FR-44 thêm tuỳ chọn người dùng vào phạm vi; thêm **FR-55** (đồng bộ nhóm nhắc nhở và nhóm ngôn ngữ, LWW theo nhóm, quy tắc thiết bị mới/cloud trống, áp ngay, không tự xin quyền). §6 NFR-16 thêm hàng tuỳ chọn. §9 sửa A-23, thêm A-35 … A-38. §10 OQ-06 … OQ-09 chuyển thành quyết định.
+- 2026-10-13 — v3.0 (mode `revise`, phase 3, quyết định user 2026-10-13: đường cong "Bạn" so số phút với ngày có ghi trước, nhân dồn). §1 mục tiêu 4 và §3 Goals cập nhật định nghĩa; §4 sửa câu chữ US-08 (giữ ID); §5 **FR-27 viết lại** (milestone M5 → M9), thêm ghi chú phase 3 (không FR mới, số liệu khác không đổi); §9 A-02 thay bởi FR-27 v3.0, thêm A-39 … A-43; §10 OQ-03 ghi chú đã quyết hướng khác, thêm OQ-11 (hôm nay ghi dở). Không đổi FR/NFR khác.

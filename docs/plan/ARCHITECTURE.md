@@ -101,7 +101,7 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `domain/entry.ts` | logic | Validate entry, giới hạn 1440 phút/ngày, quy tắc ngày ghi bù | zod, dates |
 | `domain/stats.ts` | logic | Tổng theo ngày/tuần/tháng, ngày đạt, streak, tiến độ, đi trước/chậm | dates |
 | `domain/heatmap.ts` | logic | Lưới năm (cột tuần, hàng thứ Hai→Chủ nhật), mức màu 0–4 | dates, stats |
-| `domain/curve.ts` | logic | Chuỗi điểm 1.01^k lý tưởng và 1.01^n thực tế, headline "+X%" | dates, stats |
+| `domain/curve.ts` | logic | Chuỗi điểm 1.01^k lý tưởng và thực tế, headline "+X%", miền trục Y. **v3.0 (M9):** thực tế = phút ngày có ghi gần nhất / phút ngày đầu có ghi (§4.5, ADR-26) | dates |
 | `domain/timer.ts` | logic | Thời gian đã chạy, làm tròn phút, ngày quy về | dates |
 | `domain/reminder.ts` | logic | `shouldNotify`, `shouldShowBanner`, dữ liệu nhắc có cấu trúc (`{ pendingCount, items: [{ goalName, minutes, target }] }`) — không sinh chữ; chữ do `ReminderService` dịch | stats |
 | `domain/backup.ts` | logic | Schema file backup (zod), kiểm tra version và toàn vẹn tham chiếu | zod, entry |
@@ -247,7 +247,7 @@ Thay đổi schema sau này: tăng `db.version(n)` kèm `upgrade()`; tăng `sche
 - `pace` = tổng phút tới hôm nay − `dailyTarget × số ngày đã trôi qua (startDate → min(today, endDate), tính cả hai đầu, tức là gồm cả hôm nay)`; dương = đi trước. Goal `upcoming`: pace = 0.
 - Timer: số phút điền sẵn khi Stop = `clamp(round(elapsedMs / 60000), 1, 1440)` (làm tròn tới phút gần nhất, 30 s làm tròn lên; tối thiểu 1, tối đa 1440).
 - Mức heatmap một goal: 0 = 0 phút; 1 = >0 và <50% `dailyTarget`; 2 = 50–<100%; 3 = 100–<200%; 4 = ≥200%. "All goals" theo tổng phút: 0 = 0; 1 = 1–29; 2 = 30–59; 3 = 60–119; 4 = ≥120. Ngày ngoài khoảng goal: trạng thái `outside`.
-- Đường cong: với mỗi ngày d trong khoảng goal, `k` = thứ tự ngày (startDate là 1), `ideal = 1.01^k`; với d ≤ today, `n(d)` = số ngày đạt từ startDate tới d, `actual = 1.01^n(d)`. Headline: `(1.01^n(today) − 1) × 100`, 1 chữ số thập phân.
+- Đường cong: với mỗi ngày d trong khoảng goal, `k` = thứ tự ngày (startDate là 1), `ideal = 1.01^k`. ~~Với d ≤ today, `n(d)` = số ngày đạt từ startDate tới d, `actual = 1.01^n(d)`. Headline: `(1.01^n(today) − 1) × 100`, 1 chữ số thập phân.~~ **v3.0 (M9):** `actual(d)` = phút ngày có ghi gần nhất ≤ d / phút ngày đầu tiên có ghi; công thức đầy đủ, làm tròn, ví dụ, contract và thang Y ở **§4.5**.
 
 ### 4.1 Kiểu domain ở phase 2 (v2.0)
 
@@ -486,6 +486,99 @@ Ghi chú: developer được chỉnh cú pháp cho chạy đúng trên Supabase 
 
 Áp nhóm `locale` từ cloud: ghi kv `locale` → `LocaleService.watch` phát → container gọi `setLocale(i18n, locale)` ngay (đổi `<html lang>`, `document.title`, toàn app, không reload). Áp nhóm `reminder`: ghi `settings.reminderEnabled/reminderTime` (giữ nguyên các field khác của `settings`) → Settings và scheduler đọc giá trị mới; **không** gọi `Notification.requestPermission()`.
 | Phiên Supabase | `localStorage['opb-auth']` (+ `opb-auth-code-verifier` trong lúc đăng nhập) | — | Do SDK quản lý (A-26) |
+
+### 4.5 Đường cong 1% v3 (phase 3, M9; FR-27 v3.0, ADR-26)
+
+Thay toàn bộ quy tắc "thực tế = 1.01^n (n = số ngày đạt chỉ tiêu)" của M5. Vẫn là hàm thuần `curve(goal, goalEntries, today): CurveData` trong `src/domain/curve.ts` (chữ ký giữ nguyên); `StatsService.curve(goalId, today)` giữ nguyên chữ ký. Không lưu gì, không đổi schema, backup, sync.
+
+**Ký hiệu.**
+
+- `last = lastElapsedDay(goal, today)` = `min(today, endDate)`; `today < startDate` → `null` (goal upcoming, không có điểm thực tế).
+- `D` = các ngày `startDate … last` (tính cả hai đầu); `elapsedDays = |D|`.
+- `m(d)` = tổng `minutes` của **mọi** entry còn sống của goal có `date = d`, với d ∈ D. Entry có ngày ngoài D bị bỏ qua (A-41).
+- Ngày **có ghi**: `m(d) > 0`. `f` = ngày có ghi đầu tiên trong D (**baseline**). `p(d)` = ngày có ghi gần nhất ≤ d. `prev(d)` = ngày có ghi gần nhất < d.
+
+**Công thức.**
+
+| Đại lượng | Định nghĩa |
+| :- | :- |
+| `ideal(d)` (không đổi) | `1.01^k`, k = thứ tự ngày trong khoảng (startDate = 1), cho **mọi** ngày của khoảng |
+| `actual(d)`, d ∈ D | `1` nếu chưa có `f` hoặc `d < f`; ngược lại `m(p(d)) / m(f)` |
+| `changePercent(d)` | d có ghi và d > f: `pct(m(d), m(prev(d)))`; ngày baseline và ngày không ghi: `null` |
+| `headlinePercent` | có `f`: `pct(m(p(last)), m(f))`; không có: `0` |
+| `actualFactor` | `actual(last)` (1 khi chưa có ghi hoặc upcoming) |
+| `idealPercent`, `idealFactor` (không đổi) | `growthPercent(1.01^elapsedDays)`, `1.01^elapsedDays` |
+
+Cách đọc theo lời user: ngày đầu có ghi = +0%; mỗi ngày có ghi sau đó nhân giá trị với `m(hôm nay) / m(ngày có ghi trước)`; ngày 0 phút đi ngang (giữ giá trị, không trừ). Vì tích các tỉ lệ rút gọn (telescoping), giá trị = `m(ngày có ghi gần nhất) / m(ngày đầu có ghi)`. **Code phải tính bằng tỉ số trực tiếp** như bảng trên, không nhân dồn số thực (tránh sai số tích luỹ qua 1827 ngày).
+
+**Làm tròn `pct(a, b)`** (a, b là số phút nguyên dương, kết quả là % có dấu, 1 chữ số thập phân): `y = (a − b) × 1000 / b`; `r = sign(y) × Math.round(|y|)` (nửa làm tròn **xa 0**, đối xứng âm/dương); kết quả `r / 10`; `−0` chuẩn hoá thành `0`. `ActualPoint.percent = pct(m(p(d)), m(f))` (hoặc `0` trước baseline). Ví dụ: `pct(17,16) = 6.3`, `pct(15,16) = −6.3`, `pct(27,14) = 92.9`, `pct(1440,1) = 143900`, `pct(1,1440) = −99.9`.
+
+**Phạm vi giá trị.** Với dữ liệu hợp lệ (1–1440 phút/ngày, FR-07) `actual ∈ [1/1440, 1440]`, headline ∈ [−99.9, +143900.0]: không cần giới hạn nhân tạo, không tràn số. Dữ liệu gộp từ sync có thể vượt 1440/ngày (A-25): công thức giữ nguyên, không cắt. Đường lý tưởng vẫn có thể rất lớn (1.01^1827 ≈ 7,9·10^7), như M5.
+
+**Contract (thay `ActualPoint`, `CurveData` của M5; `IdealPoint`, `growth`, `growthPercent`, `lastElapsedDay`, `DAILY_GROWTH` giữ nguyên):**
+
+```ts
+export interface ActualPoint {
+  date: ISODate;
+  k: number;                       // thứ tự ngày, 1-based
+  minutes: number;                 // m(d); 0 nếu không ghi
+  logged: boolean;                 // m(d) > 0
+  value: number;                   // actual(d): hệ số so với baseline (1 trước/tại baseline)
+  percent: number;                 // % có dấu, 1 chữ số thập phân (pct)
+  changePercent: number | null;    // % so với ngày có ghi trước; null nếu không ghi hoặc là baseline
+}
+export interface LoggedDayRef { date: ISODate; minutes: number }
+export interface CurveData {
+  ideal: IdealPoint[];             // không đổi: mọi ngày của khoảng
+  actual: ActualPoint[];           // startDate → last; [] khi upcoming
+  periodDays: number;
+  elapsedDays: number;
+  loggedDays: number;              // số ngày có ghi trong D (thay daysOnTarget)
+  baseline: LoggedDayRef | null;   // f
+  latest: LoggedDayRef | null;     // p(last)
+  previous: LoggedDayRef | null;   // prev(latest)
+  latestChangePercent: number | null; // pct(latest, previous); null nếu previous = null
+  actualFactor: number;
+  idealFactor: number;
+  headlinePercent: number;         // có dấu
+  idealPercent: number;
+}
+/** Miền trục Y (đơn vị %) cho các điểm đang hiển thị sau khi lọc Range. */
+export function curveYDomain(idealPercents: readonly number[], youPercents: readonly number[]): [number, number];
+```
+
+Bỏ khỏi contract: `ActualPoint.n`, `ActualPoint.met`, `CurveData.daysOnTarget` (số ngày đạt chỉ tiêu vẫn có ở `goalStats().daysOnTarget`, Stat card không đổi).
+
+**Ví dụ (oracle cho test).** Ký hiệu % đã làm tròn bằng `pct`/`growthPercent`.
+
+*Dataset R1 — dữ liệu thật của user* (goal daily 30 phút, 2026-10-10 → 2026-12-31, `periodDays` = 83; today = 2026-10-13):
+
+| Ngày | k | m(d) | actual | percent | changePercent | ideal % |
+| :- | :- | :- | :- | :- | :- | :- |
+| 2026-10-10 | 1 | 5 | 1 | +0.0 | null | +1.0 |
+| 2026-10-11 | 2 | 10 | 2 | +100.0 | +100.0 | +2.0 |
+| 2026-10-12 | 3 | 14 | 2.8 | +180.0 | +40.0 | +3.0 |
+| 2026-10-13 | 4 | 27 | 5.4 | +440.0 | +92.9 | +4.1 |
+
+→ `headlinePercent = 440`, `actualFactor = 5.4` (×5,4), `baseline = {10-10, 5}`, `latest = {10-13, 27}`, `previous = {10-12, 14}`, `latestChangePercent = 92.9`, `loggedDays = 4`, `elapsedDays = 4`, `idealPercent = 4.1`.
+
+- R1 với today = 2026-10-14 (chưa ghi): thêm điểm 10-14 `minutes 0, value 5.4, percent 440, changePercent null`; headline vẫn 440; `elapsedDays = 5`, `idealPercent = 5.1`.
+- R1 khi 10-13 ghi thành hai entry 20 + 7 phút: kết quả giống hệt.
+- R1 bỏ entry 10-12: 10-12 `value 2` (đi ngang, +100.0), 10-13 `value 5.4`, `changePercent = +170.0` (so với 10-11 = 10 phút), headline 440.
+- Đi xuống: 10-10 5 phút, 10-11 3 phút → 10-11 `value 0.6`, `percent −40.0`, `changePercent −40.0`, headline −40.
+- Ngày cực trị: 1 phút rồi 1440 phút → headline 143900; 1440 rồi 1 → headline −99.9.
+
+*S1 tại 2026-10-09 (§0 TASKS):* G1 "Read" (30 phút mỗi ngày 10-01 … 10-08): 9 điểm, mọi `value = 1`, headline **0.0** (M5 là 8.3), `loggedDays = 8`, `idealPercent = 9.4`, `latest = {10-08, 30}`, `previous = {10-07, 30}`, `latestChangePercent = 0`. G2 "Guitar" (20 phút 09-01 … 09-10, 10 phút 09-15, 20 phút 10-07, 10-08): 39 điểm; 09-15 `value 0.5`, `percent −50.0`, `changePercent −50.0`; 09-16 … 10-06 đi ngang −50.0; 10-07 `value 1`, `changePercent +100.0`; headline **0.0**; `loggedDays = 13`; `idealPercent = 47.4`. G3 "Spanish" (một entry 03-02) và G5 "Old course" (một entry 06-30): headline **0.0** (M5 là 1.0). G4 upcoming: `actual = []`, headline 0.
+
+**Hiển thị (copy do designer chốt ở DESIGN.md revise v3; plan chỉ nêu dữ liệu bắt buộc).**
+
+- Headline: `headlinePercent` có dấu (`+` khi ≥ 0, `−` khi < 0; A-43), `decimal1` theo locale, có nhóm hàng nghìn (en `+143,900.0%`, vi `+143.900,0%`).
+- Hệ số ×N (`actualFactor`): formatter mới `f.factor(v)` trong `src/i18n/format.ts`: v ≥ 1 → tối đa 2 chữ số thập phân, bỏ số 0 thừa (en `5.4`, `2.8`, `1,440`; vi `5,4`); v < 1 → 2 chữ số có nghĩa (`0.6`, `0.00069`).
+- Phụ đề (thay `goal.detail.headlineSub` "Ngày k/N · n ngày đạt chỉ tiêu · 1,01^n = …"): phải nêu (a) ngày có ghi gần nhất và số phút; (b) % so với ngày có ghi trước đó (có dấu) và số phút ngày đó; (c) ×N kể từ ngày đầu có ghi và số phút ngày đầu. Biến thể: chưa có entry; chỉ một ngày có ghi (chỉ nêu điểm xuất phát); upcoming (giữ `goal.detail.upcoming`).
+- Tóm tắt SR, legend "You", chú thích dưới chart, `empty.detail.curve`, tooltip (ngày có ghi: số phút + `changePercent`), nhãn trực tiếp tại hôm nay, bảng dữ liệu (thêm cột số phút): mọi % của "You" có dấu.
+- Đường You: một điểm mỗi ngày, đi ngang qua ngày 0 phút, đổi giá trị tại ngày có ghi (có thể đi xuống); kiểu nét (linear/step) do designer chốt.
+
+**Thang Y (giữ control Range của A-D4).** Tuyến tính, đơn vị % như M5. Miền tự co giãn theo **cả hai series đang hiển thị** (sau khi lọc Range): `curveYDomain` trả `[yMin, yMax]` với `yMin = min(0, min You%)`, `yMax = max(1, max Ideal%, max You%)`, mỗi đầu nới thêm 5% của `yMax − yMin` rồi làm tròn ra ngoài tới bội số "đẹp" (1, 2, 5 × 10^n); chart dùng làm `domain` (thay `[0, 'auto']` của M5) và có đường tham chiếu tại 0% (mức ngày đầu). Nhãn trục: % số nguyên có dấu; |v| ≥ 10.000 dùng `Intl.NumberFormat` `notation: 'compact'` để không tràn trục ở 360 px. Hệ quả chấp nhận: khi You vượt xa Ideal (R1: +440% so với +4,1%) đường Ideal nằm sát 0% (đúng thực tế); goal dài vẫn mặc định "So far" để Ideal không nuốt thang. Thang log: Later.
 
 ## 5. Interface contract
 
@@ -1098,6 +1191,9 @@ Bối cảnh: QC/dev không có tài khoản Supabase/Google thật; Docker có 
 **ADR-24 — Đăng nhập lần đầu = gộp; đăng xuất hỏi giữ/xoá, mặc định giữ (v2.0).**
 Bối cảnh: user chốt "merge, không xoá"; máy dùng chung cần xoá được. Lựa chọn: bản ghi cục bộ đã `dirty = 1` nên chu kỳ đầu tự đẩy lên; đổi sang tài khoản khác thì hỏi và `markAllDirty`; đăng xuất: hộp thoại giữ (mặc định)/xoá (`clearUserData` một transaction), thử sync lần cuối trước. Hệ quả: không bao giờ mất dữ liệu do đăng nhập; dữ liệu của tài khoản cũ có thể bị gộp sang tài khoản mới nếu người dùng chọn "Add to account" (có cảnh báo số lượng).
 
+**ADR-26 — Đường cong "Bạn" = tỉ lệ phút so với ngày có ghi trước, nhân dồn, tính bằng tỉ số trực tiếp (v3.0, M9).**
+Bối cảnh: user xem Goal detail thật và thấy định nghĩa M5 (1.01^n, n = số ngày đạt chỉ tiêu) không khớp ý "better per day": user muốn so số phút hôm nay với ngày trước (5 → 6 phút = +20%), nhân dồn từ ngày đầu, ngày 0 phút đi ngang (quyết định 2026-10-13). Lựa chọn: `actual(d) = m(ngày có ghi gần nhất ≤ d) / m(ngày đầu có ghi)` (tương đương tích telescoping), tính trực tiếp từ hai số nguyên; làm tròn % nửa xa 0; contract `CurveData` đổi field (§4.5); trục Y tự co giãn theo cả hai series qua `curveYDomain`; đường lý tưởng và Range (A-D4) giữ nguyên. Phương án đã loại: (1) nhân dồn số thực từng ngày — sai số tích luỹ, kết quả giống hệt về toán; (2) so với "hôm qua" theo lịch (ngày 0 phút thành mẫu số 0 → vô nghĩa) — user chốt so với ngày có ghi gần nhất; (3) baseline = trung bình vài ngày đầu — user chốt ngày đầu. Hệ quả: đường cong không còn phụ thuộc chỉ tiêu ngày (A-42); có thể âm; một ngày ghi nhiều bất thường làm headline nhảy lớn (đúng định nghĩa); "+1%" trên Today vẫn theo chỉ tiêu (hai khái niệm tách biệt, copy phải nói rõ); test M5 về giá trị đường cong được thay bởi test M9 (TASKS M9).
+
 ## Changelog
 
 - 2026-10-09 — v1, tạo mới (mode `new`).
@@ -1106,3 +1202,4 @@ Bối cảnh: user chốt "merge, không xoá"; máy dùng chung cần xoá đư
 - 2026-10-10 — v1.3 (mode `revise`, ghi nhận deviation M1–M2 đã PASS QC, chuẩn bị M3): §3 thêm `settings-service`, `mutex`, `notification-port`, `app/reminder-scheduler`, cập nhật mô tả `data/*`; quy tắc lint tách lớp bỏ qua `*.test.ts(x)`. §5.2 `KvRepository.update` (nguyên tử, ADR-14), `EntryRepository.getById` (M3), interface mới `TimerRepository.saveTimerEntry` + `SaveTimerEntryOutcome` (M3), `BackupData`, ràng buộc nguyên tử cho mọi implementation repository. §5.3 thêm cột Constructor; `DomainError.params`; `GoalService` tham số `kv` tuỳ chọn; `EntryService` dùng `getById` + tách `prepareAdd` (M3); `TimerService` (`current`, `stop` chỉ xem trước, `Mutex`, `save` nguyên tử ở M3); thêm `SettingsService` (claim/release ngày nhắc), `NotificationPort`; `ReminderService.check` claim-trước-gửi; ghi nhận scheduler chạy bù trigger, `Today.pendingTimer` + cờ `GoalCard` hạ bởi effect, banner tính ở UI. §5.6 thứ tự claim → show → release. §6 thêm file. §10 thêm rủi ro ghi đua nhiều tab. §11 thêm ADR-14 … ADR-16. Không đổi phạm vi, không đổi mã lỗi.
 - 2026-10-12 — v2.0 (mode `revise`, phase 2: đăng nhập Google tuỳ chọn + đồng bộ offline-first qua Supabase). §1 thêm sơ đồ và luồng phase 2; §2 thêm Supabase, `@supabase/supabase-js` 2.117.3 (lazy), Supabase CLI 2.120.0 qua npx, mock Supabase Node; §3 thêm component phase 2 (AuthPort/AuthService, RemoteStore/SyncService, LoginPromptService, LockPort, Dexie v2, LocalSyncStore, LocalDataRepository, integration/supabase, auth-callback, sync-scheduler, UI mới) và quy tắc lint `@supabase/*`; §4 thêm 4.1 kiểu sync + kv `sync`/`loginPrompt`, 4.2 Dexie v2 + quy tắc xoá mềm/`dirty`/`nextUpdatedAt`, 4.3 SQL migration (bảng, trigger LWW, RLS, grant), 4.4 bảng cái gì đồng bộ; §5.1 callback `?auth=callback`; §5.2 `LocalDataRepository`, `LocalSyncStore`; §5.3 `AuthService`, `SyncService`, `LoginPromptService`, sửa `BackupService`; §5.4 mã `AUTH_*`, `SYNC_*`; §5.5 export/import với tombstone; thêm §5.9 Auth contract, §5.10 Sync protocol, §5.11 mock Supabase; §6 thư mục mới; §7 biến `VITE_SUPABASE_*`, `VITE_SYNC_INTERVAL_MS`, biến test DB, secrets Actions; §8 chiến lược test auth/sync (Fake, hai thiết bị, hợp đồng, migration, SQL/RLS, project E2E `cloud`); §9 lệnh `build:e2e`, `build:cloud-e2e`, `preview:cloud-e2e`, `mock:supabase`, `db:*`, `test:db`; §10 thêm 12 rủi ro; §11 ghi chú ADR-01/08/10/12, thêm ADR-17 … ADR-24. Không đổi contract M1–M5 ngoài hành vi xoá mềm/lọc tombstone ở repository (chữ ký giữ nguyên).
 - 2026-10-12 — v2.1 (mode `revise`, trả lời OQ-06 … OQ-09 sau Gate 1 phase 2). OQ-07 → đồng bộ nhắc nhở + ngôn ngữ: §3 thêm `data/dexie/prefs-repo.ts`; §4.1 thêm `PrefGroup`, `PrefsSyncState`, `RemotePrefs`, kv `prefsSync`; §4.2 migration đặt mốc tuỳ chọn (A-36), `replaceAll` đánh dấu nhóm reminder (A-37), `clearUserData` xoá `prefsSync`; §4.3 thêm bảng `settings` + trigger `settings_before_write` (LWW theo nhóm) + RLS + grant vào cùng file migration; §4.4 bảng đồng bộ viết lại + bảng quy tắc `resolvePrefGroup` + cách áp locale/reminder; §5.2 `SyncedPrefsRepository`; §5.3 `SettingsService`/`LocaleService` nhận `prefs` tuỳ chọn, `SyncService` nhận `prefs`; §5.10 `pushPrefs`/`pullPrefs` + bước 3b, gộp tài khoản đánh dấu tuỳ chọn; §5.11 mock `/rest/v1/settings`; §8 test tuỳ chọn + ghi chú không có Docker (OQ-08); §10 thêm 2 rủi ro; §11 ghi chú ADR-12, ADR-22, thêm ADR-25. OQ-06 (không giới hạn đăng nhập), OQ-09 (không nút xoá cloud): không đổi kiến trúc.
+- 2026-10-13 — v3.0 (mode `revise`, phase 3: định nghĩa mới đường cong "Bạn", FR-27 v3.0). §3 sửa mô tả `domain/curve.ts` (bỏ phụ thuộc `stats`); §4 gạch quy tắc 1.01^n, trỏ sang **§4.5** mới (ký hiệu, công thức, làm tròn `pct` nửa xa 0, phạm vi giá trị, contract `ActualPoint`/`CurveData`/`curveYDomain`, oracle dataset R1 dữ liệu thật của user + S1, yêu cầu hiển thị, formatter `f.factor`, thang Y tự co giãn theo cả hai series); §11 thêm ADR-26. Không đổi schema, sync, backup, route, mã lỗi.
