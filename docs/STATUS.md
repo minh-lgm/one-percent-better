@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-09 2026-10-10 (thư mục đã đổi tên thành one-percent-better; Final QC PASS r2 — HOÀN TẤT)
-**Next step:** user làm U0 (export backup trên bản Pages cũ) và U8 (GitHub Secrets VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY) → orchestrator push main → kiểm bản Pages (card Account, logo) → user U10 (NOT VERIFIED thật)
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-13 (phase 2 đã deploy lên Pages; chờ U10)
+**Next step:** user làm U10 (kiểm tay NV-1…NV-7 trên bản Pages đã deploy phase 2; mục (4) curl RLS đã PASS) → gửi kết quả để cập nhật STATUS
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -78,7 +78,7 @@
 
 ## Tổng kết phase 2 (2026-10-13)
 - M6 Auth (PASS r1), M7 Sync (PASS r2), M8 Login prompts (PASS r1), Final QC phase 2 PASS. Unit 1160, Playwright 568 (chromium + cloud mock), bundle 239,8 kB gzip. Logo product đã gắn (icon PWA, favicon, brand mark).
-- Chưa push/deploy: chờ user U0 (backup) + U8 (GitHub Secrets). NOT VERIFIED thật (U10): docs/qc/report-final-phase2.md §8. Backlog: §9 + bảng Backlog.
+- 2026-10-13: user xong U0 + U8 → push main (01283dc), workflow run 38332523929 success, Pages deploy phase 2. Kiểm trên bản deploy: bundle có cloud config, card Account + nút Sign in with Google hiện, logo (brand mark, favicon, icon PWA) 200, SW đăng ký, privacy.html 200, 0 lỗi console. U10 (4)(6-curl): anon select/insert `goals`/`entries`/`settings` → 42501 permission denied (RLS + grant đúng). Còn lại U10 (1)(2)(3)(5)(6) user kiểm tay: docs/qc/report-final-phase2.md §8. Backlog: §9 + bảng Backlog.
 
 ## Tổng kết phase 1 (2026-10-10)
 - 5 milestone + Final QC đều PASS. Unit 686, e2e 347, bundle 214,9 kB gzip (≤ 250). Chạy: `npm ci && npm run e2e:install && npm run check && npm run test:e2e`; dùng: `npm run build && npm run preview` → http://localhost:4173.
