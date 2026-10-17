@@ -8,7 +8,7 @@
 // down when a day has less than the previous logged day; not drawn at all before the first
 // logged day exists. The Y domain comes from `curveYScale` over the points on screen, with a
 // solid 0 % reference line (= the first logged day).
-import { useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { CartesianGrid, Line, LineChart, ReferenceDot, ReferenceLine, Tooltip, XAxis, YAxis, type TooltipContentProps } from 'recharts';
 import type { ActualPoint, IdealPoint } from '../../domain/curve';
 import { curveYScale, growthPercent } from '../../domain/curve';
@@ -47,6 +47,12 @@ const MAX_POINTS_WITH_DOTS = 45;
 const LABEL_CLEARANCE = 24;
 const LABEL_ABOVE_DY = -10;
 const LABEL_BELOW_DY = 14;
+/**
+ * M9-D1: when a mouse press elsewhere blurs the chart, the reading line must not vanish (and shift
+ * the layout) before that click lands. The line is cleared right after the next click, or after
+ * this delay when no click follows (Tab away). Keyboard behaviour (Escape clears at once) is unchanged.
+ */
+export const BLUR_CLEAR_DELAY_MS = 300;
 
 export default function CurveChart({ ideal, actual, label, testId }: CurveChartProps) {
   const { t } = useT();
@@ -56,6 +62,31 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
   const width = useElementWidth(wrap);
   const height = width < 520 ? 240 : 320;
   const [reading, setReading] = useState<number | null>(null);
+  const blurCleanup = useRef<(() => void) | null>(null);
+
+  const cancelPendingBlur = () => {
+    blurCleanup.current?.();
+    blurCleanup.current = null;
+  };
+  useEffect(() => cancelPendingBlur, []);
+
+  function onBlur() {
+    cancelPendingBlur();
+    const clear = () => {
+      cancelPendingBlur();
+      setReading(null);
+    };
+    // After the click has been dispatched (its default action, e.g. toggling <details>, has run).
+    const afterClick = () => {
+      window.setTimeout(clear, 0);
+    };
+    const timer = window.setTimeout(clear, BLUR_CLEAR_DELAY_MS);
+    document.addEventListener('click', afterClick, { once: true });
+    blurCleanup.current = () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('click', afterClick);
+    };
+  }
 
   // No baseline yet → no You line, no You label, Ideal-only tooltips (DESIGN A-D37).
   const hasYou = actual.some((p) => p.logged);
@@ -157,6 +188,7 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
     const target = next();
     if (target === undefined) return;
     e.preventDefault();
+    cancelPendingBlur();
     setReading(target);
   }
 
@@ -175,7 +207,8 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
         data-y-min={lo}
         data-y-max={hi}
         onKeyDown={onKeyDown}
-        onBlur={() => setReading(null)}
+        onBlur={onBlur}
+        onFocus={cancelPendingBlur}
       >
         <div aria-hidden="true">
           <LineChart width={width} height={height} data={data} margin={MARGIN} accessibilityLayer={false}>

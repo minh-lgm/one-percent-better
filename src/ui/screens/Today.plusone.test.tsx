@@ -235,3 +235,28 @@ describe('Today — M5-AC13 (entry order, pendingTimer), M3-D4, M5-AC6', () => {
     expect(await screen.findByRole('article', { name: 'Read' })).toBeInTheDocument();
   });
 });
+
+describe('M5-P1: the heading gets focus after the Stop dialog closes without relying on requestAnimationFrame (M10-AC8)', () => {
+  it('losing the Save race with a requestAnimationFrame that never fires → dialog closed, <h1> focused', async () => {
+    const original = window.requestAnimationFrame;
+    window.requestAnimationFrame = () => 0;
+    try {
+      const user = userEvent.setup();
+      await withReadGoal();
+      await renderApp({ route: '/today', container: tc });
+      const card = await screen.findByRole('article', { name: 'Read' });
+      await user.click(within(card).getByRole('button', { name: en.goalCard.startTimer }));
+      await screen.findByTestId('timer-card');
+      await user.click(screen.getByRole('button', { name: /^Stop timer for Read/ }));
+      const dialog = await screen.findByTestId('stop-dialog');
+      await tc!.container.db.kv.delete('activeTimer');
+      await waitFor(() => expect(screen.queryByTestId('timer-card')).toBeNull());
+      await user.click(within(dialog).getByRole('button', { name: en.entry.form.save }));
+      await waitFor(() => expect(screen.queryByTestId('stop-dialog')).toBeNull());
+      expect(await screen.findByRole('alert')).toHaveTextContent(en.errors.TIMER_NOT_RUNNING);
+      await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveFocus());
+    } finally {
+      window.requestAnimationFrame = original;
+    }
+  });
+});

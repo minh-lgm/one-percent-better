@@ -2,14 +2,14 @@
 // timer starts, so a cold transform cannot time out — F-D1). The screens mock it.
 // M5-AC2 superseded by M9-AC3 / M9-AC4 (FR-27 v3.0): "You" = minutes vs the previous logged
 // day, compounded; signed labels; Y scale from `curveYScale`; 0 % reference line.
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { curve } from '../../domain/curve';
 import { buildEntry, datasetR1, datasetR4, datasetS1, TODAY, TODAY_R1 } from '../../test/builders';
 import type { TestContainer } from '../../test/container';
 import { renderWithLocale, scanVi } from '../../test/render-with-locale';
-import CurveChart from './CurveChart';
+import CurveChart, { BLUR_CLEAR_DELAY_MS } from './CurveChart';
 
 let tc: TestContainer | undefined;
 
@@ -86,7 +86,8 @@ describe('CurveChart v3 (M9-AC3, DESIGN S4 "Biểu đồ v3")', () => {
     await user.keyboard('{ArrowRight}');
     expect(reading).toHaveTextContent(/^Oct 13 · 27 min/);
     await user.tab();
-    expect(reading).toHaveTextContent('');
+    // M10 (M9-D1): the line is cleared shortly after blur (after the click that caused it, or ≤ 300 ms), no longer synchronously.
+    await waitFor(() => expect(reading).toHaveTextContent(''));
   });
 
   it('S1 Read: flat today reads "Nothing logged, the line stays flat"; G2 "So far": negative tick and a domain below −50', async () => {
@@ -205,5 +206,49 @@ describe('CurveChart v3 (M9-AC3, DESIGN S4 "Biểu đồ v3")', () => {
     await waitFor(() => expect(chart2.textContent).toContain(`Bạn ${MINUS}40,0%`));
     expect(yTicks(chart2).some((v) => v.startsWith(MINUS))).toBe(true);
     expect(scanVi()).toEqual([]);
+  });
+});
+
+describe('M9-D1: the reading line survives the mouse press that blurs the chart (M10-AC8)', () => {
+  it('blur keeps the reading until the click that caused it has been dispatched, then clears it', async () => {
+    const user = userEvent.setup();
+    const r = await renderWithLocale(<CurveChart ideal={real.ideal} actual={real.actual} label={LABEL_R1} testId="curve-chart" />);
+    tc = r.tc;
+    const chart = screen.getByTestId('curve-chart');
+    const reading = screen.getByTestId('curve-reading');
+    chart.focus();
+    await user.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(reading).toHaveTextContent(/^Oct 12 · 14 min/);
+    // mousedown on a <summary> elsewhere blurs the chart first…
+    fireEvent.blur(chart);
+    expect(reading).toHaveTextContent(/^Oct 12 · 14 min/);
+    // …then the click arrives; only after it is dispatched does the line go.
+    fireEvent.click(document.body);
+    expect(reading).toHaveTextContent(/^Oct 12 · 14 min/);
+    await waitFor(() => expect(reading).toHaveTextContent(''));
+  });
+
+  it('blur without any click (Tab away) clears the reading within the fallback delay; refocus + arrow cancels a pending clear', async () => {
+    const user = userEvent.setup();
+    const r = await renderWithLocale(<CurveChart ideal={real.ideal} actual={real.actual} label={LABEL_R1} testId="curve-chart" />);
+    tc = r.tc;
+    const chart = screen.getByTestId('curve-chart');
+    const reading = screen.getByTestId('curve-reading');
+    chart.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(reading).toHaveTextContent(/^Oct 13/);
+    const started = Date.now();
+    fireEvent.blur(chart);
+    await waitFor(() => expect(reading).toHaveTextContent(''), { timeout: 1000 });
+    expect(Date.now() - started).toBeLessThan(1000);
+
+    chart.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(reading).toHaveTextContent(/^Oct 13/);
+    fireEvent.blur(chart);
+    chart.focus();
+    await user.keyboard('{ArrowLeft}');
+    await new Promise((resolve) => setTimeout(resolve, BLUR_CLEAR_DELAY_MS + 50));
+    expect(reading).toHaveTextContent(/^Oct 12/);
   });
 });

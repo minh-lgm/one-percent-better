@@ -46,8 +46,6 @@ interface PlusOneFeedback {
   seq: number;
 }
 
-const focusHeading = () => requestAnimationFrame(() => document.querySelector<HTMLElement>('main h1')?.focus());
-
 export function Today() {
   const { t } = useT();
   const f = useFormat();
@@ -74,6 +72,16 @@ export function Today() {
   const loadError = goals.error || entries.error || timer.error || settings.error;
   const showSkeleton = useDelayed(loading);
   const [stop, setStop] = useState<StopState | null>(null);
+  // M5-P1: focus the page heading from an effect that runs once the Stop dialog is really gone
+  // (the dialog's own close effect runs first, as a child), instead of a requestAnimationFrame
+  // that a background tab may never get.
+  const [headingFocusPending, setHeadingFocusPending] = useState(false);
+  useEffect(() => {
+    if (!headingFocusPending || stop !== null) return;
+    setHeadingFocusPending(false);
+    document.querySelector<HTMLElement>('main h1')?.focus();
+  }, [headingFocusPending, stop]);
+  const focusHeading = () => setHeadingFocusPending(true);
   // Timer error that ended the Stop dialog (M3-D4): shown as an alert on the page until the next timer action.
   const [timerAlert, setTimerAlert] = useState<Extract<ErrorCode, 'TIMER_NOT_RUNNING' | 'GOAL_NOT_FOUND'> | null>(null);
   // Timer returned by a successful `start`, shown until the live query catches up (M2-D4).
