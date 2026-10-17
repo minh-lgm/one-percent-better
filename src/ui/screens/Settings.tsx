@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
 import { IMPORT_MAX_BYTES } from '../../config/constants';
-import { BACKUP_MIME_TYPE, backupReminder } from '../../domain/backup';
+import { BACKUP_MIME_TYPE, backupReminder } from '../../domain/backup-file';
 import { toISODate } from '../../domain/dates';
 import { buildReminderIcs, ICS_FILE_NAME } from '../../domain/ics';
 import type { NotificationPermissionState } from '../../domain/reminder';
@@ -170,7 +170,7 @@ export function Settings() {
     try {
       // `parse` rejects by size before looking at the text; do not even read huge files.
       const text = file.size > IMPORT_MAX_BYTES ? '' : await readTextFile(file);
-      const parsed = backupService.parse(text, file.size, toISODate(new Date()));
+      const parsed = await backupService.parse(text, file.size, toISODate(new Date()));
       if (!parsed.ok) {
         setImportError(parsed.errors[0] ?? 'read');
         return;

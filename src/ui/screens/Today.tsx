@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { TOAST_DURATION_MS } from '../../config/constants';
-import { backupReminder } from '../../domain/backup';
+import { backupReminder } from '../../domain/backup-file';
 import { addDays, toISODate } from '../../domain/dates';
 import { minutesByGoal } from '../../domain/entry';
 import { activeGoals, byCreatedAt, dailyTarget } from '../../domain/goal';

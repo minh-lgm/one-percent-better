@@ -1,48 +1,20 @@
 // Backup file format, schemaVersion 1 (ARCHITECTURE §5.5; FR-19, FR-20, FR-21, NFR-04, NFR-05).
 // Pure: parsing and validation only. The file is untrusted input: size limit,
 // JSON.parse in try/catch, strict zod schema, referential integrity. No eval.
+// v3.1 (ADR-27): this is one of the two zod boundaries and is loaded lazily (Import only).
 import { z } from 'zod';
+import { BACKUP_APP, BACKUP_SCHEMA_VERSION, type BackupFile } from './backup-file';
 import { DAILY_MINUTES_MAX, DAILY_MINUTES_MIN, DAY_MINUTES_LIMIT, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX, GOAL_NAME_MAX, GOAL_WHY_MAX, ID_MAX, IMPORT_MAX_BYTES, PERIOD_DAYS_MAX, TOTAL_HOURS_MAX, TOTAL_HOURS_MIN } from '../config/constants';
 import { daysInclusive, isValidISODate, isWithin } from './dates';
 import { dailyTarget } from './goal';
 import { isValidReminderTime } from './reminder';
-import { fail, ok, type DomainError, type Goal, type ISODate, type ISODateTime, type LogEntry, type Result, type Settings } from './types';
+import { fail, ok, type DomainError, type Goal, type ISODate, type LogEntry, type Result, type Settings } from './types';
 
-export const BACKUP_APP = 'one-percent-better';
-export const BACKUP_SCHEMA_VERSION = 1;
-export const BACKUP_MIME_TYPE = 'application/json;charset=utf-8';
-/** Days without a backup after which the app nags (A-12). */
-export const BACKUP_REMINDER_DAYS = 30;
-
-/** What goes into / comes out of the database. Structurally equal to `BackupData` in the data layer. */
-export interface BackupContent {
-  goals: Goal[];
-  entries: LogEntry[];
-  settings: Settings;
-}
-
-export interface BackupFile extends BackupContent {
-  app: typeof BACKUP_APP;
-  schemaVersion: typeof BACKUP_SCHEMA_VERSION;
-  exportedAt: ISODateTime;
-}
-
-/** `1percent-better-backup-YYYY-MM-DD.json` (local export date). */
-export function backupFileName(today: ISODate): string {
-  return `1percent-better-backup-${today}.json`;
-}
-
-/** Build the export object. `Settings` never contains `locale` (ADR-12), so nothing has to be stripped. */
-export function buildBackup(content: BackupContent, exportedAt: Date): BackupFile {
-  return {
-    app: BACKUP_APP,
-    schemaVersion: BACKUP_SCHEMA_VERSION,
-    exportedAt: exportedAt.toISOString(),
-    goals: content.goals,
-    entries: content.entries,
-    settings: content.settings,
-  };
-}
+// The schema-free part (constants, types, `buildBackup`, `backupReminder`) lives in `./backup-file.ts`
+// and is re-exported here so older imports keep working (ADR-27). Application code must not import
+// this module statically (ESLint): `BackupService.parse` loads it with `import()`.
+export { BACKUP_APP, BACKUP_MIME_TYPE, BACKUP_REMINDER_DAYS, BACKUP_SCHEMA_VERSION, backupFileName, backupReminder, buildBackup } from './backup-file';
+export type { BackupContent, BackupFile, BackupReminder } from './backup-file';
 
 const isoDate = z.string().refine(isValidISODate, 'YYYY-MM-DD');
 const isoDateTime = z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'ISO date-time');
@@ -194,19 +166,4 @@ export function checkIntegrity(goals: readonly Goal[], entries: readonly LogEntr
     perDay.set(key, total);
   }
   return null;
-}
-
-export type BackupReminder = { kind: 'never' } | { kind: 'old'; days: number };
-
-/**
- * Backup nag (FR-21, A-12): shown when there is at least one goal and the user
- * never exported, or the last export is more than 30 days old.
- */
-export function backupReminder(lastBackupAt: ISODateTime | null, goalCount: number, now: Date): BackupReminder | null {
-  if (goalCount <= 0) return null;
-  if (!lastBackupAt) return { kind: 'never' };
-  const last = Date.parse(lastBackupAt);
-  if (Number.isNaN(last)) return { kind: 'never' };
-  const days = Math.floor((now.getTime() - last) / 86_400_000);
-  return days > BACKUP_REMINDER_DAYS ? { kind: 'old', days } : null;
 }

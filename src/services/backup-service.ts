@@ -1,10 +1,18 @@
+import { IMPORT_MAX_BYTES } from '../config/constants';
 import type { BackupRepository } from '../data/repositories';
-import { backupFileName, buildBackup, parseBackup, type BackupFile } from '../domain/backup';
+import { backupFileName, buildBackup, type BackupFile } from '../domain/backup-file';
 import { toISODate } from '../domain/dates';
 import { normalizeSettings } from '../domain/settings';
 import { nextUpdatedAt } from '../domain/sync';
-import { ok, type ISODate, type ISODateTime, type Result } from '../domain/types';
+import { fail, ok, type ISODate, type ISODateTime, type Result } from '../domain/types';
 import type { SettingsService } from './settings-service';
+
+/** The lazily loaded schema module (zod lives there, ADR-27). Tests inject a counting stub. */
+export type BackupSchemaModule = Pick<typeof import('../domain/backup'), 'parseBackup'>;
+export type BackupSchemaLoader = () => Promise<BackupSchemaModule>;
+
+/** Default loader: the only place the app pulls `domain/backup.ts` (and zod) in, on the first Import. */
+const loadBackupSchema: BackupSchemaLoader = () => import('../domain/backup');
 
 export interface BackupExport {
   fileName: string;
@@ -31,7 +39,22 @@ export class BackupService {
     private readonly settings: SettingsService,
     /** v2.0 (FR-51, A-29): when signed in, imported rows are stamped "now" so they replace the account's copy. */
     private readonly isSignedIn: () => boolean = () => false,
+    /** v3.1 (ADR-27): how the schema module is loaded; memoised after the first success. */
+    private readonly loadSchema: BackupSchemaLoader = loadBackupSchema,
   ) {}
+
+  private schema: Promise<BackupSchemaModule> | null = null;
+
+  /** `import()` once; a failed load (offline, chunk not cached) is retried on the next call. */
+  private getSchema(): Promise<BackupSchemaModule> {
+    if (!this.schema) {
+      this.schema = this.loadSchema().catch((e: unknown) => {
+        this.schema = null;
+        throw e;
+      });
+    }
+    return this.schema;
+  }
 
   /** Serialise everything and remember `lastBackupAt = now` (also inside the file). */
   async export(now: Date): Promise<BackupExport> {
@@ -45,8 +68,15 @@ export class BackupService {
   /**
    * Validate an uploaded file (size, JSON, schema, version, integrity) without
    * touching the database. `today` rejects entries dated in the future (M3-D3).
+   * v3.1 (ADR-27): async — the size check runs first (an oversized file never loads the
+   * schema chunk), then `domain/backup.ts` is imported once. A failed import rejects
+   * (the UI shows its generic read error).
    */
-  parse(text: string, sizeBytes: number, today?: ISODate): Result<BackupPreview> {
+  async parse(text: string, sizeBytes: number, today?: ISODate): Promise<Result<BackupPreview>> {
+    if (sizeBytes > IMPORT_MAX_BYTES) {
+      return fail({ code: 'IMPORT_FILE_TOO_LARGE', message: `file is ${sizeBytes} bytes, limit ${IMPORT_MAX_BYTES}` });
+    }
+    const { parseBackup } = await this.getSchema();
     const parsed = parseBackup(text, sizeBytes, today);
     if (!parsed.ok) return parsed;
     return ok({ goals: parsed.value.goals.length, entries: parsed.value.entries.length, exportedAt: parsed.value.exportedAt, file: parsed.value });

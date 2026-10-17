@@ -2,7 +2,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { buildBackup } from '../../domain/backup';
+import { buildBackup } from '../../domain/backup-file';
 import { DEFAULT_SETTINGS } from '../../domain/types';
 import en from '../../i18n/resources/en.json';
 import vi from '../../i18n/resources/vi.json';

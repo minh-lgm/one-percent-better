@@ -6,7 +6,7 @@ import { DexieKvRepository } from '../data/dexie/kv-repo';
 import { DEFAULT_SETTINGS } from '../domain/types';
 import { buildEntry, buildGoal, datasetS1, FIXED_NOW } from '../test/builders';
 import { createTestDatabase } from '../test/db';
-import { BackupService } from './backup-service';
+import { BackupService, type BackupSchemaModule } from './backup-service';
 import { SettingsService } from './settings-service';
 
 let db: AppDatabase;
@@ -63,7 +63,7 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
     await openDatabase(db2);
     try {
       const other = wire(db2);
-      const preview = other.service.parse(json, json.length);
+      const preview = await other.service.parse(json, json.length);
       expect(preview.ok).toBe(true);
       if (!preview.ok) return;
       expect(preview.value).toMatchObject({ goals: 5, entries: 23, exportedAt: FIXED_NOW.toISOString() });
@@ -94,7 +94,7 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
       entries: s1.entries,
       settings: { reminderEnabled: true, reminderTime: '07:30', lastReminderDate: '2026-10-09', lastBackupAt: '2026-10-01T00:00:00.000Z' },
     });
-    const preview = service.parse(json, json.length);
+    const preview = await service.parse(json, json.length);
     expect(preview.ok).toBe(true);
     if (!preview.ok) return;
     expect(await service.counts()).toEqual({ goals: 1, entries: 1 });
@@ -125,7 +125,7 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
       ['IMPORT_INTEGRITY', JSON.stringify({ ...base, entries: [buildEntry({ id: 'o', goalId: 'g1', date: '2026-09-30' })] })],
     ];
     for (const [code, text, size] of cases) {
-      const r = service.parse(text, size ?? text.length);
+      const r = await service.parse(text, size ?? text.length);
       expect(r.ok, code).toBe(false);
       if (!r.ok) expect(r.errors[0].code).toBe(code);
     }
@@ -141,7 +141,7 @@ describe('BackupService.import when signed in (M7-AC11, FR-51, A-29)', () => {
     const s1 = datasetS1();
     const future = { ...s1.goals[0], updatedAt: '2026-10-09T05:00:00.000Z' };
     const json = JSON.stringify({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals: [future, ...s1.goals.slice(1)], entries: s1.entries, settings: {} });
-    const preview = service2.parse(json, json.length);
+    const preview = await service2.parse(json, json.length);
     if (!preview.ok) throw new Error('setup');
     await service2.import(preview.value, FIXED_NOW);
     const rows = await db.goals.toArray();
@@ -151,9 +151,51 @@ describe('BackupService.import when signed in (M7-AC11, FR-51, A-29)', () => {
     for (const g of rows) expect(g.dirty).toBe(1);
 
     signedIn.value = false;
-    const again = service2.parse(JSON.stringify({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals: s1.goals, entries: s1.entries, settings: {} }), 10);
+    const again = await service2.parse(JSON.stringify({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals: s1.goals, entries: s1.entries, settings: {} }), 10);
     if (!again.ok) throw new Error('setup');
     await service2.import(again.value, new Date('2026-10-09T06:00:00.000Z'));
     expect((await db.goals.get('g1'))?.updatedAt).toBe(s1.goals[0].updatedAt);
+  });
+});
+
+describe('BackupService.parse loads the schema lazily (M10-AC3, ADR-27)', () => {
+  function counting() {
+    const calls = { n: 0 };
+    const loader = async (): Promise<BackupSchemaModule> => {
+      calls.n += 1;
+      return import('../domain/backup');
+    };
+    return { calls, service: new BackupService(new DexieBackupRepository(db), settings, () => false, loader) };
+  }
+
+  it('returns a Promise; an oversized file is rejected before the schema module is loaded', async () => {
+    const { calls, service: svc } = counting();
+    const p = svc.parse('{}', IMPORT_MAX_BYTES + 1);
+    expect(p).toBeInstanceOf(Promise);
+    const r = await p;
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors[0].code).toBe('IMPORT_FILE_TOO_LARGE');
+    expect(calls.n).toBe(0);
+  });
+
+  it('two parses load the module once; a failed load is retried on the next parse', async () => {
+    const { calls, service: svc } = counting();
+    const s1 = datasetS1();
+    const json = JSON.stringify({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals: s1.goals, entries: s1.entries, settings: {} });
+    expect((await svc.parse(json, json.length)).ok).toBe(true);
+    expect((await svc.parse(json, json.length)).ok).toBe(true);
+    expect(calls.n).toBe(1);
+
+    let fail = true;
+    const flaky = { n: 0 };
+    const svc2 = new BackupService(new DexieBackupRepository(db), settings, () => false, async () => {
+      flaky.n += 1;
+      if (fail) throw new TypeError('Failed to fetch dynamically imported module');
+      return import('../domain/backup');
+    });
+    await expect(svc2.parse(json, json.length)).rejects.toThrow('dynamically imported');
+    fail = false;
+    expect((await svc2.parse(json, json.length)).ok).toBe(true);
+    expect(flaky.n).toBe(2);
   });
 });

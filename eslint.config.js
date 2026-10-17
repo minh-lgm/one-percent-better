@@ -8,12 +8,12 @@ import globals from 'globals';
 
 const TEST_FILES = ['**/*.test.ts', '**/*.test.tsx'];
 
-/** Build a `no-restricted-imports` rule from regex patterns. */
+/** Build a `no-restricted-imports` rule from regex patterns (`[regex, message, extra?]`). */
 const restrictImports = (entries) => ({
   'no-restricted-imports': [
     'error',
     {
-      patterns: entries.map(([regex, message]) => ({ regex, message })),
+      patterns: entries.map(([regex, message, extra]) => ({ regex, message, ...(extra ?? {}) })),
     },
   ],
 });
@@ -28,6 +28,22 @@ const dir = (names) => `(^|/)(${names.join('|')})(/|$)`;
 const SUPABASE_RULES = [
   [pkg(['@supabase']), '@supabase/* may only be imported in src/integration/supabase/** (ARCH §3, ADR-18).'],
   ['(^|/)supabase-client(\\.[cm]?[jt]sx?)?$', 'Do not import supabase-client statically: use integration/supabase/loader (ADR-18, keeps the SDK out of the entry chunk).'],
+];
+
+// ARCHITECTURE §3 (v3.1, ADR-27): zod stays on the two lazy boundaries only; everything else validates in plain TS.
+const ZOD_RULE = [pkg(['zod']), 'zod is only allowed in src/domain/backup.ts and src/integration/supabase/** (ADR-27: keep it off the cold-load path).'];
+// ADR-27: `domain/backup.ts` (the zod schema) is reached only through the `import()` in BackupService.parse;
+// a static value import anywhere in the app would drag zod into the entry chunk. `import type` is fine.
+const BACKUP_STATIC_RULE = [
+  '(^|/)backup(\\.[cm]?[jt]sx?)?$',
+  'Do not import domain/backup statically: use domain/backup-file (types/constants) or BackupService.parse (ADR-27).',
+  { allowTypeImports: true },
+];
+const BOUNDARY_RULES = [ZOD_RULE, ...SUPABASE_RULES];
+
+const DOMAIN_RULES = [
+  [pkg(['react', 'react-dom', 'dexie', 'recharts', 'i18next', 'react-i18next']), 'Domain must stay pure (ARCH §3).'],
+  [dir(['data', 'services', 'integration', 'ui', 'app', 'i18n']), 'Domain must not import other app layers (ARCH §3).'],
 ];
 
 // M6-P1: `import('@supabase/…')` / `import('…/supabase-client')` must not appear outside the integration folder either.
@@ -109,6 +125,19 @@ export default tseslint.config(
     rules: restrictImports(SUPABASE_RULES),
   },
   {
+    // zod containment (ADR-27): every app file except the two lazy boundaries (tests included, so a
+    // test cannot smuggle zod into a helper that production code imports).
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/integration/supabase/**', 'src/domain/backup.ts'],
+    rules: restrictImports(BOUNDARY_RULES),
+  },
+  {
+    // Static `domain/backup` containment (ADR-27): app layers use `domain/backup-file`; tests may import the schema directly.
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: [...TEST_FILES, 'src/domain/backup.ts', 'src/integration/supabase/**'],
+    rules: restrictImports([...BOUNDARY_RULES, BACKUP_STATIC_RULE]),
+  },
+  {
     // Non-JSX files: only the dynamic-import rule (the .tsx configs below restate it next to the text rules).
     files: ['src/**/*.ts', 'e2e/**/*.ts', 'tests/**/*.ts'],
     ignores: ['src/integration/supabase/**', 'tests/db/**'],
@@ -120,12 +149,13 @@ export default tseslint.config(
     // Domain: pure. No React, no Dexie, no i18n, no other app layers.
     // (Domain *tests* may read the translation resources to check real copy.)
     files: ['src/domain/**/*.ts'],
-    ignores: TEST_FILES,
-    rules: restrictImports([
-      [pkg(['react', 'react-dom', 'dexie', 'recharts', 'i18next', 'react-i18next']), 'Domain must stay pure (ARCH §3).'],
-      [dir(['data', 'services', 'integration', 'ui', 'app', 'i18n']), 'Domain must not import other app layers (ARCH §3).'],
-      ...SUPABASE_RULES,
-    ]),
+    ignores: [...TEST_FILES, 'src/domain/backup.ts'],
+    rules: restrictImports([...DOMAIN_RULES, ...BOUNDARY_RULES, BACKUP_STATIC_RULE]),
+  },
+  {
+    // The zod boundary of the domain: same purity rules, zod allowed (ADR-27).
+    files: ['src/domain/backup.ts'],
+    rules: restrictImports([...DOMAIN_RULES, ...SUPABASE_RULES]),
   },
   {
     // Services: only repository interfaces, domain, i18n types/detect/format. Integrations injected.
@@ -137,7 +167,8 @@ export default tseslint.config(
       [dir(['ui', 'app']), 'Services must not import UI (ARCH §3).'],
       [dir(['integration']), 'Services receive integrations through the constructor/factory; do not import src/integration (ARCH §3).'],
       ['(^|/)i18n/(instance|resources)(/|$|\\.)', 'Services receive a Translator; do not import the i18n instance/resources (ARCH §3).'],
-      ...SUPABASE_RULES,
+      ...BOUNDARY_RULES,
+      BACKUP_STATIC_RULE,
     ]),
   },
   {
@@ -147,7 +178,8 @@ export default tseslint.config(
     rules: restrictImports([
       [pkg(['dexie', 'i18next']), 'UI must not import Dexie or i18next directly (ARCH §3).'],
       [dir(['dexie']), 'UI must not import the Dexie implementation (ARCH §3).'],
-      ...SUPABASE_RULES,
+      ...BOUNDARY_RULES,
+      BACKUP_STATIC_RULE,
     ]),
   },
   {
@@ -156,7 +188,8 @@ export default tseslint.config(
     rules: restrictImports([
       [pkg(['react', 'react-dom', 'react-i18next']), 'i18n must not import React (ARCH §3).'],
       [dir(['ui', 'services', 'data', 'app', 'integration']), 'i18n must not import other app layers (ARCH §3).'],
-      ...SUPABASE_RULES,
+      ...BOUNDARY_RULES,
+      BACKUP_STATIC_RULE,
     ]),
   },
 

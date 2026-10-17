@@ -1,6 +1,6 @@
-import { z } from 'zod';
 import { DAY_MINUTES_LIMIT, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX } from '../config/constants';
 import { isWithin } from './dates';
+import { isIntInRange } from './goal';
 import { fail, ok, type DomainError, type Goal, type ISODate, type LogEntry, type Result } from './types';
 
 export interface EntryFieldsInput {
@@ -13,18 +13,16 @@ export interface EntryFields {
   note: string;
 }
 
-const minutesSchema = z.number().int().min(ENTRY_MINUTES_MIN).max(ENTRY_MINUTES_MAX);
-const noteSchema = z.string().trim().max(ENTRY_NOTE_MAX);
-
-/** Validate minutes and note (FR-07). */
+/** Validate minutes and note (FR-07). Plain checks (v3.1, ADR-27): integer 1–1440, trimmed note ≤ 280. */
 export function validateEntryFields(input: EntryFieldsInput): Result<EntryFields> {
   const errors: DomainError[] = [];
-  const minutes = minutesSchema.safeParse(input.minutes);
-  if (!minutes.success) errors.push({ code: 'ENTRY_MINUTES_INVALID', field: 'minutes', message: 'minutes must be an integer 1–1440' });
-  const note = noteSchema.safeParse(input.note ?? '');
-  if (!note.success) errors.push({ code: 'ENTRY_NOTE_TOO_LONG', field: 'note', message: `note longer than ${ENTRY_NOTE_MAX}` });
+  const minutesOk = isIntInRange(input.minutes, ENTRY_MINUTES_MIN, ENTRY_MINUTES_MAX);
+  if (!minutesOk) errors.push({ code: 'ENTRY_MINUTES_INVALID', field: 'minutes', message: 'minutes must be an integer 1–1440' });
+  const note = typeof input.note === 'string' ? input.note.trim() : '';
+  const noteOk = note.length <= ENTRY_NOTE_MAX;
+  if (!noteOk) errors.push({ code: 'ENTRY_NOTE_TOO_LONG', field: 'note', message: `note longer than ${ENTRY_NOTE_MAX}` });
   if (errors.length > 0) return fail(errors);
-  return ok({ minutes: minutes.success ? minutes.data : 0, note: note.success ? note.data : '' });
+  return ok({ minutes: minutesOk ? input.minutes : 0, note: noteOk ? note : '' });
 }
 
 /** Date rules: not in the future, inside the goal period (FR-07, FR-17). */

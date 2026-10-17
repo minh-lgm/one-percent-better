@@ -1,4 +1,4 @@
-import type { BackupReminder } from '../../domain/backup';
+import type { BackupReminder } from '../../domain/backup-file';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../hooks/useT';
 import { LinkButton } from './Button';

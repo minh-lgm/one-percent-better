@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import {
   DAILY_MINUTES_MAX,
   DAILY_MINUTES_MIN,
@@ -31,10 +30,15 @@ export interface GoalFields {
   endDate: ISODate;
 }
 
-const nameSchema = z.string().trim().min(1).max(GOAL_NAME_MAX);
-const whySchema = z.string().trim().max(GOAL_WHY_MAX);
-const dailySchema = z.number().int().min(DAILY_MINUTES_MIN).max(DAILY_MINUTES_MAX);
-const totalHoursSchema = z.number().int().min(TOTAL_HOURS_MIN).max(TOTAL_HOURS_MAX);
+/** Integer in `[min, max]` (v3.1, ADR-27: plain check, no zod on the cold-load path). `NaN`/non-number → `false`. */
+export function isIntInRange(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+}
+
+/** `string | undefined` → trimmed text (non-strings count as empty, as the old schema did). */
+function trimmed(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
 
 export function periodDays(goal: Pick<Goal, 'startDate' | 'endDate'>): number {
   return daysInclusive(goal.startDate, goal.endDate);
@@ -59,35 +63,34 @@ export function goalStatus(goal: Pick<Goal, 'archived' | 'startDate' | 'endDate'
 export function validateGoalInput(input: GoalInput): Result<GoalFields> {
   const errors: DomainError[] = [];
 
-  const name = nameSchema.safeParse(input.name ?? '');
-  if (!name.success) {
-    const issue = name.error.issues[0];
+  const name = trimmed(input.name);
+  const nameOk = name.length >= 1 && name.length <= GOAL_NAME_MAX;
+  if (!nameOk) {
     errors.push(
-      issue?.code === 'too_big'
+      name.length > GOAL_NAME_MAX
         ? { code: 'GOAL_NAME_TOO_LONG', field: 'name', message: `name longer than ${GOAL_NAME_MAX}` }
         : { code: 'GOAL_NAME_REQUIRED', field: 'name', message: 'name is required' },
     );
   }
 
-  const why = whySchema.safeParse(input.why ?? '');
-  if (!why.success) {
+  const why = trimmed(input.why);
+  const whyOk = why.length <= GOAL_WHY_MAX;
+  if (!whyOk) {
     errors.push({ code: 'GOAL_WHY_TOO_LONG', field: 'why', message: `why longer than ${GOAL_WHY_MAX}` });
   }
 
   let targetMinutes = 0;
   let targetOk = false;
   if (input.targetType === 'daily') {
-    const r = dailySchema.safeParse(input.targetValue);
-    if (r.success) {
-      targetMinutes = r.data;
+    if (isIntInRange(input.targetValue, DAILY_MINUTES_MIN, DAILY_MINUTES_MAX)) {
+      targetMinutes = input.targetValue;
       targetOk = true;
     } else {
       errors.push({ code: 'GOAL_TARGET_INVALID', field: 'target', message: 'daily minutes out of range', params: { variant: 'daily' } });
     }
   } else {
-    const r = totalHoursSchema.safeParse(input.targetValue);
-    if (r.success) {
-      targetMinutes = r.data * 60;
+    if (isIntInRange(input.targetValue, TOTAL_HOURS_MIN, TOTAL_HOURS_MAX)) {
+      targetMinutes = input.targetValue * 60;
       targetOk = true;
     } else {
       errors.push({ code: 'GOAL_TARGET_INVALID', field: 'target', message: 'total hours out of range', params: { variant: 'total' } });
@@ -119,8 +122,8 @@ export function validateGoalInput(input: GoalInput): Result<GoalFields> {
 
   if (errors.length > 0) return fail(errors);
   return ok({
-    name: name.success ? name.data : '',
-    why: why.success ? why.data : '',
+    name: nameOk ? name : '',
+    why: whyOk ? why : '',
     targetType: input.targetType,
     targetMinutes,
     startDate: input.startDate,

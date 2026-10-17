@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi as vitest } from 'vitest';
 import { IMPORT_MAX_BYTES } from '../../config/constants';
-import { buildBackup } from '../../domain/backup';
+import { buildBackup } from '../../domain/backup-file';
 import { DEFAULT_SETTINGS } from '../../domain/types';
 import en from '../../i18n/resources/en.json';
 import vi from '../../i18n/resources/vi.json';
@@ -172,7 +172,7 @@ describe('Settings — Backup card (M3-AC6, AC8, AC9, AC10, AC13)', () => {
 
     const codes = ['IMPORT_FILE_TOO_LARGE', 'IMPORT_INVALID_JSON', 'IMPORT_INVALID_SCHEMA', 'IMPORT_UNSUPPORTED_VERSION', 'IMPORT_INTEGRITY'] as const;
     for (const code of codes) {
-      vitest.spyOn(tc!.container.backupService, 'parse').mockReturnValueOnce({ ok: false, errors: [{ code, message: '', params: { v: '2' } }] });
+      vitest.spyOn(tc!.container.backupService, 'parse').mockResolvedValueOnce({ ok: false, errors: [{ code, message: '', params: { v: '2' } }] });
       await user.upload(input, jsonFile('{}'));
       const expected = code === 'IMPORT_UNSUPPORTED_VERSION' ? vi.errors.IMPORT_UNSUPPORTED_VERSION.replace('{{v}}', '2') : vi.errors[code];
       await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(expected));

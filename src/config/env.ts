@@ -1,30 +1,22 @@
-import { z } from 'zod';
-
+// Runtime configuration (ARCHITECTURE §7). Plain TypeScript checks (v3.1, ADR-27): zod must not be
+// on the cold-load path, and the rules here are only "non-empty slug" and "integer in a range".
 const DEFAULT_DB_NAME = 'one-percent-better';
 const DEFAULT_REMINDER_INTERVAL_MS = 60_000;
 const DEFAULT_SYNC_INTERVAL_MS = 300_000;
 
-const envSchema = z.object({
-  VITE_DB_NAME: z
-    .string()
-    .trim()
-    .min(1)
-    .max(100)
-    .regex(/^[A-Za-z0-9_-]+$/)
-    .catch(DEFAULT_DB_NAME),
-  VITE_REMINDER_CHECK_INTERVAL_MS: z.coerce
-    .number()
-    .int()
-    .min(1000)
-    .max(3_600_000)
-    .catch(DEFAULT_REMINDER_INTERVAL_MS),
-  VITE_SYNC_INTERVAL_MS: z.coerce
-    .number()
-    .int()
-    .min(60_000)
-    .max(3_600_000)
-    .catch(DEFAULT_SYNC_INTERVAL_MS),
-});
+/** Trimmed `[A-Za-z0-9_-]{1,100}`; anything else → the default. */
+function parseDbName(raw: unknown): string {
+  if (typeof raw !== 'string') return DEFAULT_DB_NAME;
+  const text = raw.trim();
+  return text.length >= 1 && text.length <= 100 && /^[A-Za-z0-9_-]+$/.test(text) ? text : DEFAULT_DB_NAME;
+}
+
+/** Coerce like `Number(raw)` (strings from `.env`), then require an integer in `[min, max]`; else the fallback. */
+function parseIntInRange(raw: unknown, min: number, max: number, fallback: number): number {
+  if (raw === undefined || raw === null || typeof raw === 'object' || typeof raw === 'symbol' || typeof raw === 'function') return fallback;
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  return Number.isInteger(n) && n >= min && n <= max ? n : fallback;
+}
 
 /** Cloud (Supabase) configuration. `null` = cloud features are off (FR-38). */
 export interface CloudConfig {
@@ -86,15 +78,10 @@ export function parseCloud(raw: Record<string, unknown>): CloudConfig | null {
  * so the app always starts (ARCHITECTURE §7: no variable is required).
  */
 export function parseEnv(raw: Record<string, unknown> = {}): AppEnv {
-  const parsed = envSchema.parse({
-    VITE_DB_NAME: raw.VITE_DB_NAME ?? undefined,
-    VITE_REMINDER_CHECK_INTERVAL_MS: raw.VITE_REMINDER_CHECK_INTERVAL_MS ?? undefined,
-    VITE_SYNC_INTERVAL_MS: raw.VITE_SYNC_INTERVAL_MS ?? undefined,
-  });
   return {
-    dbName: parsed.VITE_DB_NAME,
-    reminderCheckIntervalMs: parsed.VITE_REMINDER_CHECK_INTERVAL_MS,
-    syncIntervalMs: parsed.VITE_SYNC_INTERVAL_MS,
+    dbName: parseDbName(raw.VITE_DB_NAME),
+    reminderCheckIntervalMs: parseIntInRange(raw.VITE_REMINDER_CHECK_INTERVAL_MS, 1000, 3_600_000, DEFAULT_REMINDER_INTERVAL_MS),
+    syncIntervalMs: parseIntInRange(raw.VITE_SYNC_INTERVAL_MS, 60_000, 3_600_000, DEFAULT_SYNC_INTERVAL_MS),
     cloud: parseCloud(raw),
   };
 }
