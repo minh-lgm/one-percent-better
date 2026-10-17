@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-17 (phase 3 M9 PASS QC; chờ user duyệt push/deploy)
-**Next step:** user duyệt push `main` → Pages deploy → user xem Goal detail thật (OQ-D16 câu headline âm) → backlog F2-R1 (bundle sát ngưỡng) trước tính năng kế tiếp
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-17 (phase 3 M9 đã deploy lên Pages, workflow run 39030389635 success)
+**Next step:** user xem Goal detail thật trên Pages (OQ-D16 câu headline âm) → milestone nhỏ backlog: F2-R1 tách chunk schemas + Minor (M9-D1, M8-D1, M8-P1, M6-P1…) qua planner trước tính năng kế tiếp
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -22,6 +22,7 @@
 - 2026-10-12 — (orchestrator, dev-M7 WIP OQ) (1) 3 test QC cũ (m1-domain, m3-r1-domain ×2) assert hard-delete mâu thuẫn xoá mềm ADR-20 → QC M7 round 1 re-target sang xoá mềm (tombstone + deletedAt), không tính là defect. (2) AC7: đăng nhập lại cùng tài khoản ngay sau Sign out Keep → không hỏi D5; sau khi đã gộp sang tài khoản khác thì quay lại hỏi D5 (deviation D7) → chấp nhận, planner ghi nhận ở lần revise sau
 - 2026-10-13 — Phase 3: user xem Goal detail thật và nói đường cong 1% hiện tại sai ý. Định nghĩa mới cho "Bạn" (FR-27): so **số phút hôm nay với ngày trước** (vd hôm qua 5, hôm nay 6 → +20%), **nhân dồn từ ngày đầu** (headline = tích các tỉ lệ ngày, tức phút của ngày có ghi gần nhất / phút ngày đầu có ghi; dữ liệu thật của user: 5→10→14→27 phút = +440%); **ngày không ghi (0 phút) thì đi ngang +0%** (không trừ, ngày kế so với ngày có ghi gần nhất). Đường lý tưởng vẫn +1% mỗi ngày. Orchestrator đã hỏi 2 câu (headline, ngày 0 phút) → trả lời như trên. Giao planner `mode: revise` → M9
 - 2026-10-13 — Gate 1 phase 3: duyệt plan v3.0 (M9). OQ-11 (hôm nay đang ghi dở có tính ngay?) → **Tính ngay** (= A-39, giữ nguyên plan). Designer revise v3 → developer M9 → qc
+- 2026-10-17 — Push/deploy phase 3? → "push đi": đã push 0ac3e3f, Pages deploy success, bundle deploy chứa chuỗi v3 + phase 2, manifest icon mới, privacy.html 200
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
