@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-13 (phase 2 đã deploy lên Pages; chờ U10)
-**Next step:** qc M9 round 1 → gửi kết quả để cập nhật STATUS
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-17 (phase 3 M9 PASS QC; chờ user duyệt push/deploy)
+**Next step:** user duyệt push `main` → Pages deploy → user xem Goal detail thật (OQ-D16 câu headline âm) → backlog F2-R1 (bundle sát ngưỡng) trước tính năng kế tiếp
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -50,7 +50,7 @@
 | Plan v2.1 (phase 2) | DONE (duyệt 2026-10-12) | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
 | Plan v3.0 (phase 3) | DONE (duyệt 2026-10-13) | docs/plan/ (FR-27 v3, ARCH §4.5, ADR-26, TASKS M9) | M9: 5 task, 8 AC; dataset R1 (dữ liệu thật user), R3, R4; bảng test M5 bị thay thế |
 | Design v3 | DONE (2026-10-13, commit 674cf8b; Gate 2 bỏ qua theo Gate 1 "Duyệt, làm tiếp") | docs/design/DESIGN.md v3.0 §7.6.4, mockups/07-goal-detail.html (7 tình huống, en/vi) | 12 key mới, 9 key sửa, 3 key bỏ (headlineSub_one/_other, tooltip). OQ-D17: trục Y chỉ nới đầu dưới khi min < 0 → orchestrator chốt theo DESIGN (trong dung sai M9-AC2). OQ-D16 câu headline âm: user xem sau khi deploy |
-| M9 | DOING — qc round 1 | docs/handoff/dev-M9.md (commit 66ead74) | dev tự kiểm AC1–AC8 PASS; bundle tải lạnh Today 248,3/250 kB; 24 unit + 17 e2e fail đều là test QC cũ 1,01^n (handoff §5/§8), QC re-target; tsconfig tạm exclude tests/qc/m5-r1-domain.test.ts |
+| M9 | PASS (round 1; QC chạy full regression = Final QC phase 3) | docs/qc/report-M9-r1.md | dev tự kiểm AC1–AC8 PASS; bundle tải lạnh Today 248,3/250 kB; 24 unit + 17 e2e fail đều là test QC cũ 1,01^n (handoff §5/§8), QC re-target; tsconfig tạm exclude tests/qc/m5-r1-domain.test.ts |
 | M8 | PASS (round 1) | docs/qc/report-M8-r1.md | M7-D5, M7-P1 FIXED |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
@@ -78,7 +78,8 @@
 | M7-P1 | (FIXED trong M8, 7 chuỗi dev đề xuất NOT IN DESIGN — designer duyệt) Key copy riêng cho hàng trên máy bị cloud từ chối; dọn tombstone đã sync; `npm run check` trên máy có .env.local ra bản cloud ON | QC M7 r1/r2 |
 | M8-D1 | Mốc lastDismissedAt/lastExportHintAt ở tương lai (đồng hồ máy từng sai) làm banner/hint im hàng chục năm (login-prompt.ts isSnoozed) — clamp mốc > now | QC M8 r1 |
 | M8-P1 | OQ-D12 (hint export chỉ khi online) planner/designer chốt; README còn "(used from M7)"; exportBackup không catch quanh claimExportHint | QC M8 r1 |
-| F2-R1 | Bundle sát ngưỡng: tải lạnh #/today 247,3 kB / 250 kB — tách chunk schemas (zod 34 kB) hoặc xét lại ngưỡng trước khi thêm tính năng | Final QC phase 2 |
+| F2-R1 | Bundle sát ngưỡng: tải lạnh #/today 248,3 kB / 250 kB (M9) — tách chunk schemas (zod 34 kB) hoặc xét lại ngưỡng trước khi thêm tính năng | Final QC phase 2 |
+| M9-D1 | vi 360 px: đang đọc chart bằng bàn phím, bấm chuột lần đầu vào "Xem dữ liệu dạng bảng" không mở (mousedown blur chart → layout nhảy); bấm lần 2 mới mở | QC M9 r1 |
 | M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
 ## Tổng kết phase 2 (2026-10-13)
