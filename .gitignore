@@ -16,3 +16,6 @@ supabase/.branches/
 
 # Product logo source (1.9 MB SVG wrapping a PNG): kept out of the repo; icons are generated from it
 logo/
+
+# Developer-side Playwright artifacts (parallel QC runs share test-results/)
+test-results-dev/
