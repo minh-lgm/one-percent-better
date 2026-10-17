@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-17 (phase 3 M9 đã deploy lên Pages, workflow run 39030389635 success)
-**Next step:** user xem Goal detail thật trên Pages (OQ-D16 câu headline âm) → milestone nhỏ backlog: F2-R1 tách chunk schemas + Minor (M9-D1, M8-D1, M8-P1, M6-P1…) qua planner trước tính năng kế tiếp
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-17 (phase 4: M10 backlog + bundle; planner đang lập plan)
+**Next step:** planner revise (M10: F2-R1 bundle + backlog Minor) → developer M10 → qc M10 → deploy. Gate 1/2 không cần duyệt lại (user: "làm backlog đi")
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -23,6 +23,7 @@
 - 2026-10-13 — Phase 3: user xem Goal detail thật và nói đường cong 1% hiện tại sai ý. Định nghĩa mới cho "Bạn" (FR-27): so **số phút hôm nay với ngày trước** (vd hôm qua 5, hôm nay 6 → +20%), **nhân dồn từ ngày đầu** (headline = tích các tỉ lệ ngày, tức phút của ngày có ghi gần nhất / phút ngày đầu có ghi; dữ liệu thật của user: 5→10→14→27 phút = +440%); **ngày không ghi (0 phút) thì đi ngang +0%** (không trừ, ngày kế so với ngày có ghi gần nhất). Đường lý tưởng vẫn +1% mỗi ngày. Orchestrator đã hỏi 2 câu (headline, ngày 0 phút) → trả lời như trên. Giao planner `mode: revise` → M9
 - 2026-10-13 — Gate 1 phase 3: duyệt plan v3.0 (M9). OQ-11 (hôm nay đang ghi dở có tính ngay?) → **Tính ngay** (= A-39, giữ nguyên plan). Designer revise v3 → developer M9 → qc
 - 2026-10-17 — Push/deploy phase 3? → "push đi": đã push 0ac3e3f, Pages deploy success, bundle deploy chứa chuỗi v3 + phase 2, manifest icon mới, privacy.html 200
+- 2026-10-17 — Làm backlog trước tính năng mới? → "làm backlog đi": M10 gồm F2-R1 (tách chunk schemas), các Minor mở (M9-D1, M8-D1, M8-P1, M7-P1 phần mở, M6-P1, M5-P1, M4-P1, M3-P1, M1-P3), designer/planner ghi nhận deviation. Không cần Gate duyệt lại
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
@@ -51,7 +52,9 @@
 | Plan v2.1 (phase 2) | DONE (duyệt 2026-10-12) | docs/plan/ (v2.0) | M6 Auth skeleton, M7 Sync offline-first, M8 Login prompts + final; 15 task, 36 AC; User setup U0–U11 |
 | Plan v3.0 (phase 3) | DONE (duyệt 2026-10-13) | docs/plan/ (FR-27 v3, ARCH §4.5, ADR-26, TASKS M9) | M9: 5 task, 8 AC; dataset R1 (dữ liệu thật user), R3, R4; bảng test M5 bị thay thế |
 | Design v3 | DONE (2026-10-13, commit 674cf8b; Gate 2 bỏ qua theo Gate 1 "Duyệt, làm tiếp") | docs/design/DESIGN.md v3.0 §7.6.4, mockups/07-goal-detail.html (7 tình huống, en/vi) | 12 key mới, 9 key sửa, 3 key bỏ (headlineSub_one/_other, tooltip). OQ-D17: trục Y chỉ nới đầu dưới khi min < 0 → orchestrator chốt theo DESIGN (trong dung sai M9-AC2). OQ-D16 câu headline âm: user xem sau khi deploy |
-| M9 | PASS (round 1; QC chạy full regression = Final QC phase 3) | docs/qc/report-M9-r1.md | dev tự kiểm AC1–AC8 PASS; bundle tải lạnh Today 248,3/250 kB; 24 unit + 17 e2e fail đều là test QC cũ 1,01^n (handoff §5/§8), QC re-target; tsconfig tạm exclude tests/qc/m5-r1-domain.test.ts |
+| M9 | PASS (round 1; QC chạy full regression = Final QC phase 3) — deployed 2026-10-17 | docs/qc/report-M9-r1.md |
+| Plan v3.1 (M10 backlog) | DOING — planner | docs/plan/ | |
+| M10 | TODO | | | dev tự kiểm AC1–AC8 PASS; bundle tải lạnh Today 248,3/250 kB; 24 unit + 17 e2e fail đều là test QC cũ 1,01^n (handoff §5/§8), QC re-target; tsconfig tạm exclude tests/qc/m5-r1-domain.test.ts |
 | M8 | PASS (round 1) | docs/qc/report-M8-r1.md | M7-D5, M7-P1 FIXED |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
