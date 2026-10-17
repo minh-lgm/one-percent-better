@@ -243,14 +243,12 @@ test.describe('QC M8: damaged or odd kv rows never crash the page', () => {
   }
 
   test('clock skew: a "Not now" stamped in the future (device clock was wrong) should not silence the banner for decades', async ({ page }) => {
-    test.fail(true, 'M8-D1 (Minor): isSnoozed() treats a lastDismissedAt in the future as still snoozed; remove this marker when fixed');
+    // M8-D1 FIXED in M10 (A-46, 24 h tolerance); marker test.fail removed in M10 round 1. Auto-wait locator instead of count().
     await importPayload(page, payload([{ id: 'g1', name: 'Read', createdAt: stale }], []));
     await putKv(page, 'loginPrompt', { dismissCount: 1, lastDismissedAt: '2099-01-01T00:00:00.000Z', lastExportHintAt: null });
     await today(page);
     await expect(goalCard(page, 'Read')).toBeVisible();
-    const shown = await banner(page).count();
-    console.log(`QC clock-skew: banner with lastDismissedAt in 2099 and now 2026 -> count ${shown}`);
-    expect(shown).toBe(1);
+    await expect(banner(page)).toBeVisible();
   });
 });
 

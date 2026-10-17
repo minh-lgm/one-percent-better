@@ -465,14 +465,11 @@ test.describe('M9 QC — interaction, language, theme', () => {
   });
 });
 
-// M9-D1 (Minor, open): with the longer v3 reading strings, a keyboard reading that wraps to 3 lines (vi at 360 px) makes the first
-// mouse click on "Show data as table" miss (mousedown blurs the chart -> the reading line disappears -> the layout jumps up before mouseup).
-// test.fail: this test is EXPECTED to fail while the defect exists; when it is fixed the test starts passing and Playwright reports it,
-// so QC flips it to a normal test.
+// M9-D1 (Minor): with the longer v3 reading strings, a keyboard reading that wraps to 3 lines (vi at 360 px) made the first
+// mouse click on "Show data as table" miss. FIXED in M10 (44dee1b); the test.fail marker was removed in M10 round 1 so this is a normal regression test.
 test.describe('M9-D1 mixed keyboard reading + mouse click (vi, 360 px)', () => {
   test.use({ viewport: { width: 360, height: 900 }, locale: 'vi-VN' });
   test('the first click on the table summary opens the table even while a 3-line reading is shown', async ({ page }) => {
-    test.fail(true, 'M9-D1: first click lost after a keyboard reading that wraps to 3 lines');
     await freezeClock(page, CLOCK_R1);
     await importBackup(page, 'r1-real-backup.json', VI);
     await gotoHash(page, '/goals/r1');

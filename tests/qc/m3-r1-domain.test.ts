@@ -192,7 +192,7 @@ describe('BackupService on a real container', () => {
     await localeService.set('vi');
     await db.kv.put({ key: 'activeTimer', value: { goalId: 'x', startedAt: NOW.toISOString() } });
     await db.kv.put({ key: 'settings', value: { reminderEnabled: true, reminderTime: '07:00', lastReminderDate: '2026-10-08', lastBackupAt: null, plusOneShown: {} } });
-    const preview = backupService.parse(SAMPLE, bytes(SAMPLE));
+    const preview = await backupService.parse(SAMPLE, bytes(SAMPLE));
     expect(preview.ok).toBe(true);
     if (!preview.ok) return;
     expect(await backupService.import(preview.value)).toEqual({ ok: true, value: { goals: 5, entries: 23 } });
@@ -219,7 +219,7 @@ describe('BackupService on a real container', () => {
     expect(e.ok).toBe(true);
     const out = await a.container.backupService.export(NOW);
     const b = await container();
-    const preview = b.container.backupService.parse(out.json, bytes(out.json));
+    const preview = await b.container.backupService.parse(out.json, bytes(out.json));
     if (!preview.ok) throw new Error(JSON.stringify(preview.errors));
     await b.container.backupService.import(preview.value);
     expect(await b.container.db.goals.toArray()).toEqual(await a.container.db.goals.toArray());
@@ -234,7 +234,7 @@ describe('BackupService on a real container', () => {
     const timer: ActiveTimer = { goalId: g.value.id, startedAt: NOW.toISOString() };
     await db.kv.put({ key: 'activeTimer', value: timer });
     const before = { goals: await db.goals.toArray(), entries: await db.entries.toArray(), settings: await db.kv.get('settings') };
-    const preview = backupService.parse(SAMPLE, bytes(SAMPLE));
+    const preview = await backupService.parse(SAMPLE, bytes(SAMPLE));
     if (!preview.ok) throw new Error('parse');
     for (const table of ['entries', 'kv'] as const) {
       const spy = vi.spyOn(db[table], table === 'entries' ? 'bulkAdd' : 'put').mockRejectedValueOnce(new Error('boom') as never);
@@ -254,7 +254,7 @@ describe('BackupService on a real container', () => {
       const g = await goalService.create({ name: 'Racer', why: '', targetType: 'daily', targetValue: 10, startDate: '2026-10-01', endDate: '2026-10-31' }, NOW);
       if (!g.ok) throw new Error('setup');
       await timerService.start(g.value.id, new Date(NOW.getTime() - 30 * 60_000));
-      const preview = backupService.parse(SAMPLE, bytes(SAMPLE));
+      const preview = await backupService.parse(SAMPLE, bytes(SAMPLE));
       if (!preview.ok) throw new Error('parse');
       await Promise.allSettled([backupService.import(preview.value), timerService.save({ minutes: 30, note: '' }, NOW)]);
       // M7 (soft delete, ADR-20): "orphan" = a LIVE entry whose goal is not live; the replaced "Racer" stays as a tombstone.
@@ -283,7 +283,7 @@ describe('BackupService on a real container', () => {
     expect(size).toBeLessThanOrEqual(IMPORT_MAX_BYTES);
     const tc = await container();
     const t0 = performance.now();
-    const preview = tc.container.backupService.parse(text, size);
+    const preview = await tc.container.backupService.parse(text, size);
     const t1 = performance.now();
     if (!preview.ok) throw new Error(JSON.stringify(preview.errors));
     await tc.container.backupService.import(preview.value);
@@ -418,7 +418,7 @@ describe('M3-AC14 EntryService.update/remove by id', () => {
   it('getById finds an entry without any range scan and unknown ids give ENTRY_NOT_FOUND with the DB unchanged', async () => {
     const tc = await container();
     const { db, backupService, entryService } = tc.container;
-    const p = backupService.parse(SAMPLE, bytes(SAMPLE));
+    const p = await backupService.parse(SAMPLE, bytes(SAMPLE));
     if (!p.ok) throw new Error('parse');
     await backupService.import(p.value);
     const before = await db.entries.toArray();

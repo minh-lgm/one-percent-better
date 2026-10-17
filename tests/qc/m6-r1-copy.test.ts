@@ -51,13 +51,14 @@ describe('QC M6: key parity and phase-1 copy untouched', () => {
   it('settings.about.desc is still the phase-1 sentence (FR-38)', () => {
     expect((en as { settings: { about: { desc: string } } }).settings.about.desc).toBe('Everything you log stays on this device. No account, no tracking.');
   });
-  it('the only copy the dev added beyond DESIGN is settings.about.privacyLink (deviation D8)', () => {
+  it('every en.json key now has a DESIGN row (privacyLink was added to DESIGN S7.7.5 in v3.1; re-targeted in M10 round 1)', () => {
     const designKeys = new Set(
       [...design.matchAll(/^\| `([A-Za-z0-9_.]+)` \|/gm)].map((m) => m[1] as string),
     );
     const extra = flat(en).filter((k) => !designKeys.has(k) && !/_(one|other|zero|few|many)$/.test(k));
-    // Keys that exist in the app but in no DESIGN table row (excluding plural suffix forms): list them for the report.
-    expect(extra.sort()).toEqual(expect.arrayContaining(['settings.about.privacyLink']));
-    console.log('keys in en.json without a DESIGN row:', extra);
+    // Keys that exist in the app but in no DESIGN table row (excluding plural suffix forms). DESIGN v3.1 documents
+    // settings.about.privacyLink, so the list must now be empty: any new key without a DESIGN row is a deviation.
+    expect(extra.sort()).toEqual([]);
+    expect(designKeys.has('settings.about.privacyLink')).toBe(true);
   });
 });

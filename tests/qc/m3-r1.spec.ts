@@ -654,7 +654,7 @@ test.describe('Import of out-of-range but schema-valid data, and the past-day li
   // Re-targeted in M5 round 1 (M3-D3 was fixed and the dispute settled by the orchestrator: import validates like the form).
   // Original intent kept: data the app itself would refuse to create must never reach the screens. Before M5 the import let it
   // through and the test checked that no screen crashed; now each violation is refused at the import boundary with an
-  // IMPORT_* Alert, the confirm dialog (D3) never opens, and the data already in the database is untouched. A legitimate
+  // IMPORT_* Alert (re-targeted in M10 round 1: out-of-range values get IMPORT_INVALID_SCHEMA_outOfRange, M5-P1), the confirm dialog (D3) never opens, and the data already in the database is untouched. A legitimate
   // archived goal still imports and renders on every screen.
   test('goals the app itself would refuse (daily target 600000, 100-year period, future entry) are rejected at import with IMPORT_*; an archived goal still imports and renders', async ({ page }) => {
     const problems = watch(page);
@@ -669,8 +669,8 @@ test.describe('Import of out-of-range but schema-valid data, and the past-day li
     const arch = { ...g, id: 'arch', name: 'Arch', archived: true };
     const fut = { ...(base.entries[0] as Record<string, unknown>), id: 'fut', goalId: 'long', date: '2030-05-05' };
     const cases: Array<[string, Sample, string]> = [
-      ['daily target 600000', { ...base, goals: [huge], entries: [] }, EN.errors.IMPORT_INVALID_SCHEMA],
-      ['100-year period', { ...base, goals: [long], entries: [] }, EN.errors.IMPORT_INVALID_SCHEMA],
+      ['daily target 600000', { ...base, goals: [huge], entries: [] }, EN.errors.IMPORT_INVALID_SCHEMA_outOfRange],
+      ['100-year period', { ...base, goals: [long], entries: [] }, EN.errors.IMPORT_INVALID_SCHEMA_outOfRange],
       ['entry dated after today', { ...base, goals: [{ ...g, id: 'ok', name: 'Ok' }], entries: [{ ...fut, goalId: 'ok', date: '2026-10-10' }] }, EN.errors.IMPORT_INTEGRITY],
     ];
     for (const [label, file, message] of cases) {
