@@ -23,7 +23,7 @@ import { PageHeader } from '../components/PageHeader';
 import { ReminderTimeField } from '../components/ReminderTimeField';
 import { SignOutDialog, type SignOutChoice } from '../components/SignOutDialog';
 import { Switch } from '../components/Switch';
-import { errorMessage, WRITE_FAILED_KEY } from '../error-messages';
+import { errorMessage, EXPORT_FAILED_KEY, WRITE_FAILED_KEY } from '../error-messages';
 import { useFormat } from '../hooks/useFormat';
 import { useNow } from '../hooks/useNow';
 import { useOnline } from '../hooks/useOnline';
@@ -102,7 +102,8 @@ export function Settings() {
   const fileInput = useRef<HTMLInputElement>(null);
   const importButton = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
-  const [importError, setImportError] = useState<DomainError | 'read' | 'write' | null>(null);
+  // One Alert in the Backup card at a time (DESIGN S7 v3.1): import errors, a failed read/write, or a failed export.
+  const [importError, setImportError] = useState<DomainError | 'read' | 'write' | 'export' | null>(null);
   const [importing, setImporting] = useState<ImportState | null>(null);
 
   useEffect(() => {
@@ -149,15 +150,25 @@ export function Settings() {
   async function exportBackup() {
     if (busy) return;
     setBusy('export');
+    setImportError(null);
+    const now = new Date();
     try {
-      const now = new Date();
       const { fileName, json } = await backupService.export(now);
       downloadTextFile(fileName, json, BACKUP_MIME_TYPE);
       toast.show('toast.backupExported');
-      // FR-53: at most one hint per 30 days, claimed atomically, only while signed out and online (OQ-D12).
-      if (await loginPromptService.claimExportHint(now, { auth: authState.kind, online })) setExportHint(true);
+    } catch {
+      // M3-P1 (v3.1): reading the data or creating the file failed → Alert in the card, nothing else.
+      setImportError('export');
+      return;
     } finally {
       setBusy(null);
+    }
+    // FR-53: at most one hint per 30 days, claimed atomically, only while signed out and online (A-44).
+    // A failed claim must not spoil a successful export (M8-P1): skip the hint, log, move on.
+    try {
+      if (await loginPromptService.claimExportHint(now, { auth: authState.kind, online })) setExportHint(true);
+    } catch (e) {
+      console.warn('Export hint could not be claimed', e);
     }
   }
 
@@ -210,6 +221,7 @@ export function Settings() {
   let importErrorText: string | null = null;
   if (importError === 'read') importErrorText = t('errors.UNKNOWN');
   else if (importError === 'write') importErrorText = t(WRITE_FAILED_KEY);
+  else if (importError === 'export') importErrorText = t(EXPORT_FAILED_KEY);
   else if (importError) {
     const m = errorMessage(importError, f);
     importErrorText = t(m.key, m.params);

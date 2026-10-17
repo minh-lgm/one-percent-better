@@ -156,3 +156,43 @@ describe('M3-D3: import applies the goal/entry limits of the app (IMPORT_INVALID
     expect(checkIntegrity(sampleFile().goals, [future])).toBeNull();
   });
 });
+
+describe('IMPORT_INVALID_SCHEMA variant outOfRange (M10-AC9, ARCH §5.4 v3.1, M5-P1)', () => {
+  const variantOf = (t: string, today?: string) => {
+    const r = parseBackup(t, 1000, today);
+    if (r.ok) return 'ok';
+    return `${r.errors[0].code}${r.errors[0].params?.variant ? `:${String(r.errors[0].params.variant)}` : ''}`;
+  };
+  const withGoal = (overrides: Partial<ReturnType<typeof buildGoal>>) => {
+    const file = sampleFile();
+    return text({ ...file, goals: [{ ...file.goals[0], ...overrides }, ...file.goals.slice(1)] });
+  };
+  const withEntry = (overrides: Partial<ReturnType<typeof buildEntry>>) => {
+    const file = sampleFile();
+    return text({ ...file, entries: [{ ...file.entries[0], ...overrides }, ...file.entries.slice(1)] });
+  };
+
+  it('value outside a business limit → IMPORT_INVALID_SCHEMA with params.variant = outOfRange', () => {
+    expect(variantOf(withGoal({ targetType: 'daily', targetMinutes: 600_000 }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+    expect(variantOf(withGoal({ startDate: '2000-01-01', endDate: '2099-12-31' }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+    expect(variantOf(withGoal({ name: 'n'.repeat(61) }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+    expect(variantOf(withGoal({ name: '   ' }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+    expect(variantOf(withGoal({ why: 'w'.repeat(281) }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+    expect(variantOf(withGoal({ targetType: 'total', targetMinutes: 600_000, startDate: '2026-10-01', endDate: '2026-10-31' }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+    expect(variantOf(withEntry({ minutes: 1441 }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+    expect(variantOf(withEntry({ minutes: 12.5 }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+    expect(variantOf(withEntry({ note: 'n'.repeat(281) }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+  });
+
+  it('structural problems keep the plain IMPORT_INVALID_SCHEMA (no variant); integrity problems stay IMPORT_INTEGRITY', () => {
+    expect(variantOf('[]')).toBe('IMPORT_INVALID_SCHEMA');
+    expect(variantOf(text({ ...sampleFile(), app: 'other-app' }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(variantOf(withEntry({ minutes: '30' as unknown as number }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(variantOf(withGoal({ id: 'x'.repeat(65) }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(variantOf(text({ ...sampleFile(), goals: undefined }))).toBe('IMPORT_INVALID_SCHEMA');
+    // Range + structure in the same file → the structural message (the file is not from this app).
+    expect(variantOf(text({ ...sampleFile(), goals: [{ ...sampleFile().goals[0], name: 'n'.repeat(61), bogus: 1 }] }))).toBe('IMPORT_INVALID_SCHEMA');
+    const future = buildEntry({ id: 'future', goalId: 'g1', date: '2026-10-10', minutes: 10 });
+    expect(variantOf(text({ ...sampleFile(), entries: [...sampleFile().entries, future] }), '2026-10-09')).toBe('IMPORT_INTEGRITY');
+  });
+});

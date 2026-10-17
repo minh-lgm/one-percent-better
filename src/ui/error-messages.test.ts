@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createFormatters } from '../i18n/format';
 import { createI18n, createTranslator } from '../i18n/instance';
-import { errorMessage } from './error-messages';
+import { errorMessage, EXPORT_FAILED_KEY } from './error-messages';
 
 const i18n = createI18n({ locale: 'vi', strictMissingKeys: true });
 const f = createFormatters('vi', createTranslator(i18n));
@@ -64,5 +64,15 @@ describe('errorMessage (DESIGN §7.3)', () => {
     const timer = errorMessage({ code: 'GOAL_TIMER_RUNNING', message: '' }, f);
     expect(timer.key).toBe('errors.GOAL_TIMER_RUNNING');
     expect(() => i18n.t(timer.key)).not.toThrow();
+  });
+});
+
+describe('v3.1 keys (M10-AC9, M10-AC10)', () => {
+  it('IMPORT_INVALID_SCHEMA with variant outOfRange → its own key; without → the plain key', () => {
+    expect(errorMessage({ code: 'IMPORT_INVALID_SCHEMA', message: '', params: { variant: 'outOfRange' } }, f).key).toBe('errors.IMPORT_INVALID_SCHEMA_outOfRange');
+    expect(errorMessage({ code: 'IMPORT_INVALID_SCHEMA', message: '' }, f).key).toBe('errors.IMPORT_INVALID_SCHEMA');
+    expect(() => i18n.t('errors.IMPORT_INVALID_SCHEMA_outOfRange')).not.toThrow();
+    expect(() => i18n.t(EXPORT_FAILED_KEY)).not.toThrow();
+    expect(EXPORT_FAILED_KEY).toBe('errors.EXPORT_FAILED');
   });
 });

@@ -110,6 +110,8 @@
     "IMPORT_FILE_TOO_LARGE": "Tệp này lớn hơn 5 MB nên không thể là bản sao lưu của 1% Better. Hãy chọn tệp khác. Chưa có gì bị thay đổi.",
     "IMPORT_INVALID_JSON": "Tệp này không phải JSON hợp lệ. Hãy chọn bản sao lưu đã xuất từ 1% Better. Chưa có gì bị thay đổi.",
     "IMPORT_INVALID_SCHEMA": "Tệp này không giống bản sao lưu của 1% Better. Hãy chọn tệp đã xuất từ app này. Chưa có gì bị thay đổi.",
+    "IMPORT_INVALID_SCHEMA_outOfRange": "Bản sao lưu này có giá trị mà 1% Better không cho phép, ví dụ khoảng thời gian mục tiêu dài hơn 1.827 ngày, số phút ngoài khoảng 1–1.440, hoặc tên, ghi chú quá dài. Hãy sửa tệp, hoặc xuất một bản sao lưu mới từ app này. Chưa có gì bị thay đổi.",
+    "EXPORT_FAILED": "Không tạo được tệp sao lưu. Dữ liệu trên thiết bị này không thay đổi. Hãy thử lại; nếu vẫn lỗi, hãy kiểm tra xem trình duyệt có cho phép tải tệp từ trang này không.",
     "IMPORT_UNSUPPORTED_VERSION": "Bản sao lưu này dùng phiên bản định dạng ({{v}}) mà app không đọc được. Hãy xuất lại từ bản app mới nhất. Chưa có gì bị thay đổi.",
     "IMPORT_INTEGRITY": "Bản sao lưu này không nhất quán (ví dụ: có lần ghi không thuộc mục tiêu nào). Chưa có gì bị thay đổi.",
     "loadViewTitle": "Không tải được màn hình này",

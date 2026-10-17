@@ -29,6 +29,9 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
     }
     case 'IMPORT_UNSUPPORTED_VERSION':
       return { key: 'errors.IMPORT_UNSUPPORTED_VERSION', params: { v: String(error.params?.v ?? '?') } };
+    case 'IMPORT_INVALID_SCHEMA':
+      // v3.1 (M5-P1): well-formed file, value outside the app's limits → its own sentence.
+      return { key: variant === 'outOfRange' ? 'errors.IMPORT_INVALID_SCHEMA_outOfRange' : 'errors.IMPORT_INVALID_SCHEMA' };
     case 'DATE_OUTSIDE_GOAL_PERIOD':
       return {
         key: 'errors.DATE_OUTSIDE_GOAL_PERIOD',
@@ -51,7 +54,6 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
     case 'NOTIFICATIONS_DENIED':
     case 'IMPORT_FILE_TOO_LARGE':
     case 'IMPORT_INVALID_JSON':
-    case 'IMPORT_INVALID_SCHEMA':
     case 'IMPORT_INTEGRITY':
     case 'AUTH_OFFLINE':
     case 'AUTH_CANCELLED':
@@ -65,3 +67,6 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
 
 /** Key used when a write to storage fails (not a DomainError). */
 export const WRITE_FAILED_KEY: MessageKey = 'errors.WRITE_FAILED';
+
+/** Key used when creating the backup file fails (not a DomainError; DESIGN §7.3 v3.1, M3-P1). */
+export const EXPORT_FAILED_KEY: MessageKey = 'errors.EXPORT_FAILED';

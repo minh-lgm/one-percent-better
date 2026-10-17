@@ -114,6 +114,8 @@
     "IMPORT_FILE_TOO_LARGE": "This file is larger than 5 MB, so it can't be a 1% Better backup. Choose a different file. Nothing was changed.",
     "IMPORT_INVALID_JSON": "This file isn't valid JSON. Choose a backup exported from 1% Better. Nothing was changed.",
     "IMPORT_INVALID_SCHEMA": "This file doesn't look like a 1% Better backup. Choose a file exported from this app. Nothing was changed.",
+    "IMPORT_INVALID_SCHEMA_outOfRange": "This backup contains a value 1% Better doesn't allow, such as a goal period longer than 1,827 days, minutes outside 1–1,440, or a name or note that's too long. Fix the file, or export a fresh backup from this app. Nothing was changed.",
+    "EXPORT_FAILED": "Couldn't create the backup file. Your data on this device is unchanged. Try again, and if it keeps failing, check that your browser allows downloads from this site.",
     "IMPORT_UNSUPPORTED_VERSION": "This backup uses a format version ({{v}}) this app can't read. Export it again from an up-to-date copy of the app. Nothing was changed.",
     "IMPORT_INTEGRITY": "This backup is inconsistent (for example, entries that don't belong to any goal). Nothing was changed.",
     "loadViewTitle": "Couldn't load this view",
@@ -559,8 +561,8 @@
       "removeAnyway": "Remove anyway",
       "rejected_one": "1 item on this device couldn't be uploaded to your account.",
       "rejected_other": "{{count}} items on this device couldn't be uploaded to your account.",
-      "rejectedKeep": "It stays on this device if you keep the data here. Export a backup to keep a copy.",
-      "rejectedRemove": "If you remove the data from this device, these items will be lost. Export a backup first to keep them.",
+      "rejectedKeep": "Whatever couldn't be uploaded stays on this device if you keep the data here. Export a backup to keep a copy.",
+      "rejectedRemove": "If you remove the data from this device, anything that couldn't be uploaded will be lost. Export a backup first to keep it.",
       "removeDescRejected": "Deletes your goals, entries and reminder settings on this device. Choose this on a shared device. Items that couldn't be uploaded are not in your account."
     },
     "merge": {

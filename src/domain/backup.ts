@@ -87,6 +87,20 @@ const fileSchema = z.object({
 });
 
 const schemaError = (message: string): DomainError => ({ code: 'IMPORT_INVALID_SCHEMA', message });
+/** Same code, `params.variant = 'outOfRange'` (ARCH §5.4 v3.1, M5-P1): the file is well-formed but a value breaks a business limit. */
+const outOfRangeError = (message: string): DomainError => ({ code: 'IMPORT_INVALID_SCHEMA', message, params: { variant: 'outOfRange' } });
+
+/** Fields whose limits are business rules (name/why/note length, targets, minutes, period); `id` length and structure are not. */
+const RANGE_FIELDS = new Set(['name', 'why', 'note', 'targetMinutes', 'minutes', 'startDate', 'endDate']);
+
+/** A zod issue that only says "right type, value outside the app's limits". */
+function isRangeIssue(issue: z.core.$ZodIssue): boolean {
+  const field = issue.path[issue.path.length - 1];
+  if (typeof field !== 'string' || !RANGE_FIELDS.has(field)) return false;
+  if (issue.code === 'too_big' || issue.code === 'too_small' || issue.code === 'custom') return true;
+  // `12.5` for an integer field: zod reports invalid_type with expected 'int'.
+  return issue.code === 'invalid_type' && issue.expected === 'int';
+}
 const integrityError = (message: string): DomainError => ({ code: 'IMPORT_INTEGRITY', message });
 
 /**
@@ -116,7 +130,8 @@ export function parseBackup(text: string, sizeBytes: number, today?: ISODate): R
   const parsed = fileSchema.safeParse(obj);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    return fail(schemaError(`${issue?.path.join('.') ?? ''}: ${issue?.message ?? 'invalid'}`));
+    const message = `${issue?.path.join('.') ?? ''}: ${issue?.message ?? 'invalid'}`;
+    return fail(parsed.error.issues.every(isRangeIssue) ? outOfRangeError(message) : schemaError(message));
   }
   const integrity = checkIntegrity(parsed.data.goals, parsed.data.entries, today);
   if (integrity) return fail(integrity);

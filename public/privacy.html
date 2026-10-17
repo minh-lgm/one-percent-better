@@ -90,12 +90,16 @@
       .mark {
         display: inline-grid;
         place-items: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        background: var(--primary-soft);
-        color: var(--on-primary-soft);
-        font-weight: 800;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid var(--border);
+      }
+      .mark img {
+        display: block;
+        width: 28px;
+        height: 28px;
       }
       hr {
         border: 0;
@@ -106,7 +110,7 @@
   </head>
   <body>
     <main>
-      <a class="brand" href="./"><span class="mark" aria-hidden="true">1%</span><span>Better per Day</span></a>
+      <a class="brand" href="./"><span class="mark" aria-hidden="true"><img src="./brand-mark-96.png" width="28" height="28" alt="" decoding="async" /></span><span>1% Better per Day</span></a>
       <section class="card" aria-labelledby="en-title">
         <h1 id="en-title">Privacy policy</h1>
         <p class="muted">Last updated: 2026-10-12</p>

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi as vitest } from 'vitest';
 import { IMPORT_MAX_BYTES } from '../../config/constants';
 import { buildBackup } from '../../domain/backup-file';
-import { DEFAULT_SETTINGS } from '../../domain/types';
+import { DEFAULT_SETTINGS, StorageError } from '../../domain/types';
 import en from '../../i18n/resources/en.json';
 import vi from '../../i18n/resources/vi.json';
 import { buildEntry, buildGoal, datasetS1, FIXED_NOW } from '../../test/builders';
@@ -196,5 +196,61 @@ describe('Settings — Backup card (M3-AC6, AC8, AC9, AC10, AC13)', () => {
     expect(dialog).toHaveTextContent('This backup has 1 goal, 1 entry, exported 2026-10-09. Importing replaces everything currently on this device (0 goals, 0 entries).');
     await user.click(within(dialog).getByRole('button', { name: en.import.confirm }));
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Backup imported: 1 goal, 1 entry'));
+  });
+});
+
+describe('Export never lets an error escape (M10-AC10, M3-P1, M8-P1)', () => {
+  function countUnhandled() {
+    const count = { n: 0 };
+    const onUnhandled = () => {
+      count.n += 1;
+    };
+    window.addEventListener('unhandledrejection', onUnhandled);
+    return { count, stop: () => window.removeEventListener('unhandledrejection', onUnhandled) };
+  }
+
+  it('(a) backupService.export rejects → EXPORT_FAILED alert in the Backup card, no toast, no download, button usable again', async () => {
+    const user = userEvent.setup();
+    await withTemp();
+    const unhandled = countUnhandled();
+    const { clicks } = captureDownloads();
+    vitest.spyOn(tc!.container.backupService, 'export').mockRejectedValueOnce(new StorageError('IndexedDB read failed'));
+    await renderApp({ route: '/settings', container: tc });
+    const button = await screen.findByRole('button', { name: en.settings.backup.export });
+    await user.click(button);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(en.errors.EXPORT_FAILED);
+    expect(clicks).toHaveLength(0);
+    expect(screen.queryByText(en.toast.backupExported)).toBeNull();
+    expect(screen.getByTestId('last-backup')).toHaveTextContent(en.settings.backup.lastNever);
+    await waitFor(() => expect(screen.getByRole('button', { name: en.settings.backup.export })).toBeEnabled());
+    // The next export works and clears the alert.
+    await user.click(screen.getByRole('button', { name: en.settings.backup.export }));
+    await waitFor(() => expect(clicks).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    await new Promise((r) => setTimeout(r, 20));
+    unhandled.stop();
+    expect(unhandled.count.n).toBe(0);
+  });
+
+  it('(b) claimExportHint rejects → export still succeeds (toast + file), no hint, console.warn', async () => {
+    const user = userEvent.setup();
+    tc = await createTestContainer({ cloud: true });
+    await tc.container.authService.init();
+    await tc.container.db.goals.put(buildGoal({ id: 'temp', name: 'Temp' }));
+    const unhandled = countUnhandled();
+    const warn = vitest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { clicks } = captureDownloads();
+    vitest.spyOn(tc.container.loginPromptService, 'claimExportHint').mockRejectedValueOnce(new StorageError('kv write failed'));
+    await renderApp({ route: '/settings', container: tc });
+    await user.click(await screen.findByRole('button', { name: en.settings.backup.export }));
+    await waitFor(() => expect(clicks).toHaveLength(1));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.backupExported));
+    await waitFor(() => expect(warn).toHaveBeenCalled());
+    expect(screen.queryByTestId('export-sign-in-hint')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    await new Promise((r) => setTimeout(r, 20));
+    unhandled.stop();
+    expect(unhandled.count.n).toBe(0);
   });
 });
