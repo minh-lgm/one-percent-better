@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-18 (M10 PASS QC r2; chờ user duyệt push/deploy)
-**Next step:** user duyệt push `main` → Pages deploy → kiểm bản Pages. Backlog còn: M10-D6 (bộ đếm n/60 và maxLength đếm UTF-16), planner ghi ADR-29 follow-up (applyRemote bỏ tombstone cũ), test sleep-cố-định (sync-service:248, auth-service:249, soft-delete:63)
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-18 (M10 đã deploy lên Pages, workflow run 39053245191 success)
+**Next step:** không có việc đang mở. Khi cần: tính năng mới qua `/build-app <mô tả>` (planner revise) hoặc dọn backlog còn lại: M10-D6 (bộ đếm n/60 và maxLength đếm UTF-16), planner ghi ADR-29 follow-up (applyRemote bỏ tombstone cũ), test sleep-cố-định (sync-service:248, auth-service:249, soft-delete:63)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -24,6 +24,7 @@
 - 2026-10-13 — Gate 1 phase 3: duyệt plan v3.0 (M9). OQ-11 (hôm nay đang ghi dở có tính ngay?) → **Tính ngay** (= A-39, giữ nguyên plan). Designer revise v3 → developer M9 → qc
 - 2026-10-17 — Push/deploy phase 3? → "push đi": đã push 0ac3e3f, Pages deploy success, bundle deploy chứa chuỗi v3 + phase 2, manifest icon mới, privacy.html 200
 - 2026-10-17 — Làm backlog trước tính năng mới? → "làm backlog đi": M10 gồm F2-R1 (tách chunk schemas), các Minor mở (M9-D1, M8-D1, M8-P1, M7-P1 phần mở, M6-P1, M5-P1, M4-P1, M3-P1, M1-P3), designer/planner ghi nhận deviation. Không cần Gate duyệt lại
+- 2026-10-18 — Push/deploy M10? → "push đi": đã push 7182457, Pages success, entry bundle deploy không còn zod, có chuỗi M10
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 ## Tham chiếu
@@ -54,7 +55,7 @@
 | Design v3 | DONE (2026-10-13, commit 674cf8b; Gate 2 bỏ qua theo Gate 1 "Duyệt, làm tiếp") | docs/design/DESIGN.md v3.0 §7.6.4, mockups/07-goal-detail.html (7 tình huống, en/vi) | 12 key mới, 9 key sửa, 3 key bỏ (headlineSub_one/_other, tooltip). OQ-D17: trục Y chỉ nới đầu dưới khi min < 0 → orchestrator chốt theo DESIGN (trong dung sai M9-AC2). OQ-D16 câu headline âm: user xem sau khi deploy |
 | M9 | PASS (round 1; QC chạy full regression = Final QC phase 3) — deployed 2026-10-17 | docs/qc/report-M9-r1.md |
 | Plan v3.1 (M10 backlog) | DONE | docs/plan/ (ADR-27..30, A-44..46) | 7 task dev + 1 task designer, 14 AC; Later: xem TASKS Phase 4 |
-| M10 | PASS (round 2) | docs/qc/report-M10-r2.md | tải lạnh 248,3 → 222,6 kB; tsconfig tạm exclude tests/qc/m3-r1-domain.test.ts | dev tự kiểm AC1–AC8 PASS; bundle tải lạnh Today 248,3/250 kB; 24 unit + 17 e2e fail đều là test QC cũ 1,01^n (handoff §5/§8), QC re-target; tsconfig tạm exclude tests/qc/m5-r1-domain.test.ts |
+| M10 | PASS (round 2) — deployed 2026-10-18 | docs/qc/report-M10-r2.md | tải lạnh 248,3 → 222,6 kB; tsconfig tạm exclude tests/qc/m3-r1-domain.test.ts | dev tự kiểm AC1–AC8 PASS; bundle tải lạnh Today 248,3/250 kB; 24 unit + 17 e2e fail đều là test QC cũ 1,01^n (handoff §5/§8), QC re-target; tsconfig tạm exclude tests/qc/m5-r1-domain.test.ts |
 | M8 | PASS (round 1) | docs/qc/report-M8-r1.md | M7-D5, M7-P1 FIXED |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
