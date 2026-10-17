@@ -230,7 +230,7 @@ test.describe('M5-AC4 archive: extra scenarios', () => {
     const g = (await idbAll(page, 'goals')).find((x) => x.id === 'g1')!;
     expect(g.archived).toBe(false);
     await gotoHash(page, '/goals/g1');
-    await expect(page.getByTestId('headline')).toHaveText('+8.3% better');
+    await expect(page.getByTestId('headline')).toHaveText('+0.0% better'); // M5 +8.3% superseded by M9-AC2 (S1 G1 = +0.0%)
   });
 
   test('archive is double-click safe and the Goals list order of the Archived group is updatedAt descending', async ({ page }) => {
@@ -517,7 +517,7 @@ test.describe('Offline (service worker precache)', () => {
     for (const [hash, check] of [
       ['/goals/g1', async () => expect(fresh.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2)],
       ['/review', async () => expect(fresh.getByTestId('heatmap')).toBeVisible()],
-      ['/goals/g3', async () => expect(fresh.getByTestId('headline')).toHaveText('+1.0% better')],
+      ['/goals/g3', async () => expect(fresh.getByTestId('headline')).toHaveText('+0.0% better')], // M5 +1.0% superseded by M9-AC2 (S1 G3 single entry = +0.0%)
       ['/goals', async () => expect(fresh.getByTestId('goal-row').first()).toBeVisible()],
       ['/settings', async () => expect(fresh.getByRole('heading', { level: 1, name: EN.settings.title })).toBeVisible()],
       ['/day/2026-10-08', async () => expect(fresh.getByRole('heading', { level: 1 })).toBeVisible()],

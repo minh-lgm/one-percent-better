@@ -207,9 +207,9 @@ for (const cfg of CONFIGS) {
       await check();
       await page.screenshot({ path: testInfo.outputPath(`review-${cfg.name}.png`), fullPage: true });
 
-      // ---- 8. Goal detail: curve with 2 lines, +2.0% better, history of 3
+      // ---- 8. Goal detail: curve with 2 lines, +0.0% better (M9 FR-27 v3.0), history of 3
       await gotoHash(page, `/goals/${readId}`);
-      await expect(page.getByTestId('headline')).toHaveText(/2[.,]0%/);
+      await expect(page.getByTestId('headline')).toHaveText(/\+0[.,]0%/); // M5-AC7 superseded by M9-AC7 (FR-27 v3.0): 30 min then 30 min = first day, no change -> +0.0%
       await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
       await expect(page.getByTestId('history-row')).toHaveCount(3);
       await expect(page.getByTestId('history-row').filter({ hasText: copy.entry.source.timer })).toHaveCount(1);
@@ -282,7 +282,7 @@ for (const cfg of CONFIGS) {
       expect(await goalIdOf(page, 'Read')).toBe(readId);
       expect(await goalIdOf(page, 'Spanish')).toBe(spanishId);
       await gotoHash(page, `/goals/${readId}`);
-      await expect(page.getByTestId('headline')).toHaveText(/2[.,]0%/);
+      await expect(page.getByTestId('headline')).toHaveText(/\+0[.,]0%/); // M5-AC7 superseded by M9-AC7 (FR-27 v3.0): 30 min then 30 min = first day, no change -> +0.0%
       await expect(page.getByTestId('history-row')).toHaveCount(3);
       await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
       await check();

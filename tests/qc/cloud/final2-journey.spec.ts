@@ -209,7 +209,7 @@ for (const cfg of CONFIGS) {
       await checkA();
       await page.screenshot({ path: testInfo.outputPath(`review-${cfg.name}.png`), fullPage: true });
       await gotoHash(page, `/goals/${readId}`);
-      await expect(page.getByTestId('headline')).toHaveText(/2[.,]0%/);
+      await expect(page.getByTestId('headline')).toHaveText(/\+0[.,]0%/); // M5-AC7 superseded by M9-AC7 (FR-27 v3.0): 30 min then 30 min = first day, no change -> +0.0%
       await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
       await expect(page.getByTestId('history-row')).toHaveCount(3);
       await checkA();
