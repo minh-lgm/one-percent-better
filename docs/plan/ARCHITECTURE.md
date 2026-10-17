@@ -73,7 +73,7 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | PWA | `vite-plugin-pwa` (strategy `injectManifest`) + `workbox-precaching`, `workbox-window`, `workbox-build` | 2.0.0 / 7.4.1 | Sinh manifest + precache, hỗ trợ Vite 8; `injectManifest` cho phép tự viết handler `notificationclick` | Tự viết SW tay (dễ sai cache), strategy `generateSW` (không thêm handler notification gọn) |
 | Routing | `react-router` (data router, `createHashRouter`) | 7.18.4 | Ổn định; hash routing chạy trên mọi static host không cần cấu hình rewrite | react-router 8.x (yêu cầu Node ≥ 22.22, máy có 22.14) |
 | Lưu trữ | IndexedDB qua `dexie` | 4.4.6 | API transaction rõ ràng, `liveQuery` để UI tự cập nhật, test được với fake-indexeddb | localStorage (đồng bộ, giới hạn ~5 MB, không transaction), `idb` (ít tiện ích, phải tự viết live query) |
-| Validate | `zod` | 4.6.5 | Schema cho form và file import, message rõ | Tự viết validate (dễ sót), yup |
+| Validate | `zod` | 4.6.5 | Schema cho form và file import, message rõ. **v3.1 (ADR-27):** chỉ dùng ở hai biên được nạp lười — file backup khi Import (`domain/backup.ts`) và hàng kéo từ cloud (`integration/supabase/mapper.ts`); form goal/entry và `config/env.ts` kiểm bằng TypeScript thuần (luật đơn giản: độ dài, khoảng số nguyên) để zod không nằm trên đường tải lạnh | Tự viết validate cho file import (dễ sót, đây là biên bảo mật), yup; `zod/mini` (đổi API toàn bộ schema, vẫn nằm trên đường tải lạnh nếu form dùng) |
 | Ngày tháng | `date-fns` | 4.4.0 | Hàm thuần, tree-shake, xử lý ngày cục bộ an toàn (DST) | dayjs (plugin), tự tính bằng ms (lỗi DST) |
 | i18n (chuỗi) | `i18next` + `react-i18next` | 26.4.2 / 17.0.16 | Phổ biến nhất cho React; nội suy, số nhiều qua `Intl.PluralRules` (hậu tố `_one`/`_other`; `vi` chỉ có `_other`), `changeLanguage` re-render toàn app ngay; key có kiểu (TS `CustomTypeOptions`) để bắt key sai lúc typecheck; peer `typescript ^5 \|\| ^6 \|\| ^7` hợp TS 6.0; ≈ 20 KB gzip, vừa ngân sách NFR-03. Resource import tĩnh từ JSON (không backend plugin, không request) | `i18next-browser-languagedetector` 8.2.1 (cache sẵn chỉ localStorage/cookie, trong khi quyết định là lưu ở kv IndexedDB; quy tắc FR-33 chỉ một dòng, tự viết dễ test hơn); tự viết `t()` (rẻ nhưng phải tự lo nội suy, số nhiều, re-render, kiểu key); `react-intl`/FormatJS (ICU message nặng hơn, cần polyfill/compile để gọn); Lingui (cần macro/compile step, thêm biến số cho toolchain) |
 | i18n (định dạng) | `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.PluralRules` (có sẵn trong trình duyệt và Node 22 full-icu) | — | Không thêm dependency; đúng quy ước `en-US`/`vi-VN` | Định dạng tay bằng date-fns locale (thêm bundle, trùng với Intl) |
@@ -93,18 +93,19 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 
 | Component | Lớp (config/logic/data/integration) | Trách nhiệm | Phụ thuộc |
 | :- | :- | :- | :- |
-| `config/env.ts` | config | Đọc và validate `import.meta.env` (DB name, interval nhắc) với default | zod |
+| `config/env.ts` | config | Đọc và validate `import.meta.env` (DB name, interval nhắc) với default. **v3.1:** kiểm bằng TS thuần, hành vi `parseEnv` giữ nguyên (M6-AC2) | ~~zod~~ — (v3.1) |
 | `config/constants.ts` | config | Giới hạn nghiệp vụ (độ dài tên, phút tối đa, kích thước import, ngưỡng heatmap) | — |
 | `domain/types.ts` | logic | Kiểu `Goal`, `LogEntry`, `ActiveTimer`, `Settings`, `ISODate`, `DomainError` | — |
 | `domain/dates.ts` | logic | Ngày cục bộ ↔ `YYYY-MM-DD`, cộng/trừ ngày, khoảng ngày, tuần ISO | date-fns |
-| `domain/goal.ts` | logic | Validate goal, `dailyTarget`, trạng thái goal, kiểm tra đổi khoảng thời gian | zod, dates |
-| `domain/entry.ts` | logic | Validate entry, giới hạn 1440 phút/ngày, quy tắc ngày ghi bù | zod, dates |
+| `domain/goal.ts` | logic | Validate goal, `dailyTarget`, trạng thái goal, kiểm tra đổi khoảng thời gian | dates (v3.1: bỏ zod, ADR-27) |
+| `domain/entry.ts` | logic | Validate entry, giới hạn 1440 phút/ngày, quy tắc ngày ghi bù | dates (v3.1: bỏ zod, ADR-27) |
 | `domain/stats.ts` | logic | Tổng theo ngày/tuần/tháng, ngày đạt, streak, tiến độ, đi trước/chậm | dates |
 | `domain/heatmap.ts` | logic | Lưới năm (cột tuần, hàng thứ Hai→Chủ nhật), mức màu 0–4 | dates, stats |
 | `domain/curve.ts` | logic | Chuỗi điểm 1.01^k lý tưởng và thực tế, headline "+X%", miền trục Y. **v3.0 (M9):** thực tế = phút ngày có ghi gần nhất / phút ngày đầu có ghi (§4.5, ADR-26) | dates |
 | `domain/timer.ts` | logic | Thời gian đã chạy, làm tròn phút, ngày quy về | dates |
 | `domain/reminder.ts` | logic | `shouldNotify`, `shouldShowBanner`, dữ liệu nhắc có cấu trúc (`{ pendingCount, items: [{ goalName, minutes, target }] }`) — không sinh chữ; chữ do `ReminderService` dịch | stats |
-| `domain/backup.ts` | logic | Schema file backup (zod), kiểm tra version và toàn vẹn tham chiếu | zod, entry |
+| `domain/backup.ts` | logic | Schema file backup (zod), kiểm tra version và toàn vẹn tham chiếu. **v3.1 (ADR-27):** chỉ được nạp bằng `import()` từ `BackupService.parse`; re-export phần của `backup-file.ts` để code/test cũ import từ đây vẫn chạy | zod, entry, backup-file |
+| `domain/backup-file.ts` (v3.1, M10) | logic | Phần **không zod** của backup, dùng trên đường tải lạnh: `backupReminder` (FR-21), `backupFileName`, `buildBackup`, `BACKUP_MIME_TYPE`, kiểu `BackupFile`, `BackupReminder` | dates, types |
 | `domain/ics.ts` | logic | Sinh nội dung `.ics` (VEVENT lặp hằng ngày); nhận `summary` và `alarmDescription` đã dịch làm tham số, tự escape theo RFC 5545 | — |
 | `i18n/types.ts` | config | Kiểu `Locale = 'en' \| 'vi'`, `MessageKey`, interface `Translator { locale: Locale; t(key, params?): string }` | — |
 | `i18n/resources/en.json`, `vi.json` | config | Toàn bộ chuỗi UI theo key; nguồn sự thật cho copy (nguyên văn từ DESIGN.md) | — |
@@ -158,6 +159,17 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `supabase/migrations/20261012000000_cloud_sync.sql`, `supabase/config.toml` | data (hạ tầng cloud) | Schema, trigger LWW, RLS, grant (§4.3); `config.toml` sinh bởi `supabase init` cho Supabase local | — | M6 |
 | `e2e/mock-supabase/server.mjs` | test | Mock Supabase (Auth PKCE + REST tối thiểu + trang chọn tài khoản giả + endpoint `/__test/*`) (§8) | Node `http` | M6 (Auth), M7 (REST) |
 
+**Component mới/sửa ở v3.1 (M10):**
+
+| Component | Lớp | Trách nhiệm | Phụ thuộc | Milestone |
+| :- | :- | :- | :- | :- |
+| `domain/backup-file.ts` | logic | Phần không zod của backup (xem bảng trên) | dates, types | M10 |
+| `domain/sync.ts` (mở rộng) | logic (domain) | Hàm thuần `isPurgeableTombstone(row, now, { neverSynced, retentionDays })` theo ADR-29 | — | M10 |
+| `data/dexie/sync-store.ts` (mở rộng) | data | `purgeTombstones(now)`: MỘT transaction `rw` trên `goals`, `entries`, `kv`; đọc kv `sync` trong cùng transaction để biết `neverSynced`; xoá cứng hàng thoả `isPurgeableTombstone`; trả số hàng đã xoá | dexie, domain/sync | M10 |
+| `app/maintenance.ts` | config (composition) | `startMaintenance({ purge, clock, schedule })`: chạy `purgeTombstones` **một lần** sau khi app đã render (không chặn khởi động; `requestIdleCallback`, thiếu thì `setTimeout` 2 s); lỗi bị bắt và ghi `console.warn`, không hiện UI | data (qua callback) | M10 |
+| `integration/auth-callback.ts` (mở rộng) | integration | `clearPkceVerifier(storage)`: xoá `localStorage['opb-auth-code-verifier']` sau khi callback xử lý xong (thành công, huỷ, lỗi) | — | M10 |
+| `integration/supabase/loader.ts` (sửa) | integration | Bản build **không** cấu hình cloud không phát ra chunk `supabase-client-*` (nhánh `import()` bị loại lúc build, ví dụ qua hằng `define` hoặc alias tới stub); bản cloud bật giữ nguyên lazy-load (ADR-18) | — | M10 |
+
 **Quy tắc phụ thuộc (bắt buộc, cưỡng chế bằng ESLint `no-restricted-imports`):**
 
 - `src/domain/**` không import `react`, `react-dom`, `dexie`, `recharts`, `i18next`, `react-i18next`, hay bất kỳ file nào trong `src/data`, `src/services`, `src/integration`, `src/ui`, `src/app`, `src/i18n` (domain không biết ngôn ngữ).
@@ -166,6 +178,8 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 - `src/i18n/**` không import `react`, `src/ui/**`, `src/services/**`, `src/data/**`.
 - Chỉ `src/app/container.ts` (và `bootstrap.ts`) được ghép implementation cụ thể.
 - **(v2.0)** `@supabase/*` chỉ được import (tĩnh) trong `src/integration/supabase/**`; mọi file khác import `@supabase/*` → lỗi lint. File ngoài `src/integration/supabase/**` không được import **tĩnh** `integration/supabase/supabase-client` (chỉ `loader.ts` dùng `import()` động; `no-restricted-imports` không xét `import()` nên quy tắc này giữ cho SDK nằm ngoài entry chunk). `src/services/**` thêm cấm `@supabase/*` và `src/integration/**` (integration được truyền qua constructor/factory). `src/domain/**` không đổi (thuần).
+- **(v3.1, ADR-27)** `zod` chỉ được import trong `src/domain/backup.ts` và `src/integration/supabase/**` (cùng file test); mọi file khác import `zod` → lỗi `no-restricted-imports`. `src/ui/**`, `src/app/**`, `src/services/**`, `src/domain/**`, `src/data/**` không được import giá trị từ `src/domain/backup.ts` **tĩnh** (dùng `domain/backup-file.ts`; `import type` được phép, rule đặt `allowTypeImports: true`); chỉ `BackupService` nạp nó bằng `import()`.
+- **(v3.1, M6-P1)** `import()` động tới `@supabase/*` hoặc tới `integration/supabase/supabase-client` ngoài `src/integration/supabase/**` → lỗi (ESLint `no-restricted-syntax`, selector `ImportExpression[source.value=/^@supabase\//]` và `ImportExpression[source.value=/supabase-client/]`; với `src/ui/**`, `src/app/**` phải gộp vào **cùng** khai báo `no-restricted-syntax` đang có, vì flat config ghi đè cả mảng selector).
 - Rule tách lớp của `src/domain/**`, `src/services/**`, `src/ui/**` bỏ qua file `*.test.ts`/`*.test.tsx` (để test đọc `en.json`/`vi.json` và dựng repository Dexie thật trên fake-indexeddb). Code không phải test vẫn bị chặn (probe M1-AC13, M1-AC17 vẫn exit ≠ 0).
 
 **Quy tắc chuỗi hiển thị (bắt buộc, cưỡng chế bằng ESLint + test, NFR-11):**
@@ -255,7 +269,8 @@ Thay đổi schema sau này: tăng `db.version(n)` kèm `upgrade()`; tăng `sche
 
 ```ts
 // src/data/repositories.ts — chỉ lớp data/sync thấy
-type SyncFlag = 0 | 1;                                   // IndexedDB không index được boolean
+type SyncFlag = 0 | 1 | 2;                               // IndexedDB không index được boolean
+                                                         // 0 = đã đồng bộ, 1 = chờ đẩy, 2 = cloud từ chối (M7-D1, ADR-28)
 type GoalRow  = Goal     & { deletedAt: ISODateTime | null; dirty: SyncFlag };
 type EntryRow = LogEntry & { deletedAt: ISODateTime | null; dirty: SyncFlag };
 type SyncRecord<T> = T & { deletedAt: ISODateTime | null };   // dạng trao đổi với RemoteStore (không có dirty)
@@ -307,6 +322,8 @@ type KvKey = 'settings' | 'activeTimer' | 'locale' | 'sync' | 'loginPrompt' | 'p
 - **Xoá** (`EntryRepository.delete`, `GoalRepository.deleteWithEntries`): xoá mềm: `deletedAt = updatedAt = nextUpdatedAt(clock(), hàng.updatedAt)`, `dirty = 1`; goal xoá kèm mọi entry còn sống của nó, cùng một transaction như phase 1. Repository nhận `clock: () => Date` qua constructor (mặc định `() => new Date()`).
 - `replaceAll` (import): xoá mềm mọi goal/entry còn sống không có trong file, `bulkPut` bản ghi trong file (`dirty = 1`, `deletedAt = null`), giữ kv `locale`, `sync`, `loginPrompt`; v2.1: đặt `prefsSync.reminder = { updatedAt: clock(), dirty: 1 }` (A-37), không đụng `prefsSync.locale`; vẫn một transaction (M3-AC7/AC9 giữ nguyên vì repository trả kiểu domain).
 - `clearUserData` (đăng xuất "xoá dữ liệu", v2.1): xoá thêm kv `prefsSync` (giữ kv `locale` để giao diện không đổi ngôn ngữ, nhưng máy trở về "chưa từng chọn" với tài khoản, A-37).
+- **Hàng bị cloud từ chối (v3.1 ghi nhận, ADR-28):** `dirty = 2` — vẫn sống trong app và trong Export, không đếm vào "đang chờ", không đẩy lại tới khi được sửa (sửa → `dirty = 1`); `markAllDirty` thử lại một lần.
+- **Dọn tombstone cục bộ (v3.1, M10, ADR-29):** `LocalSyncStore.purgeTombstones(now)` xoá **cứng** hàng `goals`/`entries` có `deletedAt != null` và `deletedAt ≤ now − 30 ngày` (`TOMBSTONE_RETENTION_DAYS = 30` trong `config/constants.ts`) **và** (`dirty ∈ {0, 2}` **hoặc** thiết bị chưa từng đồng bộ: kv `sync` không có hoặc `userId == null && lastUserId == null`). Hàng còn sống, hàng `dirty = 1` của thiết bị đã từng đồng bộ, và tombstone chưa đủ 30 ngày không bị đụng. Một transaction; lỗi → rollback. Không đổi cloud. Chạy một lần mỗi lần khởi động (`app/maintenance.ts`).
 - **`nextUpdatedAt(now, previous)`** (`domain/sync.ts`): `now ≥ previous` → `now`; ngược lại `previous + 1 ms`. `GoalService.update`/`setArchived`, `EntryService.update` dùng hàm này thay cho `now.toISOString()` (với đồng hồ cố định trong test hiện có, kết quả không đổi).
 
 ### 4.3 Schema cloud (Supabase Postgres, M6) — `supabase/migrations/20261012000000_cloud_sync.sql`
@@ -683,6 +700,9 @@ interface LocalSyncStore {
   markAllDirty(): Promise<number>;
   /** Xoá mềm entry còn sống mà goal đã bị xoá mềm (dọn cuối chu kỳ). */
   tombstoneOrphanEntries(now: Date): Promise<number>;
+  /** v3.1 (M10, ADR-29): xoá cứng tombstone đủ điều kiện §4.2 trong MỘT transaction rw trên goals + entries + kv
+   *  (đọc kv 'sync' trong cùng transaction). Trả số hàng đã xoá theo bảng. */
+  purgeTombstones(now: Date): Promise<{ goals: number; entries: number }>;
   countDirty(): Promise<number>;
   watchPendingCount(): Subscribable<number>;   // v2.1: cộng thêm số nhóm tuỳ chọn đang dirty
 }
@@ -727,6 +747,8 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 | `LoginPromptService` (v2.0) | `(kv: KvRepository, goals: GoalRepository, entries: EntryRepository)` | `state(now, ctx: { configured; signedIn; online }) → { banner: boolean; exportHint: boolean }`, `dismiss(now)`, `claimExportHint(now) → boolean` (qua `kv.update`, nguyên tử) | M8 |
 | `SettingsService`, `LocaleService` (sửa v2.1) | thêm tham số tuỳ chọn `prefs?: SyncedPrefsRepository` (như `kv` tuỳ chọn của `GoalService`) | Có `prefs`: `setReminderEnabled`/`setReminderTime` đi qua `prefs.setReminder(patch, now)`, `LocaleService.set` đi qua `prefs.setLocale(locale, now)` (luôn ghi mốc, kể cả khi chưa đăng nhập: lựa chọn của người dùng là "đã chọn"). Không có `prefs` (test cũ) → hành vi M1/M2. `claimReminderDay`, `claimPlusOne`, `update({ lastBackupAt })` không đụng `prefsSync` | M7 |
 | `BackupService` (sửa v2.0) | thêm tham số tuỳ chọn `isSignedIn: () => boolean` | `import(preview, now)`: khi đã đăng nhập, đặt `updatedAt = nextUpdatedAt(now, …)` cho mọi goal/entry trong file trước `replaceAll` (A-29); chưa đăng nhập → như M3 | M7 |
+| `BackupService` (sửa v3.1, ADR-27) | thêm tham số tuỳ chọn `loadSchema?: () => Promise<typeof import('../domain/backup')>` (mặc định `() => import('../domain/backup')`, để test đếm số lần nạp) | **`parse(text, sizeBytes, today?) → Promise<Result<BackupPreview>>`** (trước là đồng bộ): kiểm kích thước trước (file > 5 MB → `IMPORT_FILE_TOO_LARGE`, không nạp schema), rồi nạp `domain/backup.ts` bằng `import()` (memo một lần), rồi `parseBackup` như cũ; nạp module lỗi (offline mà chunk chưa có trong cache) → ném lỗi, UI hiện lỗi đọc file như hiện tại. `export`, `import`, `counts` không đổi. Vi phạm giới hạn nghiệp vụ trong file (đúng kiểu JSON nhưng ngoài giới hạn §4/§5.4) vẫn là `IMPORT_INVALID_SCHEMA` nhưng có `params.variant = 'outOfRange'` (M5-P1) | M10 |
+| `LoginPromptService` (sửa v3.1, A-46) | không đổi | `dismiss(now)`: trong `kv.update`, nếu trạng thái hiện tại đang ẩn (`isSnoozed(now, state)`) thì **không ghi** (không đếm thêm lượt). Domain `isSnoozed`/`shouldShowExportHint` coi mốc > `now + 24 h` là không có (`CLOCK_SKEW_TOLERANCE_MS = 86_400_000`) | M10 |
 
 `AuthState = { kind: 'unavailable' } | { kind: 'signed-out'; lastError?: AuthErrorCode } | { kind: 'signing-in' } | { kind: 'signed-in'; userId; email; name } | { kind: 'expired'; email }`.
 
@@ -762,7 +784,7 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 | `GOAL_TIMER_RUNNING` | Archive goal đang có timer chạy (phải Stop/Discard trước) — M5 |
 | `IMPORT_FILE_TOO_LARGE` | File > 5 MB |
 | `IMPORT_INVALID_JSON` | Không parse được JSON |
-| `IMPORT_INVALID_SCHEMA` | Sai cấu trúc/kiểu, thiếu field, `app` sai |
+| `IMPORT_INVALID_SCHEMA` | Sai cấu trúc/kiểu, thiếu field, `app` sai, id dài hơn 64 ký tự. **v3.1 (M5-P1):** khi file đúng cấu trúc/kiểu nhưng một giá trị nằm ngoài giới hạn nghiệp vụ (tên/why/note quá dài hoặc tên rỗng, `targetMinutes` ngoài khoảng theo loại, `dailyTarget` suy ra > 1440, khoảng goal > 1827 ngày hoặc `endDate < startDate`, phút entry không phải số nguyên 1–1440) → vẫn mã này, thêm `params.variant = 'outOfRange'`; UI dùng key `errors.IMPORT_INVALID_SCHEMA_outOfRange` (copy DESIGN v3.1). Mã lỗi không đổi để test bám mã vẫn đúng |
 | `IMPORT_UNSUPPORTED_VERSION` | `schemaVersion` khác 1 |
 | `IMPORT_INTEGRITY` | Entry trỏ tới goal không tồn tại, id trùng, tổng phút/ngày > 1440, entry ngoài khoảng goal |
 | `STORAGE_UNAVAILABLE` | Không mở được IndexedDB |
@@ -864,6 +886,8 @@ interface ReturnToStore { save(hash: string): void; take(): string | null }  // 
 3. GitHub Pages trả `index.html` cho `/one-percent-better/?…`; service worker không khớp precache vì có query nên lấy từ mạng (đang online). `bootstrap` (trước khi render router) gọi `readAuthCallback(location)`; nếu có → `cleanCallbackUrl` (thay URL bằng `BASE_URL + (returnTo ?? '#/settings')` qua `history.replaceState`, để reload không đổi lại code), render app, rồi chạy nền `AuthService.completeCallback(cb)` (Account card hiện `signing-in`).
 4. Thành công → `signed-in`, ghi kv `sync.account`/`userId`; M7: `SyncService.prepareFirstSignIn` → gộp hoặc hỏi (FR-47) → `syncNow('sign-in')`.
 5. `flowType: 'pkce'` bắt buộc (mặc định của SDK là `implicit`, sẽ đặt token vào `#…` và đụng hash router); `detectSessionInUrl: false` (app tự xử lý callback, test được bằng hàm thuần).
+
+**Dọn code verifier (v3.1, M6-P1):** sau khi `completeCallback` kết thúc (thành công, `AUTH_CANCELLED`, `AUTH_FAILED`), lớp integration xoá `localStorage['opb-auth-code-verifier']` (`clearPkceVerifier`, gọi từ `bootstrap` sau khi promise callback settle). Phiên `opb-auth` không bị đụng. Bắt đầu đăng nhập lại thì SDK tạo verifier mới.
 
 **Lazy-load (ADR-18):** `container` không import SDK; `AuthService.init()` chỉ nạp khi `hasStoredSession()` (có `localStorage['opb-auth']`) hoặc có callback. Trước khi SDK nạp xong, UI hiện `sync.account` đã lưu (không nháy trạng thái). Bản build không có cấu hình cloud: `AuthService` = stub `unavailable`, không có code nào gọi `loader`.
 
@@ -998,6 +1022,8 @@ Unit/integration test đặt cạnh file nguồn (`*.test.ts(x)`).
     └── db/                    # test SQL/RLS với Supabase local (chỉ `npm run test:db`, không nằm trong `npm test`)
 ```
 
+**Bổ sung v3.1 (M10):** `src/domain/backup-file.ts`; `src/app/maintenance.ts`; `e2e/m10-*.spec.ts` (project `chromium`) và `e2e/cloud/m10-*.spec.ts` (project `cloud`), gồm spec đo ngân sách tải lạnh.
+
 ## 7. Config và biến môi trường
 
 Không có secret. Không biến nào bắt buộc; app chạy với giá trị mặc định khi không có `.env`.
@@ -1049,6 +1075,14 @@ Quy ước test: mỗi test e2e dùng browser context mới (IndexedDB sạch); 
 | E2E chuẩn | Playwright project `chromium` (như cũ) trên build `--mode e2e` (cloud **tắt**) cổng 4173 | Toàn bộ spec M1–M5 + kiểm "không có Account card" | `npm run test:e2e` |
 | E2E cloud | Playwright project `cloud`: build `--mode cloud-e2e` với `BASE_PATH=/one-percent-better/`, `outDir: dist-cloud-e2e`, preview cổng 4174; mock Supabase cổng 54321 (đều là `webServer`) | `e2e/cloud/**`, `tests/qc/cloud/**`: đăng nhập PKCE qua sub-path, lazy-load, phiên bền/offline/hết hạn, đăng xuất, đồng bộ hai thiết bị (hai browser context), xoá lan truyền, offline → online, lỗi 500/401, import khi đã đăng nhập, nhắc đăng nhập, `vi-VN`, axe, 360 px, request chỉ tới {4174, 54321}. Mỗi test gọi `/__test/reset` (hoặc dùng user riêng) | `npm run test:e2e` (chạy cả hai project) |
 
+**Bổ sung v3.1 (M10):**
+
+| Loại | Công cụ | Phạm vi | Lệnh |
+| :- | :- | :- | :- |
+| Ngân sách tải lạnh (ADR-27) | Playwright, cùng phương pháp `tests/qc/final-nfr.spec.ts`: context mới, `freezeClock`, mở `#/today`, chờ `h1` + `networkidle`, cộng `gzipSync(body, { level: 9 })` của mọi response có content-type JS/CSS/HTML, bỏ URL `sw*`/`workbox*` | Project `chromium` (build `--mode e2e`, cloud tắt) và project `cloud` (cloud bật, chưa đăng nhập): tổng ≤ **230.000 byte**; không request chunk Recharts, SDK Supabase, hay chunk chứa zod; in danh sách request + số đo ra log | `npm run test:e2e` |
+| Giới hạn chung form ↔ file | Vitest | Cùng một bảng giá trị biên (tên 60/61, why 280/281, daily 1440/1441, giờ tổng 10000/10001, phút entry 1440/1441, note 280/281, khoảng 1827/1828 ngày): validator form (`domain/goal.ts`, `entry.ts`, TS thuần) và `parseBackup` (zod) chấp nhận/từ chối giống nhau | `npm test` |
+| Dọn tombstone (ADR-29) | Vitest + fake-indexeddb + `two-devices.ts` | Bảng quy tắc §4.2; rollback; hội tụ hai thiết bị sau khi dọn; thêm thao tác "tua 31 ngày + dọn" vào test ngẫu nhiên 20 seed | `npm test` |
+
 `page.clock` trong spec cloud: chỉ dùng `install`/`fastForward` cho debounce/backoff; request tới mock vẫn là thật. Spec cloud không dùng Google thật; luồng Google thật, project thật, iOS/Android là kiểm thủ công (TASKS "User setup" U10, "NOT VERIFIED" của M6–M8).
 
 Quy ước test song ngữ: component test mặc định render ở `en` (helper `renderWithLocale(ui, 'en' | 'vi')`). Test khẳng định chữ nên lấy chuỗi mong đợi từ resource (`t('toast.entrySaved')`) hoặc ghi literal `en` khi AC ghi literal; giá trị định dạng `vi` so với kết quả `Intl` tính trong test hoặc literal sau khi chuẩn hoá khoảng trắng (U+00A0, U+202F → space), vì chi tiết ICU có thể khác nhẹ giữa Node và Chromium.
@@ -1069,7 +1103,7 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | Unit + integration | `npm test` → `vitest run` |
 | Coverage | `npm run test:coverage` |
 | E2E | `npm run test:e2e` → `cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright test` (tự build + chạy preview qua `webServer`) |
-| Kiểm tra tổng | `npm run check` → lint + typecheck + test + build |
+| Kiểm tra tổng | `npm run check` → lint + typecheck + test + build. **v3.1 (M7-P1):** bước build trong `check` là `npm run build:e2e` (cloud luôn tắt, kết quả giống nhau dù máy có `.env.local` hay không); `npm run build` (dùng `.env.local` nếu có) vẫn là lệnh build chuẩn của CI/deploy (`pages.yml` chạy từng bước riêng, không dùng `check`) |
 | Build cho E2E chuẩn (v2.0) | `npm run build:e2e` → `tsc -b && vite build --mode e2e` (cloud tắt dù máy có `.env.local`); `webServer` của project `chromium` đổi sang `npm run build:e2e && npm run preview` |
 | Build + preview cloud E2E (v2.0) | `npm run build:cloud-e2e` → `cross-env BASE_PATH=/one-percent-better/ vite build --mode cloud-e2e --outDir dist-cloud-e2e`; `npm run preview:cloud-e2e` → `vite preview --outDir dist-cloud-e2e --port 4174 --strictPort` → http://localhost:4174/one-percent-better/ |
 | Mock Supabase (v2.0) | `npm run mock:supabase` → `node e2e/mock-supabase/server.mjs` (cổng 54321); demo tay: chạy lệnh này + `npm run build:cloud-e2e && npm run preview:cloud-e2e` |
@@ -1111,6 +1145,10 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | (v2.1) Nhắc được bật từ máy khác nhưng máy này chưa cấp quyền notification → người dùng tưởng sẽ có notification | Trung bình | Thấp | Banner trong app vẫn hoạt động (FR-15); Settings hiện chip quyền + nút "Allow notifications"; không tự xin quyền |
 | (v2.1) Thiết bị mới ghi đè ngôn ngữ/giờ nhắc của tài khoản bằng giá trị mặc định | Thấp | Thấp | Mốc `null` = chưa chọn → cloud luôn thắng; chỉ thao tác của người dùng mới đặt mốc; test bảng quy tắc §4.4 |
 | Nhiều tab cùng đồng bộ gây request trùng | Trung bình | Thấp | Web Locks (`opb-sync`), không hỗ trợ thì chạy song song vẫn đúng (LWW idempotent, `applyRemote` trong transaction) |
+| (v3.1) Bundle tải lạnh lại phình dần tới 250 KB khi thêm tính năng | Cao | Trung bình | Ngân sách làm việc 230 KB có spec Playwright riêng (fail khi vượt); lint chặn `zod` ngoài hai biên lazy; quy tắc ADR-27: tính năng không cần cho Today phải nằm sau `import()` |
+| (v3.1) Lần Import đầu tiên khi offline mà chunk schema chưa có trong cache | Thấp | Thấp | Chunk nằm trong precache của SW (`globPatterns` `**/*.js`) nên có sau lần cài đầu; nạp lỗi → thông báo lỗi đọc file, dữ liệu không đổi; E2E import offline |
+| (v3.1) Dọn tombstone làm bản ghi đã xoá "sống lại" | Thấp | Thấp | Chỉ dọn hàng đã được cloud xác nhận (`dirty = 0`, cloud giữ tombstone và LWW chặn bản cũ hơn), bị từ chối (`dirty = 2`), hoặc trên máy chưa từng đồng bộ; ngưỡng 30 ngày; test hội tụ + ngẫu nhiên; ca biên còn lại ghi ở A-34 |
+| (v3.1) Hai cách validate (TS thuần cho form, zod cho file/cloud) lệch giới hạn (bài học M7-D1) | Trung bình | Trung bình | Mọi giới hạn lấy từ `config/constants.ts`; test "giới hạn chung form ↔ file" (§8) |
 
 ## 11. Quyết định kiến trúc
 
@@ -1194,6 +1232,28 @@ Bối cảnh: user chốt "merge, không xoá"; máy dùng chung cần xoá đư
 **ADR-26 — Đường cong "Bạn" = tỉ lệ phút so với ngày có ghi trước, nhân dồn, tính bằng tỉ số trực tiếp (v3.0, M9).**
 Bối cảnh: user xem Goal detail thật và thấy định nghĩa M5 (1.01^n, n = số ngày đạt chỉ tiêu) không khớp ý "better per day": user muốn so số phút hôm nay với ngày trước (5 → 6 phút = +20%), nhân dồn từ ngày đầu, ngày 0 phút đi ngang (quyết định 2026-10-13). Lựa chọn: `actual(d) = m(ngày có ghi gần nhất ≤ d) / m(ngày đầu có ghi)` (tương đương tích telescoping), tính trực tiếp từ hai số nguyên; làm tròn % nửa xa 0; contract `CurveData` đổi field (§4.5); trục Y tự co giãn theo cả hai series qua `curveYDomain`; đường lý tưởng và Range (A-D4) giữ nguyên. Phương án đã loại: (1) nhân dồn số thực từng ngày — sai số tích luỹ, kết quả giống hệt về toán; (2) so với "hôm qua" theo lịch (ngày 0 phút thành mẫu số 0 → vô nghĩa) — user chốt so với ngày có ghi gần nhất; (3) baseline = trung bình vài ngày đầu — user chốt ngày đầu. Hệ quả: đường cong không còn phụ thuộc chỉ tiêu ngày (A-42); có thể âm; một ngày ghi nhiều bất thường làm headline nhảy lớn (đúng định nghĩa); "+1%" trên Today vẫn theo chỉ tiêu (hai khái niệm tách biệt, copy phải nói rõ); test M5 về giá trị đường cong được thay bởi test M9 (TASKS M9).
 
+**ADR-27 — Chiến lược chunk: zod chỉ ở biên lazy, ngân sách làm việc 230 KB cho tải lạnh Today (v3.1, M10).**
+Bối cảnh: sau M9, tải lạnh `#/today` (JS + CSS + HTML, gzip 9, cách đo `tests/qc/final-nfr.spec.ts`) là 248,3 KB / ngưỡng 250 KB (F2-R1). Phần lớn nhất có thể bỏ là chunk `schemas-*.js` (zod, ≈ 34 KB gzip) bị Rolldown tách tự động nhưng vẫn `modulepreload`, vì đường tải lạnh import zod qua bốn chỗ: `config/env.ts` (parse lúc nạp module), `domain/goal.ts`, `domain/entry.ts` (vài schema số/chuỗi đơn giản) và `domain/backup.ts` (Today/Settings import `backupReminder`, `BACKUP_MIME_TYPE` từ đây). Lựa chọn: (1) `env.ts`, `goal.ts`, `entry.ts` kiểm bằng TypeScript thuần, giữ nguyên chữ ký, mã lỗi, `params`, giới hạn (từ `config/constants.ts`); (2) tách phần không zod của backup sang `domain/backup-file.ts`; `domain/backup.ts` (zod) chỉ được `BackupService.parse` nạp bằng `import()` (memo), nên `parse` thành async; (3) mapper cloud giữ zod trong chunk Supabase vốn đã lazy; (4) lint cấm `zod` ngoài `domain/backup.ts` và `integration/supabase/**`; (5) không cần `manualChunks`: ranh giới chunk do `import()` quyết định, spec ngân sách kiểm kết quả (nếu Rolldown gộp module lazy vào chunk dùng chung bị preload, mới thêm `manualChunks`/`advancedChunks` có chủ đích và ghi handoff); (6) ngân sách làm việc 230 KB (PRD NFR-03 v3.1) có spec Playwright riêng; ngưỡng cứng 250 KB giữ nguyên. Phương án đã loại: chuyển sang `zod/mini` (viết lại toàn bộ schema theo API hàm, form vẫn kéo zod vào đường tải lạnh, mức giảm không chắc); nâng ngưỡng 250 KB (chỉ hoãn vấn đề, trái NFR-03); lazy-load file dịch của ngôn ngữ không dùng (chỉ vài KB, thêm nguy cơ nháy ngôn ngữ — ADR-11 để ngỏ cho sau); đổi React sang Preact (thay đổi lớn, rủi ro cao); chỉ dùng `manualChunks` (không đưa zod ra khỏi đường tải lạnh). Hệ quả: dự kiến tải lạnh ≈ 214–216 KB (dư ≈ 34 KB dưới 250); lần Import đầu tải thêm ≈ 35 KB (đã precache nên vẫn offline); `BackupService.parse` đổi chữ ký sang Promise — test gọi đồng bộ phải `await` (test QC: re-target, TASKS M10); có hai kiểu validate (TS cho form, zod cho file/cloud) nên phải có test "giới hạn chung form ↔ file" để không lặp lại M7-D1.
+
+**ADR-28 — Hàng bị cloud từ chối: `dirty = 2` (v3.1 ghi nhận quyết định M7-D1, 2026-10-12).**
+Bối cảnh: dữ liệu cũ trên máy có thể vi phạm ràng buộc cloud (vd. id > 64 ký tự import trước M7); đổi id phá liên kết giữa các thiết bị, xoá thì mất dữ liệu; đẩy lại mãi thì một hàng hỏng chặn cả lô. Lựa chọn: `RemoteStore.push` trả `rejected` (kiểm từng hàng bằng schema trước khi gửi; server trả 400 SQLSTATE 22xxx/23xxx thì tách đôi lô tới từng hàng); `LocalSyncStore.markRejected` đặt `dirty = 2`: hàng vẫn dùng bình thường và có trong Export, không đếm vào "đang chờ", không đẩy lại tới khi người dùng sửa (→ `dirty = 1`), `markAllDirty` thử lại một lần; `SyncStatus.rejected` + `remoteSkipped` để card Account và D4 nói đúng nguyên nhân (key `settings.account.localRejected_*`, `auth.signOut.rejected*`, `removeDescRejected` — copy chốt ở DESIGN v3.1). Importer từ chối id > 64 ngay (`IMPORT_INVALID_SCHEMA`), một hằng `ID_MAX` dùng chung cho importer và mapper. Hệ quả: không mất dữ liệu, chu kỳ đồng bộ không bị chặn; người dùng tự sửa bằng Export → sửa id → Import; tombstone `dirty = 2` được dọn theo ADR-29.
+
+**ADR-29 — Dọn tombstone cục bộ sau 30 ngày (v3.1, M10; thay phần "tombstone tích luỹ, dọn để Later" của ADR-20 và A-34 cũ).**
+Bối cảnh: xoá mềm (ADR-20) để lan truyền việc xoá; khi cloud tắt hoặc chưa đăng nhập, tombstone không bao giờ được dùng nhưng ở lại IndexedDB mãi (QC M7 r1 §9.3), làm chậm các truy vấn lọc `isLive` và giữ dữ liệu người dùng đã xoá trên đĩa. Lựa chọn: xoá cứng tombstone khi `deletedAt` cũ hơn 30 ngày **và** một trong: `dirty = 0` (cloud đã nhận: server giữ tombstone, trigger LWW chặn bản cũ hơn, nên thiết bị khác vẫn nhận được việc xoá từ server), `dirty = 2` (cloud không bao giờ có hàng này), hoặc thiết bị chưa từng đồng bộ (`sync.userId` và `sync.lastUserId` đều `null` — không ai cần tombstone). Không dọn `dirty = 1` trên thiết bị đã từng đồng bộ (đăng nhập lại cùng tài khoản phải đẩy được việc xoá, A-33). Quy tắc là hàm thuần ở `domain/sync.ts`; `LocalSyncStore.purgeTombstones` làm trong một transaction, đọc kv `sync` trong cùng transaction (đua với đăng nhập vẫn đúng); chạy một lần mỗi lần khởi động, không chặn render. Cloud không đổi (không có DELETE; dọn cloud vẫn Later). Phương án đã loại: dọn ngay khi `dirty = 0` (thiết bị khác đang offline lâu vẫn đúng nhờ server, nhưng mất khả năng tự kiểm khi gỡ lỗi; 30 ngày rẻ); dọn cả `dirty = 1` sau N ngày (mất việc xoá khi đăng nhập lại); dọn trong chu kỳ sync (cloud tắt thì không có sync). Hệ quả: dung lượng và chi phí lọc giảm; entry sống mồ côi (goal đã bị dọn) vẫn bị ẩn vì goal không sống; ca biên "sống lại" ghi ở A-34; `applyRemote` có thể chèn lại tombstone kéo về (cửa sổ lùi 120 s, đổi tài khoản) — vô hại, sẽ được dọn lần sau.
+
+**ADR-30 — Ghi nhận các deviation phase 2/3 đã được chấp nhận (v3.1).**
+Bối cảnh: một số hành vi đã ship khác chữ của plan/design và đã được QC/orchestrator chấp nhận; ghi vào contract để các milestone sau không "sửa lại cho đúng plan". Lựa chọn (mỗi mục là contract từ v3.1):
+- (a) **D7 (M7, STATUS 2026-10-12):** `prepareFirstSignIn` so với `sync.lastUserId` = tài khoản **gần nhất** đã đồng bộ. Đăng nhập lại cùng tài khoản ngay sau Sign out (Keep) → không hỏi D5; đã gộp sang tài khoản B rồi quay lại A → hỏi D5 (vì `lastUserId = B`). Cancel ở D5 giữ `lastUserId` cũ (`preserveLastUserId`).
+- (b) **OQ-D12 (M8, A-44):** `claimExportHint` chỉ chạy khi online; offline → không hint, không tiêu lượt.
+- (c) **Sync protocol (M7 D1–D3):** `pull` là keyset chính xác, cửa sổ lùi 120 s áp một lần ở đầu chu kỳ (`rewindCursor`) để phân trang > 500 hàng không lặp; `pullPrefs` trả `{ prefs, skippedInvalid }`; chu kỳ đẩy **lại** sau bước dọn nếu còn dirty (để "sync A, B, A" hội tụ với `pending = 0`).
+- (d) **Toast (M7 D9):** vùng toast chỉ hiện một thông báo; lần đăng nhập đầu có dữ liệu gộp → `toast.mergeDone` thay cho "Signed in as …" (`willAnnounceMerge()` chỉ `true` sau khi chu kỳ gộp thành công); `Sync now` áp tuỳ chọn từ cloud → giữ `prefsFromAccount`, bỏ `syncNowDone`.
+- (e) **Nhắc đăng nhập (M8 D1–D3, D5):** `LoginPromptService` đọc dữ liệu qua `StatsService` (không thêm hàm repository); Today dùng `watchData()` + `watchState()` + hàm thuần `shouldShowLoginPrompt`; banner giữ trạng thái `busy` khi bấm Google từ banner; hint sau Export tồn tại tới khi rời Settings.
+- (f) **Đường cong (M9 D1, D5):** `curveYScale` bọc `curveYDomain` để trả thêm `ticks`/`step` (chữ ký `curveYDomain` không đổi); formatter `decimal3` bị bỏ.
+- (g) **Brand (M7, orchestrator 2026-10-12/13):** brand mark là ảnh logo trên ô trắng bo góc (32/28 px, cả hai theme) thay cho ô xanh chữ "1%"; chữ cạnh mark là `app.name`; chi tiết hình ảnh do DESIGN v3.1 ghi.
+- (h) **Precache (2026-10-10):** đã ghi ở ghi chú ADR-10 (SW precache chunk lazy; ngân sách chỉ áp tải trang ban đầu) — giữ.
+- (i) **Mock** `/__test/token` nhận `email`/`name` để test tạo phiên hợp lệ với danh tính tuỳ ý (M7).
+Hệ quả: QC/dev đối chiếu các hành vi trên với ADR này, không coi là defect; thay đổi chúng cần revise plan.
+
 ## Changelog
 
 - 2026-10-09 — v1, tạo mới (mode `new`).
@@ -1203,3 +1263,4 @@ Bối cảnh: user xem Goal detail thật và thấy định nghĩa M5 (1.01^n, 
 - 2026-10-12 — v2.0 (mode `revise`, phase 2: đăng nhập Google tuỳ chọn + đồng bộ offline-first qua Supabase). §1 thêm sơ đồ và luồng phase 2; §2 thêm Supabase, `@supabase/supabase-js` 2.117.3 (lazy), Supabase CLI 2.120.0 qua npx, mock Supabase Node; §3 thêm component phase 2 (AuthPort/AuthService, RemoteStore/SyncService, LoginPromptService, LockPort, Dexie v2, LocalSyncStore, LocalDataRepository, integration/supabase, auth-callback, sync-scheduler, UI mới) và quy tắc lint `@supabase/*`; §4 thêm 4.1 kiểu sync + kv `sync`/`loginPrompt`, 4.2 Dexie v2 + quy tắc xoá mềm/`dirty`/`nextUpdatedAt`, 4.3 SQL migration (bảng, trigger LWW, RLS, grant), 4.4 bảng cái gì đồng bộ; §5.1 callback `?auth=callback`; §5.2 `LocalDataRepository`, `LocalSyncStore`; §5.3 `AuthService`, `SyncService`, `LoginPromptService`, sửa `BackupService`; §5.4 mã `AUTH_*`, `SYNC_*`; §5.5 export/import với tombstone; thêm §5.9 Auth contract, §5.10 Sync protocol, §5.11 mock Supabase; §6 thư mục mới; §7 biến `VITE_SUPABASE_*`, `VITE_SYNC_INTERVAL_MS`, biến test DB, secrets Actions; §8 chiến lược test auth/sync (Fake, hai thiết bị, hợp đồng, migration, SQL/RLS, project E2E `cloud`); §9 lệnh `build:e2e`, `build:cloud-e2e`, `preview:cloud-e2e`, `mock:supabase`, `db:*`, `test:db`; §10 thêm 12 rủi ro; §11 ghi chú ADR-01/08/10/12, thêm ADR-17 … ADR-24. Không đổi contract M1–M5 ngoài hành vi xoá mềm/lọc tombstone ở repository (chữ ký giữ nguyên).
 - 2026-10-12 — v2.1 (mode `revise`, trả lời OQ-06 … OQ-09 sau Gate 1 phase 2). OQ-07 → đồng bộ nhắc nhở + ngôn ngữ: §3 thêm `data/dexie/prefs-repo.ts`; §4.1 thêm `PrefGroup`, `PrefsSyncState`, `RemotePrefs`, kv `prefsSync`; §4.2 migration đặt mốc tuỳ chọn (A-36), `replaceAll` đánh dấu nhóm reminder (A-37), `clearUserData` xoá `prefsSync`; §4.3 thêm bảng `settings` + trigger `settings_before_write` (LWW theo nhóm) + RLS + grant vào cùng file migration; §4.4 bảng đồng bộ viết lại + bảng quy tắc `resolvePrefGroup` + cách áp locale/reminder; §5.2 `SyncedPrefsRepository`; §5.3 `SettingsService`/`LocaleService` nhận `prefs` tuỳ chọn, `SyncService` nhận `prefs`; §5.10 `pushPrefs`/`pullPrefs` + bước 3b, gộp tài khoản đánh dấu tuỳ chọn; §5.11 mock `/rest/v1/settings`; §8 test tuỳ chọn + ghi chú không có Docker (OQ-08); §10 thêm 2 rủi ro; §11 ghi chú ADR-12, ADR-22, thêm ADR-25. OQ-06 (không giới hạn đăng nhập), OQ-09 (không nút xoá cloud): không đổi kiến trúc.
 - 2026-10-13 — v3.0 (mode `revise`, phase 3: định nghĩa mới đường cong "Bạn", FR-27 v3.0). §3 sửa mô tả `domain/curve.ts` (bỏ phụ thuộc `stats`); §4 gạch quy tắc 1.01^n, trỏ sang **§4.5** mới (ký hiệu, công thức, làm tròn `pct` nửa xa 0, phạm vi giá trị, contract `ActualPoint`/`CurveData`/`curveYDomain`, oracle dataset R1 dữ liệu thật của user + S1, yêu cầu hiển thị, formatter `f.factor`, thang Y tự co giãn theo cả hai series); §11 thêm ADR-26. Không đổi schema, sync, backup, route, mã lỗi.
+- 2026-10-17 — v3.1 (mode `revise`, phase 4: M10 backlog + ngân sách bundle). §2 hàng Validate: zod chỉ ở biên lazy. §3: `env.ts`, `goal.ts`, `entry.ts` bỏ zod; thêm `domain/backup-file.ts`; bảng component v3.1 (`isPurgeableTombstone`, `purgeTombstones`, `app/maintenance.ts`, `clearPkceVerifier`, loader không phát chunk SDK khi cloud tắt); quy tắc lint mới (cấm `zod` ngoài hai biên, cấm `import()` `@supabase/*`/`supabase-client` ngoài `integration/supabase`). §4.1 `SyncFlag` thêm `2`. §4.2 ghi nhận `dirty = 2`, thêm quy tắc dọn tombstone. §5.2 `LocalSyncStore.purgeTombstones`. §5.3 `BackupService.parse` async, `LoginPromptService.dismiss` không đếm khi đang ẩn + mốc tương lai > 24 h. §5.4 `IMPORT_INVALID_SCHEMA` biến thể `outOfRange`. §5.9 dọn code verifier. §6, §8 (spec ngân sách 230 KB, test giới hạn chung form ↔ file, test dọn tombstone), §9 (`check` dùng `build:e2e`), §10 thêm 4 rủi ro. §11 thêm **ADR-27** (chiến lược chunk), **ADR-28** (`dirty = 2`), **ADR-29** (dọn tombstone), **ADR-30** (ghi nhận deviation D7, OQ-D12, sync D1–D3, toast D9, M8, M9, brand, mock). Không đổi schema Dexie/cloud, route, định dạng backup, mã lỗi.
