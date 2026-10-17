@@ -12,8 +12,22 @@ export const LOGIN_PROMPT_SNOOZE_DAYS = 14;
 export const LOGIN_PROMPT_MAX_DISMISSALS = 3;
 /** One export hint per this many days (FR-53). */
 export const EXPORT_HINT_INTERVAL_DAYS = 30;
+/**
+ * A-46 (M8-D1): a stamp more than this far in the future cannot be real (the device clock was wrong
+ * when it was written) and is treated as absent, so it can never silence the prompts for years.
+ */
+export const CLOCK_SKEW_TOLERANCE_MS = 86_400_000;
 
 const DAY_MS = 86_400_000;
+
+/** Epoch ms of a stored stamp, or `null` when missing, unparsable or implausibly in the future (A-46). */
+function plausibleStamp(value: ISODateTime | null, now: Date): number | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) return null;
+  if (ms > now.getTime() + CLOCK_SKEW_TOLERANCE_MS) return null;
+  return ms;
+}
 
 /** kv key `loginPrompt` (ARCHITECTURE §4.1). Device-only: not synced, not in a backup, survives import and "Remove data". */
 export interface LoginPromptState {
@@ -60,11 +74,10 @@ export function hasEnoughData(now: Date, firstDataAt: ISODateTime | null, entryC
   return now.getTime() - first >= LOGIN_PROMPT_MIN_DAYS * DAY_MS;
 }
 
-/** "Not now" less than 14 days ago. */
+/** "Not now" less than 14 days ago. A stamp more than 24 h in the future counts as no "Not now" at all (A-46). */
 export function isSnoozed(now: Date, state: LoginPromptState): boolean {
-  if (!state.lastDismissedAt) return false;
-  const last = Date.parse(state.lastDismissedAt);
-  if (Number.isNaN(last)) return false;
+  const last = plausibleStamp(state.lastDismissedAt, now);
+  if (last === null) return false;
   return now.getTime() - last < LOGIN_PROMPT_SNOOZE_DAYS * DAY_MS;
 }
 
@@ -83,12 +96,11 @@ export interface ExportHintInput {
   state: LoginPromptState;
 }
 
-/** FR-53: the hint under Export, at most once every 30 days, never when signed in / expired / cloud off. */
+/** FR-53: the hint under Export, at most once every 30 days, never when signed in / expired / cloud off. A future stamp (> 24 h) counts as never hinted (A-46). */
 export function shouldShowExportHint(input: ExportHintInput): boolean {
   if (input.auth !== 'signed-out') return false;
-  if (!input.state.lastExportHintAt) return true;
-  const last = Date.parse(input.state.lastExportHintAt);
-  if (Number.isNaN(last)) return true;
+  const last = plausibleStamp(input.state.lastExportHintAt, input.now);
+  if (last === null) return true;
   return input.now.getTime() - last >= EXPORT_HINT_INTERVAL_DAYS * DAY_MS;
 }
 

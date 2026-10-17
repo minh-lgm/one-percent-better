@@ -117,3 +117,29 @@ describe('LoginPromptService kv `loginPrompt`', () => {
     expect(await service.getState()).toMatchObject({ dismissCount: 1 });
   });
 });
+
+describe('dismiss() does not count while already snoozed (M10-AC7, A-46, M8-P1)', () => {
+  it('two LoginPromptService instances on the same DB dismiss concurrently → dismissCount grows by exactly 1; a later dismiss inside 14 days changes nothing', async () => {
+    const other = serviceOn(db);
+    await Promise.all([service.dismiss(NOW), other.dismiss(NOW)]);
+    const after = await service.getState();
+    expect(after.dismissCount).toBe(1);
+    expect(after.lastDismissedAt).toBe(NOW.toISOString());
+
+    const later = new Date(NOW.getTime() + 13 * DAY);
+    const returned = await service.dismiss(later);
+    expect(returned).toEqual(after);
+    expect(await service.getState()).toEqual(after);
+
+    // After the snooze the next "Not now" counts again.
+    const much = new Date(NOW.getTime() + 14 * DAY);
+    expect((await service.dismiss(much)).dismissCount).toBe(2);
+    expect((await service.getState()).lastDismissedAt).toBe(much.toISOString());
+  });
+
+  it('a "Not now" stamped in the future (clock skew) is not a snooze: the next dismiss writes normally', async () => {
+    await db.kv.put({ key: 'loginPrompt', value: { dismissCount: 1, lastDismissedAt: '2099-01-01T00:00:00.000Z', lastExportHintAt: null } });
+    const next = await service.dismiss(NOW);
+    expect(next).toEqual({ dismissCount: 2, lastDismissedAt: NOW.toISOString(), lastExportHintAt: null });
+  });
+});

@@ -5,6 +5,7 @@ import type { EntryRepository, GoalRepository, KvRepository, Subscribable } from
 import {
   dismissed,
   firstCreatedAt,
+  isSnoozed,
   normalizeLoginPrompt,
   shouldShowExportHint,
   shouldShowLoginPrompt,
@@ -76,14 +77,23 @@ export class LoginPromptService {
     };
   }
 
-  /** "Not now": count + 1, snooze 14 days (atomic read-modify-write). */
+  /**
+   * "Not now": count + 1, snooze 14 days (atomic read-modify-write). A-46 (M8-P1): when the stored
+   * state is already snoozed — another tab pressed "Not now" a moment ago — nothing is written, so
+   * two tabs cannot burn two of the three dismissals. Returns the state that is now stored.
+   */
   async dismiss(now: Date): Promise<LoginPromptState> {
-    let next: LoginPromptState | undefined;
+    let result: LoginPromptState | undefined;
     await this.kv.update<unknown>('loginPrompt', (raw) => {
-      next = dismissed(normalizeLoginPrompt(raw), now);
-      return next;
+      const current = normalizeLoginPrompt(raw);
+      if (isSnoozed(now, current)) {
+        result = current;
+        return undefined;
+      }
+      result = dismissed(current, now);
+      return result;
     });
-    return next ?? dismissed(normalizeLoginPrompt(undefined), now);
+    return result ?? dismissed(normalizeLoginPrompt(undefined), now);
   }
 
   /**

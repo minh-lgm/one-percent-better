@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dismissed, EMPTY_LOGIN_PROMPT, firstCreatedAt, normalizeLoginPrompt, shouldShowExportHint, shouldShowLoginPrompt, type LoginPromptInput } from './login-prompt';
+import { dismissed, EMPTY_LOGIN_PROMPT, firstCreatedAt, isSnoozed, normalizeLoginPrompt, shouldShowExportHint, shouldShowLoginPrompt, type LoginPromptInput } from './login-prompt';
 
 // M8-AC1: now = 2026-10-09T10:00+07:00.
 const NOW = new Date('2026-10-09T10:00:00+07:00');
@@ -84,5 +84,42 @@ describe('normalizeLoginPrompt / firstCreatedAt', () => {
     expect(firstCreatedAt([])).toBeNull();
     expect(firstCreatedAt([{ createdAt: 'bad' }])).toBeNull();
     expect(firstCreatedAt([{ createdAt: '2026-10-05T00:00:00.000Z' }, { createdAt: '2026-10-01T07:00:00+07:00' }, { createdAt: 'bad' }])).toBe('2026-10-01T07:00:00+07:00');
+  });
+});
+
+describe('future stamps are ignored (M10-AC7, A-46, M8-D1)', () => {
+  const now = new Date('2026-10-09T10:00:00+07:00');
+  const H = 3_600_000;
+  const D = 86_400_000;
+  const at = (ms: number) => new Date(now.getTime() + ms).toISOString();
+
+  it('isSnoozed: lastDismissedAt now + 25 h → false; now + 23 h → true; now − 13 d → true; now − 14 d → false', () => {
+    const state = (lastDismissedAt: string) => ({ ...EMPTY_LOGIN_PROMPT, dismissCount: 1, lastDismissedAt });
+    expect(isSnoozed(now, state(at(25 * H)))).toBe(false);
+    expect(isSnoozed(now, state(at(23 * H)))).toBe(true);
+    expect(isSnoozed(now, state(at(-13 * D)))).toBe(true);
+    expect(isSnoozed(now, state(at(-14 * D)))).toBe(false);
+    expect(isSnoozed(now, state('2099-01-01T00:00:00.000Z'))).toBe(false);
+  });
+
+  it('shouldShowExportHint: lastExportHintAt now + 25 h → true; now + 23 h → false; now − 29 d → false; now − 30 d → true', () => {
+    const input = (lastExportHintAt: string) => ({ now, auth: 'signed-out' as const, state: { ...EMPTY_LOGIN_PROMPT, lastExportHintAt } });
+    expect(shouldShowExportHint(input(at(25 * H)))).toBe(true);
+    expect(shouldShowExportHint(input(at(23 * H)))).toBe(false);
+    expect(shouldShowExportHint(input(at(-29 * D)))).toBe(false);
+    expect(shouldShowExportHint(input(at(-30 * D)))).toBe(true);
+  });
+
+  it('the banner shows again with a 2099 "Not now" (the original M8-D1 report)', () => {
+    expect(
+      shouldShowLoginPrompt({
+        now,
+        auth: 'signed-out',
+        online: true,
+        firstDataAt: at(-10 * D),
+        entryCount: 0,
+        state: { dismissCount: 1, lastDismissedAt: '2099-01-01T00:00:00.000Z', lastExportHintAt: null },
+      }),
+    ).toBe(true);
   });
 });
