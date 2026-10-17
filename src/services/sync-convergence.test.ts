@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { GoalInput } from '../domain/goal';
 import { FakeRemoteServer, offlineError } from '../test/fake-remote-store';
 import { createDevice, serverSnapshot, U1, type Device } from '../test/two-devices';
+import { datasetS1 } from '../test/builders';
 
 const T = (s: string) => new Date(s);
 const NOW = T('2026-10-09T03:00:00.000Z');
@@ -23,8 +24,9 @@ afterEach(async () => {
   devices = [];
 });
 
-async function device(name: string, now = NOW) {
-  const d = await createDevice(name, server, { now });
+async function device(name: string, now = NOW, signedIn = true) {
+  // Devices are "signed in" (kv sync.userId/lastUserId set, as AuthService does): the purge rule of M10 reads it.
+  const d = await createDevice(name, server, { now, signedIn });
   devices.push(d);
   return d;
 }
@@ -195,6 +197,134 @@ describe('(v2.1) preferences converge per group (M7-AC17)', () => {
   });
 });
 
+// ---- M10-AC5: purging old tombstones locally never breaks convergence (ADR-29, NFR-12) ----
+
+const DAY = 86_400_000;
+const LATER = (d: Device, days: number) => {
+  d.clock.now = new Date(d.clock.now.getTime() + days * DAY);
+  return d.clock.now;
+};
+
+async function importS1(d: Device) {
+  const s1 = datasetS1();
+  const json = JSON.stringify({ app: 'one-percent-better', schemaVersion: 1, exportedAt: NOW.toISOString(), goals: s1.goals, entries: s1.entries, settings: {} });
+  const preview = await d.backupService.parse(json, json.length);
+  if (!preview.ok) throw new Error('setup: S1 did not parse');
+  await d.backupService.import(preview.value, d.clock.now);
+}
+
+const rawGoal = (d: Device, id: string) => d.db.goals.get(id);
+
+describe('tombstone purge and sync (M10-AC5, ADR-29)', () => {
+  it('(a) A deletes G2, both sync; 31 days later A purges → raw G2 gone on A; sync A, B, A → live sets equal, server keeps the tombstone', async () => {
+    const a = await device('A');
+    const b = await device('B');
+    await importS1(a);
+    await syncOk(a);
+    await syncOk(b);
+    a.clock.now = T('2026-10-09T03:05:00.000Z');
+    expect((await a.goalService.remove('g2')).ok).toBe(true);
+    await syncOk(a);
+    await syncOk(b);
+    expect(await b.goals.getById('g2')).toBeUndefined();
+    LATER(a, 31);
+    LATER(b, 31);
+    expect(await a.store.purgeTombstones(a.clock.now)).toEqual({ goals: 1, entries: expect.any(Number) });
+    expect(await rawGoal(a, 'g2')).toBeUndefined();
+    await syncOk(a);
+    await syncOk(b);
+    await syncOk(a);
+    await expectConverged(a, b);
+    expect(server.rows('goals', U1).find((r) => r.id === 'g2')?.deleted_at).toBeTruthy();
+    expect(await a.goals.getById('g2')).toBeUndefined();
+    // The pull window (120 s before the cursor, ADR-30 c) may re-read the server tombstone and put it back
+    // as a synced tombstone; harmless (ADR-29), and the next purge removes it again.
+    const back = await rawGoal(a, 'g2');
+    if (back) expect(back).toMatchObject({ deletedAt: expect.any(String), dirty: 0 });
+    expect((await a.store.purgeTombstones(a.clock.now)).goals).toBe(back ? 1 : 0);
+    expect(await rawGoal(a, 'g2')).toBeUndefined();
+  });
+
+  it('(b) B was offline before A deleted G2 and never touched it; A purges after 31 days; B comes online → G2 disappears on B, A stays without it', async () => {
+    const a = await device('A');
+    const b = await device('B');
+    await importS1(a);
+    await syncOk(a);
+    await syncOk(b);
+    b.online.value = false;
+    a.clock.now = T('2026-10-09T03:05:00.000Z');
+    expect((await a.goalService.remove('g2')).ok).toBe(true);
+    await syncOk(a);
+    LATER(a, 31);
+    LATER(b, 31);
+    expect((await a.store.purgeTombstones(a.clock.now)).goals).toBe(1);
+    b.online.value = true;
+    await syncOk(b);
+    expect(await b.goals.getById('g2')).toBeUndefined();
+    await syncOk(a);
+    expect(await a.goals.getById('g2')).toBeUndefined();
+    const back = await rawGoal(a, 'g2');
+    if (back) expect(back).toMatchObject({ deletedAt: expect.any(String), dirty: 0 });
+    await expectConverged(a, b);
+  });
+
+  it('(c) like (b) but B edited G2 after the deletion instant → after A, B, A both devices hold G2 with the edit of B (A-24, as before purging existed)', async () => {
+    const a = await device('A');
+    const b = await device('B');
+    await importS1(a);
+    await syncOk(a);
+    await syncOk(b);
+    b.online.value = false;
+    a.clock.now = T('2026-10-09T03:05:00.000Z');
+    expect((await a.goalService.remove('g2')).ok).toBe(true);
+    await syncOk(a);
+    const g2 = (await b.goals.getById('g2'))!;
+    expect((await b.goalService.update('g2', { name: 'Guitar B', why: g2.why, targetType: g2.targetType, targetValue: g2.targetMinutes, startDate: g2.startDate, endDate: g2.endDate }, T('2026-10-09T03:06:00.000Z'))).ok).toBe(true);
+    LATER(a, 31);
+    LATER(b, 31);
+    expect((await a.store.purgeTombstones(a.clock.now)).goals).toBe(1);
+    b.online.value = true;
+    await syncOk(a);
+    await syncOk(b);
+    await syncOk(a);
+    expect((await a.goals.getById('g2'))?.name).toBe('Guitar B');
+    expect((await b.goals.getById('g2'))?.name).toBe('Guitar B');
+    await expectConverged(a, b);
+  });
+
+  it('(d) a device that never signed in deletes a goal, purges after 31 days, then signs in for the first time → the goal never reaches the account, pending = 0', async () => {
+    const a = await device('A', NOW, false);
+    a.user.id = null;
+    const g = await a.goalService.create(READ, NOW);
+    if (!g.ok) throw new Error('setup');
+    expect((await a.entryService.add({ goalId: g.value.id, date: '2026-10-05', minutes: 30, note: '', source: 'manual' }, NOW)).ok).toBe(true);
+    expect(await a.sync.syncNow('manual')).toEqual({ status: 'skipped', why: 'paused' });
+    expect((await a.goalService.remove(g.value.id)).ok).toBe(true);
+    LATER(a, 31);
+    expect(await a.store.purgeTombstones(a.clock.now)).toEqual({ goals: 1, entries: 1 });
+    a.user.id = U1;
+    await syncOk(a);
+    expect(server.rows('goals', U1)).toEqual([]);
+    expect(server.rows('entries', U1)).toEqual([]);
+    expect(await a.store.countDirty()).toBe(0);
+  });
+
+  it('a device that synced keeps its unsynced (dirty 1) tombstones through a purge, so signing in again still pushes the deletion', async () => {
+    const a = await device('A');
+    await importS1(a);
+    await syncOk(a);
+    a.online.value = false;
+    a.clock.now = T('2026-10-09T03:05:00.000Z');
+    expect((await a.goalService.remove('g2')).ok).toBe(true);
+    LATER(a, 31);
+    expect(await a.store.purgeTombstones(a.clock.now)).toEqual({ goals: 0, entries: 0 });
+    expect(await rawGoal(a, 'g2')).toBeDefined();
+    a.online.value = true;
+    await syncOk(a);
+    expect(server.rows('goals', U1).find((r) => r.id === 'g2')?.deleted_at).toBeTruthy();
+  });
+});
+
 // ---- Random test with a seeded PRNG (mulberry32), no dependency ----
 
 function prng(seed: number) {
@@ -257,6 +387,12 @@ describe('random operations converge (NFR-12; 20 seeds × 200 ops)', () => {
             const g = pick(goals);
             await d.goalService.remove(g.id);
             trace.push(`${d.name} delete goal ${g.id.slice(0, 8)}`);
+          } else if (op < 0.9) {
+            // M10 (ADR-29): time jumps 31 days and this device purges its old tombstones.
+            clock += 31 * 86_400_000;
+            d.clock.now = tick();
+            const purged = await d.store.purgeTombstones(d.clock.now);
+            trace.push(`${d.name} +31d purge → ${purged.goals} goals, ${purged.entries} entries`);
           } else {
             const r = await d.sync.syncNow('manual');
             trace.push(`${d.name} sync → ${r.status === 'ran' ? (r.ok ? 'ok' : r.error) : r.why}`);

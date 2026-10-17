@@ -8,6 +8,7 @@ import { openDatabase, type AppDatabase } from './db';
 import { DexieEntryRepository } from './entry-repo';
 import { DexieGoalRepository } from './goal-repo';
 import { DexieSyncStore } from './sync-store';
+import { DexieBackupRepository } from './backup-repo';
 
 let db: AppDatabase;
 let store: DexieSyncStore;
@@ -178,5 +179,76 @@ describe('tombstoneOrphanEntries and watchPendingCount', () => {
     await store.applyRemote({ goals: [rec(buildGoal({ id: 'g', updatedAt: T0 }))], entries: [rec(buildEntry({ id: 'e', goalId: 'g', updatedAt: T0 }))] });
     await vi.waitFor(() => expect(seen[seen.length - 1]).toBe(0));
     unsubscribe();
+  });
+});
+
+describe('purgeTombstones (M10-AC4, ADR-29)', () => {
+  const DELETED_AT = new Date('2026-10-09T03:00:00.000Z');
+  const PURGE_AT = new Date('2026-11-09T03:00:00.000Z');
+
+  /** S1 as live rows, G1 soft-deleted with its 8 entries (what the UI's delete does). */
+  async function seedWithDeletedG1() {
+    const s1 = datasetS1();
+    await db.goals.bulkPut(s1.goals.map((g) => ({ ...g, deletedAt: null, dirty: 0 })));
+    await db.entries.bulkPut(s1.entries.map((e) => ({ ...e, deletedAt: null, dirty: 0 })));
+    await new DexieGoalRepository(db, () => DELETED_AT).deleteWithEntries('g1');
+    expect((await db.goals.get('g1'))?.deletedAt).toBe(DELETED_AT.toISOString());
+    expect((await db.entries.where('goalId').equals('g1').toArray()).every((e) => e.deletedAt === DELETED_AT.toISOString() && e.dirty === 1)).toBe(true);
+  }
+
+  const otherRows = async () => ({
+    goals: (await db.goals.toArray()).filter((g) => g.id !== 'g1'),
+    entries: (await db.entries.toArray()).filter((e) => e.goalId !== 'g1'),
+  });
+
+  it('device never synced (no kv sync): purges G1 + 8 entries after 31 days, leaves every other row and the export untouched', async () => {
+    await seedWithDeletedG1();
+    const backups = new DexieBackupRepository(db);
+    const before = await otherRows();
+    const exportBefore = await backups.exportAll();
+    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 1, entries: 8 });
+    expect(await db.goals.get('g1')).toBeUndefined();
+    expect(await db.entries.where('goalId').equals('g1').count()).toBe(0);
+    expect(await otherRows()).toEqual(before);
+    expect(await backups.exportAll()).toEqual(exportBefore);
+    // Idempotent.
+    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 0, entries: 0 });
+  });
+
+  it('not old enough → nothing is purged', async () => {
+    await seedWithDeletedG1();
+    expect(await store.purgeTombstones(new Date('2026-11-08T02:59:59.000Z'))).toEqual({ goals: 0, entries: 0 });
+    expect(await db.goals.get('g1')).toBeDefined();
+  });
+
+  it('device that synced before (kv sync.lastUserId): dirty 1 tombstones stay; dirty 0 (or 2) tombstones go', async () => {
+    await seedWithDeletedG1();
+    await db.kv.put({ key: 'sync', value: { userId: null, lastUserId: 'u1' } });
+    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 0, entries: 0 });
+    expect(await db.goals.get('g1')).toBeDefined();
+    await db.goals.update('g1', { dirty: 0 });
+    await db.entries.where('goalId').equals('g1').modify({ dirty: 0 });
+    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 1, entries: 8 });
+
+    // dirty = 2 (refused by the cloud) is purgeable on a synced device too.
+    await db.goals.put({ ...buildGoal({ id: 'gx', name: 'Refused' }), deletedAt: DELETED_AT.toISOString(), dirty: 2 });
+    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 1, entries: 0 });
+    expect(await db.goals.get('gx')).toBeUndefined();
+  });
+
+  it('kv sync present but userId and lastUserId both null counts as never synced', async () => {
+    await seedWithDeletedG1();
+    await db.kv.put({ key: 'sync', value: { userId: null, lastUserId: null, account: null } });
+    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 1, entries: 8 });
+  });
+
+  it('a failure in the middle of the transaction rolls back: no row is deleted', async () => {
+    await seedWithDeletedG1();
+    db.entries.hook('deleting', function deleting() {
+      throw new Error('simulated failure while deleting entries');
+    });
+    await expect(store.purgeTombstones(PURGE_AT)).rejects.toThrow('simulated failure');
+    expect(await db.goals.get('g1')).toBeDefined();
+    expect(await db.entries.where('goalId').equals('g1').count()).toBe(8);
   });
 });

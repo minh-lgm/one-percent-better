@@ -68,6 +68,8 @@ export interface AppContainer {
   storagePersistence: Promise<PersistState>;
   /** Service-worker update notifications (UpdateToast). */
   updates: UpdateStore;
+  /** v3.1 (ADR-29): hard-delete old tombstones nobody can still need; run once at startup by `app/maintenance`. */
+  purgeTombstones: (now: Date) => Promise<{ goals: number; entries: number }>;
   /** Stops the watchers the container started (tests). */
   dispose(): void;
 }
@@ -124,6 +126,7 @@ export async function createContainer({
   const timerRepo = new DexieTimerRepository(db);
   const prefsRepo = new DexieSyncedPrefsRepository(db);
   const localData = new DexieLocalDataRepository(db);
+  const syncStore = new DexieSyncStore(db);
 
   const localeService = new LocaleService(kvRepo, prefsRepo, clock);
   const translator = createTranslator(i18n);
@@ -148,7 +151,7 @@ export async function createContainer({
 
   const syncService = cloud
     ? new SyncService({
-        local: new DexieSyncStore(db),
+        local: syncStore,
         prefs: prefsRepo,
         localData,
         loadRemote: loadRemote ?? createRemoteLoader(authLoader!),
@@ -195,6 +198,7 @@ export async function createContainer({
     },
     storagePersistence: requestPersistentStorage(storage),
     updates: createUpdateStore(),
+    purgeTombstones: (now) => syncStore.purgeTombstones(now),
     dispose() {
       stopLocaleWatch();
       syncService?.stop();

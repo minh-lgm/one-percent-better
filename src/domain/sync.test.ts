@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { backoffMs, compareStamps, isNewer, nextUpdatedAt, resolveIncoming, resolvePrefGroup, rewindCursor, sameVersion, stampMs } from './sync';
+import { backoffMs, compareStamps, isNewer, isPurgeableTombstone, nextUpdatedAt, resolveIncoming, resolvePrefGroup, rewindCursor, sameVersion, stampMs } from './sync';
 
 const T = (s: string) => s;
 
@@ -91,5 +91,34 @@ describe('rewindCursor and backoff', () => {
   it('backoff 30, 60, 120, 240, 480, 900, 900 s', () => {
     expect([1, 2, 3, 4, 5, 6, 7, 20].map(backoffMs)).toEqual([30, 60, 120, 240, 480, 900, 900, 900].map((s) => s * 1000));
     expect(backoffMs(0)).toBe(30_000);
+  });
+});
+
+describe('isPurgeableTombstone — ADR-29 rule table (M10-AC4)', () => {
+  const now = new Date('2026-11-09T03:00:00.000Z');
+  const ago = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
+  const synced = { neverSynced: false, retentionDays: 30 };
+  const never = { neverSynced: true, retentionDays: 30 };
+
+  it('live row → false', () => {
+    expect(isPurgeableTombstone({ deletedAt: null, dirty: 0 }, now, synced)).toBe(false);
+    expect(isPurgeableTombstone({ deletedAt: null, dirty: 1 }, now, never)).toBe(false);
+  });
+
+  it('deletedAt 31 days ago, dirty 0, device synced → true; 29 days → false; exactly 30 days → true', () => {
+    expect(isPurgeableTombstone({ deletedAt: ago(31), dirty: 0 }, now, synced)).toBe(true);
+    expect(isPurgeableTombstone({ deletedAt: ago(29), dirty: 0 }, now, synced)).toBe(false);
+    expect(isPurgeableTombstone({ deletedAt: ago(30), dirty: 0 }, now, synced)).toBe(true);
+  });
+
+  it('dirty 1 on a device that synced → false; dirty 2 → true; dirty 1 on a device that never synced → true (31 days) / false (29 days)', () => {
+    expect(isPurgeableTombstone({ deletedAt: ago(31), dirty: 1 }, now, synced)).toBe(false);
+    expect(isPurgeableTombstone({ deletedAt: ago(31), dirty: 2 }, now, synced)).toBe(true);
+    expect(isPurgeableTombstone({ deletedAt: ago(31), dirty: 1 }, now, never)).toBe(true);
+    expect(isPurgeableTombstone({ deletedAt: ago(29), dirty: 1 }, now, never)).toBe(false);
+  });
+
+  it('unparsable deletedAt → false', () => {
+    expect(isPurgeableTombstone({ deletedAt: 'not a date', dirty: 0 }, now, never)).toBe(false);
   });
 });

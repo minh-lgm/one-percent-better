@@ -1,8 +1,10 @@
-import { nextUpdatedAt, resolveIncoming, sameVersion } from '../../domain/sync';
+import { TOMBSTONE_RETENTION_DAYS } from '../../config/constants';
+import { isPurgeableTombstone, nextUpdatedAt, resolveIncoming, sameVersion } from '../../domain/sync';
 import type { Goal, LogEntry } from '../../domain/types';
 import {
   isLive,
   normalizePrefsSync,
+  normalizeSyncMeta,
   toSyncRecord,
   type ApplyResult,
   type EntryRow,
@@ -143,6 +145,25 @@ export class DexieSyncStore implements LocalSyncStore {
 
   countRejected(): Promise<number> {
     return this.db.transaction('r', this.db.goals, this.db.entries, async () => (await this.db.goals.where('dirty').equals(2).count()) + (await this.db.entries.where('dirty').equals(2).count()));
+  }
+
+  purgeTombstones(now: Date): Promise<{ goals: number; entries: number }> {
+    return this.db.transaction('rw', this.db.goals, this.db.entries, this.db.kv, async () => {
+      const raw = await this.db.kv.get('sync');
+      const meta = raw ? normalizeSyncMeta(raw.value) : null;
+      const rule = { neverSynced: !meta || (meta.userId === null && meta.lastUserId === null), retentionDays: TOMBSTONE_RETENTION_DAYS };
+      const goalIds: string[] = [];
+      await this.db.goals.filter((g) => isPurgeableTombstone(g, now, rule)).each((g) => {
+        goalIds.push(g.id);
+      });
+      const entryIds: string[] = [];
+      await this.db.entries.filter((e) => isPurgeableTombstone(e, now, rule)).each((e) => {
+        entryIds.push(e.id);
+      });
+      if (goalIds.length > 0) await this.db.goals.bulkDelete(goalIds);
+      if (entryIds.length > 0) await this.db.entries.bulkDelete(entryIds);
+      return { goals: goalIds.length, entries: entryIds.length };
+    });
   }
 }
 

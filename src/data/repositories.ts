@@ -198,6 +198,12 @@ export interface LocalSyncStore {
   markRejected(ids: { goals: string[]; entries: string[] }): Promise<number>;
   /** Rows (live or tombstoned) flagged `dirty = 2`. */
   countRejected(): Promise<number>;
+  /**
+   * v3.1 (M10, ADR-29): hard-delete the tombstones `isPurgeableTombstone` allows, in ONE readwrite
+   * transaction over goals + entries + kv (kv `sync` is read inside it to know whether the device
+   * ever synced). Returns how many rows went per table; a failure rolls everything back.
+   */
+  purgeTombstones(now: Date): Promise<{ goals: number; entries: number }>;
 }
 
 export type { PrefGroupMeta };

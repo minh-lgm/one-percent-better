@@ -117,3 +117,31 @@ export function backoffMs(failures: number): number {
   const i = Math.min(Math.max(failures, 1), BACKOFF_STEPS_S.length) - 1;
   return BACKOFF_STEPS_S[i] * 1000;
 }
+
+/** The sync markers of a stored row (`dirty`: 0 synced, 1 waiting, 2 refused by the cloud — ADR-28). */
+export interface TombstoneCandidate {
+  deletedAt: ISODateTime | null;
+  dirty: 0 | 1 | 2;
+}
+
+export interface PurgeRule {
+  /** The device never synced: kv `sync` missing, or `userId` and `lastUserId` both null (nobody needs its tombstones). */
+  neverSynced: boolean;
+  /** `TOMBSTONE_RETENTION_DAYS`. */
+  retentionDays: number;
+}
+
+/**
+ * ADR-29: a tombstone may be hard-deleted locally once it is at least `retentionDays` old AND the
+ * cloud cannot still need it from this device: `dirty = 0` (the server holds its own tombstone),
+ * `dirty = 2` (the cloud never accepted the row), or the device never synced. A `dirty = 1`
+ * tombstone of a device that did sync must stay so that signing in again can push the deletion
+ * (A-33). Live rows and unparsable `deletedAt` values are never purged.
+ */
+export function isPurgeableTombstone(row: TombstoneCandidate, now: Date, rule: PurgeRule): boolean {
+  if (row.deletedAt === null) return false;
+  const deleted = stampMs(row.deletedAt);
+  if (Number.isNaN(deleted)) return false;
+  if (now.getTime() - deleted < rule.retentionDays * 86_400_000) return false;
+  return row.dirty !== 1 || rule.neverSynced;
+}

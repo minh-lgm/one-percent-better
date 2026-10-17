@@ -55,6 +55,8 @@ export interface DeviceOptions {
   signOutTimeoutMs?: number;
   /** Gate awaited before the first remote request of every cycle (deterministic race tests). */
   ready?: () => Promise<void>;
+  /** Seed kv `sync` with `userId`/`lastUserId` as AuthService does at sign-in (M10: the purge rule reads it). Default: not seeded. */
+  signedIn?: boolean;
 }
 
 export const U1 = '00000000-0000-4000-8000-000000000001';
@@ -73,6 +75,7 @@ export async function createDevice(name: string, server: FakeRemoteServer, optio
   const prefs = new DexieSyncedPrefsRepository(db);
   const store = new DexieSyncStore(db);
   const localData = new DexieLocalDataRepository(db);
+  if (options.signedIn) await kv.set('sync', { userId: user.id, lastUserId: user.id, account: null, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null });
   const remote = new FakeRemoteStore(server, user.id ?? U1);
   const settingsService = new SettingsService(kv, prefs, tick);
   const localeService = new LocaleService(kv, prefs, tick);

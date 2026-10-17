@@ -4,6 +4,7 @@ import { I18nextProvider } from 'react-i18next';
 import { App } from './app/App';
 import { bootstrap } from './app/bootstrap';
 import { createContainer } from './app/container';
+import { startMaintenance } from './app/maintenance';
 import { startReminderScheduler } from './app/reminder-scheduler';
 import { createAppRouter } from './app/router';
 import { startSyncScheduler } from './app/sync-scheduler';
@@ -44,6 +45,8 @@ async function start(): Promise<void> {
     </StrictMode>,
   );
 
+  // Old tombstones are purged once, after the first paint (ADR-29); cloud on or off.
+  void startMaintenance({ purge: (now) => container.purgeTombstones(now) });
   // Daily reminder: check now, every interval and when the tab becomes visible (ARCH §5.6).
   startReminderScheduler({ check: (now) => container.reminderService.check(now), intervalMs: env.reminderCheckIntervalMs });
   // A click on the reminder notification asks the page to go to Today.
