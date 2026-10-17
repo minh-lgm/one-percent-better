@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AUTH_STORAGE_KEY, clearStoredSession, hasStoredSession } from './loader';
+import { AUTH_STORAGE_KEY, clearStoredSession, createSupabaseLoader, hasStoredSession } from './loader';
 
 function memoryStorage(init: Record<string, string> = {}) {
   const data = new Map(Object.entries(init));
@@ -32,5 +32,15 @@ describe('hasStoredSession (ADR-18): answers from localStorage without the SDK',
     const s = memoryStorage({ [AUTH_STORAGE_KEY]: '{}', [`${AUTH_STORAGE_KEY}-code-verifier`]: 'v', [`${AUTH_STORAGE_KEY}-flows-code-verifier`]: '[]', other: 'keep' });
     clearStoredSession(s);
     expect([...s.data.keys()]).toEqual(['other']);
+  });
+});
+
+describe('cloud gate (M10-T3, M6-P1): __OPB_CLOUD__ is true in Vitest and in cloud builds, false in a cloud-off build', () => {
+  it('Vitest sees the constant as true, so the SDK module can still be loaded for mocked tests', async () => {
+    expect(__OPB_CLOUD__).toBe(true);
+    const load = createSupabaseLoader({ url: 'http://127.0.0.1:54321', key: 'sb_publishable_mock' }, memoryStorage() as unknown as Storage);
+    const port = await load();
+    expect(typeof port.getSession).toBe('function');
+    expect(await load()).toBe(port);
   });
 });

@@ -7,6 +7,16 @@ import type { RemoteStore } from '../../services/remote-store';
 /** Storage key used by the SDK client (`auth.storageKey`); fixed so presence can be checked without the SDK. */
 export const AUTH_STORAGE_KEY = 'opb-auth';
 
+/**
+ * v3.1 (M6-P1): the only `import()` of the SDK chunk. `__OPB_CLOUD__` is a build-time constant
+ * (vite.config `define`): `false` in a build without cloud configuration, so the bundler drops the
+ * dynamic import and never emits `supabase-client-*.js`; `true` for cloud builds and in Vitest.
+ */
+function importClient(): Promise<typeof import('./supabase-client')> {
+  if (!__OPB_CLOUD__) return Promise.reject(new Error('This build has no cloud configuration (FR-38); the Supabase SDK is not included.'));
+  return import('./supabase-client');
+}
+
 type StorageLike = Pick<Storage, 'getItem' | 'removeItem' | 'key' | 'length'>;
 
 /** `true` when the SDK has a persisted session on this device. Never loads the SDK. */
@@ -59,7 +69,7 @@ export function createSupabaseLoader(cloud: CloudConfig, storage: Storage | unde
   let pending: Promise<AuthPort> | null = null;
   return () => {
     if (!pending) {
-      pending = import('./supabase-client')
+      pending = importClient()
         .then((m) => m.createSupabaseAuthPort(cloud, storage))
         .catch((e: unknown) => {
           pending = null;
@@ -78,7 +88,7 @@ export function createRemoteLoader(loadAuth: () => Promise<AuthPort>): () => Pro
   let pending: Promise<RemoteStore> | null = null;
   return () => {
     if (!pending) {
-      pending = Promise.all([loadAuth(), import('./supabase-client')])
+      pending = Promise.all([loadAuth(), importClient()])
         .then(([port, m]) => m.createSupabaseRemoteStore(port))
         .catch((e: unknown) => {
           pending = null;

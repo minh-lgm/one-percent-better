@@ -20,9 +20,11 @@ export interface BootstrapOptions {
   authCallback?: AuthCallbackParams | null;
   /** Replaces the callback URL with `<BASE_URL>#<returnTo>` (must run before the hash router is created). */
   cleanCallbackUrl?: () => void;
+  /** v3.1 (M6-P1): runs once the callback has settled (success, cancel or failure); `clearPkceVerifier(localStorage)` in the app. */
+  onCallbackSettled?: () => void;
 }
 
-export async function bootstrap({ navigatorLanguage, createContainer, i18n: existing, authCallback = null, cleanCallbackUrl }: BootstrapOptions): Promise<BootResult> {
+export async function bootstrap({ navigatorLanguage, createContainer, i18n: existing, authCallback = null, cleanCallbackUrl, onCallbackSettled }: BootstrapOptions): Promise<BootResult> {
   const detectedLocale = detectLocale(navigatorLanguage);
   const i18n = existing ?? createI18n({ locale: detectedLocale });
   setLocale(i18n, detectedLocale);
@@ -44,7 +46,11 @@ export async function bootstrap({ navigatorLanguage, createContainer, i18n: exis
     // Drop the one-time code from the URL now (a reload must not replay it), then finish in the background;
     // the Account card shows "Signing you in…" meanwhile (A3) and the result arrives as a toast/Alert.
     cleanCallbackUrl?.();
-    if (container.authService.isAvailable()) void container.authService.completeCallback(authCallback);
+    if (container.authService.isAvailable()) {
+      void container.authService.completeCallback(authCallback).finally(() => onCallbackSettled?.());
+    } else {
+      onCallbackSettled?.();
+    }
   }
   return { ok: true, container, i18n };
 }

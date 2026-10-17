@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { callbackRedirectUrl, cleanCallbackUrl, readAuthCallback, RETURN_TO_KEY, sanitizeReturnTo, sessionReturnTo } from './auth-callback';
+import { callbackRedirectUrl, cleanCallbackUrl, readAuthCallback, RETURN_TO_KEY, sanitizeReturnTo, sessionReturnTo, clearPkceVerifier, PKCE_VERIFIER_KEY } from './auth-callback';
 
 describe('readAuthCallback (M6-AC6, ADR-19)', () => {
   it('?auth=callback&code=abc → { code }', () => {
@@ -67,5 +67,28 @@ describe('callbackRedirectUrl', () => {
     expect(callbackRedirectUrl('https://minh-lgm.github.io', '/one-percent-better/')).toBe('https://minh-lgm.github.io/one-percent-better/?auth=callback');
     expect(callbackRedirectUrl('http://localhost:5173', '/')).toBe('http://localhost:5173/?auth=callback');
     expect(callbackRedirectUrl('http://localhost:4174', '/one-percent-better/')).not.toContain('#');
+  });
+});
+
+describe('clearPkceVerifier (M10-T3, M6-P1)', () => {
+  it('removes exactly opb-auth-code-verifier and nothing else; tolerates a missing or throwing storage', () => {
+    const data = new Map<string, string>([
+      [PKCE_VERIFIER_KEY, 'verifier/'],
+      ['opb-auth', '{"access_token":"a","refresh_token":"r"}'],
+      ['opb-auth-return', '#/today'],
+      ['other', 'keep'],
+    ]);
+    clearPkceVerifier({ removeItem: (k) => void data.delete(k) });
+    expect([...data.keys()]).toEqual(['opb-auth', 'opb-auth-return', 'other']);
+    expect(PKCE_VERIFIER_KEY).toBe('opb-auth-code-verifier');
+    expect(() => clearPkceVerifier(null)).not.toThrow();
+    expect(() => clearPkceVerifier(undefined)).not.toThrow();
+    expect(() =>
+      clearPkceVerifier({
+        removeItem: () => {
+          throw new Error('blocked');
+        },
+      }),
+    ).not.toThrow();
   });
 });

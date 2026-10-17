@@ -7,6 +7,8 @@ export const CALLBACK_PARAM = 'auth';
 export const CALLBACK_VALUE = 'callback';
 export const RETURN_TO_KEY = 'opb-auth-return';
 export const DEFAULT_RETURN_TO = '#/settings';
+/** Where the SDK keeps the single-use PKCE code verifier (`<storageKey>-code-verifier`, ADR-19). */
+export const PKCE_VERIFIER_KEY = 'opb-auth-code-verifier';
 
 /** `{ code }`, `{ error, description }` or `null` when the URL is not an auth callback. */
 export function readAuthCallback(location: { search: string }): AuthCallbackParams | null {
@@ -58,4 +60,16 @@ export function sessionReturnTo(storage: Pick<Storage, 'getItem' | 'setItem' | '
 /** `redirectTo` for the provider (no hash, ADR-19): e.g. `https://minh-lgm.github.io/one-percent-better/?auth=callback`. */
 export function callbackRedirectUrl(origin: string, baseUrl: string): string {
   return new URL(`${baseUrl}?${CALLBACK_PARAM}=${CALLBACK_VALUE}`, origin).href;
+}
+
+/**
+ * v3.1 (M6-P1): drop the PKCE code verifier once a callback has settled (signed in, cancelled or
+ * failed). It is single-use; the SDK makes a fresh one at the next sign-in. Nothing else is touched.
+ */
+export function clearPkceVerifier(storage: Pick<Storage, 'removeItem'> | null | undefined): void {
+  try {
+    storage?.removeItem(PKCE_VERIFIER_KEY);
+  } catch {
+    // Storage may be blocked (private mode); nothing to clean then.
+  }
 }

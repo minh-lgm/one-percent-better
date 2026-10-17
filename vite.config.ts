@@ -8,9 +8,12 @@ const base = process.env.BASE_PATH ?? '/';
 
 export default defineConfig(({ mode }) => {
   const plugins: PluginOption[] = [react()];
-  // Cloud off at build time (FR-38): the lazy Supabase chunk is still emitted (the dynamic import
-  // exists in loader.ts) but nothing can ever request it, so keep it out of the precache too.
+  // Cloud off at build time (FR-38). M10 (M6-P1): `__OPB_CLOUD__` gates the only `import()` of the SDK
+  // (integration/supabase/loader.ts), so a cloud-off build emits no `supabase-client-*.js` at all;
+  // Vitest always gets `true` so the SDK module can be loaded under mocks. The precache ignore stays
+  // as belt and braces.
   const cloudOn = Boolean(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL?.trim());
+  const sdkInBuild = cloudOn || mode === 'test';
 
   // The PWA plugin is only needed for real builds/preview; keep it out of Vitest.
   if (mode !== 'test') {
@@ -50,6 +53,9 @@ export default defineConfig(({ mode }) => {
   return {
     base,
     plugins,
+    define: {
+      __OPB_CLOUD__: JSON.stringify(sdkInBuild),
+    },
     build: {
       target: 'es2022',
       sourcemap: false,

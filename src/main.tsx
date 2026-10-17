@@ -9,7 +9,7 @@ import { startReminderScheduler } from './app/reminder-scheduler';
 import { createAppRouter } from './app/router';
 import { startSyncScheduler } from './app/sync-scheduler';
 import { env } from './config/env';
-import { cleanCallbackUrl, readAuthCallback, sessionReturnTo } from './integration/auth-callback';
+import { cleanCallbackUrl, clearPkceVerifier, readAuthCallback, sessionReturnTo } from './integration/auth-callback';
 import { listenForNavigation } from './integration/sw-messages';
 import { registerServiceWorker } from './integration/sw-register';
 import { StorageError } from './ui/screens/StorageError';
@@ -25,6 +25,8 @@ async function start(): Promise<void> {
     createContainer: (i18n) => createContainer({ i18n, dbName: env.dbName, cloud: env.cloud, notificationIconUrl: `${import.meta.env.BASE_URL}icons/pwa-192.png` }),
     authCallback,
     cleanCallbackUrl: () => cleanCallbackUrl(window.history, import.meta.env.BASE_URL, sessionReturnTo(window.sessionStorage).take()),
+    // The single-use PKCE verifier must not outlive the callback (M6-P1).
+    onCallbackSettled: () => clearPkceVerifier(window.localStorage),
   });
 
   if (!result.ok) {

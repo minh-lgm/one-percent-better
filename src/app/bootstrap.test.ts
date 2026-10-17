@@ -99,31 +99,54 @@ describe('createContainer + bootstrap — account (M6-AC3, M6-AC5, ARCH §5.9)',
     expect(tc.auth!.state.loads).toBe(0);
   });
 
-  it('OAuth callback: URL cleaned before render, completeCallback runs in the background → signed-in', async () => {
+  it('OAuth callback: URL cleaned before render, completeCallback runs in the background → signed-in; onCallbackSettled runs once after it', async () => {
     tc = await createTestContainer({ cloud: true });
     const cleanCallbackUrl = vi.fn();
+    const onCallbackSettled = vi.fn();
     const result = await bootstrap({
       navigatorLanguage: 'en',
       createContainer: async () => tc!.container,
       i18n: tc.i18n,
       authCallback: { code: 'abc' },
       cleanCallbackUrl,
+      onCallbackSettled,
     });
     expect(result.ok).toBe(true);
     expect(cleanCallbackUrl).toHaveBeenCalledTimes(1);
     // Synchronously after bootstrap the card would render "signing-in"; the exchange finishes afterwards.
     expect(tc.container.authService.state()).toEqual({ kind: 'signing-in' });
+    expect(onCallbackSettled).not.toHaveBeenCalled();
     await tc.container.authService.settled();
     expect(tc.container.authService.state()).toMatchObject({ kind: 'signed-in', email: 'minh.test@example.com' });
     expect(tc.auth!.port.lastCode).toBe('abc');
+    await vi.waitFor(() => expect(onCallbackSettled).toHaveBeenCalledTimes(1));
+  });
+
+  it('a cancelled callback (error=access_denied) also settles → onCallbackSettled runs once (M10-T3, M6-P1)', async () => {
+    tc = await createTestContainer({ cloud: true });
+    const onCallbackSettled = vi.fn();
+    const result = await bootstrap({
+      navigatorLanguage: 'en',
+      createContainer: async () => tc!.container,
+      i18n: tc.i18n,
+      authCallback: { error: 'access_denied', description: 'cancelled' },
+      cleanCallbackUrl: () => undefined,
+      onCallbackSettled,
+    });
+    expect(result.ok).toBe(true);
+    await tc.container.authService.settled();
+    await vi.waitFor(() => expect(onCallbackSettled).toHaveBeenCalledTimes(1));
+    expect(tc.container.authService.state()).toMatchObject({ kind: 'signed-out', lastError: 'AUTH_CANCELLED' });
   });
 
   it('callback on a build without cloud: URL still cleaned, nothing else happens', async () => {
     tc = await createTestContainer();
     const cleanCallbackUrl = vi.fn();
-    const result = await bootstrap({ navigatorLanguage: 'en', createContainer: async () => tc!.container, i18n: tc.i18n, authCallback: { code: 'abc' }, cleanCallbackUrl });
+    const onCallbackSettled = vi.fn();
+    const result = await bootstrap({ navigatorLanguage: 'en', createContainer: async () => tc!.container, i18n: tc.i18n, authCallback: { code: 'abc' }, cleanCallbackUrl, onCallbackSettled });
     expect(result.ok).toBe(true);
     expect(cleanCallbackUrl).toHaveBeenCalledTimes(1);
     expect(tc.container.authService.state()).toEqual({ kind: 'unavailable' });
+    expect(onCallbackSettled).toHaveBeenCalledTimes(1);
   });
 });

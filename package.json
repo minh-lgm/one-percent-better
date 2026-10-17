@@ -26,7 +26,7 @@
     "db:stop": "npx --yes supabase@2.120.0 stop",
     "db:reset": "npx --yes supabase@2.120.0 db reset",
     "test:db": "node scripts/test-db.mjs",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build:e2e",
     "icons": "node scripts/gen-icons.mjs",
     "fixtures:large": "node scripts/gen-large-backup.mjs",
     "bench": "cross-env BENCH_ASSERT=1 vitest run src/services/stats-service.test.ts --reporter=verbose"
