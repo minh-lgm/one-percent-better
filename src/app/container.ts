@@ -126,7 +126,7 @@ export async function createContainer({
   const timerRepo = new DexieTimerRepository(db);
   const prefsRepo = new DexieSyncedPrefsRepository(db);
   const localData = new DexieLocalDataRepository(db);
-  const syncStore = new DexieSyncStore(db);
+  const syncStore = new DexieSyncStore(db, clock);
 
   const localeService = new LocaleService(kvRepo, prefsRepo, clock);
   const translator = createTranslator(i18n);

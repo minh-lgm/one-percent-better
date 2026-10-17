@@ -73,7 +73,7 @@ export async function createDevice(name: string, server: FakeRemoteServer, optio
   const entries = new DexieEntryRepository(db, tick);
   const kv = new DexieKvRepository(db);
   const prefs = new DexieSyncedPrefsRepository(db);
-  const store = new DexieSyncStore(db);
+  const store = new DexieSyncStore(db, tick);
   const localData = new DexieLocalDataRepository(db);
   if (options.signedIn) await kv.set('sync', { userId: user.id, lastUserId: user.id, account: null, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null });
   const remote = new FakeRemoteStore(server, user.id ?? U1);

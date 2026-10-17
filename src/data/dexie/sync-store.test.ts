@@ -252,3 +252,32 @@ describe('purgeTombstones (M10-AC4, ADR-29)', () => {
     expect(await db.entries.where('goalId').equals('g1').count()).toBe(8);
   });
 });
+
+describe('applyRemote does not store a stale remote tombstone for an unknown record (M10 fix round 1, ADR-29)', () => {
+  it('goal/entry tombstones ≥ 30 days old with no local row are counted as applied but not written; a fresh one or one with a local row is written', async () => {
+    const now = new Date('2026-11-09T03:00:00.000Z');
+    const stale = new DexieSyncStore(db, () => now);
+    const old = '2026-10-01T00:00:00.000Z';
+    const fresh = '2026-11-08T00:00:00.000Z';
+    const r = await stale.applyRemote({
+      goals: [rec(buildGoal({ id: 'gone', updatedAt: old }), old), rec(buildGoal({ id: 'recent', updatedAt: fresh }), fresh)],
+      entries: [rec(buildEntry({ id: 'e-gone', goalId: 'gone', updatedAt: old }), old)],
+    });
+    expect(r).toEqual({ applied: 3, keptLocal: 0, skippedInvalid: 0 });
+    expect(await db.goals.get('gone')).toBeUndefined();
+    expect(await db.entries.get('e-gone')).toBeUndefined();
+    expect((await db.goals.get('recent'))?.deletedAt).toBe(fresh);
+
+    // The same old tombstone for a record the device still holds live: applied as a tombstone (and purgeable later).
+    await db.goals.put({ ...buildGoal({ id: 'gone', updatedAt: '2026-09-01T00:00:00.000Z' }), deletedAt: null, dirty: 0 });
+    await db.entries.put({ ...buildEntry({ id: 'e-live', goalId: 'gone', updatedAt: '2026-09-01T00:00:00.000Z' }), deletedAt: null, dirty: 0 });
+    await stale.applyRemote({ goals: [rec(buildGoal({ id: 'gone', updatedAt: old }), old)], entries: [] });
+    expect((await db.goals.get('gone'))?.deletedAt).toBe(old);
+    // Cascade still runs for a stale tombstone that is not stored: a live entry of that goal is soft-deleted.
+    await db.goals.delete('gone');
+    await db.entries.put({ ...buildEntry({ id: 'e-orphan', goalId: 'gone', updatedAt: '2026-09-01T00:00:00.000Z' }), deletedAt: null, dirty: 0 });
+    await stale.applyRemote({ goals: [rec(buildGoal({ id: 'gone', updatedAt: old }), old)], entries: [] });
+    expect(await db.goals.get('gone')).toBeUndefined();
+    expect((await db.entries.get('e-orphan'))?.deletedAt).toBeTruthy();
+  });
+});

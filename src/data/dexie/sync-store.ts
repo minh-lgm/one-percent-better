@@ -22,7 +22,19 @@ import { fromLiveQuery, type AppDatabase } from './db';
  * non-Dexie promise is awaited inside (ADR-16).
  */
 export class DexieSyncStore implements LocalSyncStore {
-  constructor(private readonly db: AppDatabase) {}
+  constructor(
+    private readonly db: AppDatabase,
+    private readonly clock: () => Date = () => new Date(),
+  ) {}
+
+  /**
+   * ADR-29 follow-up (M10 fix round 1): a remote tombstone for a record this device does not hold, old
+   * enough to be purged right away, is not stored — storing it would only re-create a row the startup
+   * purge just removed (the 120 s pull window re-reads the newest rows). Its cascade still runs.
+   */
+  private isStaleRemoteTombstone(remote: { deletedAt: string | null }): boolean {
+    return remote.deletedAt !== null && isPurgeableTombstone({ deletedAt: remote.deletedAt, dirty: 0 }, this.clock(), { neverSynced: false, retentionDays: TOMBSTONE_RETENTION_DAYS });
+  }
 
   getDirty(limit: number): Promise<RemoteChanges> {
     return this.db.transaction('r', this.db.goals, this.db.entries, async () => {
@@ -52,6 +64,12 @@ export class DexieSyncStore implements LocalSyncStore {
           result.keptLocal += 1;
           return;
         }
+        if (!local && this.isStaleRemoteTombstone(remote)) {
+          // Nothing to delete here and nothing worth keeping: count it, cascade, do not store (ADR-29).
+          result.applied += 1;
+          tombstonedGoals.push({ id: remote.id, deletedAt: remote.deletedAt! });
+          return;
+        }
         goalsToWrite.push(canonical);
         result.applied += 1;
         if (remote.deletedAt !== null) tombstonedGoals.push({ id: remote.id, deletedAt: remote.deletedAt });
@@ -73,6 +91,11 @@ export class DexieSyncStore implements LocalSyncStore {
         }
         if (resolveIncoming(local, remote) === 'keep-local') {
           result.keptLocal += 1;
+          return;
+        }
+        if (!local && this.isStaleRemoteTombstone(remote)) {
+          result.applied += 1;
+          written.add(remote.id);
           return;
         }
         entriesToWrite.push(canonical);
