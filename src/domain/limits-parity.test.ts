@@ -135,26 +135,32 @@ describe('limits parity with astral characters (M10-D1): form = importer = cloud
     const alphabet = ['a', 'é', 'あ', '😀', '𠮷'] as const;
     const text = (n: number) => {
       const body = pick(alphabet);
-      const pad = pick(['', '', ' ', '\t']);
+      const pad = pick(['', '', ' ', '	']);
       return pad + body.repeat(n) + pad;
+    };
+    // One tiny file per sample (1 goal, 1 entry) keeps 8 000 parses well under a second even under load.
+    const template = datasetS1().goals[0];
+    const entryTemplate = datasetS1().entries.find((x) => x.goalId === 'g1')!;
+    const fileAccepts = (goals: Goal[], entries: LogEntry[]) => {
+      const t = JSON.stringify({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals, entries, settings: {} });
+      return parseBackup(t, t.length).ok;
     };
     const mismatches: string[] = [];
     for (let i = 0; i < 4000; i += 1) {
-      const patch: Partial<Goal> = { name: text(pick([0, 1, 59, 60, 61, 62, 100])), why: text(pick([0, 1, 279, 280, 281, 282, 600])) };
-      const form = formAcceptsGoal('g1', patch);
-      const file = fileWithGoal('g1', patch);
+      const name = text(pick([0, 1, 59, 60, 61, 62, 100]));
+      const why = text(pick([0, 1, 279, 280, 281, 282, 600]));
+      const form = validateGoalInput(toInput({ ...template, name, why })).ok;
+      const file = fileAccepts([{ ...template, name, why }], []);
       // The mapper does not trim: compare on the trimmed value the form/file would store.
-      const stored = { ...g1(), name: patch.name!.trim(), why: patch.why!.trim() };
-      const mapper = mapperAcceptsGoal(stored);
-      if (form !== file || form !== mapper) mismatches.push(`goal #${i} form=${form} file=${file} mapper=${mapper} name=${charLength(patch.name!)} why=${charLength(patch.why!)}`);
+      const mapper = mapperAcceptsGoal({ ...template, name: name.trim(), why: why.trim() });
+      if (form !== file || form !== mapper) mismatches.push(`goal #${i} form=${form} file=${file} mapper=${mapper} name=${charLength(name)} why=${charLength(why)}`);
     }
-    const e = datasetS1().entries.find((x) => x.goalId === 'g1')!;
     for (let i = 0; i < 4000; i += 1) {
       const note = pick(alphabet).repeat(pick([0, 1, 279, 280, 281, 282, 1000]));
       const minutes = pick([0, 1, 30, 1440, 1441, 12.5]);
-      const form = formAcceptsEntry({ note, minutes });
-      const file = fileWithEntry({ note, minutes });
-      const mapper = mapperAcceptsEntry({ ...e, note, minutes });
+      const form = validateEntryFields({ minutes, note }).ok;
+      const file = fileAccepts([template], [{ ...entryTemplate, note, minutes }]);
+      const mapper = mapperAcceptsEntry({ ...entryTemplate, note, minutes });
       if (form !== file || form !== mapper) mismatches.push(`entry #${i} form=${form} file=${file} mapper=${mapper} note=${charLength(note)} minutes=${minutes}`);
     }
     expect(mismatches.slice(0, 5)).toEqual([]);
