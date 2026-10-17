@@ -22,8 +22,5 @@
     "skipLibCheck": true
   },
   "include": ["src", "tests/qc/**/*.test.ts", "tests/qc/**/*.test.tsx", "tests/db/**/*.test.ts"],
-  // M9 (FR-27 v3.0): the QC domain test still reads the M5 fields `ActualPoint.n` / `CurveData.daysOnTarget`
-  // that ARCH §4.5 removed; it is QC's file (re-targeted in M9 round 1). Excluded from `tsc -b` until then so the
-  // build stays green; Vitest still runs it (the superseded assertions fail there, as TASKS "Test cũ bị thay thế" expects).
-  "exclude": ["src/sw.ts", "tests/qc/m5-r1-domain.test.ts"]
+  "exclude": ["src/sw.ts"]
 }
