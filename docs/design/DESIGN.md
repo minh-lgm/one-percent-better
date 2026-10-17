@@ -1,9 +1,9 @@
 # Design — 1% Better per Day
 
-Phiên bản: **v3.0** (mode `revise`, 2026-10-13: phase 3 — đường cong "Bạn" tính theo phút so với ngày có ghi trước, FR-27 v3.0; PRD v3.0, ARCHITECTURE v3.0 §4.5, TASKS v3.0 M9). **v3.0 chỉ đổi Goal detail (S4)**: headline, phụ đề, biểu đồ đường cong, bảng dữ liệu, chú thích và các key `goal.detail.*` / `empty.detail.curve` (xem Changelog); mọi màn khác, token màu/cỡ chữ, bố cục và copy giữ nguyên. Trước đó v2.0 (2026-10-12: phase 2 — đăng nhập Google tuỳ chọn + đồng bộ cloud; app build không cấu hình cloud giống hệt v1.1) và v1.1 (2026-10-09, thêm tiếng Việt). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
+Phiên bản: **v3.1** (mode `revise`, 2026-10-17: M10-T8 — không thêm tính năng; **ghi nhận deviation đã ship** của phase 2/3 [brand mark ảnh logo, quy tắc một toast, hint Export chỉ khi online, `empty.day.noGoals` không dấu chấm] và **chốt copy/quy tắc còn mở**: 7 key hàng bị cloud từ chối, `settings.about.privacyLink`, `errors.IMPORT_INVALID_SCHEMA_outOfRange`, `errors.EXPORT_FAILED`, nhãn giá trị cột BarChart, câu chữ heatmap 1024–1191 px; chi tiết ở Changelog v3.1; PRD v3.1 A-44 … A-46, ARCH v3.1 ADR-28/30, TASKS v3.1 M10). Trước đó **v3.0** (mode `revise`, 2026-10-13: phase 3 — đường cong "Bạn" tính theo phút so với ngày có ghi trước, FR-27 v3.0; PRD v3.0, ARCHITECTURE v3.0 §4.5, TASKS v3.0 M9). **v3.0 chỉ đổi Goal detail (S4)**: headline, phụ đề, biểu đồ đường cong, bảng dữ liệu, chú thích và các key `goal.detail.*` / `empty.detail.curve` (xem Changelog); mọi màn khác, token màu/cỡ chữ, bố cục và copy giữ nguyên. Trước đó v2.0 (2026-10-12: phase 2 — đăng nhập Google tuỳ chọn + đồng bộ cloud; app build không cấu hình cloud giống hệt v1.1) và v1.1 (2026-10-09, thêm tiếng Việt). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
 Loại app: **GUI** (PWA một người dùng, mobile-first 360 px, dùng tốt trên desktop 1440 px). **UI song ngữ English (`en`) / Tiếng Việt (`vi`)**: mặc định theo `navigator.language`, đổi trong Settings (FR-32 … FR-36). Tài liệu bằng tiếng Việt. **Nguồn sự thật của mọi chuỗi UI là mục 7 (bảng key `en` / `vi`); developer copy nguyên văn từ đó vào `en.json` / `vi.json`.** Các khối "Copy" trong mục 4 là bản `en` để đọc nhanh theo ngữ cảnh; nếu lệch với mục 7 thì mục 7 thắng.
 
-Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 px, tự theo sáng/tối của hệ thống): xem `docs/design/mockups/index.html`. Các mockup viết bằng `en`; riêng Today có thêm bản `vi`.
+Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 px, tự theo sáng/tối của hệ thống): xem `docs/design/mockups/index.html`. Các mockup viết bằng `en`; riêng Today có thêm bản `vi`. **(v3.1)** Brand mark trong nav của mọi mockup nạp ảnh `public/brand-mark-96.png` của repo bằng đường dẫn tương đối `../../../public/brand-mark-96.png` (không qua mạng; ngoại lệ có chủ đích của quy tắc "tự chứa" vì không nhúng được ảnh dạng base64 trong lượt làm này — nếu mở file mockup ngoài repo thì ô trắng sẽ trống, phần còn lại không ảnh hưởng).
 
 | Mockup | Màn hình | Milestone chính |
 | :- | :- | :- |
@@ -137,7 +137,10 @@ Khi app đang mở và đã qua giờ nhắc và còn goal chưa đạt:
    --> thay thế trong 1 transaction --> toast "Backup imported: 5 goals, 23 entries"
 (v2, M7) Đã đăng nhập: D3 dùng biến thể "Replace data on all your devices?" (nói rõ import cũng thay dữ liệu trong tài khoản);
          offline thêm dòng "reaches your account when you're back online"; sau import chỉ báo đồng bộ chuyển "Syncing…" --> "Synced".
-(v2, M8) Chưa đăng nhập + cloud bật + chưa gợi ý trong 30 ngày: sau Export thành công hiện ExportSignInHint trong card Backup (F14).
+(v2, M8) Chưa đăng nhập + cloud bật + chưa gợi ý trong 30 ngày + **đang online lúc Export thành công** (v3.1, A-44): sau Export hiện ExportSignInHint trong card Backup (F14).
+(v3.1, M10) Export thất bại (đọc dữ liệu lỗi, không tạo được tệp) --> (!) Alert danger trong card Backup `errors.EXPORT_FAILED` (cùng chỗ với lỗi import);
+         KHÔNG có toast "Backup exported", KHÔNG tải tệp, KHÔNG gợi ý đăng nhập, "Last backup" không đổi; nút Export dùng lại được ngay.
+         Export thành công nhưng việc "tiêu lượt" hint lỗi --> bỏ qua hint (im lặng), vẫn toast "Backup exported" và vẫn tải tệp.
 ```
 
 ### F8 — Archive / xoá goal (US-12, FR-04) — M1 (xoá), M5 (archive)
@@ -176,7 +179,7 @@ Mọi flow dưới đây chỉ tồn tại khi bản build có cấu hình cloud
      |        Ở Settings: Alert danger trong card Account (có nút "Dismiss"), nút đăng nhập dùng lại được ngay.
      |        Ở màn khác (Today): toast lỗi (8 s) kèm nút "Go to Account" --> #/settings.
      |        Dữ liệu cục bộ KHÔNG đổi; không có dialog chặn.
-     |yes--> signed-in: toast "Signed in as <email>"; focus ở <h1> của màn (như mọi lần đổi route)
+     |yes--> signed-in: toast "Signed in as <email>" (v3.1: nếu lần đồng bộ đầu có gộp dữ liệu thì chỉ hiện `toast.mergeDone`, thay thế câu này — quy tắc một toast, mục 5); focus ở <h1> của màn (như mọi lần đổi route)
               Card Account hiện avatar chữ cái đầu + tên + email.
               (M7) --> F11 (gộp dữ liệu) --> F13 (đồng bộ)
 ```
@@ -191,6 +194,9 @@ Mở app khi offline: phiên đã lưu vẫn hiện (email, tên) và **không**
 [D4 Sign out dialog]  mặc định: (•) Keep data on this device   ( ) Remove data from this device
    (M7) <còn thay đổi chưa đồng bộ?> --yes--> khối cảnh báo "N changes haven't synced…" + "We'll try to sync before signing you out." (online)
                                                hoặc "You're offline … they'll sync when you sign in again" (offline)
+   (v3.1, ADR-28) <còn hàng trên máy bị cloud từ chối (`dirty = 2`)?> --yes--> cùng khối cảnh báo thêm "N items on this device couldn't be uploaded…" + "Whatever couldn't be uploaded stays on this device if you keep the data here…";
+                                               mô tả lựa chọn Remove đổi sang bản KHÔNG nói "Your account keeps everything" (`removeDescRejected`);
+                                               chọn Remove --> thêm "…anything that couldn't be uploaded will be lost. Export a backup first…" (7.7.2). Các hàng này KHÔNG đếm vào "đang chờ" và không chặn đồng bộ lần cuối.
    |Cancel / Esc ------------------------------> đóng dialog, vẫn đăng nhập, focus về nút "Sign out"
    |chọn Remove --> nút primary đổi thành "Sign out and remove data" (danger); (nếu còn thay đổi chưa đồng bộ) hiện thêm
    |                 "If you remove the data from this device, these changes will be lost."
@@ -257,12 +263,15 @@ Thay đổi từ thiết bị khác xuất hiện sau lần đồng bộ kế ti
         |"Not now" --> banner ẩn, toast "OK. You can sign in any time from Settings.", focus về <h1>;
                        14 ngày sau hiện lại; sau 3 lần "Not now" không hiện trên Today nữa (Account card vẫn luôn có nút)
         BackupBanner không hiện cùng lúc (banner đăng nhập ưu tiên); khi banner đăng nhập ẩn do "Not now", BackupBanner hiện như cũ.
-[Settings > Backup] Export thành công + chưa đăng nhập + chưa gợi ý trong 30 ngày
+[Settings > Backup] Export thành công + cloud bật + chưa đăng nhập + ĐANG ONLINE lúc Export thành công + chưa gợi ý trong 30 ngày
    --> ngoài toast "Backup exported", dưới hai nút hiện ExportSignInHint (khối thông tin, có nút "Sign in with Google")
+   Export lúc OFFLINE (v3.1, A-44): KHÔNG hiện hint và KHÔNG tiêu "lượt 30 ngày"; lần Export online kế tiếp vẫn có thể hiện hint.
+   (Hint đã hiện rồi mới mất mạng: giữ khối, nút đăng nhập bị vô hiệu kèm dòng "You're offline. Connect to the internet to sign in." — chỉ là trạng thái, không còn là đường vào chính.)
 [Settings > Account] chưa đăng nhập: LUÔN có lời giải thích + nút, không có "Not now"
 [Settings > Storage] "Not protected" + cloud bật + chưa đăng nhập: thêm câu gợi ý + nút "Go to Account"
-Không bao giờ hiện lời nhắc đăng nhập khi: cloud tắt, đã đăng nhập, phiên hết hạn (card Account lo). Banner Today còn cần đang online (FR-52);
-ExportSignInHint (FR-53) không xét online: nếu đang offline, nút đăng nhập trong hint bị vô hiệu kèm dòng "You're offline. Connect to the internet to sign in."
+Không bao giờ hiện lời nhắc đăng nhập khi: cloud tắt, đã đăng nhập, phiên hết hạn (card Account lo). Cả banner Today (FR-52) lẫn ExportSignInHint (FR-53, v3.1) cần đang online.
+Quy tắc mốc thời gian (v3.1, A-46): mốc "Not now"/"đã gợi ý" lưu trên máy mà lớn hơn bây giờ quá 24 giờ (đồng hồ máy từng sai) được coi như chưa từng có → banner/hint lại theo quy tắc thường;
+   số lần "Not now" đã đếm vẫn giữ. "Not now" bấm khi banner đang trong thời gian ẩn (ví dụ hai tab cùng bấm) không đếm thêm lượt. Không đổi gì ở giao diện.
 ```
 
 ---
@@ -272,7 +281,7 @@ ExportSignInHint (FR-53) không xét online: nếu đang offline, nút đăng nh
 ### 3.1 Điều hướng
 
 - **< 1024 px**: thanh tab dưới cố định, 4 mục: `Today`, `Goals`, `Review`, `Settings`. Cao 56 px + safe-area.
-- **≥ 1024 px**: sidebar trái rộng 232 px: logo "1%" + "Better per Day", 4 mục như trên.
+- **≥ 1024 px**: sidebar trái rộng 232 px: **(v3.1) brand** = `BrandMark` (ảnh logo trên ô trắng bo góc 32 px, xem mục 5 "Brand") + chữ `app.name` **"1% Better per Day"** (một dòng, đậm 700, `--text`; xuống dòng được nếu chữ phóng 200 %), 4 mục như trên. Brand là link về `#/today` với `aria-label` = `app.name`. **Thanh tab dưới < 1024 px không có brand** (như cũ).
 - Tab đang chọn: màu `--primary`, chữ đậm, có vạch/nền (không chỉ dựa vào màu), `aria-current="page"`.
 - **Tab `Review` chỉ hiện từ M4** (chưa có route). Mục ở M1–M3 chỉ có 3 tab. Link "Log a past day" trên Today chỉ hiện từ M3. Link tên goal → Goal detail chỉ có từ M3.
 - Màn hình con (Goal form, Goal detail, Day) giữ nguyên tab cha được tô sáng: Goal form và Goal detail → `Goals`; Day → `Today`.
@@ -302,9 +311,9 @@ ExportSignInHint (FR-53) không xét online: nếu đang offline, nút đăng nh
 | :- | :- | :- |
 | base (mobile) | 0–639 px | Một cột, padding ngang 16 px, tab bar dưới, form/dialog full-width (dialog dạng bottom sheet), stat card 2 cột, heatmap cuộn ngang trong vùng chứa riêng (tự cuộn tới tuần hiện tại) |
 | `sm` (tablet) | ≥ 640 px | Nội dung căn giữa, rộng tối đa 720 px (màn hẹp) hoặc 960 px (Review, Goal detail); hành động hàng goal nằm cùng hàng; dialog căn giữa rộng 480 px |
-| `lg` (desktop) | ≥ 1024 px | Sidebar trái thay tab bar; padding nội dung 32/40 px; heatmap vừa khít (ô 14 px) không cần cuộn; stat card 5 cột; chart cao 320 px |
+| `lg` (desktop) | ≥ 1024 px | Sidebar trái thay tab bar; padding nội dung 32/40 px (Review: 24 px); **(v3.1)** heatmap ô 13 px: vừa khít, không cuộn, **chỉ khi viewport ≥ 1192 px**; từ 1024 đến 1191 px vẫn cuộn ngang trong hộp `.heatmap-scroll` (xem mục 6.3); stat card 5 cột; chart cao 320 px |
 
-Không có thanh cuộn ngang ở `documentElement` ở 360–1440 px (NFR-06). Ngoại lệ có chủ đích: vùng heatmap trên mobile (< 640 px) cuộn ngang bên trong `.heatmap-scroll` (M4-AC10).
+Không có thanh cuộn ngang ở `documentElement` ở 360–1440 px (NFR-06). Ngoại lệ có chủ đích: vùng heatmap cuộn ngang bên trong `.heatmap-scroll` ở mobile (< 640 px) **và (v3.1) ở mọi viewport từ 640 đến 1191 px** mà vùng nội dung chưa đủ chỗ cho 53 tuần (M4-AC10); `documentElement` không bao giờ cuộn ngang.
 
 ### 3.3 Bản đồ milestone (developer M1 đọc mục này đầu tiên)
 
@@ -320,6 +329,7 @@ Không có thanh cuộn ngang ở `documentElement` ở 360–1440 px (NFR-06). 
 | **M7** *(v2)* | `SyncIndicator` + StatusRow trong AppShell (5 trạng thái + signing-in); chi tiết đồng bộ trong `AccountCard` (Last synced, Waiting to sync, "Sync now", Alert lỗi `SYNC_*`, dòng `SYNC_REMOTE_INVALID`); `MergeAccountDialog` (D5); cảnh báo chưa đồng bộ trong D4; D3 biến thể đã đăng nhập; ghi chú "theo tài khoản" ở card Language và Reminders + biến thể quyền `default` khi nhắc đã bật từ cloud; mô tả Backup khi đã đăng nhập; toast `mergeDone`, `prefsFromAccount`, `syncNowDone`; chuỗi `sync.*`, `auth.merge.*`, `import.*SignedIn`, `errors.SYNC_*` |
 | **M8** *(v2)* | `LoginPromptBanner` (Today); `ExportSignInHint` (card Backup); gợi ý đăng nhập ở card Storage "Not protected"; mô tả Backup khi chưa đăng nhập; chuỗi `loginPrompt.*`, `exportHint.*`, `settings.backup.descSignedOut`, `settings.storage.notProtectedSignIn` (+ nút dùng `settings.account.goTo`) |
 | **M9** *(v3)* | Chỉ Goal detail (S4), không màn nào khác: headline có dấu + biến thể âm (`goal.detail.headlineDown`, màu `--text`), phụ đề 2 dòng (`subDay` + `subToday`/`subEarlier`/`subStart`/`empty.detail.curve`), `CurveChart` v3 (đường "Bạn" `stepAfter`, vạch 0%, thang Y theo `curveYDomain`, nhãn trục có dấu + compact, nhãn trực tiếp không đè nhau, tooltip 4 biến thể, chấm nhỏ ở ngày có ghi), legend 3 mục, chú thích mới, tóm tắt SR 2 biến thể, bảng dữ liệu 5 cột; formatter có dấu (`+`/`−` U+2212) và `f.factor` (`×5.4`). Chuỗi: mục 7.6.4 (cột MS = M9) và `empty.detail.curve` |
+| **M10** *(v3.1, M10-T6 đọc mục này)* | Không có màn hình mới. Việc UI/copy: (1) 7 key hàng bị cloud từ chối, 7.7.1 và 7.7.2 (**chỉ 2 chuỗi `en` đổi**: `auth.signOut.rejectedKeep`, `auth.signOut.rejectedRemove`; 5 key còn lại giữ nguyên văn đã ship) + vị trí hiển thị ở S7 (A9, D4); (2) `settings.about.privacyLink`, 7.7.5 (chuỗi đã ship, giữ); (3) `errors.IMPORT_INVALID_SCHEMA_outOfRange` và `errors.EXPORT_FAILED` (**key mới**), 7.3, vị trí ở S7 Backup; (4) `empty.day.noGoals`: chỉ sửa chữ ở S5 (đã không có dấu chấm trong 7.4 và `en.json`); (5) **nhãn giá trị cột BarChart** (S6, mục 5 `BarChart`: điều kiện đo được); (6) brand mark (3.1, mục 5 "Brand") và quy tắc một toast (mục 5 `Toast`): ghi nhận hành vi đã ship, không cần đổi code |
 
 ### 3.4 Bố cục với chuỗi tiếng Việt (rà 360 px)
 
@@ -591,7 +601,7 @@ Quy ước chung cho mọi màn hình:
   2. **Vạch 0%** (mức ngày đầu có ghi): đường ngang liền 1,5 px `--chart-zero`, luôn hiện (miền luôn chứa 0 vì `yMin ≤ 0 < yMax`); nhãn trục `0%`. Là mốc đọc "trên hay dưới ngày đầu"; có mục legend riêng (`goal.detail.legendZero`). Các vạch lưới khác 1 px `--border`.
   3. **Thang Y** (giữ control Range A-D4): tuyến tính, miền = `curveYDomain(ideal%, you%)` của **các điểm đang hiển thị**; không giới hạn cứng, không thang log. **Đầu dưới chỉ nới (5 %) khi có giá trị âm**; nếu "Bạn" không bao giờ dưới 0 thì `yMin = 0` đúng (không chừa khoảng trống dưới vạch 0%, nếu không R1 sẽ có cả một bậc `−100%` vô nghĩa) — vẫn nằm trong dung sai của M9-AC2 (xem OQ-D17). Vạch/nhãn: bước "đẹp" (1, 2, 5 × 10ⁿ), **không nhỏ hơn 1 (đơn vị %)** để nhãn luôn là số nguyên, 4–6 vạch, luôn có 0.
   4. **Nhãn trục Y** = % số nguyên **có dấu**: `+100%`, `0%` (không dấu), `−50%` (U+2212). |v| < 10.000: có nhóm hàng nghìn (`+1,000%` / `+1.000%`); |v| ≥ 10.000: `Intl.NumberFormat` `notation: 'compact'` — `en` `+144K%`, `vi` `+144 N%` (dùng đúng kết quả của Intl, không tự ghép), tối đa 8 ký tự. Lề trái chừa theo nhãn dài nhất (≈ 6,6 px × số ký tự + 14 px, tối thiểu 44 px).
-  5. **Nhãn trực tiếp tại điểm cuối** (`goal.detail.labelIdeal`, `labelYou`): mặc định mỗi nhãn nằm ngay **trên** chấm của nó (chuyển xuống dưới chấm nếu sẽ chạm đỉnh vùng vẽ); nếu hai chấm cách nhau < 24 px thì nhãn của series cao hơn ở trên chấm, nhãn của series thấp hơn ở dưới chấm — hai nhãn không bao giờ đè nhau, kể cả khi "Bạn" thấp hơn Ideal. Kẹp trong vùng vẽ; nhãn nằm bên phải chấm, neo phải (nằm bên trái chấm) nếu x > 70 % chiều rộng.
+  5. **Nhãn trực tiếp tại điểm cuối** (`goal.detail.labelIdeal`, `labelYou`): mặc định mỗi nhãn nằm ngay **trên** chấm của nó (chuyển xuống dưới chấm nếu sẽ chạm đỉnh vùng vẽ); nếu hai chấm cách nhau < 24 px thì nhãn của series cao hơn ở trên chấm, nhãn của series thấp hơn ở dưới chấm — hai nhãn không bao giờ đè nhau, kể cả khi "Bạn" thấp hơn Ideal. Kẹp trong vùng vẽ; nhãn nằm bên phải chấm, neo phải (nằm bên trái chấm) nếu x > 70 % chiều rộng. **(v3.1, tuỳ chọn, chỉ CSS, không có AC; QC M9 r1 §9.4)** Chữ của cả hai nhãn có **viền sáng 3 px** màu `--surface` (`paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round`) để đường Ideal nét đứt chạy sát chấm gần vạch 0% (R3, 360 px) không cắt ngang chữ. Không đổi vị trí, chuỗi hay màu chữ; mockup `07-goal-detail.html` đã có. Nếu dev không làm trong M10 thì để backlog Minor, không chặn.
   6. **Trục X**: nhãn ngày ngắn không năm (~ mỗi 72 px), như M5. Chiều cao 240 px (mobile) / 320 px (desktop).
   7. **Hệ quả đã chấp nhận (ARCH §4.5)**: khi "Bạn" vượt xa Ideal (R1: +440% so với +4,1%) Ideal nằm sát vạch 0% — đúng thực tế, giá trị đọc ở nhãn trực tiếp, tooltip và bảng. Goal dài vẫn mặc định `So far` để Ideal không nuốt thang.
 - **Copy:** mục 7.6.4 là nguồn; dưới đây là bản `en` với R1 / R3 (số đã qua formatter, mục 7.1).
@@ -628,7 +638,7 @@ Quy ước chung cho mọi màn hình:
 - **Component dùng:** PageHeader, DateNav, GoalCard (day), EntryForm, EntryRow (có Badge nguồn), EmptyState, Toast, Skeleton.
 - **Trạng thái:**
   - *default*: liệt kê goal (kể cả `ended`, `archived`) có `startDate ≤ date ≤ endDate`.
-  - *loading*: skeleton. *empty*: không goal nào chứa ngày đó → `No goals were running on this day.` + `View goals`.
+  - *loading*: skeleton. *empty*: không goal nào chứa ngày đó → tiêu đề `No goals were running on this day` (**không có dấu chấm cuối**: là tiêu đề `empty.day.noGoals`, đúng `en.json`; v3.1) + thân `empty.day.noGoalsBody` + `View goals`.
   - *goal chưa có entry ngày đó*: `No time logged for this goal on this day.` + nút `Add entry`.
   - *ngày tương lai* (kể cả mở bằng URL): không có form; thông báo `You can't log time for a future date.` + `Go to today`.
   - *ngày sai định dạng* (`#/day/abc`, `2026-13-40`): màn lỗi `That date isn't valid.` + link `Go to Today`.
@@ -665,11 +675,18 @@ Quy ước chung cho mọi màn hình:
   - *Một goal, năm ngoài khoảng goal*: mọi ô ở trạng thái `outside`; dòng `This goal doesn't run in {year}.`
   - *error*: tính toán/chunk lỗi → ErrorState `Couldn't load this view` + `Retry`. *offline*: bình thường.
   - *Heatmap — ô*: mức 0–4 (màu `--heat-0..4`), hôm nay có viền đậm, ô tương lai viền nét đứt nhạt, ô `outside` (ngoài khoảng goal, hoặc ngoài năm) kẻ sọc nhạt.
+  - *Heatmap — chiều rộng (v3.1, M4-P1a)*: lưới 53 tuần cần ≈ 959 px (845 lưới + 34 cột nhãn thứ + 2 × 16 padding card + 2 × 24 padding `main.wide`), nên **chỉ vừa khít, không cuộn khi vùng nội dung đạt 960 px, tức viewport ≥ 232 (sidebar) + 960 = 1192 px**. Từ 640 đến 1191 px (kể cả 1024–1191 px, nơi sidebar 232 px chỉ chừa 792–959 px) heatmap vẫn cuộn ngang **trong** `.heatmap-scroll`, tự cuộn tới tuần hiện tại khi mở; trang không cuộn ngang. Đây là hành vi đúng (không có ô nào bị cắt ở 1192 px trở lên); không đổi cỡ ô để ép vừa.
+  - *Nhãn giá trị trên cột BarChart (v3.1, M4-P1b)*: áp dụng cho **cả hai** biểu đồ cột (12 tuần, 12 tháng), không cho CurveChart. Quy tắc đo được:
+    1. **Điều kiện "đủ chỗ"**: `slot = (chartWidth − 38) / số cột ≥ 30 px`, với `chartWidth` = chiều rộng đo được của `.chart` (đúng giá trị đang truyền làm `width` cho Recharts), 38 = trục Y 34 + lề phải 4, số cột = 12. Tương đương `chartWidth ≥ 398 px`. Hệ quả ở viewport: 360, 390, 414 px (xếp dọc, chart = viewport − 64 ≈ 296–350 px) **không** nhãn; từ ≈ 462 px xếp dọc (480 px: 416 px) và 768 px (704 px) **có**; 1024–1100 px (hai chart cạnh nhau, ≈ 332–370 px) **không**; từ ≈ 1156 px (1280 px: ≈ 460 px; 1440 px: ≈ 416 px) **có**. Không đủ chỗ → không vẽ nhãn nào (không vẽ một phần).
+    2. **Cột nào có nhãn** (khi đủ chỗ): cột có ≥ 3 phút. Cột 0 phút **không** có nhãn (không có chiều cao, nhãn `0.0` chỉ là nhiễu); cột 1–2 phút cũng không (làm tròn ra `0.0`).
+    3. **Định dạng**: số **giờ** (cùng đơn vị với trục Y; trục không ghi đơn vị, đơn vị đã nằm ở tóm tắt và tooltip) **không kèm đơn vị**: `hours = minutes / 60`; `hours < 100` → `f.decimal1` (`en` `2.7`, `vi` `2,7`); `hours ≥ 100` → số nguyên theo `f.number` (`168`, `744`). Tối đa 4 ký tự. Không dấu `+`, không hậu tố.
+    4. **Kiểu và vị trí**: chữ SVG 11 px đậm 600, `text-anchor: middle`, đặt trên đỉnh cột (cách 4 px); màu `--text-muted` cho cột thường, `--text` cho cột kỳ hiện tại (cột `--primary`); `aria-hidden` (cả biểu đồ đã `aria-hidden`; số liệu có ở tóm tắt, tooltip và bảng ẩn, nên nhãn **không** thêm vào bảng ẩn). Lề trên của chart ≥ 20 px (hiện 12) để nhãn cột cao nhất không bị cắt. Gợi ý `data-testid="bar-value"` cho mỗi nhãn.
+    5. Không đổi: trục, tooltip, tóm tắt SR, bảng ẩn, màu cột. Khi đổi kích thước cửa sổ hoặc xoay màn hình, nhãn hiện/ẩn theo điều kiện 1 ngay (không cần reload).
 - **Tương tác:**
   - Bấm hoặc Enter/Space trên ô quá khứ/hôm nay → `#/day/:date`; ô tương lai và `outside` không điều hướng (`aria-disabled="true"`).
   - Bàn phím trên heatmap: một tab-stop (hôm nay, hoặc ô đầu); mũi tên Trái/Phải = tuần trước/sau, Lên/Xuống = ngày trước/sau, Home/End = ngày đầu/cuối năm; chi tiết ở mục 8.
   - Hover/focus ô → tooltip chữ (cùng nội dung accessible name), không chỉ dùng `title`.
-  - Mobile: vùng heatmap tự cuộn tới tuần hiện tại khi mở.
+  - Mobile **và mọi viewport < 1192 px** (v3.1): vùng heatmap tự cuộn tới tuần hiện tại khi mở.
 - **Copy:** `Review`, `Goal`, `All goals`, `Year`, `Time logged`, `Days on target`, `Current streak`, `Longest streak`, `Progress`, `Pace`, `Activity in {year}`, `Less`, `More`, `Last 12 weeks`, `Months of {year}`, `Pick a goal to see progress and pace.`, `{n} days` (`1 day`), pace: `{x} min ahead` / `{x} min behind` / `On pace` (≥ 60 phút: `{h} h {m} min ahead`), phụ đề card: Time logged `In {year}` (một goal thêm `Whole goal: {h} h`), Progress `{minutes} of {total} min`, Pace `Expected {n} min by today`. Heatmap tóm tắt (SR): `In {year} you logged time on {a} days and hit your target on {b} days. Longest streak: {c} days.` Tooltip/label ô: mục 7.5. Nút: `Retry`, `Create a goal`.
 
 ### S7 — Settings  (Milestone: M1 [Language + Storage + About]; M2 [Reminders]; M3 [Backup]; **M6 [Account, About mới]; M7 [đồng bộ, D3 đã đăng nhập]; M8 [gợi ý Backup/Storage]**. User story: US-09, US-10, US-11, US-13, US-14, US-15 … US-20)
@@ -718,7 +735,7 @@ Quy ước chung cho mọi màn hình:
     - `granted` → chip `Allowed`; mô tả `You'll get one notification a day while 1% Better is open.`
     - `denied` → chip `Blocked`; mô tả `Notifications are blocked for this site. Allow them in your browser's site settings, then come back. You'll still see a reminder banner in the app.`
     - không hỗ trợ → chip `Not supported`; mô tả `This browser doesn't support notifications. You'll still see a reminder banner in the app.`
-  - *Backup* (M3): `Last backup: Never` / `Last backup: 2026-10-09`; khi quá 30 ngày hoặc chưa từng và có goal: Banner `It's been {n} days since your last backup.` / `You haven't backed up yet.`; lỗi import hiện Alert (7.3) và không thay đổi dữ liệu; *loading* khi đang đọc/ghi file: nút vô hiệu + `Working…`; *success*: toast.
+  - *Backup* (M3): `Last backup: Never` / `Last backup: 2026-10-09`; khi quá 30 ngày hoặc chưa từng và có goal: Banner `It's been {n} days since your last backup.` / `You haven't backed up yet.`; lỗi import hiện Alert (7.3) và không thay đổi dữ liệu (**v3.1:** file đúng kiểu JSON nhưng có giá trị ngoài giới hạn của app → câu riêng `errors.IMPORT_INVALID_SCHEMA_outOfRange`, không dùng câu chung "không giống bản sao lưu"); lỗi Export → Alert `errors.EXPORT_FAILED` (xem Tương tác); *loading* khi đang đọc/ghi file: nút vô hiệu + `Working…`; *success*: toast.
   - *Storage* (M1): `Protected` (persisted = true) — `Your browser won't clear this data automatically.`; `Not protected` — `Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.`; không hỗ trợ API → `Unknown` + `Your browser doesn't report storage protection. Export a backup now and then.`
   - *offline*: chip Offline chung (đã đăng nhập: SyncIndicator); không đổi gì khác.
   - **(v2) Card Account** (M6 trở đi; **không render** khi `AuthState = unavailable`, tức cloud chưa cấu hình — FR-38, và khi đó cũng không có D4/D5/SyncIndicator/banner/hint nào). Một card, 10 trạng thái (A1 … A10); bảng dưới là hợp đồng giao diện, mockup `09-account.html` là hình dung:
@@ -733,7 +750,7 @@ Quy ước chung cho mọi màn hình:
 | A6 | `signed-in`, `syncing` | Như A5; `Sync now` `aria-disabled`, nhãn `Syncing…` | M7 |
 | A7 | `signed-in`, `pending > 0` (online hoặc offline) | Như A5, `Waiting to sync = N changes`; offline: `Sync now` `disabled` + dòng `settings.account.offlineSync` | M7 |
 | A8 | `signed-in`, `error` (`SYNC_OFFLINE` / `SYNC_UNREACHABLE`) | Như A5 + Alert danger `errors.SYNC_*` + dòng `Trying again at {time}.` (`nextRetryAt`); `Sync now` bấm được (bỏ qua backoff) | M7. Không có Alert nếu chỉ offline (A7) |
-| A9 | `signed-in`, idle nhưng có hàng cloud bị bỏ (`SYNC_REMOTE_INVALID`) | Như A5 + dòng thông tin (icon info, `--text-muted`) `errors.SYNC_REMOTE_INVALID`; **không** đổi chỉ báo | M7 |
+| A9 | `signed-in`, idle nhưng có hàng bị bỏ: từ cloud (`SYNC_REMOTE_INVALID`) **và/hoặc** hàng trên máy bị cloud từ chối (`dirty = 2`, ADR-28) | Như A5 + dòng thông tin (icon info, `--text-muted`) mang `data-reason`: `remote` (chỉ hàng từ cloud bị bỏ) → `errors.SYNC_REMOTE_INVALID`; `local` (chỉ hàng trên máy bị từ chối) → `settings.account.localRejected_*` (`{{count}}` = số hàng); `both` → **hai dòng**, `localRejected_*` trước rồi `SYNC_REMOTE_INVALID`. **Không** đổi chỉ báo (vẫn `Synced`), không đếm vào "Waiting to sync" | M7 (`remote`); M8 (`local`, `both`; copy chốt ở v3.1, mục 7.7.1) |
 | A10 | `expired` | Alert info (`role="status"`) `settings.account.expiredTitle` + `errors.AUTH_SESSION_EXPIRED` + dòng `Account: {email}`; nút Google `Sign in with Google` + `Sign out`; **không** có `Sync now`, `dl` | Dữ liệu cục bộ giữ nguyên. M6 (chỉ báo: M7) |
 
 **Loading** (SDK đang nạp khi có phiên lưu sẵn): hiện ngay A5 với email/tên đã lưu (`sync.account`), `Sync now` bị vô hiệu, **không** hiện A1 rồi đổi (tránh nháy). **Empty**: không áp dụng. **Quyền**: mỗi thiết bị một tài khoản (A-22); không có phân quyền khác.
@@ -744,9 +761,10 @@ Quy ước chung cho mọi màn hình:
 | :- | :- | :- | :- |
 | Backup — mô tả | `settings.backup.desc` (như v1.1) | `settings.backup.descSignedOut` (M8) | `settings.backup.descSignedIn` (M7) |
 | Backup — hint dưới nút | `settings.backup.importHint` | như cột trái | `settings.backup.importHintSignedIn` |
-| Backup — sau Export | toast `Backup exported` | toast + **ExportSignInHint** (M8; tối đa 1 lần/30 ngày; không khi hết phiên) | toast |
+| Backup — sau Export | toast `Backup exported` | toast + **ExportSignInHint** (M8; tối đa 1 lần/30 ngày; **chỉ khi đang online lúc Export**, v3.1; không khi hết phiên) | toast |
 | Storage "Not protected" | `settings.storage.notProtectedDesc` | + câu `settings.storage.notProtectedSignIn` và nút `Go to Account` (M8) | như cột trái (không gợi ý) |
 | About — mô tả | `settings.about.desc` (như v1.1: "No account, no tracking") | `settings.about.descCloud` + `settings.about.privacy` (M6) | `settings.about.descSignedIn` + `settings.about.privacy` (M6) |
+| About — liên kết chính sách (v3.1, M6-P1a) | **Có** (`settings.about.privacyLink`, M6 D8) | có | có |
 
 - **Tương tác:**
   - *Language*: bấm/chạm một lựa chọn, hoặc dùng mũi tên Trái/Phải (radio group), Space chọn → `LocaleService.set` ghi kv, `i18next.changeLanguage`, `<html lang>`, `document.title` đổi **đồng bộ trong cùng khung hình**; toàn bộ chữ trên trang (kể cả h1 `Settings` → `Cài đặt`, tab bar, mô tả card, mọi card khác) đổi tại chỗ. Focus **giữ nguyên** trên lựa chọn vừa chọn (không nhảy về h1, không reload, không cuộn). Hiện toast `toast.languageChanged` bằng ngôn ngữ **mới** (`role="status"` để người dùng trình đọc màn hình nghe được rằng ngôn ngữ đã đổi). Chọn lại lựa chọn đang chọn: không làm gì, không toast. Toast, banner, form đang hiển thị ở màn khác sẽ dùng ngôn ngữ mới khi quay lại.
@@ -755,10 +773,12 @@ Quy ước chung cho mọi màn hình:
   - **(v2) Sau khi quay về từ Google** (callback): app render `#/settings` ngay, focus vào `<h1>` như mọi lần đổi route; card ở A3 rồi A5 (hoặc A4); toast `toast.signedIn` (`role="status"`) cho người dùng screen reader. **Không** tự chuyển focus vào card, **không** cuộn.
   - **(v2) Sau khi đóng D4 bằng "Sign out":** card chuyển sang A1, focus về **h2 "Account"** của card (`tabindex="-1"`), toast `toast.signedOutKept` / `toast.signedOutRemoved`.
   - **(v2) Storage:** `Go to Account` cuộn tới card Account và focus nút Google (không đổi route, không dùng hash).
-  - **(v2) Export** (M8): sau khi tải xong, nếu `claimExportHint` thắng → ExportSignInHint xuất hiện **dưới** hai nút Export/Import (không lấy focus, không `role="alert"`; toast `Backup exported` đã đủ để SR biết việc đã xong). Nút trong hint = nút Google với `returnTo = #/settings`.
+  - **(v2) Export** (M8): sau khi tải xong, nếu `claimExportHint` thắng → ExportSignInHint xuất hiện **dưới** hai nút Export/Import (không lấy focus, không `role="alert"`; toast `Backup exported` đã đủ để SR biết việc đã xong). Nút trong hint = nút Google với `returnTo = #/settings`. **(v3.1, A-44)** `claimExportHint` chỉ được gọi khi đang online lúc Export thành công; offline → không hint, không tiêu lượt. `claimExportHint` ném lỗi → bỏ qua hint (không Alert, không toast lỗi; `console.warn`), việc Export vẫn là thành công.
+  - **(v3.1, M10) Export thất bại** (`backupService.export` lỗi: đọc IndexedDB hỏng, không tạo được tệp): Alert danger `role="alert"` `errors.EXPORT_FAILED` hiện trong card Backup, **đúng vị trí Alert lỗi import** (dưới `settings.backup.importHint` và ExportSignInHint nếu có; **một Alert tại một thời điểm**: lần Export hoặc Import kế tiếp xoá Alert cũ trước khi chạy). Không toast "Backup exported", không tải tệp, không hint, "Last backup" không đổi, nút `Export backup (JSON)` về trạng thái bình thường (hết `Working…`) và dùng lại được; không có nút `Dismiss` (Alert tự mất ở lần thao tác Backup kế tiếp, giống lỗi import). Không lấy focus (người dùng đang đứng ở nút Export; `role="alert"` đã đủ để SR đọc).
 - **Copy:** `Settings`; card `Language / Ngôn ngữ` (cùng một chuỗi ở `en` và `vi`), mô tả `Choose the language of menus, messages and dates. Your own goal names and notes stay as you wrote them.`, lựa chọn `English` / `Tiếng Việt`, hint `The date and time pickers and permission prompts follow your browser's language.`, toast `Language changed`; card `Reminders`, `Backup`, `Storage`, `About`; `Daily reminder`; mô tả switch `Get a nudge when you haven't hit your targets today.`; `Reminder time`; `Notification permission`; giới hạn: `Heads up: reminders are sent only while 1% Better is open (in a tab or an installed window, even in the background). To be reminded when the app is closed, add a daily event to your calendar.`; iOS: `On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).`; `Add reminder to calendar (.ics)`; phụ `Adds a repeating daily event at {time}.`; Backup mô tả `Your data lives only on this device. Export a backup now and then, or to move to another device.` và `Importing replaces everything currently on this device.`; nút `Export backup (JSON)`, `Import backup…`; About: `1% Better per Day` / `Everything you log stays on this device. No account, no tracking.`
 - **D3 — Import preview dialog** (M3): tiêu đề `Replace all data?`; nội dung `This backup has {5 goals, 23 entries}, exported {2026-10-09}. Importing replaces everything currently on this device ({a goals, b entries}). This can't be undone.`; nút `Replace all data` (danger), `Cancel` (focus ban đầu ở `Cancel`). Pluralization: `1 goal`, `1 entry`.
 - **(v2) Copy mới của S7** ở 7.7 (Account: 7.7.1; Backup/Storage/About/ghi chú: 7.7.5). Chuỗi cũ không đổi.
+- **(v3.1) Liên kết chính sách quyền riêng tư** (cuối card About, **luôn hiện, cả khi cloud tắt**; M6 D8): một `<a>` thường (không phải nút) trong `.hint`, chữ `settings.about.privacyLink`, trỏ tới `privacy.html` cùng origin (`BASE_URL + 'privacy.html'`), mở **cùng tab** (trang tĩnh đó có sẵn liên kết "Better per Day" quay về app, nên không cần tab mới và không có "(opens in a new tab)"). Đứng dưới dòng `settings.about.privacy` (khi cloud bật). Vùng chạm cao ≥ 44 px (`display: inline-flex; align-items: center; min-height: var(--tap)`), gạch chân luôn hiện, màu `--primary` (≥ 4.5:1 trên `--surface`). Nếu bản đã ship dùng kiểu link khác nhưng vẫn đạt axe và có focus nhìn thấy thì chấp nhận (không phải tiêu chí M10-AC11).
 - **D3 — biến thể đã đăng nhập** (M7, FR-51): cùng cấu trúc và cùng nút như D3, khác chữ. Tiêu đề `Replace data on all your devices?`; thân `This backup has {goals}, {entries}, exported {date}. Importing replaces everything currently on this device ({curGoals}, {curEntries}) and, once synced, everything in your account too — so it changes your other devices as well. This can't be undone.` Nếu đang offline thêm một dòng riêng `You're offline, so the change will reach your account when you're back online.` Nút `Replace all data` (danger, cùng key `import.confirm`), `Cancel` (focus ban đầu). Chọn biến thể theo `AuthState.kind === 'signed-in'`; `expired` dùng D3 chuẩn.
 - **D4 — Sign out dialog** (`SignOutDialog`; M6, cảnh báo chưa đồng bộ M7; FR-41). `<dialog>` + `showModal()`, bottom sheet < 640 px, hộp giữa 480 px từ 640 px; nội dung cuộn, hàng nút dính đáy (3.5).
 
@@ -784,6 +804,7 @@ Quy ước chung cho mọi màn hình:
   - *Mặc định:* lựa chọn **Keep** được chọn **và có focus** khi mở (khác D2/D3 vì lựa chọn mặc định là phương án an toàn). Nút xác nhận là `primary` khi Keep; đổi thành `danger` + nhãn `Sign out and remove data` khi chọn Remove. `Cancel`/Esc/click backdrop = đóng, không làm gì.
   - *Busy:* sau khi xác nhận, hai nút và radio bị vô hiệu, nhãn nút xác nhận `Signing out…`, `aria-busy="true"` (tối đa ≈ 10 s nếu đang đồng bộ lần cuối). Dialog không đóng cho tới khi xong.
   - *Cảnh báo chưa đồng bộ* (M7): chỉ khi `pending > 0`. Online: `auth.signOut.unsynced` + `auth.signOut.unsyncedOnline`. Offline: `auth.signOut.unsynced` + `auth.signOut.unsyncedOffline`. Chọn Remove (cả online lẫn offline): thêm khối `role="status"` `auth.signOut.unsyncedRemove`.
+  - *Hàng trên máy bị cloud từ chối* (M8 → v3.1 chốt copy, ADR-28, `rejected > 0`; **đếm tươi mỗi lần mở D4**, không phụ thuộc `pending`): cùng khối cảnh báo (nền `--info-soft`, DOM `unsynced-warning` + `data-rejected`) hiện khi `pending > 0` **hoặc** `rejected > 0`. Thứ tự đoạn trong khối: (1) nếu `pending > 0`: `auth.signOut.unsynced_*` + dòng online/offline như trên; (2) nếu `rejected > 0`: `auth.signOut.rejected_*` + `auth.signOut.rejectedKeep`. Mô tả lựa chọn **Remove** đổi từ `auth.signOut.removeDesc` sang `auth.signOut.removeDescRejected` (vì `removeDesc` nói "Your account keeps everything", sai với các hàng này). Chọn Remove: vùng `role="status"` hiện thêm `auth.signOut.rejectedRemove` (cùng lúc với `unsyncedRemove` nếu `pending > 0`, `rejectedRemove` ở dưới). Các hàng này **không** làm dialog giữ mở và không đổi nhãn nút (đồng bộ lần cuối không thể đẩy chúng; Alert `syncFailed`/`Remove anyway` chỉ vì `pending`). Keep: không đổi hành vi, hàng vẫn nằm trên máy.
   - *Đồng bộ lần cuối lỗi + đang chọn Remove* (M7): dialog **ở lại**, hiện Alert `role="alert"` `auth.signOut.syncFailed`, nhãn nút đổi thành `Remove anyway` (danger); người dùng có thể đổi sang Keep, Cancel, hoặc xác nhận lần nữa (xem OQ-D10). Với Keep, lỗi đồng bộ không chặn đăng xuất (thay đổi vẫn nằm trên máy, F10).
   - *Lỗi xoá dữ liệu cục bộ* (hiếm): Alert `errors.WRITE_FAILED` trong dialog, dialog giữ mở.
 - **D5 — Merge account dialog** (`MergeAccountDialog`; M7; FR-47). Hiện đúng một lần sau khi đăng nhập khi thiết bị từng gắn tài khoản **khác** và còn dữ liệu cục bộ; đồng bộ tạm dừng cho tới khi chọn.
@@ -853,7 +874,7 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 | `OfflineChip` | Báo offline | — | hiện/ẩn theo `navigator.onLine` | AppShell (M1) |
 | `StatCard` | Một chỉ số | `label`, `value`, `sub?`, `progress?` | default, loading (skeleton), zero | Review, Goal detail (M4, M5) |
 | `Heatmap` | Lưới năm 53×7 | `year`, `cells`, `mode`: goal / all, `onSelect` | cell levels 0–4, today, future, outside; focus; tooltip | Review (M4) |
-| `BarChart` | Cột tuần/tháng (Recharts, lazy) | `series`, `unit`, `title` | default, empty (text), loading | Review (M4) |
+| `BarChart` | Cột tuần/tháng (Recharts, lazy). **(v3.1)** có nhãn giá trị trên cột khi "đủ chỗ" (điều kiện đo được ở S6 "Nhãn giá trị trên cột BarChart": `(chartWidth − 38) / 12 ≥ 30 px`; cột ≥ 3 phút; số giờ không đơn vị) | `series`, `unit`, `title` | default, empty (text), loading; **labels-on / labels-off** theo chiều rộng | Review (M4; nhãn M10) |
 | `CurveChart` | Đường Ideal vs You (Recharts, lazy). **v3:** "You" = `ActualPoint.percent` (bậc thang, đi xuống được), vạch 0%, thang Y theo `curveYDomain`, nhãn trục có dấu/compact, tooltip 4 biến thể, bảng 5 cột (S4 "Biểu đồ v3") | `ideal[]`, `actual[]` (`ActualPoint` v3: `minutes`, `logged`, `percent`, `changePercent`), `today`, `range` | default, empty-actual (`baseline = null`: chỉ Ideal + vạch 0%), negative, flat (ngày cuối không ghi), upcoming | Goal detail (M5; v3 M9) |
 | `HistoryTable` | Lịch sử entry | `entries` | default, empty | Goal detail (M3) |
 | `DateNav` | Điều hướng ngày | `date`, `today` | next vô hiệu ở hôm nay | Day (M3) |
@@ -867,7 +888,8 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 | `SignOutDialog` *(v2, D4)* | Hộp thoại đăng xuất Keep/Remove | `pending`, `online`, `onConfirm({ keepData })` | open, remove-selected, busy, sync-failed | Settings (M6; cảnh báo M7) |
 | `MergeAccountDialog` *(v2, D5)* | Xác nhận gộp dữ liệu máy vào tài khoản mới | `goals`, `entries`, `email`, `onConfirm`, `onCancel` | open, busy | AppShell (hiện sau đăng nhập; M7) |
 | `LoginPromptBanner` *(v2)* | Nhắc đăng nhập nhẹ nhàng trên Today | `onSignIn`, `onNotNow` | default, busy (nút Google đang đăng nhập) | Today (M8) |
-| `ExportSignInHint` *(v2)* | Gợi ý đăng nhập sau Export thành công | `onSignIn`, `online` | default, offline (nút vô hiệu + lý do) | Settings Backup (M8) |
+| `ExportSignInHint` *(v2)* | Gợi ý đăng nhập sau Export thành công (**v3.1:** chỉ được tạo khi online lúc Export, A-44) | `onSignIn`, `online` | default; offline (nút vô hiệu + lý do) — **chỉ còn xảy ra khi mất mạng sau khi hint đã hiện** | Settings Backup (M8) |
+| `BrandMark` *(v3.1, ghi nhận bản đã ship, ADR-30 g)* | Dấu thương hiệu ở sidebar ≥ 1024 px: ảnh logo trên ô trắng (xem "Brand" dưới bảng) | không props; `alt=""`, `aria-hidden` (tên truy cập nằm ở link cha, `aria-label` = `app.name`) | một trạng thái, giống nhau ở sáng và tối | AppShell sidebar (M1; ảnh logo từ commit `feat(brand)` sau M7) |
 | `SettingsSyncNote` *(v2)* | Dòng `.hint` có icon "đã lưu vào tài khoản" ở Language/Reminders | `text` | — | Settings (M7) |
 
 **SyncIndicator — 6 trạng thái** (5 trạng thái của PRD FR-50 + `signing-in`; chưa đăng nhập hoặc cloud tắt = **ẩn**, không render). Ưu tiên khi nhiều điều kiện cùng đúng: `expired` > `signing-in` > `error` > `offline/pending` > `syncing` > `synced`.
@@ -887,12 +909,35 @@ Chi tiết dùng chung: chip cao 32 px (`min-height`), padding ngang 12 px, bo `
 Quy tắc dùng chung:
 
 - Mỗi `Button` luôn có chữ hoặc `aria-label`; nút phá huỷ dùng `danger`, không đặt cạnh primary mà không có khoảng cách ≥ 8 px.
-- Chỉ **một** toast tại một thời điểm; toast mới thay toast cũ.
+- Chỉ **một** toast tại một thời điểm; toast mới thay toast cũ (thay ngay, đặt lại thời gian hiển thị của toast mới; vùng `role="status"` nghe được nội dung mới đúng một lần). **Quy tắc một toast (v3.1, ghi nhận ADR-30 d / M7 D9)** — vì cùng một sự kiện không được tạo hai toast liên tiếp, các cặp sau chỉ hiện **một** toast, theo bảng ưu tiên:
+
+  | Tình huống | Toast hiện | Toast KHÔNG hiện |
+  | :- | :- | :- |
+  | Vừa đăng nhập xong, lần đồng bộ đầu có gộp dữ liệu (đẩy hoặc kéo ≥ 1 bản ghi) và thành công | `toast.mergeDone` (nêu số mục tiêu/lần ghi trong tài khoản) | `toast.signedIn` ("Signed in as …") |
+  | Vừa đăng nhập xong, máy sạch / chọn Cancel ở D5 / chu kỳ gộp lỗi | `toast.signedIn` (D5 Cancel: `toast.signedOutKept`) | `toast.mergeDone` |
+  | Bấm `Sync now` thành công mà đồng thời áp tuỳ chọn từ tài khoản (giờ nhắc, ngôn ngữ) | `toast.prefsFromAccount` | `toast.syncNowDone` |
+  | Bấm `Sync now` thành công, không có gì áp từ tài khoản | `toast.syncNowDone` | — |
+  | Mọi trường hợp khác (ví dụ `toast.entrySaved` ngay sau `toast.languageChanged`) | toast sau cùng | toast trước (bị thay) |
+
+  Hệ quả cho người làm test: không assert "hai toast cùng lúc"; assert toast cuối cùng. Toast lỗi có `action` (8 s) cũng bị thay bởi toast mới hơn như mọi toast khác (không có độ ưu tiên riêng).
 - Dialog dùng phần tử `<dialog>` + `showModal()` (có sẵn focus trap, Esc đóng, `::backdrop`), trả focus về phần tử đã mở dialog (nếu phần tử đó không còn, về `<h1>` hoặc TimerCard).
 - Form: lỗi hiển thị dưới field bằng icon + chữ, `id` lỗi được nối vào `aria-describedby`; không đổi layout nhảy đột ngột (chừa chỗ cho hint).
 - **(v2) Nút Google** là nút duy nhất không dùng token `--primary`: theo hướng dẫn thương hiệu (nền trắng, viền xám, chữ `#1F1F1F`, logo G nhiều màu, không bóng đổ, không đổi màu/hình logo, không thêm viền quanh logo); bản tối dùng bộ màu "dark" của Google. Nhãn **chỉ** là `Sign in with Google` / `Đăng nhập bằng Google` (không viết thêm `bằng tài khoản`). Có thể có hai nút Google trên Settings (card Account + ExportSignInHint ở Backup, chỉ sau Export); nút trong ExportSignInHint chỉ là lối tắt, không thay thế nút của card. Khoảng cách giữa nút Google và nút kề ≥ 8 px.
 - **(v2) Dialog có radio (D4):** lựa chọn mặc định an toàn nhận focus ban đầu (ngoại lệ có chủ đích của quy tắc "focus ở Cancel"); Esc = Cancel; hàng nút dính đáy, nội dung cuộn trong dialog; khi mở dialog, phần còn lại của trang `inert` (do `showModal()` lo).
 - **(v2) Không bao giờ hiện hai banner đăng nhập/sao lưu cùng lúc** trên Today: thứ tự ưu tiên LoginPromptBanner > BackupBanner; ReminderBanner độc lập, luôn ở trên.
+
+### Brand (v3.1 — thay mục "logo ô xanh chữ 1%" của v1; ghi nhận bản đã ship, ADR-30 g)
+
+Orchestrator gắn logo sản phẩm của user ngày 2026-10-12/13 (commit `feat(brand)` sau M7); user và orchestrator đã chấp nhận. Đây là contract từ v3.1.
+
+| Thành phần | Quy định |
+| :- | :- |
+| Ảnh | `public/brand-mark-96.png` (96 × 96, PNG **trong suốt**, chữ logo màu đen, mũi tên xanh); tải bằng `BASE_URL + 'brand-mark-96.png'`, `decoding="async"` |
+| Ô nền | Hình vuông **32 × 32 px**, `border-radius: 9px`, `padding: 2px`, nền **`#FFFFFF` ở cả hai theme** (sáng và tối), `flex: none`; ảnh hiển thị **28 × 28 px** (`width/height: 100%`, `object-fit: contain`). Không viền, không bóng. Lý do trắng cả ở theme tối: chữ logo đen trong suốt sẽ biến mất trên nền tối |
+| Chữ cạnh mark | `app.name` = **"1% Better per Day"** (cả `en` và `vi`), 700, `--text`, khoảng cách 10 px từ ô. Key `app.brandSuffix` ("Better per Day") **bị bỏ** (không còn dùng; xem 7.2) |
+| Vị trí | Đầu sidebar (≥ 1024 px), `padding: 0 12px 20px`; link tới `#/today`, `aria-label` = `app.name`; ảnh `alt=""` + `aria-hidden` (tránh đọc đôi với chữ bên cạnh). **Không có brand ở thanh tab dưới < 1024 px**, nên 360 px không đổi bố cục |
+| Icon hệ thống | PWA icon 192/512 và maskable, apple-touch 180: nền trắng; favicon 32 và `favicon.svg`: trong suốt (do orchestrator tạo từ logo; không thiết kế lại ở đây) |
+| Khoá bởi test | `tests/qc/m7-r1-brand.spec.ts` khoá ô 32 px / ảnh 28 px. Muốn mark lớn hơn (ví dụ 36/32 để chữ trong logo dễ đọc) thì QC nới assertion trước; xem OQ-D19 |
 
 ---
 
@@ -935,6 +980,7 @@ Cài đặt: một file `src/ui/styles/tokens.css` khai báo CSS custom properti
 | `--google-bg` *(v2)* | `#FFFFFF` | `#131314` | nền nút Google (bộ màu chính thức của Google: theme "light" / "dark") |
 | `--google-border` *(v2)* | `#747775` | `#8E918F` | viền nút Google (≥ 3:1 so với `--surface`/`--primary-soft`) |
 | `--google-text` *(v2)* | `#1F1F1F` | `#E3E3E3` | chữ nút Google; lớp phủ hover/active = `--google-text` ở 8 % / 12 % |
+| `--brand-tile` *(v3.1, ghi nhận)* | `#FFFFFF` | `#FFFFFF` | ô nền của brand mark (mục 5 "Brand"): **trắng ở cả hai theme** vì ảnh logo trong suốt có chữ đen. Bản đã ship dùng literal `#fff` trong `.mark`; không bắt buộc tạo biến CSS |
 
 Phase 2 **không thêm** token màu nào khác: SyncIndicator, AccountCard, banner và dialog mới chỉ dùng token sẵn có (`--surface-2`, `--border`, `--primary`, `--primary-soft`/`--on-primary-soft`, `--info*`, `--danger*`). Màu amber `--plus-*` vẫn chỉ dành cho "+1%" (không dùng cho trạng thái đồng bộ/hết phiên). Logo chữ G của Google giữ bốn màu gốc (`#4285F4`, `#34A853`, `#FBBC05`, `#EA4335`) ở cả sáng lẫn tối, là ngoại lệ có chủ đích của quy tắc "chỉ dùng token".
 
@@ -968,7 +1014,7 @@ Font hệ thống (NFR-01: không font ngoài): `--font: system-ui, -apple-syste
 | Kích thước phase 2 *(v2)* | `--chip-h` 32 (chiều cao SyncIndicator), avatar 40, nút Google `min-height` = `--tap` (44), logo G 20 (trong ô 20×20), khoảng logo–chữ 10, radio D4 vùng bấm ≥ 44 |
 | Breakpoint | `sm` 640, `lg` 1024 (xem 3.2) |
 
-Heatmap: ô 11 px + khoảng 2 px (mobile < 640 px; cuộn ngang trong vùng chứa), 13 px + 3 px (≥ 640 px; 53 cột = 845 px, vừa khít vùng nội dung 960 px ở ≥ 1024 px, tablet vẫn có thể cuộn); bo 2 px. Biến CSS `--cell`, `--gap`.
+Heatmap: ô 11 px + khoảng 2 px (mobile < 640 px; cuộn ngang trong vùng chứa), 13 px + 3 px (≥ 640 px; 53 cột = 845 px); bo 2 px. Biến CSS `--cell`, `--gap`. **(v3.1, M4-P1a; thay câu của v1 nói lưới không cần cuộn ngay từ 1024 px, vốn không đúng vì sidebar chiếm 232 px)** Tổng chiều rộng cần = 845 (lưới) + 34 (cột nhãn thứ) + 32 (padding card 2 × 16) + 48 (padding `main.wide` 2 × 24, ≥ 1024 px) ≈ 959 px ≤ 960 px (`--content-max`). Heatmap **vừa khít và không cuộn chỉ khi vùng nội dung đạt ≈ 959–960 px, tức viewport ≥ 232 (`--nav-w`) + 960 = 1192 px** (ngưỡng làm tròn; đo ở trình duyệt có thanh cuộn dạng overlay như Chromium headless — trên máy có thanh cuộn dọc cổ điển ≈ 15 px, ngưỡng thực tế dịch lên ≈ 1207 px). Dưới ngưỡng đó, gồm 640–1023 px (tab bar, nội dung ≤ viewport) và **1024–1191 px** (sidebar chừa 792–959 px; ở 1024 px ẩn ≈ 169 px), heatmap cuộn ngang bên trong `.heatmap-scroll` và tự cuộn tới tuần hiện tại; trang không cuộn ngang. Biến CSS `--cell`/`--gap` **không đổi** theo viewport trong khoảng này (không co ô để ép vừa). QC kiểm: `scrollWidth − clientWidth` của `.heatmap-scroll` ≤ 2 ở 1200, 1280, 1440, 1920 px (khớp QC M4 r2); > 0 ở 1024 và 1100 px; `documentElement` không cuộn ngang ở mọi viewport (khớp QC M4 r2: 360 … 1920 px). Không kiểm chính xác 1191/1192 px (sai số làm tròn).
 
 ---
 
@@ -1060,7 +1106,7 @@ Cột **MS** = milestone cần chuỗi đó (M1 = có ngay từ M1).
 | :- | :- | :- | :- | :- |
 | `app.name` | M1 | tên app, `<title>` mặc định, About | `1% Better per Day` | `1% Better per Day` (= en) |
 | `app.shortName` | M1 | tên ngắn, `aria-label` logo, tiêu đề trang | `1% Better` | `1% Better` (= en) |
-| `app.brandSuffix` | M1 | chữ cạnh logo ở sidebar | `Better per Day` | `Better per Day` (= en) |
+| ~~`app.brandSuffix`~~ | M1 | **(v3.1) KHÔNG CÒN DÙNG, đã bỏ khỏi `en.json`/`vi.json`.** Chữ cạnh brand mark ở sidebar nay là `app.name` (mục 5 "Brand") | ~~`Better per Day`~~ | ~~`Better per Day`~~ |
 | `app.tagline` | M1 | EmptyState/About | `1% better, one day at a time.` | `Mỗi ngày tốt hơn 1%.` |
 | `doc.title` | M1 | `document.title` mọi màn; `{{page}}` = tiêu đề h1 của màn | `{{page}} — 1% Better` | `{{page}} — 1% Better` (= en) |
 | `nav.label` | M1 | `aria-label` của thanh điều hướng | `Main` | `Chính` |
@@ -1122,9 +1168,9 @@ Cột **MS** = milestone cần chuỗi đó (M1 = có ngay từ M1).
 | `toast.signedOutRemoved` | M6 | sau đăng xuất + xoá dữ liệu | `Signed out. Data removed from this device.` | `Đã đăng xuất. Dữ liệu đã được xóa khỏi thiết bị này.` |
 | `toast.signInCancelled` | M6 | lỗi `AUTH_CANCELLED` khi quay về màn **không phải** Settings (tone error, kèm nút `settings.account.goTo`) | `Sign-in was cancelled.` | `Đã hủy đăng nhập.` |
 | `toast.signInFailed` | M6 | lỗi `AUTH_FAILED` ở màn không phải Settings | `Couldn't sign you in.` | `Không đăng nhập được.` |
-| `toast.mergeDone` | M7 | sau lần đồng bộ đầu tiên có gộp dữ liệu; `{{goals}}`, `{{entries}}` = `format.goalsCount` / `entriesCount` của dữ liệu còn sống trên máy sau khi gộp | `Signed in. Your account now has {{goals}}, {{entries}}.` | `Đã đăng nhập. Tài khoản của bạn hiện có {{goals}}, {{entries}}.` |
+| `toast.mergeDone` | M7 | sau lần đồng bộ đầu tiên có gộp dữ liệu; **thay thế** `toast.signedIn` (không hiện cả hai — quy tắc một toast, mục 5); `{{goals}}`, `{{entries}}` = `format.goalsCount` / `entriesCount` của dữ liệu còn sống trên máy sau khi gộp | `Signed in. Your account now has {{goals}}, {{entries}}.` | `Đã đăng nhập. Tài khoản của bạn hiện có {{goals}}, {{entries}}.` |
 | `toast.prefsFromAccount` | M7 | khi giờ nhắc hoặc ngôn ngữ được áp từ cloud (hiện bằng ngôn ngữ **mới**) | `Settings updated from your account` | `Đã cập nhật cài đặt từ tài khoản của bạn` |
-| `toast.syncNowDone` | M7 | sau `Sync now` thành công | `Everything is up to date` | `Mọi thứ đã được cập nhật` |
+| `toast.syncNowDone` | M7 | sau `Sync now` thành công; **không hiện** nếu cùng lần đó đã áp tuỳ chọn từ tài khoản (khi đó chỉ hiện `toast.prefsFromAccount`; quy tắc một toast, mục 5) | `Everything is up to date` | `Mọi thứ đã được cập nhật` |
 | `plusone.live` | M5 | vùng `aria-live` khi +1% | `+1% for {{goal}} today.` | `+1% cho {{goal}} hôm nay.` |
 
 ### 7.3 Thông báo lỗi và ánh xạ `src/ui/error-messages.ts`
@@ -1153,6 +1199,9 @@ Nguyên tắc: nói rõ chuyện gì, và làm gì tiếp. **`src/ui/error-messa
 | `AUTH_*`, `SYNC_*` (v2) | Alert/dòng trong card Account | `errors.<CODE>` (không có biến thể) |
 | `AUTH_CANCELLED` / `AUTH_FAILED` khi người dùng quay về màn **không phải** Settings (v2) | Toast tone error + nút `settings.account.goTo` | `toast.signInCancelled` / `toast.signInFailed` (bản ngắn); bản đầy đủ `errors.AUTH_*` vẫn nằm ở card Account (A4) |
 | lỗi đồng bộ khi đăng xuất + chọn Remove (v2) | Alert trong D4 | `auth.signOut.syncFailed` (7.7.2) |
+| `IMPORT_INVALID_SCHEMA` có `params.variant = 'outOfRange'` (v3.1, M5-P1) | Alert trong card Backup. Dùng khi file **đúng kiểu dữ liệu** nhưng một giá trị vượt giới hạn của app: tên > 60 hoặc why > 280 ký tự, chỉ tiêu ngày ngoài 1–1.440 hoặc giờ tổng ngoài 1–10.000, khoảng goal > 1.827 ngày, phút entry ngoài 1–1.440 hoặc không nguyên, ghi chú > 280 ký tự | `errors.IMPORT_INVALID_SCHEMA_outOfRange` |
+| `IMPORT_INVALID_SCHEMA` không có `variant` (v3.1) | gốc không phải object, `app` khác, sai kiểu (vd. `minutes: "30"`), id > 64 ký tự, thiếu field | `errors.IMPORT_INVALID_SCHEMA` (như cũ) |
+| lỗi khi Export (`backupService.export` ném lỗi; không phải `DomainError`) (v3.1, M3-P1) | Alert trong card Backup (S7, Tương tác "Export thất bại") | `errors.EXPORT_FAILED` (không dùng `errors.WRITE_FAILED`: câu đó nói về "thay đổi còn trong biểu mẫu") |
 
 | Key | MS | Hiển thị ở | `en` | `vi` |
 | :- | :- | :- | :- | :- |
@@ -1181,6 +1230,8 @@ Nguyên tắc: nói rõ chuyện gì, và làm gì tiếp. **`src/ui/error-messa
 | `errors.IMPORT_FILE_TOO_LARGE` | M3 | Alert Backup | `This file is larger than 5 MB, so it can't be a 1% Better backup. Choose a different file. Nothing was changed.` | `Tệp này lớn hơn 5 MB nên không thể là bản sao lưu của 1% Better. Hãy chọn tệp khác. Chưa có gì bị thay đổi.` |
 | `errors.IMPORT_INVALID_JSON` | M3 | Alert Backup | `This file isn't valid JSON. Choose a backup exported from 1% Better. Nothing was changed.` | `Tệp này không phải JSON hợp lệ. Hãy chọn bản sao lưu đã xuất từ 1% Better. Chưa có gì bị thay đổi.` |
 | `errors.IMPORT_INVALID_SCHEMA` | M3 | Alert Backup | `This file doesn't look like a 1% Better backup. Choose a file exported from this app. Nothing was changed.` | `Tệp này không giống bản sao lưu của 1% Better. Hãy chọn tệp đã xuất từ app này. Chưa có gì bị thay đổi.` |
+| `errors.IMPORT_INVALID_SCHEMA_outOfRange` | M10 *(mới v3.1)* | Alert Backup (file đúng kiểu nhưng có giá trị ngoài giới hạn; xem quy tắc chọn key ở trên) | `This backup contains a value 1% Better doesn't allow, such as a goal period longer than 1,827 days, minutes outside 1–1,440, or a name or note that's too long. Fix the file, or export a fresh backup from this app. Nothing was changed.` | `Bản sao lưu này có giá trị mà 1% Better không cho phép, ví dụ khoảng thời gian mục tiêu dài hơn 1.827 ngày, số phút ngoài khoảng 1–1.440, hoặc tên, ghi chú quá dài. Hãy sửa tệp, hoặc xuất một bản sao lưu mới từ app này. Chưa có gì bị thay đổi.` |
+| `errors.EXPORT_FAILED` | M10 *(mới v3.1)* | Alert Backup, khi Export thất bại (S7 Tương tác "Export thất bại"); `role="alert"` | `Couldn't create the backup file. Your data on this device is unchanged. Try again, and if it keeps failing, check that your browser allows downloads from this site.` | `Không tạo được tệp sao lưu. Dữ liệu trên thiết bị này không thay đổi. Hãy thử lại; nếu vẫn lỗi, hãy kiểm tra xem trình duyệt có cho phép tải tệp từ trang này không.` |
 | `errors.IMPORT_UNSUPPORTED_VERSION` | M3 | Alert Backup | `This backup uses a format version ({{v}}) this app can't read. Export it again from an up-to-date copy of the app. Nothing was changed.` | `Bản sao lưu này dùng phiên bản định dạng ({{v}}) mà app không đọc được. Hãy xuất lại từ bản app mới nhất. Chưa có gì bị thay đổi.` |
 | `errors.IMPORT_INTEGRITY` | M3 | Alert Backup | `This backup is inconsistent (for example, entries that don't belong to any goal). Nothing was changed.` | `Bản sao lưu này không nhất quán (ví dụ: có lần ghi không thuộc mục tiêu nào). Chưa có gì bị thay đổi.` |
 | `errors.WRITE_FAILED` | M1 | Alert inline trong form/dialog/Language | `Couldn't save. Your changes are still in the form — try again.` | `Không lưu được. Thay đổi của bạn vẫn còn trong biểu mẫu — hãy thử lại.` |
@@ -1220,7 +1271,7 @@ Quy ước key (luật 2, mục 7.0): `<key>` = tiêu đề, `<key>Body` = nội
 | `empty.detail.history` | M3 | Goal detail — tiêu đề | `No entries yet` | `Chưa có lần ghi nào` |
 | `empty.detail.historyBody` | M3 | — nội dung | `Time you log for this goal will show up here.` | `Thời gian bạn ghi cho mục tiêu này sẽ hiện ở đây.` |
 | `empty.detail.curve` | M9 *(sửa v3: chuỗi mới)* | Goal detail (chưa entry) — dòng 2 của phụ đề, thay câu số liệu | `Your line starts on the first day you log time. That day is your starting point (0%).` | `Đường của bạn bắt đầu từ ngày đầu tiên bạn ghi thời gian. Ngày đó là điểm xuất phát (0%).` |
-| `empty.day.noGoals` | M3 | Day — tiêu đề | `No goals were running on this day` | `Không có mục tiêu nào đang chạy trong ngày này` |
+| `empty.day.noGoals` | M3 | Day — tiêu đề. **(v3.1, M8 QC)** Chốt **không có dấu chấm cuối** ở cả `en` và `vi`, khớp `en.json`/`vi.json` đã ship; quy ước chung: tiêu đề EmptyState không kết thúc bằng dấu chấm, `…Body` là câu đầy đủ có dấu chấm. Chỗ S5 từng ghi có dấu chấm đã sửa | `No goals were running on this day` | `Không có mục tiêu nào đang chạy trong ngày này` |
 | `empty.day.noGoalsBody` | M3 | — nội dung | `Goals show up here on the days they're active.` | `Mục tiêu sẽ hiện ở đây vào những ngày chúng đang chạy.` |
 | `empty.day.noGoalsAction` | M3 | — nút | `View goals` | `Xem mục tiêu` |
 | `empty.day.noEntries` | M3 | Day (một goal chưa có entry) — dòng chữ; nút dùng `goalCard.addEntry` | `No time logged for this goal on this day.` | `Chưa ghi thời gian nào cho mục tiêu này trong ngày này.` |
@@ -1586,6 +1637,8 @@ Cùng quy tắc ở 7.0 (key, `{{biến}}`, `_one/_other`, giọng `vi`). **Khô
 | `settings.account.syncNow` | M7 | nút | `Sync now` | `Đồng bộ ngay` |
 | `settings.account.offlineSync` | M7 | A7 offline, dưới nút `Sync now` đã vô hiệu | `You're offline. Changes are saved on this device and sync when you're back online.` | `Bạn đang ngoại tuyến. Thay đổi được lưu trên thiết bị này và sẽ đồng bộ khi có mạng trở lại.` |
 | `settings.account.nextRetry` | M7 | A8, `{{time}}` = `HH:MM` của `nextRetryAt` | `Trying again at {{time}}.` | `Sẽ thử lại lúc {{time}}.` |
+| `settings.account.localRejected_one` | M8 *(v3.1: chốt, giữ nguyên văn bản đã ship)* | A9, dòng thông tin `data-reason="local"` (hoặc `both`, đứng **trước** dòng `SYNC_REMOTE_INVALID`); đúng **1** hàng trên máy bị cloud từ chối (`dirty = 2`, ADR-28). Hàng "mục" = goal hoặc entry (không phân biệt) | `1 item on this device couldn't be uploaded to your account and stays only here. Export a backup to keep a copy; everything else is synced.` | — |
+| `settings.account.localRejected_other` | M8 *(v3.1: chốt, giữ nguyên)* | như trên, `{{count}}` ≥ 2 = số hàng (`f.number`) | `{{count}} items on this device couldn't be uploaded to your account and stay only here. Export a backup to keep a copy; everything else is synced.` | `{{count}} mục trên thiết bị này không tải lên được tài khoản của bạn nên chỉ còn ở đây. Hãy xuất bản sao lưu để giữ một bản sao; mọi thứ còn lại đã được đồng bộ.` |
 | `settings.account.signOut` | M6 | nút mở D4 | `Sign out` | `Đăng xuất` |
 | `settings.account.expiredTitle` | M6 | A10, dòng đậm đầu Alert | `Sign in again` | `Hãy đăng nhập lại` |
 | `settings.account.expiredAccount` | M6 | A10 | `Account: {{email}}` | `Tài khoản: {{email}}` |
@@ -1612,6 +1665,11 @@ Cùng quy tắc ở 7.0 (key, `{{biến}}`, `_one/_other`, giọng `vi`). **Khô
 | `auth.signOut.unsyncedRemove` | M7 | `role="status"`, hiện khi chọn Remove và `pending > 0` | `If you remove the data from this device, these changes will be lost.` | `Nếu xóa dữ liệu khỏi thiết bị này, các thay đổi đó sẽ mất.` |
 | `auth.signOut.syncFailed` | M7 | Alert trong D4 khi đồng bộ lần cuối lỗi mà đang chọn Remove | `Couldn't sync your changes. If you remove the data now, they will be lost.` | `Không đồng bộ được các thay đổi của bạn. Nếu xóa dữ liệu bây giờ, chúng sẽ mất.` |
 | `auth.signOut.removeAnyway` | M7 | nhãn nút xác nhận sau `syncFailed` | `Remove anyway` | `Vẫn xóa` |
+| `auth.signOut.rejected_one` | M8 *(v3.1: chốt, giữ nguyên văn bản đã ship)* | D4, khối cảnh báo `unsynced-warning` (`data-rejected`), `rejected = 1` hàng trên máy bị cloud từ chối (ADR-28); đoạn sau đoạn `unsynced_*` nếu có | `1 item on this device couldn't be uploaded to your account.` | — |
+| `auth.signOut.rejected_other` | M8 *(v3.1: chốt, giữ nguyên)* | `rejected` ≥ 2 | `{{count}} items on this device couldn't be uploaded to your account.` | `{{count}} mục trên thiết bị này không tải lên được tài khoản của bạn.` |
+| `auth.signOut.rejectedKeep` | M8 *(**v3.1: `en` ĐỔI**, `vi` giữ nguyên)* | D4, ngay sau `rejected_*` (cùng đoạn cảnh báo). `en` bản cũ "It stays on this device if you keep the data here. …" sai ngữ pháp khi `{{count}}` ≥ 2 ("N items … It stays"); bản mới không phụ thuộc số nhiều | `Whatever couldn't be uploaded stays on this device if you keep the data here. Export a backup to keep a copy.` | `Chúng vẫn nằm trên thiết bị này nếu bạn giữ dữ liệu ở đây. Hãy xuất bản sao lưu để giữ một bản sao.` |
+| `auth.signOut.rejectedRemove` | M8 *(**v3.1: `en` ĐỔI**, `vi` giữ nguyên)* | D4, vùng `role="status"` khi chọn Remove và `rejected > 0`. `en` bản cũ "…these items will be lost. Export a backup first to keep them." lệch số khi 1 hàng | `If you remove the data from this device, anything that couldn't be uploaded will be lost. Export a backup first to keep it.` | `Nếu xóa dữ liệu khỏi thiết bị này, các mục đó sẽ mất. Hãy xuất bản sao lưu trước để giữ chúng.` |
+| `auth.signOut.removeDescRejected` | M8 *(v3.1: chốt, giữ nguyên văn bản đã ship)* | D4, mô tả lựa chọn Remove, **thay** `auth.signOut.removeDesc` khi `rejected > 0` | `Deletes your goals, entries and reminder settings on this device. Choose this on a shared device. Items that couldn't be uploaded are not in your account.` | `Xóa mục tiêu, lần ghi và cài đặt nhắc nhở trên thiết bị này. Hãy chọn khi dùng máy chung. Các mục không tải lên được không có trong tài khoản của bạn.` |
 | `auth.merge.title` | M7 | D5, tiêu đề | `Add this device's data to your account?` | `Thêm dữ liệu trên thiết bị này vào tài khoản của bạn?` |
 | `auth.merge.body` | M7 | D5; `{{goals}}`, `{{entries}}` = cụm đếm; `{{email}}` nguyên văn | `This device still has {{goals}}, {{entries}} from another account. If you continue, they'll be added to the account {{email}}, next to what's already there.` | `Thiết bị này vẫn còn {{goals}}, {{entries}} từ một tài khoản khác. Nếu tiếp tục, chúng sẽ được thêm vào tài khoản {{email}}, cạnh những gì đã có.` |
 | `auth.merge.note` | M7 | D5, `.hint` | `Cancel signs you out. Nothing is uploaded.` | `Chọn Hủy sẽ đăng xuất. Không có gì được tải lên.` |
@@ -1672,8 +1730,9 @@ Cùng quy tắc ở 7.0 (key, `{{biến}}`, `_one/_other`, giọng `vi`). **Khô
 | `settings.about.descCloud` | M6 | About khi cloud bật, chưa đăng nhập/hết phiên (thay `settings.about.desc`) | `Everything you log is saved on this device first. Signing in is optional, and there's no tracking.` | `Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước. Đăng nhập là tùy chọn và không có theo dõi.` |
 | `settings.about.descSignedIn` | M6 | About khi đã đăng nhập | `Everything you log is saved on this device first and synced to your account. There's no tracking.` | `Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước, rồi đồng bộ vào tài khoản của bạn. Không có theo dõi.` |
 | `settings.about.privacy` | M6 | About, `.hint`, khi cloud bật (cả hai trạng thái) | `If you sign in, your goals, entries, reminder settings and language are stored in this app's database (Supabase) under your account. Other people who use the app can't see them.` | `Nếu bạn đăng nhập, mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ của bạn được lưu trong cơ sở dữ liệu của app (Supabase) dưới tài khoản của bạn. Những người khác dùng app không xem được chúng.` |
+| `settings.about.privacyLink` | M6 *(v3.1: bổ sung vào DESIGN, M6-P1a; giữ nguyên văn bản đã ship)* | About, nhãn liên kết tới `privacy.html` (cùng origin, `BASE_URL + 'privacy.html'`, cùng tab), đứng cuối card About; **luôn hiện, kể cả khi cloud tắt** (M6 D8). Vì có ở cả hai trạng thái, key này **không** thuộc nhóm "chỉ khi cloud bật" | `Privacy policy` | `Chính sách quyền riêng tư` |
 
-Khi cloud tắt, toàn bộ 7.7 không được dùng và `settings.about.desc` (`No account, no tracking.`) giữ nguyên như v1.1 (FR-38).
+Khi cloud tắt, phần lớn 7.7 không được dùng (trừ `settings.about.privacyLink`, luôn hiện) và `settings.about.desc` (`No account, no tracking.`) giữ nguyên như v1.1 (FR-38).
 
 ---
 
@@ -1729,7 +1788,7 @@ Ngoại lệ có chủ đích: các mức nhạt của heatmap (`--heat-0..2`) k
 - Có bảng dữ liệu tương đương: BarChart — bảng ẩn visually (`.sr-only`) với `caption`; CurveChart — `<details>` "Show data as table" hiển thị được cho mọi người.
 - Phân biệt hai đường Ideal/You không dựa vào màu: Ideal nét đứt mảnh + màu xám; You nét liền dày + màu xanh + marker tròn tại hôm nay; legend có mẫu nét; nhãn trực tiếp tại điểm hôm nay (v3: `Ideal +4.1%`, `You +440.0%`; "Bạn" có thể là `You −40.0%`).
 - **(v3) Đường cong có số âm:** (a) dấu luôn là **chữ** (`+`, `−` U+2212) chứ không chỉ vị trí/màu; headline âm có cả chữ `so với ngày đầu`, nên không phụ thuộc màu `--text` vs `--primary`; (b) vạch 0% là nét liền đậm 1,5 px, phân biệt với lưới 1 px và Ideal nét đứt, tương phản ≥ 3:1; (c) mọi giá trị của chart đều có ở tóm tắt text (hiện luôn), tooltip (hover **và** focus/phím mũi tên, chuỗi `goal.detail.tooltip*`) và bảng 5 cột; (d) tooltip **không** là live region (tránh đọc dồn khi rê chuột); khi dùng phím mũi tên, chuỗi tooltip của ngày đang đọc được gán cho vùng chart đang focus (`role="img"`, `aria-describedby` trỏ tóm tắt) để SR đọc đúng một lần mỗi bước; (e) khi đổi Range, miền Y đổi nhưng focus ở lại control Range và tóm tắt không đổi; (f) `U+2212` được trình đọc phổ biến đọc là "trừ"/"minus", `-` ASCII dễ bị đọc là "gạch ngang"; vì thế code chỉ sinh `−`; (g) headline cực trị (`Tốt hơn +143.900,0%`) xuống dòng được, không cắt, phóng chữ 200 % không tràn.
-- Cột biểu đồ có nhãn giá trị khi đủ chỗ, tooltip khi hover/focus.
+- **(v3.1, đo được)** Cột biểu đồ có **nhãn giá trị khi "đủ chỗ"** — định nghĩa duy nhất ở S6 "Nhãn giá trị trên cột BarChart": `(chartWidth − 38) / 12 ≥ 30 px` (tương đương `chartWidth ≥ 398 px`), chỉ cột ≥ 3 phút, số giờ không đơn vị, `aria-hidden`; không đủ chỗ thì không có nhãn nào. Tooltip khi hover/focus giữ nguyên. Nhãn là phụ trợ thị giác: mọi giá trị vẫn có ở tóm tắt text, tooltip và bảng ẩn, nên không có nhãn không làm mất thông tin (WCAG 1.1.1/1.3.1 không phụ thuộc nhãn).
 
 **Khác**
 
@@ -1787,6 +1846,14 @@ Kiểm bằng `@axe-core/playwright` (0 serious/critical) ở `en` và `vi`, sá
 - D5: focus ban đầu ở `Cancel`; thân nêu rõ số lượng và email (không chỉ dùng màu); Esc = `Cancel`.
 - Hàng nút dính đáy không che nội dung khi phóng chữ 200 % (nội dung cuộn trong dialog, thanh cuộn nhận focus bàn phím nhờ `tabindex="0"` trên vùng cuộn nếu nội dung tràn).
 
+**(v3.1) Brand, Export lỗi, hàng bị từ chối, liên kết chính sách**
+
+- Brand mark: ảnh `alt=""` trong `<span aria-hidden="true">`; link cha có `aria-label` = `app.name` (tên truy cập "1% Better per Day", trùng chữ hiển thị — WCAG 2.5.3); chữ hiển thị `app.name` đã đủ nghĩa nên ảnh không cần mô tả. Ô trắng bảo đảm tương phản của chữ logo (đen trên trắng ≈ 21:1) ở cả theme tối.
+- Export thất bại: Alert `role="alert"` (người dùng vừa thao tác xong nên cần nghe ngay, như lỗi import); nút Export hết `aria-busy` và focus vẫn ở nút Export. Không dùng toast cho lỗi này (toast `role="status"` polite và biến mất sau 4 s, dễ bị bỏ lỡ với lỗi cần hành động).
+- D4 có hàng bị từ chối: khối cảnh báo nằm trong phần `aria-describedby` của dialog (như cảnh báo chưa đồng bộ); vùng `role="status"` luôn có trong DOM để `rejectedRemove` được đọc khi người dùng chọn Remove; mô tả radio Remove (`removeDescRejected`) nằm trong `aria-describedby` của radio như `removeDesc`.
+- Dòng A9 (`data-reason`) là chữ tĩnh, không live region (không phải lỗi mới xảy ra); icon `aria-hidden`.
+- Liên kết `settings.about.privacyLink`: `<a href>` thật, tên truy cập là chữ hiển thị, focus-visible như mọi link; mở cùng tab nên không cần cảnh báo "cửa sổ mới".
+
 **LoginPromptBanner và ExportSignInHint**
 
 - Banner: `<section aria-label>` (`loginPrompt.label`), **không** `role="dialog"`/`alertdialog`, không `aria-live` (không ngắt người dùng đang ghi), không tự lấy focus; Tab tới được theo thứ tự đọc ngay sau banner nhắc. Hai nút ≥ 44 px, cách nhau ≥ 8 px. Nút "Not now" có tên truy cập là chính chữ hiển thị.
@@ -1819,7 +1886,7 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **A-D9.** Banner nhắc (FR-15) không có nút đóng; banner backup đặt ở Today (dưới banner nhắc) và ở đầu card Backup trong Settings. Chỉ hiện ≤ 1 banner backup.
 - **A-D10.** Streak chip trên Today (`{n}-day streak`, tính streak tổng) chỉ xuất hiện từ M4 (cần `StatsService`).
 - **A-D11.** `Last backup` hiển thị ngày ngắn theo giờ cục bộ từ `lastBackupAt`: `en` `YYYY-MM-DD`, `vi` `dd/MM/yyyy` (FR-36).
-- **A-D12.** Màu amber của "+1%" là điểm nhấn thương hiệu duy nhất ngoài xanh chủ đạo; logo là ô vuông bo góc chữ "1%" nền `--primary`. Icon vẽ bằng SVG inline (không icon font, không tải ngoài).
+- **A-D12.** Màu amber của "+1%" là điểm nhấn thương hiệu duy nhất ngoài xanh chủ đạo; logo là ô vuông bo góc chữ "1%" nền `--primary` **(v3.1: không còn đúng; thay bằng brand mark ảnh logo trên ô trắng, xem mục 5 "Brand" và A-D41)**. Icon vẽ bằng SVG inline (không icon font, không tải ngoài).
 - **A-D13 (i18n).** Card **Language / Ngôn ngữ** đứng **đầu** trang Settings (trước Reminders), tiêu đề card là cùng một chuỗi song ngữ ở cả `en.json` và `vi.json` để người lỡ vào nhầm ngôn ngữ vẫn nhận ra. Control là SegmentedControl 2 lựa chọn, áp dụng ngay (không nút Save), kèm toast `toast.languageChanged`. Nếu user muốn đặt card ở cuối (gần About) thì chỉ cần đổi thứ tự, không ảnh hưởng key.
 - **A-D14 (i18n).** Tên key theo thành phần/màn hình (`today.*`, `goal.form.*`, `errors.*`…) như yêu cầu, **không** dùng tiền tố `screen.<tên>.*` mà ARCH §5.8 nêu như ví dụ; không key nào là tiền tố của key khác (xem 7.0). Các key mà plan/AC đã tham chiếu giữ đúng tên: `nav.today`, `empty.today.noGoals`, `errors.GOAL_NAME_REQUIRED`, `errors.GOAL_TARGET_INVALID_daily`, `errors.GOAL_PERIOD_INVALID_tooLong`, `errors.IMPORT_INVALID_JSON`, `notification.body`, `heatmap.cell.all`, `ics.summary`, `settings.language.option.en|vi`, `format.percent`, `format.minutes`, `format.duration`, `app.name`, `app.shortName`.
 - **A-D15 (i18n).** Nhãn nút `Start timer` ở `vi` là `Đếm giờ` (gọn, ≈ 116 px) thay cho `Bắt đầu đếm giờ` (≈ 172 px) để hàng 2 nút ở card Today vừa 360 px; ngữ cảnh đã rõ nhờ biểu tượng play, badge `Đang đếm giờ` và TimerCard.
@@ -1855,6 +1922,20 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **A-D39.** Tooltip có 4 biến thể (có thay đổi / ngày đầu / không ghi / chỉ Ideal) thay vì một chuỗi chung với phần "Bạn" bỏ trống, để mỗi biến thể là một câu đọc được bằng SR và dịch được độc lập.
 - **A-D40.** Nhãn trục `vi` compact lấy từ `Intl` `vi-VN` (`144 N` = nghìn). Nếu QC thấy khó hiểu thì phương án thay là bỏ compact ở `vi` (chấp nhận nhãn dài hơn, `+143.900%`, cần lề trái ≈ 66 px) — cần planner đổi ARCH §4.5, designer không tự đổi.
 
+**Assumptions của phase 4 (v3.1, M10-T8 — ghi nhận deviation và chốt copy; không thêm tính năng)**
+
+- **A-D41 (brand).** Brand mark = ảnh logo trong suốt trên ô trắng 32 px (ảnh 28 px) ở cả hai theme; chữ cạnh mark là `app.name` "1% Better per Day"; key `app.brandSuffix` bỏ. Nguồn: ADR-30 (g), dev-M7 "Brand assets". Ô trắng ở theme tối là **chủ ý** (logo có chữ đen trong suốt), không phải lỗi thiếu theme.
+- **A-D42 (7 key hàng bị cloud từ chối).** Duyệt 5/7 chuỗi dev đề xuất giữ **nguyên văn** (`localRejected_one/_other`, `rejected_one/_other`, `removeDescRejected`); **sửa `en` của 2 chuỗi** (`rejectedKeep`, `rejectedRemove`) vì chúng đứng sau câu có `{{count}}` nên "It stays"/"these items … keep them" sai ngữ pháp khi 1 hoặc nhiều hàng; `vi` không bị (tiếng Việt không chia số) nên giữ nguyên. "mục" trong `vi` = "item" (goal hoặc entry), nhất quán với `errors.SYNC_REMOTE_INVALID` ("Một số mục từ tài khoản…"), và không nhầm với "mục tiêu" nhờ có "trên thiết bị này". Vị trí hiển thị: A9 và D4 (S7).
+- **A-D43 (privacy link).** `settings.about.privacyLink` luôn hiện (kể cả cloud tắt), cùng tab: trang `privacy.html` có sẵn liên kết quay về app; mở tab mới chỉ thêm một chuỗi cảnh báo "cửa sổ mới" mà không cần.
+- **A-D44 (hint Export, OQ-D12).** Theo A-44: hint Export chỉ khi **online** lúc Export thành công, không tiêu lượt khi offline. Trạng thái "nút đăng nhập bị vô hiệu kèm dòng offline" của `ExportSignInHint` chỉ còn khi mất mạng sau khi hint đã hiện (component giữ nguyên).
+- **A-D45 (headline âm, OQ-D16).** Theo A-45: giữ `goal.detail.headlineDown` = `−40.0% vs your first day` / `−40,0% so với ngày đầu` (A-D34) cho tới khi user chọn câu khác; đổi câu chỉ là đổi hai chuỗi, không đổi layout/logic/AC.
+- **A-D46 (nhãn giá trị cột).** Chọn **làm** (không bỏ yêu cầu) với quy tắc rất hẹp để rẻ và đo được: ngưỡng `slot ≥ 30 px`, chỉ cột ≥ 3 phút, số giờ 1 chữ số thập phân không đơn vị (khớp trục Y đang tính theo giờ), `aria-hidden`. Hệ quả chấp nhận: ở điện thoại dọc và ở 1024–≈1155 px (hai chart cạnh nhau) không có nhãn; thông tin vẫn đủ nhờ tooltip/tóm tắt/bảng ẩn. Không thêm key i18n (số do `f.decimal1`/`f.number` sinh), nên không có bản dịch mới. Nếu dev thấy tốn công hơn lợi ích thì báo orchestrator để bỏ yêu cầu (ghi lại ở Backlog), không tự đổi ngưỡng.
+- **A-D47 (Export thất bại).** Dùng Alert trong card Backup (như lỗi import) thay vì toast: lỗi cần hành động ("thử lại / kiểm tra cho phép tải tệp") và toast polite 4 s dễ bị bỏ lỡ. Không dùng `errors.WRITE_FAILED` vì câu đó nói "thay đổi vẫn còn trong biểu mẫu" (sai ngữ cảnh). Việc `claimExportHint` lỗi **không** hiện gì ra UI (bỏ qua hint, `console.warn`).
+- **A-D48 (import ngoài giới hạn).** `outOfRange` liệt kê ví dụ giới hạn thay vì nêu đúng field (importer chỉ biết "một giá trị vượt giới hạn" và `errors[0]` có thể thuộc bất kỳ field nào; nêu sai field còn tệ hơn câu chung). Các con số trong câu (1.827 ngày, 1–1.440 phút) khớp `config/constants.ts` và bảng 7.3; nếu giới hạn đổi thì phải sửa chuỗi này và test `limits-parity` (M10-AC2) báo.
+- **A-D49 (quy tắc một toast).** Ghi nhận hành vi đã ship (ADR-30 d) và hợp thức hoá bằng bảng ưu tiên ở mục 5 (`mergeDone` > `signedIn`, `prefsFromAccount` > `syncNowDone`, còn lại toast sau cùng thắng). Không thêm hàng đợi toast.
+- **A-D50 (heatmap).** Giữ nguyên kích thước ô; chỉ sửa câu chữ: vừa khít khi viewport ≥ 1192 px (ngưỡng làm tròn), cuộn trong hộp ở 1024–1191 px. Không đổi ngưỡng breakpoint `lg` (1024) vì sidebar xuất hiện ở đó.
+- **A-D51 (nhãn trực tiếp "Ideal +X%").** Thêm viền sáng quanh chữ nhãn (tuỳ chọn, chỉ CSS) thay vì dời vị trí: giữ nguyên thuật toán vị trí đã được QC kiểm (`curve-label` không đè nhau). Không có AC; không chặn.
+
 ---
 
 ## 11. Open questions
@@ -1870,12 +1951,15 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **OQ-D9 (cho planner, nhỏ).** `LocaleService` chưa có API cho biết ngôn ngữ hiện tại là "đã chọn" hay "đang theo trình duyệt"; thiết kế không cần (Language chỉ hiện ngôn ngữ đang dùng). Nếu sau này muốn thêm tuỳ chọn "Theo trình duyệt" thì cần quyết định ở plan.
 - **OQ-D10 (cho planner, M7, quan trọng với dữ liệu).** Thiết kế D4 (A-D26): khi người dùng chọn **Remove data** mà đồng bộ lần cuối không đẩy hết thay đổi (offline, lỗi, hết 10 s), dialog **ở lại** và hỏi lại bằng nút `Remove anyway`. ARCH §5.9 hiện nói lỗi mạng không chặn đăng xuất; TASKS M7-AC12 chỉ kiểm nhánh Keep. Cần planner xác nhận (thêm một AC nhỏ cho nhánh Remove + còn thay đổi chờ) hoặc bỏ bước hỏi lại (khi đó chỉ còn khối cảnh báo `auth.signOut.unsyncedRemove`, người dùng bấm `Sign out and remove data` là xoá luôn). Mặc định thiết kế: có hỏi lại.
 - **OQ-D11 (cho user, quyền riêng tư).** Chuỗi `settings.about.privacy` nói dữ liệu được lưu trong cơ sở dữ liệu của app (Supabase) và "người khác dùng app không xem được"; thực tế chủ project (anh) đọc được mọi hàng trong Dashboard. Giữ cách nói trung thực này hay muốn nêu rõ "chủ app có thể truy cập kỹ thuật"? (Có thể đổi chữ sau mà không đụng layout.)
-- **OQ-D12 (cho planner, nhỏ).** `ExportSignInHint` (FR-53) dùng "lượt" 30 ngày qua `claimExportHint` ngay khi Export thành công; nếu lúc đó offline thì nút đăng nhập bị vô hiệu và lượt bị tiêu. Đề xuất: chỉ `claim` khi `online`. Thiết kế hiện hiển thị cả khi offline (nút vô hiệu + lý do) để khớp FR-53 nguyên văn.
+- **OQ-D12 — ĐÃ QUYẾT (v3.1, PRD A-44, ARCH ADR-30 b).** ~~`ExportSignInHint` (FR-53) dùng "lượt" 30 ngày qua `claimExportHint` ngay khi Export thành công; nếu lúc đó offline thì nút đăng nhập bị vô hiệu và lượt bị tiêu.~~ Quyết định: chỉ `claim` khi **online** lúc Export thành công; offline → không hint, không tiêu lượt. F14, S7 và §5 đã viết lại (v3.1); developer M8 đã làm đúng như vậy từ trước.
 - **OQ-D13 (cho planner/developer, thông tin).** Để dựng đúng, M6/M7 cần hiển thị được: `AuthState.signed-out.lastError` (có thể xoá bằng `Dismiss`), `SyncStatus.nextRetryAt`, số bản ghi `skippedInvalid` (chỉ cần cờ có/không cho A9), số goal/entry còn sống sau lần đồng bộ đầu (cho `toast.mergeDone`), và email/tên đã lưu trong kv `sync.account` (cho `expired`). Nếu một trong các dữ liệu này không có trong `AuthState`/`SyncStatus`, báo lại để chỉnh thiết kế thay vì tự suy ra.
 - **OQ-D14 (cho planner, nhỏ).** Phase 2 chưa có cách để người dùng đã đăng nhập xem hoặc xoá dữ liệu cloud/tài khoản trong app (OQ-09 đã quyết "để Later"). Thiết kế không thêm; chỉ nêu trong `settings.about.privacy` và README rằng dữ liệu nằm ở Supabase.
 - **OQ-D15 (cho planner/developer, thông tin, M9).** Ánh xạ copy ↔ AC để khỏi tìm: M9-AC4 (phụ đề chứa `27`, `14`, `+92.9%`, `×5.4`, `5`) = `goal.detail.subToday`; M9-AC6(2) (một ngày có ghi, không `×`) = `subStart`; M9-AC6(1) = `empty.detail.curve` + `chartSummaryEmpty`; M9-AC6(3)/M9-AC5 (headline âm chứa `40.0` / `40,0`) = `goal.detail.headlineDown`; "key headline" trong M9-AC4/AC5 = `goal.detail.headline` (≥ 0), còn `< 0` là `headlineDown` (hai key, chọn theo dấu `headlinePercent`). Tooltip ngày baseline cần `baseline.date` (đã có trong `CurveData`) để chọn `tooltipBase`; không cần trường mới.
 - **OQ-D17 (cho planner, nhỏ, M9).** ARCH §4.5 viết "mỗi đầu nới thêm 5 % của `yMax − yMin`". Với R1 (không giá trị âm) áp dụng nguyên văn cho đầu dưới cho `yMin = −22` rồi làm tròn ra `−100` (bậc đẹp = 100): một dải trống ~1/6 chiều cao dưới vạch 0%. Mockup và S4 yêu cầu **không nới đầu dưới khi min của "Bạn" ≥ 0** (`yMin = 0`); vẫn thoả `yMin ∈ [−0.25·S, 0]` của M9-AC2 nên không cần đổi AC, chỉ cần dòng chữ ở ARCH §4.5 và `curveYDomain` theo đó. Nếu planner muốn giữ nguyên văn thì báo lại để designer chỉnh mockup.
-- **OQ-D16 (cho user, nhỏ, M9).** Headline âm đang là `−40.0% vs your first day` / `−40,0% so với ngày đầu` (A-D34). Muốn câu khác (ví dụ `40.0% below your first day` / `Thấp hơn ngày đầu 40,0%`) thì chỉ cần đổi hai chuỗi `goal.detail.headlineDown`, không đụng layout hay logic.
+- **OQ-D16 (cho user, nhỏ, M9) — TRẠNG THÁI (v3.1, PRD A-45): CHỐT TẠM, CHỜ USER CHỌN CÂU KHÁC.** Headline âm giữ `−40.0% vs your first day` / `−40,0% so với ngày đầu` (A-D34, A-D45). Chưa có yêu cầu đổi câu từ user (STATUS không ghi quyết định nào về việc này). Muốn câu khác (ví dụ `40.0% below your first day` / `Thấp hơn ngày đầu 40,0%`) thì chỉ cần đổi hai chuỗi `goal.detail.headlineDown`, không đụng layout hay logic. Không chặn M10.
+- **OQ-D18 (cho developer/orchestrator, nhỏ, v3.1).** `public/privacy.html` (trang tĩnh) vẫn dùng brand cũ: ô xanh chữ "1%" + chữ "Better per Day" (dòng 109), lệch với brand mark ảnh logo của app (A-D41). Ngoài phạm vi DESIGN (file nằm ở `public/`, chỉ developer sửa). Đề nghị đổi cho khớp ở một lần dọn sau; không chặn M10 và không có AC.
+- **OQ-D19 (cho user/QC, nhỏ, v3.1).** Ảnh logo ở 28 px khó đọc chữ "BETTER"; chữ `app.name` bên cạnh đã đủ nghĩa. Nếu muốn mark lớn hơn (ví dụ ô 36 px / ảnh 32 px) thì QC phải nới assertion `tests/qc/m7-r1-brand.spec.ts:102` trước, rồi đổi CSS `.mark`; designer không đổi con số ở v3.1 vì đang bị test khoá và chưa có yêu cầu từ user.
+- **OQ-D20 (cho planner, thông tin, v3.1).** Trục Y của BarChart không ghi đơn vị (giờ) và nhãn giá trị mới (A-D46) cũng không kèm đơn vị; đơn vị hiện ở tóm tắt, tooltip và bảng ẩn. Nếu QC/user thấy "2.7" khó hiểu thì thêm một tiêu đề đơn vị nhỏ cho trục (cần một key mới + bản dịch, ví dụ `chart.bar.unitHours` = `Hours` / `Giờ`) — designer sẽ thêm khi được yêu cầu; không làm trong M10.
 
 ---
 
@@ -1904,3 +1988,14 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
   - §7.1: định dạng % có dấu, **dấu trừ chốt U+2212**, hệ số `×N`, nhãn trục Y. §7.6.4: **12 key mới** (`goal.detail.headlineDown`, `subDay`, `subToday`, `subEarlier`, `subStart`, `legendZero`, `chartSummaryEmpty`, `tooltipChange`, `tooltipBase`, `tooltipFlat`, `tableMinutes`, `tableChange`), **9 key sửa** (`goal.detail.headline`, `chartCaption`, `legendYou`, `chartSummary`, `chartNote`, `tooltipIdeal`, `labelIdeal`, `labelYou`, `empty.detail.curve`), **3 key bỏ** (`goal.detail.headlineSub_one`, `headlineSub_other`, `tooltip`); đủ `en` và `vi`, cột MS = M9.
   - §8: a11y đường cong có số âm (dấu bằng chữ, vạch 0%, tooltip không live region, U+2212). Mockup `07-goal-detail.html` viết lại: dữ liệu R1, đổi `English`/`Tiếng Việt`, 7 tình huống (R1, R1 sang ngày không ghi, hôm nay ghi dở, R3 đi xuống, R4 cực trị, một ngày có ghi, chưa có entry), Range, bảng 5 cột; `index.html` cập nhật mô tả.
   - Assumptions A-D34 … A-D40; Open questions OQ-D15 (ánh xạ copy ↔ AC), OQ-D16 (câu headline âm), OQ-D17 (đầu dưới trục Y không nới khi không có số âm, lệch nhẹ chữ ARCH §4.5, trong dung sai AC). Không phát hiện luồng PRD thiếu.
+- 2026-10-17 — **v3.1** (mode `revise`, M10-T8; PRD v3.1 A-44 … A-46, ARCH v3.1 ADR-28/30, TASKS v3.1 M10). **Không thêm tính năng, không đổi layout** ngoài các mục dưới; ghi nhận deviation đã ship và chốt copy còn mở. Mỗi key mới có cả `en` và `vi`.
+  - **(1) Brand** — §3.1, §5 (mục "Brand" mới + component `BrandMark`), §6 (`--brand-tile`), A-D12/A-D41: brand mark = ảnh `brand-mark-96.png` trên ô **trắng** 32 px (ảnh 28 px, `border-radius: 9px`, `padding: 2px`) ở **cả hai theme**; chữ cạnh mark = `app.name` "1% Better per Day"; `app.brandSuffix` **bỏ** (7.2). Mockup: nav của 10 file (`01-today*.html`, `02` … `09`) đổi sang ảnh logo trên ô trắng + chữ `1% Better per Day`.
+  - **(2) 7 key hàng bị cloud từ chối** — 7.7.1 (`settings.account.localRejected_one/_other`), 7.7.2 (`auth.signOut.rejected_one/_other`, `rejectedKeep`, `rejectedRemove`, `removeDescRejected`), hết trạng thái "chưa có trong DESIGN". **Giữ nguyên văn đã ship: 5 key** (`localRejected_one/_other`, `rejected_one/_other`, `removeDescRejected`; `vi` của cả 7 key giữ nguyên). **Đổi `en`: 2 key** — `auth.signOut.rejectedKeep` và `auth.signOut.rejectedRemove` (lệch số ít/nhiều sau `rejected_*`; dev cập nhật ở M10-T6 + literal trong test `m8-prompts` "M7-D5"). Vị trí hiển thị: S7 A9 (`data-reason` local/remote/both) và D4 (khối cảnh báo, mô tả Remove, vùng `role="status"`).
+  - **(3) `settings.about.privacyLink`** — 7.7.5 (+ S7): `en` "Privacy policy" / `vi` "Chính sách quyền riêng tư" (giữ nguyên văn đã ship), luôn hiện kể cả cloud tắt, cùng tab tới `privacy.html`.
+  - **(4) F14 / OQ-D12** — hint Export chỉ khi online, offline không hint, không tiêu lượt (A-44); F7, F14, S7, §5 `ExportSignInHint`, A-D44; **OQ-D12 đóng**. F14 thêm quy tắc mốc tương lai > 24 giờ và hai tab "Not now" (A-46, không đổi UI). **OQ-D16**: giữ câu headline âm theo A-45 (A-D45).
+  - **(5) §6 / §3.2 heatmap** — câu cũ khẳng định lưới 53 tuần không cuộn ngay từ 1024 px đã bỏ (sai vì sidebar 232 px); ngưỡng đúng: vừa khít khi viewport ≥ 1192 px (845 + 34 + 32 + 48 ≈ 959 ≤ 960); 1024–1191 px cuộn trong `.heatmap-scroll`; không đổi cỡ ô (A-D50).
+  - **(6) Nhãn giá trị cột BarChart** — S6 + §5 `BarChart` + §8 + A-D46: quy tắc đo được `(chartWidth − 38) / 12 ≥ 30 px`, cột ≥ 3 phút, số giờ không đơn vị, `aria-hidden`; không key mới. Là việc dev ở M10-T6 (d).
+  - **(7) Copy mới (M10-T6)** — 7.3: `errors.IMPORT_INVALID_SCHEMA_outOfRange` (**key mới**, + hai dòng quy tắc chọn key theo `params.variant`), `errors.EXPORT_FAILED` (**key mới**; Alert trong card Backup, S7 "Export thất bại"); 7.4 `empty.day.noGoals`: chốt không dấu chấm (chỉ sửa chữ ở S5; `en.json` đã đúng, **không đổi code**); §5 Toast: **quy tắc một toast** + bảng ưu tiên (`mergeDone` > `signedIn`; `prefsFromAccount` > `syncNowDone`); 7.2 ghi chú ở `toast.mergeDone`/`syncNowDone`.
+  - **(8) Tuỳ chọn** — S4 quy tắc 5: viền sáng quanh chữ nhãn trực tiếp "Ideal +X%/You +X%" (CSS, không AC; mockup `07-goal-detail.html` đã có). Không đổi vị trí nhãn.
+  - **Tổng hợp key cho M10-T6**: **2 key mới** (`errors.IMPORT_INVALID_SCHEMA_outOfRange`, `errors.EXPORT_FAILED`; cả `en` và `vi`); **2 chuỗi `en` đổi** (`auth.signOut.rejectedKeep`, `auth.signOut.rejectedRemove`; `vi` không đổi); **6 key chỉ ghi nhận vào DESIGN, chữ đã ship giữ nguyên** (`settings.account.localRejected_one/_other`, `auth.signOut.rejected_one/_other`, `auth.signOut.removeDescRejected`, `settings.about.privacyLink`); `empty.day.noGoals` không đổi chữ (chỉ sửa chỗ viết sai ở §4 S5); **1 key đã bỏ khỏi code** (`app.brandSuffix`, đánh dấu bỏ trong 7.2). Mọi key khác không đổi.
+  - Assumptions A-D41 … A-D51; Open questions OQ-D12 (đã quyết), OQ-D16 (cập nhật), OQ-D18 … OQ-D20 (mới). Không phát hiện luồng PRD thiếu.

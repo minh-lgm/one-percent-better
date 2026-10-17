@@ -41,7 +41,7 @@ a{color:var(--primary)}
 .nav .item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--tabbar-h);border-top:3px solid transparent;color:var(--text-muted);text-decoration:none;font-size:12px;line-height:16px;font-weight:600}
 .nav .item[aria-current=page]{color:var(--primary);border-top-color:var(--primary);font-weight:700}
 .nav .ic{width:24px;height:24px}
-.mark{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--primary);color:var(--on-primary);font-weight:800;font-size:14px}
+.mark{display:inline-grid;place-items:center;width:32px;height:32px;padding:2px;border-radius:9px;background:#fff;flex:none}.mark img{display:block;width:100%;height:100%;object-fit:contain}
 .content{min-width:0}
 main{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--tabbar-h) + 32px)}
 main.wide{max-width:var(--content-max)}
@@ -115,7 +115,7 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 <a class="skip" href="#main">Skip to content</a>
 
 <nav class="nav" aria-label="Main">
-  <a class="brand" href="01-today.html" aria-label="1% Better per Day"><span class="mark" aria-hidden="true">1%</span><span>Better per Day</span></a>
+  <a class="brand" href="01-today.html" aria-label="1% Better per Day"><span class="mark" aria-hidden="true"><img src="../../../public/brand-mark-96.png" width="28" height="28" alt="" decoding="async"></span><span>1% Better per Day</span></a>
   <a class="item" href="01-today.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span>Today</span></a>
   <a class="item" href="02-goals.html"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span>Goals</span></a>
   <a class="item" href="06-review.html"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span>Review</span></a>
