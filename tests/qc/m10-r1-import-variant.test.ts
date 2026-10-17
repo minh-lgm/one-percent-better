@@ -124,14 +124,12 @@ describe('integrity errors are not reworded', () => {
   });
 });
 
-// M10-D3 (Minor, open, predates M10 - M5 superRefine): when endDate >= startDate as strings but one of them is not a real date,
-// the superRefine of goalSchema calls daysInclusive() which throws RangeError, so parseBackup throws instead of returning
-// IMPORT_INVALID_SCHEMA. `it.fails` = EXPECTED to fail while the defect is open; when fixed, vitest reports it and QC flips it.
-const THROWS = new Set(['startDate=2026-02-30', 'startDate=2026-1-5', 'startDate=empty string', 'endDate=hello']);
+// M10-D3 (FIXED in round 2, predates M10 - M5 superRefine): a malformed / impossible date is a structured schema error, never a
+// RangeError thrown out of parseBackup.
 describe('M10-D3: malformed calendar dates must come back as a structured schema error, not as a thrown exception', () => {
   for (const [label, v] of [['2026-02-30', '2026-02-30'], ['hello', 'hello'], ['2026-1-5', '2026-1-5'], ['empty string', '']] as const) {
     for (const field of ['startDate', 'endDate'] as const) {
-      (THROWS.has(`${field}=${label}`) ? it.fails : it)(`goal.${field} = ${label}`, async () => {
+      it(`goal.${field} = ${label}`, async () => {
         const f = base();
         f.goals[0]![field] = v;
         const result = await keyFor(f).then(

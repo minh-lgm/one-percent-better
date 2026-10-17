@@ -25,14 +25,12 @@ function file(goals: Goal[], entries: LogEntry[]) {
   return parseBackup(text, text.length, '2026-10-09');
 }
 
-// M10-D1 (Major, open): the plain-TS form validators count UTF-16 code units (`string.length`), the zod schema of the importer (and
-// the cloud mapper / SQL char_length) counts code points. Before M10 both were zod, so 60 emoji were a valid goal name; since
-// ADR-27 the form rejects them (and any text whose astral characters push it over the limit in UTF-16 units) while the importer
-// accepts it. `it.fails` = EXPECTED to fail while open; QC flips it to `it` when fixed.
+// M10-D1 (FIXED in round 2): the form validators count code points (domain/text.ts charLength), like the zod schema of the importer,
+// the cloud mapper and SQL char_length. Before the fix, ADR-27 counted UTF-16 code units and rejected 60 emoji that the file accepts.
 const BMP = ['a', 'é', 'あ'] as const;
 const ASTRAL = ['😀', '𠮷'] as const;
 
-for (const [label, alphabet, runner] of [['BMP characters only', BMP, it], ['astral characters (emoji, U+20BB7)', [...BMP, ...ASTRAL], it.fails]] as const) {
+for (const [label, alphabet, runner] of [['BMP characters only', BMP, it], ['astral characters (emoji, U+20BB7)', [...BMP, ...ASTRAL], it]] as const) {
 describe(`goal: form validator and importer agree - ${label}`, () => {
   runner('4000 random goals around every limit', () => {
     const rand = prng(20261017);
@@ -112,13 +110,13 @@ describe(`entry: form validator and importer agree - ${label}`, () => {
 
 describe('M10-D1 deterministic cases (form behaviour before M10, when it used zod: limits count characters, not UTF-16 units)', () => {
   const base: GoalInput = { name: 'x', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' };
-  it.fails('a goal name of 60 emoji (60 characters, 120 UTF-16 units) is accepted by the form, as it is by the importer', () => {
+  it('a goal name of 60 emoji (60 characters, 120 UTF-16 units) is accepted by the form, as it is by the importer', () => {
     expect(validateGoalInput({ ...base, name: '😀'.repeat(60) }).ok).toBe(true);
   });
-  it.fails('a why of 280 emoji is accepted by the form', () => {
+  it('a why of 280 emoji is accepted by the form', () => {
     expect(validateGoalInput({ ...base, why: '😀'.repeat(280) }).ok).toBe(true);
   });
-  it.fails('an entry note of 280 emoji is accepted by the form', () => {
+  it('an entry note of 280 emoji is accepted by the form', () => {
     expect(validateEntryFields({ minutes: 30, note: '😀'.repeat(280) }).ok).toBe(true);
   });
   it('the importer accepts exactly these values (so form and file disagree)', () => {

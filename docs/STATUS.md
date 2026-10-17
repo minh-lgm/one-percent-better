@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-17 (M10: designer T8 + developer T1–T5,T7 song song)
-**Next step:** qc M10 round 2 (report docs/qc/report-M10-r2.md) → deploy
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-18 (M10 PASS QC r2; chờ user duyệt push/deploy)
+**Next step:** user duyệt push `main` → Pages deploy → kiểm bản Pages. Backlog còn: M10-D6 (bộ đếm n/60 và maxLength đếm UTF-16), planner ghi ADR-29 follow-up (applyRemote bỏ tombstone cũ), test sleep-cố-định (sync-service:248, auth-service:249, soft-delete:63)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -54,7 +54,7 @@
 | Design v3 | DONE (2026-10-13, commit 674cf8b; Gate 2 bỏ qua theo Gate 1 "Duyệt, làm tiếp") | docs/design/DESIGN.md v3.0 §7.6.4, mockups/07-goal-detail.html (7 tình huống, en/vi) | 12 key mới, 9 key sửa, 3 key bỏ (headlineSub_one/_other, tooltip). OQ-D17: trục Y chỉ nới đầu dưới khi min < 0 → orchestrator chốt theo DESIGN (trong dung sai M9-AC2). OQ-D16 câu headline âm: user xem sau khi deploy |
 | M9 | PASS (round 1; QC chạy full regression = Final QC phase 3) — deployed 2026-10-17 | docs/qc/report-M9-r1.md |
 | Plan v3.1 (M10 backlog) | DONE | docs/plan/ (ADR-27..30, A-44..46) | 7 task dev + 1 task designer, 14 AC; Later: xem TASKS Phase 4 |
-| M10 | DOING — fix r1 DONE (c53406d), chờ QC r2 | docs/qc/report-M10-r1.md | tải lạnh 248,3 → 222,6 kB; tsconfig tạm exclude tests/qc/m3-r1-domain.test.ts | dev tự kiểm AC1–AC8 PASS; bundle tải lạnh Today 248,3/250 kB; 24 unit + 17 e2e fail đều là test QC cũ 1,01^n (handoff §5/§8), QC re-target; tsconfig tạm exclude tests/qc/m5-r1-domain.test.ts |
+| M10 | PASS (round 2) | docs/qc/report-M10-r2.md | tải lạnh 248,3 → 222,6 kB; tsconfig tạm exclude tests/qc/m3-r1-domain.test.ts | dev tự kiểm AC1–AC8 PASS; bundle tải lạnh Today 248,3/250 kB; 24 unit + 17 e2e fail đều là test QC cũ 1,01^n (handoff §5/§8), QC re-target; tsconfig tạm exclude tests/qc/m5-r1-domain.test.ts |
 | M8 | PASS (round 1) | docs/qc/report-M8-r1.md | M7-D5, M7-P1 FIXED |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
@@ -72,19 +72,21 @@
 | M3-D2 | (FIXED trong M4, commit 786a82f) Số ≥ 1000 trong dialog D3 và toast import thiếu dấu phân cách hàng nghìn | QC M3 r1 |
 | M3-D3 | (FIXED trong M5) Import chấp nhận goal targetMinutes 600000, khoảng 100 năm, entry tương lai (app từ chối khi tạo tay) | QC M3 r1 |
 | M3-D4 | (FIXED trong M5) Tab thua cuộc đua Save hai tab: dialog Stop còn mở, tóm tắt thiếu tên goal | QC M3 r1 |
-| M3-P1 | `exportBackup` thiếu catch; thêm assertion E2E cho dòng why | QC M3 r1 |
-| M4-D5 | Vitest chạy 2 process song song có test chạm timeout 5 s (Review/Day/Heatmap 2–3 s); chạy tuần tự ổn định | QC M4 r2 |
-| M4-P1 | DESIGN §6 nói heatmap vừa ở ≥1024 px nhưng 1024–1191 px vẫn cuộn trong hộp (sidebar 232 px) — designer sửa câu chữ; nhãn giá trị trên cột chart chưa có | QC M4 r1/r2 |
-| M5-P1 | Trục Y curve hiện `+0.0%` (mockup `+0%`); focusHeading dùng requestAnimationFrame; lỗi import vượt giới hạn dùng chung IMPORT_INVALID_SCHEMA (nên có câu riêng) | QC M5 r1/r2 |
+| M3-P1 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) `exportBackup` thiếu catch; thêm assertion E2E cho dòng why | QC M3 r1 |
+| M4-D5 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) Vitest chạy 2 process song song có test chạm timeout 5 s (Review/Day/Heatmap 2–3 s); chạy tuần tự ổn định | QC M4 r2 |
+| M4-P1 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) DESIGN §6 nói heatmap vừa ở ≥1024 px nhưng 1024–1191 px vẫn cuộn trong hộp (sidebar 232 px) — designer sửa câu chữ; nhãn giá trị trên cột chart chưa có | QC M4 r1/r2 |
+| M5-P1 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) Trục Y curve hiện `+0.0%` (mockup `+0%`); focusHeading dùng requestAnimationFrame; lỗi import vượt giới hạn dùng chung IMPORT_INVALID_SCHEMA (nên có câu riêng) | QC M5 r1/r2 |
 | M6-D1 | (FIXED trong M7) Replay `?auth=callback&code=…` cũ/giả khi đang có phiên hợp lệ → card kẹt "Sign in again" tới khi reload; M7 sẽ làm sync tạm dừng (auth-service completeCallback). Test QC có test.fail | QC M6 r1 |
-| M6-P1 | DESIGN §7.7.5 cần thêm key `settings.about.privacyLink`; ESLint chưa chặn dynamic import @supabase trong src/ui; PKCE verifier còn trong localStorage tới khi sign-out; dist cloud-off vẫn chứa chunk SDK không dùng; privacy.html nói sync trước khi M7 có | QC M6 r1 |
+| M6-P1 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) DESIGN §7.7.5 cần thêm key `settings.about.privacyLink`; ESLint chưa chặn dynamic import @supabase trong src/ui; PKCE verifier còn trong localStorage tới khi sign-out; dist cloud-off vẫn chứa chunk SDK không dùng; privacy.html nói sync trước khi M7 có | QC M6 r1 |
 | M7-D5 | (FIXED trong M8) Sign out → Remove xoá cả hàng `dirty = 2` (cloud từ chối) không cảnh báo; D4 nói "account keeps everything" — giao dev sửa trong M8 | QC M7 r2 |
-| M7-P1 | (FIXED trong M8, 7 chuỗi dev đề xuất NOT IN DESIGN — designer duyệt) Key copy riêng cho hàng trên máy bị cloud từ chối; dọn tombstone đã sync; `npm run check` trên máy có .env.local ra bản cloud ON | QC M7 r1/r2 |
-| M8-D1 | Mốc lastDismissedAt/lastExportHintAt ở tương lai (đồng hồ máy từng sai) làm banner/hint im hàng chục năm (login-prompt.ts isSnoozed) — clamp mốc > now | QC M8 r1 |
-| M8-P1 | OQ-D12 (hint export chỉ khi online) planner/designer chốt; README còn "(used from M7)"; exportBackup không catch quanh claimExportHint | QC M8 r1 |
-| F2-R1 | Bundle sát ngưỡng: tải lạnh #/today 248,3 kB / 250 kB (M9) — tách chunk schemas (zod 34 kB) hoặc xét lại ngưỡng trước khi thêm tính năng | Final QC phase 2 |
-| M9-D1 | vi 360 px: đang đọc chart bằng bàn phím, bấm chuột lần đầu vào "Xem dữ liệu dạng bảng" không mở (mousedown blur chart → layout nhảy); bấm lần 2 mới mở | QC M9 r1 |
-| M1-P3 | docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
+| M7-P1 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) (FIXED trong M8, 7 chuỗi dev đề xuất NOT IN DESIGN — designer duyệt) Key copy riêng cho hàng trên máy bị cloud từ chối; dọn tombstone đã sync; `npm run check` trên máy có .env.local ra bản cloud ON | QC M7 r1/r2 |
+| M8-D1 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) Mốc lastDismissedAt/lastExportHintAt ở tương lai (đồng hồ máy từng sai) làm banner/hint im hàng chục năm (login-prompt.ts isSnoozed) — clamp mốc > now | QC M8 r1 |
+| M8-P1 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) OQ-D12 (hint export chỉ khi online) planner/designer chốt; README còn "(used from M7)"; exportBackup không catch quanh claimExportHint | QC M8 r1 |
+| F2-R1 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) Bundle sát ngưỡng: tải lạnh #/today 248,3 kB / 250 kB (M9) — tách chunk schemas (zod 34 kB) hoặc xét lại ngưỡng trước khi thêm tính năng | Final QC phase 2 |
+| M9-D1 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) vi 360 px: đang đọc chart bằng bàn phím, bấm chuột lần đầu vào "Xem dữ liệu dạng bảng" không mở (mousedown blur chart → layout nhảy); bấm lần 2 mới mở | QC M9 r1 |
+| M10-D6 | Bộ đếm "n/60"/"n/280" và `maxLength` ô nhập đếm UTF-16 (GoalForm, EntryForm, StopTimerDialog); 40 emoji hiện 80/60 dù hợp lệ; có từ M1 | QC M10 r2 |
+| M10-P1 | Test sleep-cố-định dễ đỏ khi máy tải nặng: sync-service.test:248, auth-service.test:249, soft-delete.test:63; eslint nên ignore test-results*/; planner ghi ADR-29 follow-up (applyRemote bỏ remote tombstone > 30 ngày không có hàng cục bộ) | QC M10 r2, dev fix log |
+| M1-P3 | (ĐÓNG trong M10, xem dev-M10 bảng đóng backlog) docs/handoff/dev-M1.md dòng 56 còn nhắc thư mục cũ `1%better` (lịch sử) | QC r2 |
 
 ## Tổng kết phase 2 (2026-10-13)
 - M6 Auth (PASS r1), M7 Sync (PASS r2), M8 Login prompts (PASS r1), Final QC phase 2 PASS. Unit 1160, Playwright 568 (chromium + cloud mock), bundle 239,8 kB gzip. Logo product đã gắn (icon PWA, favicon, brand mark).

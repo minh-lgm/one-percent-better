@@ -71,7 +71,10 @@ test('purge never drops an unsynced tombstone of a device that has synced; after
   await gotoHash(page, '/settings');
   await syncNow(page);
   await expect.poll(async () => JSON.stringify((await mock.rows('u1')).goals.find((g) => g.id === readId) ?? null), { timeout: 10_000 }).toMatch(/"deleted_at":"/);
-  expect((await rawGoals(page)).find((g) => g.name === 'Read')?.dirty).toBe(0);
+  // dirty 0 now; the start-up purge is scheduled for browser idle time (<= 10 s) and may only get to run after the push on a loaded machine
+  // (it judges the row when it runs, and a pushed tombstone older than 30 days is purgeable) - so "already gone" is as good as "dirty 0".
+  const afterPush = (await rawGoals(page)).find((g) => g.name === 'Read');
+  expect(afterPush === undefined || afterPush.dirty === 0, 'after the push the tombstone is clean (dirty 0) or already purged').toBe(true);
 
   // Next start: dirty 0 and older than 30 days -> hard-deleted locally.
   await page.reload();

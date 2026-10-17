@@ -22,12 +22,9 @@ async function openR1(page: Page, copy: typeof EN | typeof VI) {
 test.describe('M9-D1 fix, slow and unusual pointer input (vi 360 px, 3-line reading)', () => {
   test.use({ viewport: { width: 360, height: 900 }, locale: 'vi-VN' });
 
-  // M10-D4 (Minor, open): the fix only defers the clearing of the reading by 300 ms (BLUR_CLEAR_DELAY_MS). A press that lasts longer
-  // than that (mousedown -> mouseup > 300 ms, e.g. a deliberate slow click or a drag-and-release) still sees the layout jump under the
-  // pointer, and the click does not land on the summary. `test.fail` = EXPECTED to fail while open; QC flips it when fixed.
-  for (const [holdMs, knownOpen] of [[0, false], [100, false], [200, false], [400, true], [900, true]] as const) {
-    test(`mouse held ${holdMs} ms on "Show data as table" while a keyboard reading is shown, then released: the table opens${knownOpen ? ' (M10-D4 open)' : ''}`, async ({ page }) => {
-      test.fail(knownOpen, 'M10-D4: reading is cleared 300 ms after blur even while the button is still pressed -> layout jump -> click lost');
+  // M10-D4 (FIXED in round 2): the reading is kept while any pointer is down, so a slow press still lands on the summary.
+  for (const holdMs of [0, 100, 200, 400, 900]) {
+    test(`mouse held ${holdMs} ms on "Show data as table" while a keyboard reading is shown, then released: the table opens`, async ({ page }) => {
       await openR1(page, VI);
       await chart(page).focus();
       await page.keyboard.press('ArrowLeft');
@@ -152,11 +149,8 @@ test.describe('Export failure (DESIGN S7 v3.1)', () => {
     expect(errors).toEqual([]);
   });
 
-  // M10-D2 (Minor, open): BackupService.export stamps settings.lastBackupAt BEFORE the file exists; when the file cannot be created
-  // the Alert is shown but "Last backup" already says today (DESIGN S7: "Last backup" does not change) and the 30-day backup
-  // reminder is silenced although the user has no file. `test.fail` = EXPECTED to fail while open.
+  // M10-D2 (FIXED in round 2): "Last backup" is stamped only after the file was handed to the browser.
   test('M10-D2: after a failed file creation "Last backup" still says Never and the backup reminder is not silenced', async ({ page }) => {
-    test.fail(true, 'M10-D2: lastBackupAt is persisted before downloadTextFile runs');
     await page.addInitScript(() => {
       URL.createObjectURL = () => {
         throw new Error('QC: cannot create object URL');
@@ -190,10 +184,9 @@ test.describe('Export failure (DESIGN S7 v3.1)', () => {
 });
 
 // ---------------------------------------------------------------------------------------------------------------
-// M10-D1 in the browser: the goal form after ADR-27 counts UTF-16 units.
+// M10-D1 in the browser (FIXED in round 2): the goal form counts characters (code points), like the importer.
 // ---------------------------------------------------------------------------------------------------------------
 test('M10-D1: a goal named with 40 emoji (40 characters, under the limit of 60) can be created in the form, as before M10', async ({ page }) => {
-  test.fail(true, 'M10-D1: the form validator counts UTF-16 code units (80 > 60) since ADR-27; zod counted characters');
   await freezeClock(page);
   await gotoHash(page, '/goals/new');
   await page.getByLabel(new RegExp(`^${EN.goal.form.nameLabel}`)).fill('😀'.repeat(40));
@@ -230,7 +223,6 @@ test.describe('Import alerts: sequence and malformed dates', () => {
   });
 
   test('M10-D3: a goal whose startDate is not a real date ("2026-02-30") is refused with a schema sentence, not the generic read error, and nothing changes', async ({ page }) => {
-    test.fail(true, 'M10-D3: parseBackup throws RangeError from daysInclusive() for malformed dates, so Settings shows errors.UNKNOWN (predates M10)');
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await freezeClock(page);
