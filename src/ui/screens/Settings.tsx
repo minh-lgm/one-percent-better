@@ -155,6 +155,8 @@ export function Settings() {
     try {
       const { fileName, json } = await backupService.export(now);
       downloadTextFile(fileName, json, BACKUP_MIME_TYPE);
+      // Only now is it a backup (M10-D2): "Last backup" and the 30-day reminder follow the file, not the attempt.
+      await backupService.recordExport(now);
       toast.show('toast.backupExported');
     } catch {
       // M3-P1 (v3.1): reading the data or creating the file failed → Alert in the card, nothing else.

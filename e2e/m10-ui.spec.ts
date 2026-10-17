@@ -41,6 +41,22 @@ test.describe('M9-D1 fixed: vi, 360 px', () => {
   });
 });
 
+test.describe('M10-D4: the press may be held as long as the user likes (vi, 360 px)', () => {
+  test.use({ viewport: { width: 360, height: 740 }, locale: 'vi-VN' });
+  for (const holdMs of [400, 900]) {
+    test(`mouse held ${holdMs} ms on "Xem dữ liệu dạng bảng" while a 3-line reading is shown → the table opens`, async ({ page }) => {
+      await openR1(page, VI);
+      await chart(page).focus();
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+      await expect(reading(page)).toHaveText(/12 thg 10.*14 phút/);
+      await page.getByText(VI.goal.detail.showTable).click({ delay: holdMs });
+      await expect(page.getByTestId('curve-table')).toBeVisible({ timeout: 2000 });
+      await expect(reading(page)).toHaveText('', { timeout: 1000 });
+    });
+  }
+});
+
 test.describe('M9-D1 fixed: en, 360 px', () => {
   test.use({ viewport: { width: 360, height: 740 } });
   test('first click opens the table', async ({ page }) => {

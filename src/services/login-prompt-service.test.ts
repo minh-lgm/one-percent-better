@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DexieEntryRepository } from '../data/dexie/entry-repo';
 import { DexieGoalRepository } from '../data/dexie/goal-repo';
 import { DexieKvRepository } from '../data/dexie/kv-repo';
@@ -69,14 +69,13 @@ describe('LoginPromptService data facts', () => {
     const states: Array<{ dismissCount: number }> = [];
     const stopData = service.watchData().subscribe((d) => seen.push(d));
     const stopState = service.watchState().subscribe((s) => states.push(s));
-    await new Promise((r) => setTimeout(r, 30));
-    expect(seen.at(-1)).toEqual({ firstDataAt: null, entryCount: 0 });
-    expect(states.at(-1)).toEqual(EMPTY_LOGIN_PROMPT);
+    // Live queries emit asynchronously: poll instead of a fixed sleep (M10-D5).
+    await vi.waitFor(() => expect(seen.at(-1)).toEqual({ firstDataAt: null, entryCount: 0 }));
+    await vi.waitFor(() => expect(states.at(-1)).toEqual(EMPTY_LOGIN_PROMPT));
     await db.goals.put(buildGoal({ id: 'g1', createdAt: ago(DAY) }));
     await service.dismiss(NOW);
-    await new Promise((r) => setTimeout(r, 60));
-    expect(seen.at(-1)).toEqual({ firstDataAt: ago(DAY), entryCount: 0 });
-    expect(states.at(-1)?.dismissCount).toBe(1);
+    await vi.waitFor(() => expect(seen.at(-1)).toEqual({ firstDataAt: ago(DAY), entryCount: 0 }));
+    await vi.waitFor(() => expect(states.at(-1)?.dismissCount).toBe(1));
     stopData();
     stopState();
   });

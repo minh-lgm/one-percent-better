@@ -22,5 +22,5 @@
     "skipLibCheck": true
   },
   "include": ["src", "tests/qc/**/*.test.ts", "tests/qc/**/*.test.tsx", "tests/db/**/*.test.ts"],
-  "exclude": ["src/sw.ts", "tests/qc/m3-r1-domain.test.ts"]
+  "exclude": ["src/sw.ts"]
 }

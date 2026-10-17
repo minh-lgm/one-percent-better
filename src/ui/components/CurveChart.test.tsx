@@ -252,3 +252,37 @@ describe('M9-D1: the reading line survives the mouse press that blurs the chart 
     expect(reading).toHaveTextContent(/^Oct 12/);
   });
 });
+
+describe('M10-D4: a press held longer than the fallback delay keeps the reading until it is released', () => {
+  it('pointerdown → blur → 400 ms later the line is still there; pointerup + click → cleared', async () => {
+    const user = userEvent.setup();
+    const r = await renderWithLocale(<CurveChart ideal={real.ideal} actual={real.actual} label={LABEL_R1} testId="curve-chart" />);
+    tc = r.tc;
+    const chart = screen.getByTestId('curve-chart');
+    const reading = screen.getByTestId('curve-reading');
+    chart.focus();
+    await user.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(reading).toHaveTextContent(/^Oct 12/);
+    fireEvent.pointerDown(document.body);
+    fireEvent.blur(chart);
+    await new Promise((resolve) => setTimeout(resolve, BLUR_CLEAR_DELAY_MS + 100));
+    expect(reading).toHaveTextContent(/^Oct 12/);
+    fireEvent.pointerUp(document.body);
+    fireEvent.click(document.body);
+    await waitFor(() => expect(reading).toHaveTextContent(''));
+  });
+
+  it('a press released elsewhere without a click still clears the line after the delay', async () => {
+    const user = userEvent.setup();
+    const r = await renderWithLocale(<CurveChart ideal={real.ideal} actual={real.actual} label={LABEL_R1} testId="curve-chart" />);
+    tc = r.tc;
+    const chart = screen.getByTestId('curve-chart');
+    const reading = screen.getByTestId('curve-reading');
+    chart.focus();
+    await user.keyboard('{ArrowRight}');
+    fireEvent.pointerDown(document.body);
+    fireEvent.blur(chart);
+    fireEvent.pointerCancel(document.body);
+    await waitFor(() => expect(reading).toHaveTextContent(''), { timeout: 1000 });
+  });
+});

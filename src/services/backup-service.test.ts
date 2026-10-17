@@ -50,6 +50,9 @@ describe('BackupService.export (M3-AC6, M3-AC13)', () => {
     expect(file.settings).toEqual({ ...DEFAULT_SETTINGS, lastBackupAt: FIXED_NOW.toISOString() });
     expect(json).not.toContain('locale');
     expect(JSON.stringify(Object.keys(file))).not.toContain('locale');
+    // M10-D2: building the file does not count as a backup; recordExport does.
+    expect((await settings.get()).lastBackupAt).toBeNull();
+    await service.recordExport(FIXED_NOW);
     expect((await settings.get()).lastBackupAt).toBe(FIXED_NOW.toISOString());
   });
 });

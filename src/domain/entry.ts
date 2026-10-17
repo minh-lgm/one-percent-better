@@ -1,6 +1,7 @@
 import { DAY_MINUTES_LIMIT, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX } from '../config/constants';
 import { isWithin } from './dates';
 import { isIntInRange } from './goal';
+import { charLength } from './text';
 import { fail, ok, type DomainError, type Goal, type ISODate, type LogEntry, type Result } from './types';
 
 export interface EntryFieldsInput {
@@ -19,7 +20,7 @@ export function validateEntryFields(input: EntryFieldsInput): Result<EntryFields
   const minutesOk = isIntInRange(input.minutes, ENTRY_MINUTES_MIN, ENTRY_MINUTES_MAX);
   if (!minutesOk) errors.push({ code: 'ENTRY_MINUTES_INVALID', field: 'minutes', message: 'minutes must be an integer 1–1440' });
   const note = typeof input.note === 'string' ? input.note.trim() : '';
-  const noteOk = note.length <= ENTRY_NOTE_MAX;
+  const noteOk = charLength(note) <= ENTRY_NOTE_MAX; // code points, like the importer/cloud (M10-D1)
   if (!noteOk) errors.push({ code: 'ENTRY_NOTE_TOO_LONG', field: 'note', message: `note longer than ${ENTRY_NOTE_MAX}` });
   if (errors.length > 0) return fail(errors);
   return ok({ minutes: minutesOk ? input.minutes : 0, note: noteOk ? note : '' });

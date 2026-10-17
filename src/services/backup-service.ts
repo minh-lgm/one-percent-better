@@ -56,13 +56,21 @@ export class BackupService {
     return this.schema;
   }
 
-  /** Serialise everything and remember `lastBackupAt = now` (also inside the file). */
+  /**
+   * Serialise everything; the file itself carries `lastBackupAt = now`. Nothing is persisted here
+   * (M10-D2): the caller calls `recordExport(now)` once the file really exists / was handed to the
+   * browser, so a failed download never counts as a backup.
+   */
   async export(now: Date): Promise<BackupExport> {
     const data = await this.backups.exportAll();
     const lastBackupAt = now.toISOString();
     const file = buildBackup({ ...data, settings: { ...data.settings, lastBackupAt } }, now);
-    await this.settings.update({ lastBackupAt });
     return { fileName: backupFileName(toISODate(now)), json: JSON.stringify(file, null, 2) };
+  }
+
+  /** Remember `lastBackupAt = now` after the file was created and downloaded (M10-D2). */
+  recordExport(now: Date): Promise<unknown> {
+    return this.settings.update({ lastBackupAt: now.toISOString() });
   }
 
   /**

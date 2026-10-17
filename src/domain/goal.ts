@@ -8,6 +8,7 @@ import {
   TOTAL_HOURS_MIN,
 } from '../config/constants';
 import { daysInclusive, isValidISODate, isWithin } from './dates';
+import { charLength } from './text';
 import { fail, ok, type DomainError, type Goal, type GoalStatus, type ISODate, type Result, type TargetType } from './types';
 
 /** Raw form input (numbers may be NaN when the field is empty or not numeric). */
@@ -63,18 +64,20 @@ export function goalStatus(goal: Pick<Goal, 'archived' | 'startDate' | 'endDate'
 export function validateGoalInput(input: GoalInput): Result<GoalFields> {
   const errors: DomainError[] = [];
 
+  // Limits count characters (code points), like the importer, the cloud mapper and SQL `char_length` (M10-D1).
   const name = trimmed(input.name);
-  const nameOk = name.length >= 1 && name.length <= GOAL_NAME_MAX;
+  const nameLength = charLength(name);
+  const nameOk = nameLength >= 1 && nameLength <= GOAL_NAME_MAX;
   if (!nameOk) {
     errors.push(
-      name.length > GOAL_NAME_MAX
+      nameLength > GOAL_NAME_MAX
         ? { code: 'GOAL_NAME_TOO_LONG', field: 'name', message: `name longer than ${GOAL_NAME_MAX}` }
         : { code: 'GOAL_NAME_REQUIRED', field: 'name', message: 'name is required' },
     );
   }
 
   const why = trimmed(input.why);
-  const whyOk = why.length <= GOAL_WHY_MAX;
+  const whyOk = charLength(why) <= GOAL_WHY_MAX;
   if (!whyOk) {
     errors.push({ code: 'GOAL_WHY_TOO_LONG', field: 'why', message: `why longer than ${GOAL_WHY_MAX}` });
   }

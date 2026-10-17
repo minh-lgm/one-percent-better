@@ -196,3 +196,26 @@ describe('IMPORT_INVALID_SCHEMA variant outOfRange (M10-AC9, ARCH §5.4 v3.1, M5
     expect(variantOf(text({ ...sampleFile(), entries: [...sampleFile().entries, future] }), '2026-10-09')).toBe('IMPORT_INTEGRITY');
   });
 });
+
+describe('M10-D3: malformed calendar dates are a structured schema error, never a thrown RangeError', () => {
+  const withGoal = (overrides: Partial<ReturnType<typeof buildGoal>>) => {
+    const file = sampleFile();
+    return text({ ...file, goals: [{ ...file.goals[0], ...overrides }], entries: [] });
+  };
+  for (const field of ['startDate', 'endDate'] as const) {
+    for (const bad of ['2026-02-30', 'hello', '2026-1-5', '']) {
+      it(`goal.${field} = ${JSON.stringify(bad)} → IMPORT_INVALID_SCHEMA without the outOfRange variant`, () => {
+        const r = parseBackup(withGoal({ [field]: bad }), 1000);
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+          expect(r.errors[0].code).toBe('IMPORT_INVALID_SCHEMA');
+          expect(r.errors[0].params?.variant).toBeUndefined();
+        }
+      });
+    }
+  }
+  it('a real but too long period still carries the outOfRange variant', () => {
+    const r = parseBackup(withGoal({ startDate: '2000-01-01', endDate: '2099-12-31' }), 1000);
+    expect(r.ok ? 'ok' : r.errors[0].params?.variant).toBe('outOfRange');
+  });
+});

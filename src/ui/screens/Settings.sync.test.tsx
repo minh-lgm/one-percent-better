@@ -153,7 +153,8 @@ describe('Settings — signed-in copy (M7-AC15, DESIGN S7)', () => {
     await tc.container.authService.completeCallback({ code: 'ok' });
     await sync().handleSignedIn(U1, USER1.email);
     await waitFor(() => expect(screen.getByTestId('toast')).toHaveTextContent(`Signed in as ${USER1.email}`));
-    expect(screen.getByTestId('sync-indicator')).toHaveAttribute('data-state', 'error');
+    // The failed cycle settles slightly after the toast under load (M10-D5): wait for it instead of asserting at once.
+    await waitFor(() => expect(screen.getByTestId('sync-indicator')).toHaveAttribute('data-state', 'error'));
   });
 
   it('D3 signed in: title/body variant, offline note when offline; signed out keeps the M3 dialog', async () => {

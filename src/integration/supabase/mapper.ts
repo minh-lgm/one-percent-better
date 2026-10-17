@@ -36,6 +36,7 @@ const nullableTimestamp = z.unknown().transform((v, ctx) => {
   return t;
 });
 const isoDate = z.string().refine(isValidISODate, 'YYYY-MM-DD');
+// String limits count code points (zod), like `domain/text.ts` `charLength` in the forms and SQL `char_length` (M10-D1).
 const id = z.string().min(1).max(ID_MAX);
 
 export const goalRowSchema = z

@@ -16,9 +16,11 @@ import { fail, ok, type DomainError, type Goal, type ISODate, type LogEntry, typ
 export { BACKUP_APP, BACKUP_MIME_TYPE, BACKUP_REMINDER_DAYS, BACKUP_SCHEMA_VERSION, backupFileName, backupReminder, buildBackup } from './backup-file';
 export type { BackupContent, BackupFile, BackupReminder } from './backup-file';
 
-const isoDate = z.string().refine(isValidISODate, 'YYYY-MM-DD');
+// `params.structural`: a malformed/impossible date is a format problem (generic sentence), not an out-of-range value.
+const isoDate = z.string().refine(isValidISODate, { message: 'YYYY-MM-DD', params: { structural: true } });
 const isoDateTime = z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'ISO date-time');
 // Same limit as the cloud (mapper.ts / SQL): a row the importer accepts must be pushable (M7-D1).
+// zod's `.min()/.max()` on strings count code points, the same unit as `domain/text.ts` `charLength` and SQL `char_length` (M10-D1).
 const id = z.string().min(1).max(ID_MAX);
 
 // M3-D3: a backup must obey the same goal limits as the form (ARCH §4): daily
@@ -45,7 +47,8 @@ const goalSchema = z
     if (g.targetType === 'total' && (g.targetMinutes < TOTAL_HOURS_MIN * 60 || g.targetMinutes > TOTAL_HOURS_MAX * 60)) {
       ctx.addIssue({ code: 'custom', path: ['targetMinutes'], message: `total target must be ${TOTAL_HOURS_MIN}-${TOTAL_HOURS_MAX} hours` });
     }
-    if (g.endDate >= g.startDate) {
+    // M10-D3: the date refinements above may already have failed; never compute with an impossible date.
+    if (isValidISODate(g.startDate) && isValidISODate(g.endDate) && g.endDate >= g.startDate) {
       if (daysInclusive(g.startDate, g.endDate) > PERIOD_DAYS_MAX) {
         ctx.addIssue({ code: 'custom', path: ['endDate'], message: `period longer than ${PERIOD_DAYS_MAX} days` });
       } else if (g.targetType === 'total' && dailyTarget(g) > DAILY_MINUTES_MAX) {
@@ -97,6 +100,7 @@ const RANGE_FIELDS = new Set(['name', 'why', 'note', 'targetMinutes', 'minutes',
 function isRangeIssue(issue: z.core.$ZodIssue): boolean {
   const field = issue.path[issue.path.length - 1];
   if (typeof field !== 'string' || !RANGE_FIELDS.has(field)) return false;
+  if ((issue as { params?: { structural?: boolean } }).params?.structural) return false;
   if (issue.code === 'too_big' || issue.code === 'too_small' || issue.code === 'custom') return true;
   // `12.5` for an integer field: zod reports invalid_type with expected 'int'.
   return issue.code === 'invalid_type' && issue.expected === 'int';

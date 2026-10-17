@@ -254,3 +254,28 @@ describe('Export never lets an error escape (M10-AC10, M3-P1, M8-P1)', () => {
     expect(unhandled.count.n).toBe(0);
   });
 });
+
+describe('M10-D2: a failed file creation is not a backup', () => {
+  it('URL.createObjectURL throws → EXPORT_FAILED alert, "Last backup: Never" stays, the never-backed-up banner stays, kv untouched', async () => {
+    const user = userEvent.setup();
+    await withTemp();
+    const realCreate = URL.createObjectURL;
+    Object.assign(URL, {
+      createObjectURL: () => {
+        throw new Error('cannot create object URL');
+      },
+      revokeObjectURL: vitest.fn(),
+    });
+    try {
+      await renderApp({ route: '/settings', container: tc });
+      expect(await screen.findByText(en.settings.backup.lastNever)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: en.settings.backup.export }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(en.errors.EXPORT_FAILED);
+      expect(screen.getByTestId('last-backup')).toHaveTextContent(en.settings.backup.lastNever);
+      expect(screen.getByTestId('backup-banner')).toHaveTextContent(en.backup.banner.never);
+      expect((await tc!.container.settingsService.get()).lastBackupAt).toBeNull();
+    } finally {
+      Object.assign(URL, { createObjectURL: realCreate });
+    }
+  });
+});

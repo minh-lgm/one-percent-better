@@ -48,11 +48,34 @@ const LABEL_CLEARANCE = 24;
 const LABEL_ABOVE_DY = -10;
 const LABEL_BELOW_DY = 14;
 /**
- * M9-D1: when a mouse press elsewhere blurs the chart, the reading line must not vanish (and shift
- * the layout) before that click lands. The line is cleared right after the next click, or after
- * this delay when no click follows (Tab away). Keyboard behaviour (Escape clears at once) is unchanged.
+ * M9-D1 / M10-D4: when a pointer press elsewhere blurs the chart, the reading line must not vanish
+ * (and shift the layout) before that click lands — however long the button is held. The line is
+ * cleared right after the next click; without a click (Tab away, or a press released elsewhere) it
+ * is cleared once this delay has passed AND no pointer is down. Escape still clears at once.
  */
 export const BLUR_CLEAR_DELAY_MS = 300;
+
+/** Is any pointer (mouse button, finger, pen) currently down on the document? */
+function usePointerDown() {
+  const down = useRef(false);
+  useEffect(() => {
+    const press = () => {
+      down.current = true;
+    };
+    const release = () => {
+      down.current = false;
+    };
+    document.addEventListener('pointerdown', press, true);
+    document.addEventListener('pointerup', release, true);
+    document.addEventListener('pointercancel', release, true);
+    return () => {
+      document.removeEventListener('pointerdown', press, true);
+      document.removeEventListener('pointerup', release, true);
+      document.removeEventListener('pointercancel', release, true);
+    };
+  }, []);
+  return down;
+}
 
 export default function CurveChart({ ideal, actual, label, testId }: CurveChartProps) {
   const { t } = useT();
@@ -63,6 +86,7 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
   const height = width < 520 ? 240 : 320;
   const [reading, setReading] = useState<number | null>(null);
   const blurCleanup = useRef<(() => void) | null>(null);
+  const pointerDown = usePointerDown();
 
   const cancelPendingBlur = () => {
     blurCleanup.current?.();
@@ -80,11 +104,24 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
     const afterClick = () => {
       window.setTimeout(clear, 0);
     };
-    const timer = window.setTimeout(clear, BLUR_CLEAR_DELAY_MS);
+    // Fallback when no click follows: wait for the delay, and for the pointer to be up (M10-D4: a
+    // press held longer than the delay must not see the layout jump under it).
+    let delayPassed = false;
+    const maybeClear = () => {
+      if (delayPassed && !pointerDown.current) window.setTimeout(clear, 0);
+    };
+    const timer = window.setTimeout(() => {
+      delayPassed = true;
+      maybeClear();
+    }, BLUR_CLEAR_DELAY_MS);
     document.addEventListener('click', afterClick, { once: true });
+    document.addEventListener('pointerup', maybeClear);
+    document.addEventListener('pointercancel', maybeClear);
     blurCleanup.current = () => {
       window.clearTimeout(timer);
       document.removeEventListener('click', afterClick);
+      document.removeEventListener('pointerup', maybeClear);
+      document.removeEventListener('pointercancel', maybeClear);
     };
   }
 
