@@ -29,6 +29,7 @@ async function cloudEntries(mock: { liveRows: (u: 'u1' | 'u2') => Promise<{ entr
   await expect.poll(async () => (await mock.liveRows('u1')).entries.length, { timeout: 15_000 }).toBe(n);
 }
 
+// QC M11 r1: callers read this with expect.poll - it used to be read once right after Save/syncNow, which raced the live query (flaky under load, also on the pre-M11 commit).
 async function amount(page: Parameters<typeof gotoHash>[0], name: string): Promise<string> {
   await gotoHash(page, '/today');
   return (await goalCard(page, name).locator('.amount').textContent())?.replace(/\s+/g, ' ').trim() ?? '';
@@ -67,8 +68,8 @@ test.describe('QC M7: cross-device create / edit / archive / delete converge', (
     const errB = collectErrors(b.page);
     await signInAsMinh(b.page);
     await expectSyncState(b.page, 'synced');
-    expect(await goalNames(b.page)).toEqual(['Alpha']);
-    expect(await amount(b.page, 'Alpha')).toContain('10/30');
+    await expect.poll(() => goalNames(b.page)).toEqual(['Alpha']);
+    await expect.poll(() => amount(b.page, 'Alpha')).toContain('10/30');
 
     // B: log more, archive Alpha, create Beta with an entry.
     await logTime(b.page, 'Alpha', 5);
@@ -81,10 +82,10 @@ test.describe('QC M7: cross-device create / edit / archive / delete converge', (
 
     // A picks it up.
     await syncNow(page);
-    expect(await goalNames(page)).toEqual(['Alpha', 'Beta']);
+    await expect.poll(() => goalNames(page)).toEqual(['Alpha', 'Beta']);
     await gotoHash(page, '/goals');
     await expect(page.getByRole('heading', { level: 2, name: /^Archived \(1\)/ })).toBeVisible();
-    expect(await amount(page, 'Beta')).toContain('20/20');
+    await expect.poll(() => amount(page, 'Beta')).toContain('20/20');
     await expect(goalCard(page, 'Alpha')).toHaveCount(0); // archived: not on Today
 
     // A restores Alpha and renames Beta; B deletes Alpha's sibling... then both converge again.
@@ -94,15 +95,15 @@ test.describe('QC M7: cross-device create / edit / archive / delete converge', (
     await renameGoal(page, betaId, 'Beta v2');
     await syncNow(page);
     await syncNow(b.page);
-    expect(await goalNames(b.page)).toEqual(['Alpha', 'Beta v2']);
-    expect(await amount(b.page, 'Alpha')).toContain('15/30'); // 10 (A) + 5 (B)
+    await expect.poll(() => goalNames(b.page)).toEqual(['Alpha', 'Beta v2']);
+    await expect.poll(() => amount(b.page, 'Alpha')).toContain('15/30'); // 10 (A) + 5 (B)
 
     // B deletes Beta v2 -> gone on A after its sync; Alpha stays.
     await sleep(1200);
     await deleteGoal(b.page, 'Beta v2');
     await syncNow(b.page);
     await syncNow(page);
-    expect(await goalNames(page)).toEqual(['Alpha']);
+    await expect.poll(() => goalNames(page)).toEqual(['Alpha']);
 
     const live = await mock.liveRows('u1');
     expect(live.goals.map((g) => g.name)).toEqual(['Alpha']);
@@ -146,10 +147,10 @@ test.describe('QC M7: cross-device create / edit / archive / delete converge', (
     await syncNow(page);
     await syncNow(b.page);
     const expected = ['Only on A', 'Only on B', 'Shared (B)'];
-    expect(await goalNames(page)).toEqual(expected);
-    expect(await goalNames(b.page)).toEqual(expected);
-    expect(await amount(page, 'Only on B')).toContain('6/10');
-    expect(await amount(b.page, 'Only on A')).toContain('4/10');
+    await expect.poll(() => goalNames(page)).toEqual(expected);
+    await expect.poll(() => goalNames(b.page)).toEqual(expected);
+    await expect.poll(() => amount(page, 'Only on B')).toContain('6/10');
+    await expect.poll(() => amount(b.page, 'Only on A')).toContain('4/10');
     const live = await mock.liveRows('u1');
     expect(live.goals.map((g) => g.name).sort()).toEqual(expected);
     expect(live.entries).toHaveLength(2);
@@ -169,14 +170,14 @@ test.describe('QC M7: failure modes of the sync engine keep every local change (
       await expectSyncState(page, 'error', 20_000);
       await expect(syncIndicator(page)).toContainText(EN.sync.indicator.error);
       await expect(page.getByTestId('sync-announce')).toHaveText(EN.sync.announce.error, { timeout: 5_000 });
-      expect(await amount(page, 'Read')).toContain('7/30');
+      await expect.poll(() => amount(page, 'Read')).toContain('7/30');
       await gotoHash(page, '/settings');
       await expect(page.getByTestId('sync-error')).toContainText(EN.errors.SYNC_UNREACHABLE);
       expect(await pendingCount(page)).toBeGreaterThan(0);
       // New writes still work while sync is failing.
       await gotoHash(page, '/today');
       await logTime(page, 'Read', 3);
-      expect(await amount(page, 'Read')).toContain('10/30');
+      await expect.poll(() => amount(page, 'Read')).toContain('10/30');
       await mock.clearFailures();
       await gotoHash(page, '/settings');
       await page.getByTestId('sync-now').click();
@@ -196,7 +197,7 @@ test.describe('QC M7: failure modes of the sync engine keep every local change (
     await gotoHash(page, '/today');
     await logTime(page, 'Read', 7);
     await expect(syncIndicator(page)).toHaveAttribute('data-state', /^(offline|error)$/, { timeout: 15_000 });
-    expect(await amount(page, 'Read')).toContain('7/30');
+    await expect.poll(() => amount(page, 'Read')).toContain('7/30');
     await page.unroute('**/rest/v1/**');
     await gotoHash(page, '/settings');
     await page.getByTestId('sync-now').click();
@@ -217,7 +218,7 @@ test.describe('QC M7: failure modes of the sync engine keep every local change (
     await gotoHash(page, '/today');
     await logTime(page, 'Read', 7);
     await expectSyncState(page, 'syncing', 10_000);
-    expect(await amount(page, 'Read')).toContain('7/30'); // usable while the call hangs
+    await expect.poll(() => amount(page, 'Read')).toContain('7/30'); // usable while the call hangs
     await expectSyncState(page, 'error', 30_000);
     const waited = Date.now() - started;
     expect(waited).toBeGreaterThan(17_000);
@@ -241,7 +242,7 @@ test.describe('QC M7: failure modes of the sync engine keep every local change (
     await expectSyncState(page, 'expired', 15_000);
     await expect(syncIndicator(page)).toHaveAttribute('href', /#\/settings$/);
     await expect(page.getByTestId('sync-announce')).toHaveText(EN.sync.announce.expired, { timeout: 5_000 });
-    expect(await amount(page, 'Read')).toContain('7/30');
+    await expect.poll(() => amount(page, 'Read')).toContain('7/30');
     await gotoHash(page, '/settings');
     await expect(accountCard(page)).toHaveAttribute('data-state', 'expired');
     await expect(accountCard(page)).toContainText('minh.test@example.com');

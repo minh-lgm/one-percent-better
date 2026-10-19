@@ -68,15 +68,45 @@ describe('M10-D3 (r2): impossible dates are structured schema errors', () => {
     }
   });
 
+  // M11 (QC r1 re-target): `endDate: null` is a legal value now (open-ended daily goal, FR-20 v4.0), so it is no longer in the
+  // "wrong type" list for endDate; it stays there for startDate. null for endDate is covered by the next two tests.
   it('non-string dates (number, null, object, array, boolean) do not throw', async () => {
     for (const bad of [20260101, null, {}, [], true, 1e21]) {
       for (const field of ['startDate', 'endDate'] as const) {
+        if (field === 'endDate' && bad === null) continue;
         const f = base();
         f.goals[0]![field] = bad;
         const res = await parse(f);
         expect(res.ok).toBe(false);
         if (!res.ok) expect(res.errors[0]!.code).toBe('IMPORT_INVALID_SCHEMA');
       }
+    }
+  });
+
+  it('M11: goal.endDate = null is accepted for a daily goal (g1) and still never throws', async () => {
+    const f = base();
+    f.goals[0]!.endDate = null;
+    const res = await parse(f);
+    expect(res.ok).toBe(true);
+  });
+
+  it('M11: endDate null is rejected (outOfRange variant) for a total goal (g3); a MISSING endDate key stays the generic schema error', async () => {
+    const f = base();
+    const g3 = f.goals.find((g) => g.targetType === 'total')!;
+    g3.endDate = null;
+    const res = await parse(f);
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.errors[0]!.code).toBe('IMPORT_INVALID_SCHEMA');
+      expect(keyOf(res.errors[0]!)).toBe('errors.IMPORT_INVALID_SCHEMA_outOfRange');
+    }
+    const g = base();
+    delete g.goals[0]!.endDate;
+    const res2 = await parse(g);
+    expect(res2.ok).toBe(false);
+    if (!res2.ok) {
+      expect(res2.errors[0]!.code).toBe('IMPORT_INVALID_SCHEMA');
+      expect(keyOf(res2.errors[0]!)).toBe('errors.IMPORT_INVALID_SCHEMA');
     }
   });
 

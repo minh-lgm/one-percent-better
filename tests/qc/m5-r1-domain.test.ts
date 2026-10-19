@@ -22,6 +22,11 @@ const pow101 = (n: number) => {
   return v;
 };
 
+/** M11 (QC r1 re-target): `Goal.endDate` is `ISODate | null`; this oracle models finite goals only (open-ended: tests/qc/m11-r1-open-ended.test.ts). */
+const endOf = (g: Goal): string => {
+  if (g.endDate === null) throw new Error('oracle models finite goals only');
+  return g.endDate;
+};
 function goal(p: Partial<Goal> & Pick<Goal, 'startDate' | 'endDate'>): Goal {
   return { id: 'g', name: 'G', why: '', targetType: 'daily', targetMinutes: 30, archived: false, createdAt: '2020-01-01T00:00:00.000Z', updatedAt: '2020-01-01T00:00:00.000Z', ...p };
 }
@@ -75,11 +80,11 @@ interface Oracle {
   factor: number;
 }
 function oracle(g: Goal, entries: LogEntry[], today: string): Oracle {
-  const days = diff(g.startDate, g.endDate) + 1;
+  const days = diff(g.startDate, endOf(g)) + 1;
   const ideal = [];
   for (let k = 1; k <= days; k++) ideal.push({ date: add(g.startDate, k - 1), v: pow101(k) });
   const actual: OPoint[] = [];
-  const last = today < g.startDate ? null : today < g.endDate ? today : g.endDate;
+  const last = today < g.startDate ? null : today < endOf(g) ? today : endOf(g);
   let line: Frac = frac(1, 1);
   let baseline: Ref | null = null;
   let latest: Ref | null = null;

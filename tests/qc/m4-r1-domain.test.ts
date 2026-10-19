@@ -13,15 +13,20 @@ const D = (s: string) => new Date(`${s}T00:00:00Z`);
 const S = (d: Date) => d.toISOString().slice(0, 10);
 const add = (s: string, n: number) => S(new Date(D(s).getTime() + n * 86_400_000));
 const diff = (a: string, b: string) => Math.round((D(b).getTime() - D(a).getTime()) / 86_400_000);
+/** M11 (QC r1 re-target): `Goal.endDate` is `ISODate | null`; this oracle models finite goals only (open-ended goals: tests/qc/m11-r1-open-ended.test.ts). */
+const endOf = (g: Goal): string => {
+  if (g.endDate === null) throw new Error('oracle models finite goals only');
+  return g.endDate;
+};
 
 function dailyOf(g: Goal): number {
-  return g.targetType === 'daily' ? g.targetMinutes : Math.ceil(g.targetMinutes / (diff(g.startDate, g.endDate) + 1));
+  return g.targetType === 'daily' ? g.targetMinutes : Math.ceil(g.targetMinutes / (diff(g.startDate, endOf(g)) + 1));
 }
 function minutesOf(entries: LogEntry[], goalId: string | null, date: string): number {
   return entries.filter((e) => e.date === date && (goalId === null || e.goalId === goalId)).reduce((a, e) => a + e.minutes, 0);
 }
 function metOnGoal(g: Goal, entries: LogEntry[], date: string): boolean {
-  if (date < g.startDate || date > g.endDate) return false;
+  if (date < g.startDate || date > endOf(g)) return false;
   const m = minutesOf(entries, g.id, date);
   return m > 0 && m >= dailyOf(g);
 }
@@ -115,14 +120,14 @@ describe('M4 QC oracle: per-goal and overall stats on random datasets (year/leap
           for (const g of goals) {
             const ge = entries.filter((e) => e.goalId === g.id);
             const s = goalStats(g, ge, year, today);
-            const r = runs((d) => metOnGoal(g, entries, d), g.startDate, g.endDate > today ? today : g.endDate, today);
+            const r = runs((d) => metOnGoal(g, entries, d), g.startDate, endOf(g) > today ? today : endOf(g), today);
             expect({ c: s.currentStreak, l: s.longestStreak }, `${g.id} streak`).toEqual({ c: r.cur, l: r.longest });
             const total = ge.reduce((a, e) => a + e.minutes, 0);
-            const totalTarget = g.targetType === 'daily' ? g.targetMinutes * (diff(g.startDate, g.endDate) + 1) : g.targetMinutes;
+            const totalTarget = g.targetType === 'daily' ? g.targetMinutes * (diff(g.startDate, endOf(g)) + 1) : g.targetMinutes;
             expect(s.minutesTotal).toBe(total);
             expect(s.totalTarget).toBe(totalTarget);
             expect(s.progressPercent).toBeCloseTo(Math.round((total / totalTarget) * 1000) / 10, 9);
-            const elapsed = today < g.startDate ? 0 : diff(g.startDate, today < g.endDate ? today : g.endDate) + 1;
+            const elapsed = today < g.startDate ? 0 : diff(g.startDate, today < endOf(g) ? today : endOf(g)) + 1;
             expect(s.elapsedDays).toBe(elapsed);
             expect(s.pace).toBe(elapsed === 0 ? 0 : total - dailyOf(g) * elapsed);
             const inYear = ge.filter((e) => e.date.startsWith(`${year}-`));
@@ -154,7 +159,7 @@ describe('M4 QC oracle: heatmap grid and levels', () => {
               expect(c.col).toBe(Math.floor((jan1Row + i) / 7));
               expect(c.today).toBe(date === today);
               if (date > today) return expect(c.state).toBe('future');
-              if (goal && (date < goal.startDate || date > goal.endDate)) return expect(c.state).toBe('outside');
+              if (goal && (date < goal.startDate || date > endOf(goal))) return expect(c.state).toBe('outside');
               const m = minutesOf(entries, goal ? goal.id : null, date);
               expect(c.minutes).toBe(m);
               expect(c.state).toBe(m > 0 ? 'logged' : 'none');
