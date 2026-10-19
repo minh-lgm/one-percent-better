@@ -1,9 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi as vitest } from 'vitest';
 import en from '../../i18n/resources/en.json';
 import vi from '../../i18n/resources/vi.json';
-import { datasetS1 } from '../../test/builders';
+import { datasetS1, datasetS1O1 } from '../../test/builders';
 import { createTestContainer, type TestContainer } from '../../test/container';
 import { renderApp, scanVi } from '../../test/render-with-locale';
 
@@ -144,6 +144,67 @@ describe('Goals (M1-AC5, M1-AC9, M1-AC18)', () => {
     await waitFor(() => expect(dialog).toHaveAttribute('open'));
     expect(within(dialog).getByRole('heading', { name: 'Xóa mục tiêu "Read"?' })).toBeInTheDocument();
     expect(within(dialog).getByText('Thao tác này xóa vĩnh viễn mục tiêu và 8 lần ghi của nó. Bạn không thể hoàn tác.')).toBeInTheDocument();
+    expect(scanVi()).toEqual([]);
+  });
+});
+
+// ---- v4.0 (M11-AC10, DESIGN S2 / 7.6.2): the open-ended row ----
+describe('Goals — open-ended goal O1 (M11-AC10, FR-05, FR-56)', () => {
+  async function seededS1O1(locale: 'en' | 'vi' = 'en') {
+    tc = await createTestContainer({ locale });
+    const { goals, entries } = datasetS1O1();
+    await tc.container.db.goals.bulkPut(goals);
+    await tc.container.db.entries.bulkPut(entries);
+    return tc;
+  }
+
+  it('en: "10 min/day · from 2026-10-01, no end date" in Active (4), last by createdAt; no dash, no 2026-12-31, no Ended line', async () => {
+    await seededS1O1();
+    await renderApp({ route: '/goals', container: tc });
+    await screen.findByRole('heading', { level: 2, name: 'Active (4)' });
+    const active = screen.getByRole('heading', { level: 2, name: 'Active (4)' }).closest('section')!;
+    expect(within(active).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Read', 'Guitar', 'Spanish', 'Meditate']);
+    const row = screen.getByRole('heading', { level: 3, name: 'Meditate' }).closest('li')!;
+    expect(within(row).getByText('10 min/day · from 2026-10-01, no end date')).toBeInTheDocument();
+    expect(within(row).getByText(en.goal.status.active)).toBeInTheDocument();
+    expect(row.textContent).not.toContain('–');
+    expect(row.textContent).not.toContain('2026-12-31');
+    expect(row.textContent).not.toContain('Ended');
+    expect(within(row).getByRole('link', { name: en.common.edit })).toHaveAttribute('href', '/goals/o1/edit');
+  });
+
+  it('five years later (2031-10-02) O1 is still Active while every S1 goal has ended; never a badge or group "Ended" for it', async () => {
+    vitest.setSystemTime(new Date('2031-10-02T10:00:00+07:00'));
+    await seededS1O1();
+    await renderApp({ route: '/goals', container: tc });
+    await screen.findByRole('heading', { level: 2, name: 'Active (1)' });
+    expect(screen.getByRole('heading', { level: 2, name: 'Ended (5)' })).toBeInTheDocument();
+    const active = screen.getByRole('heading', { level: 2, name: 'Active (1)' }).closest('section')!;
+    expect(within(active).getByRole('heading', { level: 3, name: 'Meditate' })).toBeInTheDocument();
+    const row = within(active).getByRole('heading', { level: 3, name: 'Meditate' }).closest('li')!;
+    expect(within(row).getByText(en.goal.status.active)).toBeInTheDocument();
+    expect(row.textContent).not.toContain('Ended');
+    const ended = screen.getByRole('heading', { level: 2, name: 'Ended (5)' }).closest('section')!;
+    expect(within(ended).queryByRole('heading', { level: 3, name: 'Meditate' })).toBeNull();
+  });
+
+  it('upcoming open-ended goal: badge Upcoming + "Starts {date}" line, same open-ended row text', async () => {
+    await seededS1O1();
+    await tc!.container.db.goals.update('o1', { startDate: '2026-11-01' });
+    await renderApp({ route: '/goals', container: tc });
+    await screen.findByRole('heading', { level: 2, name: 'Upcoming (2)' });
+    const row = screen.getByRole('heading', { level: 3, name: 'Meditate' }).closest('li')!;
+    expect(within(row).getByText(en.goal.status.upcoming)).toBeInTheDocument();
+    expect(within(row).getByText('Starts 2026-11-01')).toBeInTheDocument();
+    expect(within(row).getByText('10 min/day · from 2026-11-01, no end date')).toBeInTheDocument();
+  });
+
+  it('vi: "10 phút/ngày · từ 01/10/2026, không có thời hạn", no English leaks', async () => {
+    await seededS1O1('vi');
+    await renderApp({ route: '/goals', container: tc });
+    await screen.findByRole('heading', { level: 2, name: 'Đang chạy (4)' });
+    const row = screen.getByRole('heading', { level: 3, name: 'Meditate' }).closest('li')!;
+    expect(within(row).getByText('10 phút/ngày · từ 01/10/2026, không có thời hạn')).toBeInTheDocument();
     expect(scanVi()).toEqual([]);
   });
 });

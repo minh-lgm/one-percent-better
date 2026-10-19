@@ -67,3 +67,35 @@ describe('en.json / vi.json match DESIGN v3.1 verbatim (M10-AC11)', () => {
     expect(EN['auth.signOut.rejectedRemove']).toBe('If you remove the data from this device, anything that couldn\'t be uploaded will be lost. Export a backup first to keep it.');
   });
 });
+
+// ---- v4.0 (M11-AC11): the 12 keys of DESIGN v4.0, verbatim in both languages ----
+const KEYS_V4 = [
+  'goal.form.endsNever',
+  'goal.form.endsNeverHint',
+  'goal.form.endsNeverTotalNote',
+  'goal.form.endsNeverSwitched',
+  'goals.rowDailyOpen',
+  'goal.detail.subDayOpen',
+  'goal.detail.chartSummaryOpen',
+  'goal.detail.chartSummaryEmptyOpen',
+  'stat.progressSubOpen',
+  'review.progressNoteOpen',
+  'errors.GOAL_PERIOD_INVALID_openEndedTotal',
+  'errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded',
+];
+
+describe('en.json / vi.json match DESIGN v4.0 verbatim (M11-AC11, A-56)', () => {
+  for (const key of KEYS_V4) {
+    it(key, () => {
+      const expected = designCopy(key);
+      expect(EN[key], `en ${key}`).toBe(expected.en);
+      expect(VI[key], `vi ${key}`).toBe(expected.vi);
+    });
+  }
+
+  it('the vi label of the third radio is the user\'s wording (A-56); en is "No end date" (A-D61)', () => {
+    expect(VI['goal.form.endsNever']).toBe('Không có thời hạn');
+    expect(EN['goal.form.endsNever']).toBe('No end date');
+    expect(KEYS_V4).toHaveLength(12);
+  });
+});

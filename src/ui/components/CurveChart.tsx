@@ -151,6 +151,11 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
   const [lo, hi] = scale.domain;
   const longestTick = Math.max(...scale.ticks.map((v) => f.axisPercent(v).length));
   const yAxisWidth = Math.max(44, Math.round(6.6 * longestTick + 14));
+  // v4.0 (DESIGN S4 rule 6, A-D59): an open-ended goal on its first day has one point per line — centre it
+  // horizontally instead of pinning it to the left edge (no fake point for tomorrow).
+  const singlePoint = data.length === 1;
+  const halfPlot = Math.max(0, (width - MARGIN.left - MARGIN.right - yAxisWidth) / 2);
+  const xPadding = singlePoint ? { left: Math.floor(halfPlot), right: Math.floor(halfPlot) } : undefined;
 
   // Direct labels (DESIGN rule 5): above the dot by default, below when they would hit the top
   // of the plot; when the two dots are close, the higher series goes above and the lower below.
@@ -250,7 +255,7 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
         <div aria-hidden="true">
           <LineChart width={width} height={height} data={data} margin={MARGIN} accessibilityLayer={false}>
             <CartesianGrid vertical={false} stroke="var(--border)" />
-            <XAxis dataKey="date" height={X_AXIS_HEIGHT} tickFormatter={(d: string) => f.dateMonthDay(d)} interval="preserveStartEnd" minTickGap={48} tickLine={false} axisLine={{ stroke: 'var(--border)' }} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+            <XAxis dataKey="date" height={X_AXIS_HEIGHT} padding={xPadding} tickFormatter={(d: string) => f.dateMonthDay(d)} interval="preserveStartEnd" minTickGap={48} tickLine={false} axisLine={{ stroke: 'var(--border)' }} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
             <YAxis width={yAxisWidth} tickLine={false} axisLine={false} domain={scale.domain} ticks={scale.ticks} interval={0} tickFormatter={(v: number) => f.axisPercent(v)} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
             <ReferenceLine y={0} className="zero-line" stroke="var(--chart-zero)" strokeWidth={1.5} ifOverflow="extendDomain" />
             <Tooltip content={renderTooltip} cursor={{ stroke: 'var(--text-muted)', strokeDasharray: '2 3' }} isAnimationActive={false} active={reading !== null ? true : undefined} defaultIndex={reading ?? undefined} />

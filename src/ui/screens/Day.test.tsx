@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import en from '../../i18n/resources/en.json';
 import vi from '../../i18n/resources/vi.json';
-import { buildEntry, datasetS1 } from '../../test/builders';
+import { buildEntry, datasetO1, datasetS1 } from '../../test/builders';
 import { createTestContainer, type TestContainer } from '../../test/container';
 import { renderApp, scanVi } from '../../test/render-with-locale';
 
@@ -203,5 +203,23 @@ describe('Today links to the Day screen (M3-T1)', () => {
     await renderApp({ route: '/today', container: tc });
     const guitar = await screen.findByRole('article', { name: 'Guitar' });
     expect(within(guitar).getByText('0/20')).toBeInTheDocument();
+  });
+});
+
+// ---- v4.0 (M11-AC10, DESIGN S5): an open-ended goal is present on every day from its start ----
+describe('Day — open-ended goal O1 (M11-AC10, FR-17)', () => {
+  it('2026-10-05 lists Meditate (10/10 logged); 2026-09-30 does not; a far-future year still lists it once reached', async () => {
+    await withS1();
+    const o1 = datasetO1();
+    await tc!.container.db.goals.bulkPut(o1.goals);
+    await tc!.container.db.entries.bulkPut(o1.entries);
+    const app = await renderApp({ route: '/day/2026-10-05', container: tc });
+    const list = await screen.findByRole('list', { name: en.day.goalsLabel });
+    expect(within(list).getAllByRole('article').map((c) => within(c).getByRole('heading', { level: 2 }).textContent)).toEqual(['Read', 'Guitar', 'Spanish', 'Meditate']);
+    expect(within(list).getByRole('article', { name: 'Meditate' })).toHaveTextContent('10/10');
+    app.unmount();
+    await renderApp({ route: '/day/2026-09-30', container: tc });
+    const list2 = await screen.findByRole('list', { name: en.day.goalsLabel });
+    expect(within(list2).getAllByRole('article').map((c) => within(c).getByRole('heading', { level: 2 }).textContent)).toEqual(['Guitar', 'Spanish']);
   });
 });

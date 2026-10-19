@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi as vitest } from 'vitest';
 import en from '../../i18n/resources/en.json';
 import vi from '../../i18n/resources/vi.json';
-import { buildGoal, datasetR1, datasetR3, datasetS1, FIXED_NOW, FIXED_NOW_R1 } from '../../test/builders';
+import { buildEntry, buildGoal, datasetO1, datasetR1, datasetR3, datasetS1, FIXED_NOW, FIXED_NOW_R1 } from '../../test/builders';
 import { createTestContainer, type TestContainer } from '../../test/container';
 import { renderApp, scanVi } from '../../test/render-with-locale';
 
@@ -399,6 +399,140 @@ describe('Goal detail — Vietnamese (M9-AC5)', () => {
     tc!.container.entryService.watchByGoal = () => ({ subscribe: (_n, onError) => (onError?.(new Error('boom')), () => {}) });
     await renderApp({ route: '/goals/g1', container: tc });
     expect(await screen.findByTestId('error-state')).toHaveTextContent(vi.errors.loadViewTitle);
+    expect(scanVi()).toEqual([]);
+  });
+});
+
+// ---- v4.0 (M11-AC10, M11-AC11; DESIGN S4 "Goal không thời hạn", 7.6.4): dataset O1 ----
+describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0, FR-56)', () => {
+  async function withO1(locale: 'en' | 'vi' = 'en', now: Date = FIXED_NOW, goalPatch: Partial<ReturnType<typeof buildGoal>> = {}, entries = datasetO1().entries) {
+    vitest.setSystemTime(now);
+    tc = await createTestContainer({ locale });
+    await tc.container.db.goals.bulkPut([{ ...datasetO1().goals[0], ...goalPatch }]);
+    await tc.container.db.entries.bulkPut(entries);
+    return tc;
+  }
+
+  it('at 2026-10-09: info "from 2026-10-01, no end date", +100.0% better, "Day 9" (no total), "Last logged Oct 8 …", open summary, NO Range, 9 + 9 points, 9 table rows ending today, stats 61.1 % / 35 min behind / 1 / 2', async () => {
+    const user = userEvent.setup();
+    await withO1();
+    await renderApp({ route: '/goals/o1', container: tc });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Meditate' })).toBeInTheDocument();
+    expect(screen.getByText('10 min/day · from 2026-10-01, no end date')).toBeInTheDocument();
+    expect(screen.getByText(en.goal.status.active)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+100.0% better'), SLOW);
+    expect(screen.getByTestId('headline')).toHaveAttribute('data-sign', 'positive');
+    expect(screen.getByTestId('headline-day')).toHaveTextContent(/^Day 9$/);
+    expect(screen.getByTestId('headline-day').textContent).not.toContain('of');
+    expect(norm(screen.getByTestId('headline-sub').textContent)).toBe('Last logged Oct 8: 20 min, +100.0% vs Oct 5 (10 min). ×2 since Oct 1 (10 min).');
+    expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'earlier');
+    expect(screen.getByRole('heading', { level: 2, name: en.goal.detail.chartTitle })).toBeInTheDocument();
+    expect(screen.getByTestId('curve-summary')).toHaveTextContent('Day 9: your line is +100.0% compared with your first logged day. The ideal line is +9.4%.');
+    expect(screen.queryByRole('radio', { name: en.goal.detail.rangeWhole })).toBeNull();
+    expect(screen.queryByRole('radio', { name: en.goal.detail.rangeSoFar })).toBeNull();
+    expect(screen.queryByRole('group', { name: en.goal.detail.rangeLegend })).toBeNull();
+    const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
+    expect(chart).toHaveAccessibleName('Day 9: your line is +100.0% compared with your first logged day. The ideal line is +9.4%.');
+    expect(chart).toHaveAttribute('data-ideal', '9');
+    expect(chart).toHaveAttribute('data-actual', '9');
+    const table = await openTable(user, en);
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(9);
+    expect(within(rows[0]).getByRole('rowheader')).toHaveTextContent('2026-10-01');
+    expect(within(rows[8]).getByRole('rowheader')).toHaveTextContent('2026-10-09');
+    expect(cellsOf(rows[0])).toEqual(['+1.0%', '+0.0%', '10', '—']);
+    expect(cellsOf(rows[1])).toEqual(['+2.0%', '+50.0%', '15', '+50.0%']);
+    expect(cellsOf(rows[4])).toEqual(['+5.1%', '+0.0%', '10', `${MINUS}33.3%`]);
+    expect(cellsOf(rows[7])).toEqual(['+8.3%', '+100.0%', '20', '+100.0%']);
+    expect(cellsOf(rows[8])).toEqual(['+9.4%', '+100.0%', '0', '—']);
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('61.1%');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('55 of 90 min expected so far');
+    expect(within(screen.getByTestId('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '61.1');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('35 min behind');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Expected 90 min by today');
+    expect(screen.getByTestId('stat-current')).toHaveTextContent('1 day');
+    expect(screen.getByTestId('stat-longest')).toHaveTextContent('2 days');
+    expect(screen.getAllByTestId('history-row')).toHaveLength(4);
+  });
+
+  it('not started yet (start 2026-11-01): badge Upcoming, +0.0% better, "Starts …" line, NO chart card at all, Progress 0.0% "0 of 0 min expected so far", On pace', async () => {
+    await withO1('en', FIXED_NOW, { startDate: '2026-11-01' }, []);
+    await renderApp({ route: '/goals/o1', container: tc });
+    await screen.findByRole('heading', { level: 1, name: 'Meditate' });
+    expect(screen.getByText(en.goal.status.upcoming)).toBeInTheDocument();
+    expect(screen.getByText('10 min/day · from 2026-11-01, no end date')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+0.0% better'), SLOW);
+    expect(screen.getByTestId('headline-sub')).toHaveTextContent('Starts 2026-11-01. Your line will appear once the goal begins.');
+    expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'upcoming');
+    expect(screen.queryByTestId('headline-day')).toBeNull();
+    expect(screen.queryByRole('heading', { level: 2, name: en.goal.detail.chartTitle })).toBeNull();
+    expect(screen.queryByTestId('curve-chart')).toBeNull();
+    expect(screen.queryByTestId('curve-summary')).toBeNull();
+    expect(screen.queryByTestId('curve-legend')).toBeNull();
+    expect(screen.queryByText(en.goal.detail.showTable)).toBeNull();
+    expect(screen.queryByRole('radio', { name: en.goal.detail.rangeWhole })).toBeNull();
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('0.0%');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('0 of 0 min expected so far');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent(en.stat.paceOnTrack);
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Expected 0 min by today');
+    expect(screen.getByTestId('stat-current')).toHaveTextContent('0 days');
+    expect(screen.getByRole('heading', { level: 2, name: en.goal.detail.historyTitle })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: en.empty.detail.history })).toBeInTheDocument();
+  });
+
+  it('first day (start = today, 10 min logged): "Day 1", one point per line, summary "Day 1: … +0.0% … +1.0%"', async () => {
+    await withO1('en', FIXED_NOW, { startDate: '2026-10-09' }, [buildEntry({ id: 'x', goalId: 'o1', date: '2026-10-09', minutes: 10 })]);
+    await renderApp({ route: '/goals/o1', container: tc });
+    await screen.findByRole('heading', { level: 1, name: 'Meditate' });
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+0.0% better'), SLOW);
+    expect(screen.getByTestId('headline-day')).toHaveTextContent(/^Day 1$/);
+    expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'start');
+    expect(screen.getByTestId('curve-summary')).toHaveTextContent('Day 1: your line is +0.0% compared with your first logged day. The ideal line is +1.0%.');
+    const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
+    expect(chart).toHaveAttribute('data-ideal', '1');
+    expect(chart).toHaveAttribute('data-actual', '1');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('100.0%');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('10 of 10 min expected so far');
+  });
+
+  it('five years later (2031-10-02): still Active, "Day 1,828", 1,828 points, summary without a total; log 10 min → the Progress denominator grows by the day', async () => {
+    await withO1('en', new Date('2031-10-02T10:00:00+07:00'));
+    await renderApp({ route: '/goals/o1', container: tc });
+    await screen.findByRole('heading', { level: 1, name: 'Meditate' });
+    expect(screen.getByText(en.goal.status.active)).toBeInTheDocument();
+    expect(screen.queryByText(en.goal.status.ended)).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+100.0% better'), SLOW);
+    expect(screen.getByTestId('headline-day')).toHaveTextContent(/^Day 1,828$/);
+    expect(screen.getByTestId('curve-summary').textContent).toMatch(/^Day 1,828: your line is \+100\.0% compared with your first logged day\. The ideal line is \+[\d,]+(\.\d)?%\.$/);
+    const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
+    expect(chart).toHaveAttribute('data-ideal', '1828');
+    expect(chart).toHaveAttribute('data-actual', '1828');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('55 of 18,280 min expected so far');
+    expect(screen.queryByRole('radio', { name: en.goal.detail.rangeSoFar })).toBeNull();
+  });
+
+  it('vi: "Tốt hơn +100,0%", "Ngày 9", summary and Progress "55/90 phút dự kiến đến nay", "Chậm 35 phút", info row, no Range, no English leaks (also upcoming)', async () => {
+    await withO1('vi');
+    const app = await renderApp({ route: '/goals/o1', container: tc });
+    await screen.findByRole('heading', { level: 1, name: 'Meditate' });
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('Tốt hơn +100,0%'), SLOW);
+    expect(screen.getByText('10 phút/ngày · từ 01/10/2026, không có thời hạn')).toBeInTheDocument();
+    expect(screen.getByTestId('headline-day')).toHaveTextContent(/^Ngày 9$/);
+    expect(screen.getByTestId('curve-summary')).toHaveTextContent('Ngày 9: đường của bạn ở mức +100,0% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức +9,4%.');
+    expect(screen.queryByRole('radio', { name: vi.goal.detail.rangeWhole })).toBeNull();
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('61,1%');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('55/90 phút dự kiến đến nay');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Chậm 35 phút');
+    await screen.findByTestId('curve-chart', undefined, SLOW);
+    expect(scanVi()).toEqual([]);
+    app.unmount();
+    await tc!.dispose();
+    await withO1('vi', FIXED_NOW, { startDate: '2026-11-01' }, []);
+    await renderApp({ route: '/goals/o1', container: tc });
+    await screen.findByRole('heading', { level: 1, name: 'Meditate' });
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('Tốt hơn +0,0%'), SLOW);
+    expect(screen.queryByTestId('curve-chart')).toBeNull();
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('0/0 phút dự kiến đến nay');
     expect(scanVi()).toEqual([]);
   });
 });

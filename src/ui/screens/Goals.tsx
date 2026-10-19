@@ -103,6 +103,8 @@ export function Goals() {
   const sections = allSections.filter((s) => s.items.length > 0);
 
   function rowLine(goal: Goal): string {
+    // v4.0 (DESIGN 7.6.2): an open-ended goal has no range — "from {start}, no end date".
+    if (goal.endDate === null) return t('goals.rowDailyOpen', { n: f.number(goal.targetMinutes), start: f.dateShort(goal.startDate) });
     const range = f.dateRange(goal.startDate, goal.endDate);
     if (goal.targetType === 'daily') return t('goals.rowDaily', { n: f.number(goal.targetMinutes), range });
     return t('goals.rowTotal', { daily: f.number(dailyTarget(goal)), hours: f.number(goal.targetMinutes / 60), range });
@@ -156,7 +158,7 @@ export function Goals() {
                       </div>
                       <p className="muted small num">{rowLine(goal)}</p>
                       {status === 'upcoming' ? <p className="muted small num">{t('goals.startsOn', { date: f.dateShort(goal.startDate) })}</p> : null}
-                      {status === 'ended' ? <p className="muted small num">{t('goals.endedOn', { date: f.dateShort(goal.endDate) })}</p> : null}
+                      {status === 'ended' && goal.endDate !== null ? <p className="muted small num">{t('goals.endedOn', { date: f.dateShort(goal.endDate) })}</p> : null}
                       {goal.why ? <p className="muted small why">{goal.why}</p> : null}
                     </div>
                     <div className="gr-actions">

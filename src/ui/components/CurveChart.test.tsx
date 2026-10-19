@@ -6,7 +6,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { curve } from '../../domain/curve';
-import { buildEntry, datasetR1, datasetR4, datasetS1, TODAY, TODAY_R1 } from '../../test/builders';
+import { buildEntry, datasetO1, datasetR1, datasetR4, datasetS1, TODAY, TODAY_R1 } from '../../test/builders';
 import type { TestContainer } from '../../test/container';
 import { renderWithLocale, scanVi } from '../../test/render-with-locale';
 import CurveChart, { BLUR_CLEAR_DELAY_MS } from './CurveChart';
@@ -284,5 +284,41 @@ describe('M10-D4: a press held longer than the fallback delay keeps the reading 
     fireEvent.blur(chart);
     fireEvent.pointerCancel(document.body);
     await waitFor(() => expect(reading).toHaveTextContent(''), { timeout: 1000 });
+  });
+});
+
+// ---- v4.0 (M11, DESIGN S4 rule 6 / A-D59): one point per line sits in the middle of the plot ----
+describe('CurveChart — open-ended goal on its first day (M11-T5)', () => {
+  it('a single point: both reference dots share one x in the middle of the plot (not on the left edge), labels Ideal +1.0% / You +0.0%, one X tick', async () => {
+    const goal = { ...datasetO1().goals[0], startDate: TODAY };
+    const single = curve(goal, [buildEntry({ id: 'x', goalId: 'o1', date: TODAY, minutes: 10 })], TODAY);
+    expect(single.ideal).toHaveLength(1);
+    const r = await renderWithLocale(<CurveChart ideal={single.ideal} actual={single.actual} label="Day 1" testId="curve-chart" />);
+    tc = r.tc;
+    const chart = screen.getByTestId('curve-chart');
+    await waitFor(() => expect(chart.querySelectorAll('.recharts-reference-dot')).toHaveLength(2));
+    const xs = Array.from(chart.querySelectorAll('.recharts-reference-dot circle')).map((c) => Number(c.getAttribute('cx')));
+    expect(xs).toHaveLength(2);
+    expect(xs[0]).toBe(xs[1]);
+    // jsdom width 320, y axis ≥ 44 px, right margin 24 → the plot spans ≈ 44 … 296; the middle is ≈ 170.
+    expect(xs[0]).toBeGreaterThan(120);
+    expect(xs[0]).toBeLessThan(220);
+    expect(chart.textContent).toContain('Ideal +1.0%');
+    expect(chart.textContent).toContain('You +0.0%');
+    expect(chart.querySelectorAll('.recharts-xAxis .recharts-cartesian-axis-tick').length + chart.querySelectorAll('.recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('nine points (O1 at 2026-10-09): no extra padding, the today dot is at the right edge and You reads +100.0%', async () => {
+    const o1 = datasetO1();
+    const c = curve(o1.goals[0], o1.entries, TODAY);
+    const r = await renderWithLocale(<CurveChart ideal={c.ideal} actual={c.actual} label="Day 9" testId="curve-chart" />);
+    tc = r.tc;
+    const chart = screen.getByTestId('curve-chart');
+    await waitFor(() => expect(chart.querySelectorAll('.recharts-reference-dot')).toHaveLength(2));
+    const xs = Array.from(chart.querySelectorAll('.recharts-reference-dot circle')).map((c) => Number(c.getAttribute('cx')));
+    expect(xs[0]).toBeGreaterThan(250);
+    expect(chart.textContent).toContain('You +100.0%');
+    expect(chart.textContent).toContain('Ideal +9.4%');
+    expect(chart.querySelectorAll('.curve-dot')).toHaveLength(4);
   });
 });

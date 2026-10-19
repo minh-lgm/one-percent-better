@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { isValidISODate, isWithin, toISODate } from '../../domain/dates';
+import { isValidISODate, toISODate } from '../../domain/dates';
 import { minutesByGoal } from '../../domain/entry';
-import { byCreatedAt, dailyTarget } from '../../domain/goal';
+import { byCreatedAt, dailyTarget, isWithinGoal } from '../../domain/goal';
 import type { DomainError, LogEntry } from '../../domain/types';
 import { Alert } from '../components/Alert';
 import { LinkButton } from '../components/Button';
@@ -91,8 +91,9 @@ function DayView({ date, today }: { date: string; today: string }) {
   const loading = goals.loading || entries.loading;
   const showSkeleton = useDelayed(loading);
 
-  // Every goal whose period contains the day, whatever its status today (ended/archived included).
-  const running = (goals.data ?? []).filter((g) => isWithin(date, g.startDate, g.endDate)).sort(byCreatedAt);
+  // Every goal whose period contains the day, whatever its status today (ended/archived included);
+  // an open-ended goal is present on every day from its start (v4.0, the future is blocked above).
+  const running = (goals.data ?? []).filter((g) => isWithinGoal(date, g)).sort(byCreatedAt);
   const dayEntries = entries.data ?? [];
   const byGoal = minutesByGoal(dayEntries);
 

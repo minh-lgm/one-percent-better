@@ -7,6 +7,7 @@ import type { DomainError, Goal, TargetType } from '../../domain/types';
 import { Alert } from '../components/Alert';
 import { Button, LinkButton } from '../components/Button';
 import { TextArea, TextField } from '../components/Field';
+import { Icon } from '../components/Icon';
 import { PageHeader } from '../components/PageHeader';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { Skeleton } from '../components/Skeleton';
@@ -20,7 +21,8 @@ import { useT } from '../hooks/useT';
 import { useToast } from '../hooks/useToast';
 import { NotFound } from './NotFound';
 
-type EndsMode = 'thisYear' | 'specific';
+/** v4.0 (M11, DESIGN S3): `never` = "No end date" (`endDate: null`), only with Minutes per day. */
+type EndsMode = 'thisYear' | 'specific' | 'never';
 
 interface FormState {
   name: string;
@@ -30,13 +32,21 @@ interface FormState {
   startDate: string;
   endsMode: EndsMode;
   endDate: string;
+  /** DESIGN A-D53: Ends was forced from "No end date" to "This year" by switching to Total hours (announced once). */
+  endsSwitched: boolean;
 }
 
 const FIELD_ORDER = ['name', 'why', 'target', 'startDate', 'endDate', 'period'] as const;
+const NEVER_DESC_ID = 'goal-ends-never-desc';
+const ENDS_ERR_ID = 'goal-ends-err';
 
 function initialState(today: string, goal?: Goal): FormState {
   if (!goal) {
-    return { name: '', why: '', targetType: 'daily', targetValue: '', startDate: today, endsMode: 'thisYear', endDate: today };
+    return { name: '', why: '', targetType: 'daily', targetValue: '', startDate: today, endsMode: 'thisYear', endDate: today, endsSwitched: false };
+  }
+  // Open-ended goal (A-D60): "No end date" selected; the hidden End date starts at the end of the start year.
+  if (goal.endDate === null) {
+    return { name: goal.name, why: goal.why, targetType: goal.targetType, targetValue: String(goal.targetMinutes), startDate: goal.startDate, endsMode: 'never', endDate: endOfYearOf(goal.startDate), endsSwitched: false };
   }
   const thisYear = goal.endDate === endOfYearOf(goal.startDate);
   return {
@@ -47,6 +57,7 @@ function initialState(today: string, goal?: Goal): FormState {
     startDate: goal.startDate,
     endsMode: thisYear ? 'thisYear' : 'specific',
     endDate: goal.endDate,
+    endsSwitched: false,
   };
 }
 
@@ -77,6 +88,7 @@ export function GoalForm() {
     startDate: useRef<HTMLInputElement>(null),
     endDate: useRef<HTMLInputElement>(null),
   };
+  const endsRef = useRef<HTMLFieldSetElement>(null);
 
   useEffect(() => {
     if (!editing || !id) return;
@@ -98,7 +110,18 @@ export function GoalForm() {
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setState((s) => ({ ...s, [key]: value }));
 
-  const effectiveEnd = state.endsMode === 'thisYear' ? endOfYearOf(state.startDate || today) : state.endDate;
+  // DESIGN S3 (v4.0): "No end date" only works with Minutes per day. Switching to Total hours while it is
+  // selected moves Ends to "This year" and announces it once (A-D53); switching back never re-selects it.
+  const setTargetType = (v: TargetType) =>
+    setState((s) => {
+      if (v === 'total' && s.endsMode === 'never') return { ...s, targetType: v, endsMode: 'thisYear', endsSwitched: true };
+      return { ...s, targetType: v, endsSwitched: v === 'daily' ? false : s.endsSwitched };
+    });
+  const setEndsMode = (v: EndsMode) => setState((s) => ({ ...s, endsMode: v, endsSwitched: false }));
+
+  const openEnded = state.endsMode === 'never';
+  const neverLocked = state.targetType === 'total';
+  const effectiveEnd = openEnded ? null : state.endsMode === 'thisYear' ? endOfYearOf(state.startDate || today) : state.endDate;
 
   const fieldError = (field: string): string | undefined => {
     const err = errors.find((e) => e.field === field);
@@ -109,6 +132,8 @@ export function GoalForm() {
 
   const hint = (() => {
     const v = parseDecimalInput(state.targetValue);
+    // No end date → no "over N days" hint (the description under the radio explains instead).
+    if (effectiveEnd === null) return undefined;
     if (!Number.isInteger(v) || v <= 0 || !isValidISODate(state.startDate) || !isValidISODate(effectiveEnd) || effectiveEnd < state.startDate) return undefined;
     const days = daysInclusive(state.startDate, effectiveEnd);
     const daysText = t('format.daysCount', { count: days });
@@ -123,6 +148,9 @@ export function GoalForm() {
 
   const startHint = editing && entryRange ? t('goal.form.startHint', { first: f.dateShort(entryRange.first), last: f.dateShort(entryRange.last) }) : undefined;
   const periodError = fieldError('period');
+  // An endDate error while the End date field is hidden (openEndedTotal safety net) shows under the Ends group.
+  const endsError = openEnded ? fieldError('endDate') : undefined;
+  const neverDesc = neverLocked ? t('goal.form.endsNeverTotalNote') : openEnded ? t('goal.form.endsNeverHint') : undefined;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -135,7 +163,8 @@ export function GoalForm() {
       targetType: state.targetType,
       targetValue: parseDecimalInput(state.targetValue),
       startDate: state.startDate,
-      endDate: effectiveEnd,
+      // Only a daily goal may be open-ended; the domain refuses `total` + null anyway (A-48).
+      endDate: openEnded && state.targetType === 'daily' ? null : (effectiveEnd ?? endOfYearOf(state.startDate || today)),
     };
     try {
       const now = new Date();
@@ -147,6 +176,13 @@ export function GoalForm() {
       }
       setErrors(result.errors);
       const first = FIELD_ORDER.find((fld) => result.errors.some((err) => err.field === fld));
+      if (first === 'endDate' && openEnded) {
+        // The End date field is hidden: focus the selected radio of the Ends group (DESIGN S3 state 5).
+        const radios = endsRef.current?.querySelectorAll<HTMLInputElement>('input[type="radio"]:not(:disabled)');
+        const checked = Array.from(radios ?? []).find((r) => r.checked) ?? radios?.[0];
+        checked?.focus();
+        return;
+      }
       const target = first === 'period' ? refs.startDate : first ? refs[first] : refs.name;
       target.current?.focus();
     } catch {
@@ -203,7 +239,7 @@ export function GoalForm() {
             name="targetType"
             legend={t('goal.form.targetLegend')}
             value={state.targetType}
-            onChange={(v) => set('targetType', v)}
+            onChange={setTargetType}
             options={[
               { value: 'daily', label: t('goal.form.targetDaily') },
               { value: 'total', label: t('goal.form.targetTotal') },
@@ -237,28 +273,58 @@ export function GoalForm() {
             error={fieldError('startDate') ?? periodError}
           />
 
-          <fieldset>
+          <fieldset ref={endsRef} aria-describedby={endsError ? ENDS_ERR_ID : undefined}>
             <legend className="legend">{t('goal.form.endsLegend')}</legend>
             <label className="radio">
-              <input type="radio" name="endsMode" value="thisYear" checked={state.endsMode === 'thisYear'} onChange={() => set('endsMode', 'thisYear')} />
+              <input type="radio" name="endsMode" value="thisYear" checked={state.endsMode === 'thisYear'} onChange={() => setEndsMode('thisYear')} />
               <span>{t('goal.form.endsThisYear', { date: f.dateShort(endOfYearOf(isValidISODate(state.startDate) ? state.startDate : today)) })}</span>
             </label>
             <label className="radio">
-              <input type="radio" name="endsMode" value="specific" checked={state.endsMode === 'specific'} onChange={() => set('endsMode', 'specific')} />
+              <input type="radio" name="endsMode" value="specific" checked={state.endsMode === 'specific'} onChange={() => setEndsMode('specific')} />
               <span>{t('goal.form.endsSpecific')}</span>
             </label>
             {state.endsMode === 'specific' ? (
-              <TextField
-                id="goal-end"
-                inputRef={refs.endDate}
-                label={t('goal.form.endLabel')}
-                required
-                type="date"
-                className="num narrow"
-                value={state.endDate}
-                onChange={(e) => set('endDate', e.target.value)}
-                error={fieldError('endDate')}
+              // v4.0 (A-D54): the End date sits right under its radio, before "No end date".
+              <div className="nested">
+                <TextField
+                  id="goal-end"
+                  inputRef={refs.endDate}
+                  label={t('goal.form.endLabel')}
+                  required
+                  type="date"
+                  className="num narrow"
+                  value={state.endDate}
+                  onChange={(e) => set('endDate', e.target.value)}
+                  error={fieldError('endDate')}
+                />
+              </div>
+            ) : null}
+            <label className="radio">
+              <input
+                type="radio"
+                name="endsMode"
+                value="never"
+                checked={openEnded}
+                disabled={neverLocked}
+                aria-describedby={neverDesc ? NEVER_DESC_ID : undefined}
+                onChange={() => setEndsMode('never')}
               />
+              <span>{t('goal.form.endsNever')}</span>
+            </label>
+            {neverDesc ? (
+              <p id={NEVER_DESC_ID} className="hint radio-desc">
+                {neverDesc}
+              </p>
+            ) : null}
+            {/* Always in the DOM so the announcement is read once when Ends is forced to "This year" (DESIGN §8.2). */}
+            <div className="sr-only" role="status" aria-live="polite" aria-atomic="true" data-testid="ends-status">
+              {state.endsSwitched ? t('goal.form.endsNeverSwitched') : ''}
+            </div>
+            {endsError ? (
+              <p id={ENDS_ERR_ID} className="err">
+                <Icon name="alert" />
+                <span>{endsError}</span>
+              </p>
             ) : null}
           </fieldset>
 

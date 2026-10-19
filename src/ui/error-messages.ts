@@ -21,6 +21,8 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
     case 'GOAL_PERIOD_INVALID':
       if (variant === 'endBeforeStart') return { key: 'errors.GOAL_PERIOD_INVALID_endBeforeStart' };
       if (variant === 'tooLong') return { key: 'errors.GOAL_PERIOD_INVALID_tooLong' };
+      // v4.0 (M11): a total goal with no end date (the form never produces it; kept as a safety net).
+      if (variant === 'openEndedTotal') return { key: 'errors.GOAL_PERIOD_INVALID_openEndedTotal' };
       return { key: 'errors.GOAL_PERIOD_INVALID' };
     case 'ENTRY_DAY_LIMIT_EXCEEDED': {
       const remaining = Number(error.params?.remaining ?? 0);
@@ -32,11 +34,12 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
     case 'IMPORT_INVALID_SCHEMA':
       // v3.1 (M5-P1): well-formed file, value outside the app's limits → its own sentence.
       return { key: variant === 'outOfRange' ? 'errors.IMPORT_INVALID_SCHEMA_outOfRange' : 'errors.IMPORT_INVALID_SCHEMA' };
-    case 'DATE_OUTSIDE_GOAL_PERIOD':
-      return {
-        key: 'errors.DATE_OUTSIDE_GOAL_PERIOD',
-        params: { start: f.dateShort(String(error.params?.start ?? '')), end: f.dateShort(String(error.params?.end ?? '')) },
-      };
+    case 'DATE_OUTSIDE_GOAL_PERIOD': {
+      const start = f.dateShort(String(error.params?.start ?? ''));
+      // v4.0 (M11): an open-ended goal has no end date → the sentence with the start date only.
+      if (error.params?.end === null) return { key: 'errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded', params: { start } };
+      return { key: 'errors.DATE_OUTSIDE_GOAL_PERIOD', params: { start, end: f.dateShort(String(error.params?.end ?? '')) } };
+    }
     case 'GOAL_NAME_REQUIRED':
     case 'GOAL_NAME_TOO_LONG':
     case 'GOAL_WHY_TOO_LONG':

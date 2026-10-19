@@ -125,6 +125,8 @@ export function Review() {
   const current = goal ? goalStat!.currentStreak : overall.currentStreak;
   const longest = goal ? goalStat!.longestStreak : overall.longestStreak;
   const outsideYear = goalStat?.outsideYear ?? false;
+  // v4.0 (DESIGN S6, A-51): an open-ended goal's progress is measured up to today → its own sub-line and note.
+  const openEnded = goal?.endDate === null;
 
   let paceText = t('stat.paceOnTrack');
   if (goalStat && goalStat.pace > 0) paceText = t('stat.paceAhead', { value: durationOf(goalStat.pace) });
@@ -184,7 +186,7 @@ export function Review() {
               testId="stat-progress"
               label={t('stat.progress')}
               value={f.percent1(goalStat.progressPercent)}
-              sub={t('stat.progressSub', { current: f.number(goalStat.minutesTotal), total: f.number(goalStat.totalTarget) })}
+              sub={t(openEnded ? 'stat.progressSubOpen' : 'stat.progressSub', { current: f.number(goalStat.minutesTotal), total: f.number(goalStat.totalTarget) })}
               progress={{ value: goalStat.progressPercent, label: t('stat.progress'), valueText: f.percent1(goalStat.progressPercent) }}
             />
             <StatCard testId="stat-pace" label={t('stat.pace')} value={paceText} sub={t('stat.paceExpected', { n: f.number(goalStat.expectedMinutes) })} textValue />
@@ -194,7 +196,7 @@ export function Review() {
         <StatCard testId="stat-longest" label={t('stat.longestStreak')} value={days(longest)} />
       </div>
       <p className="hint stats-note" data-testid="stats-note">
-        {goal ? (outsideYear ? t('review.outsideYear', { year: yearText }) : t('review.progressNote')) : t('review.pickGoal')}
+        {goal ? (outsideYear ? t('review.outsideYear', { year: yearText }) : t(openEnded ? 'review.progressNoteOpen' : 'review.progressNote')) : t('review.pickGoal')}
       </p>
 
       <section className="card sec" aria-labelledby="hm-h">

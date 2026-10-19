@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi as vitest } from 'vitest';
 import en from '../../i18n/resources/en.json';
 import vi from '../../i18n/resources/vi.json';
-import { buildGoal, datasetS1 } from '../../test/builders';
+import { buildGoal, datasetO1, datasetS1 } from '../../test/builders';
 import { createTestContainer, type TestContainer } from '../../test/container';
 import { renderApp, scanVi } from '../../test/render-with-locale';
 
@@ -232,6 +232,59 @@ describe('Review in vi (M4-AC11)', () => {
     await renderApp({ route: '/review', container: { ...t1, container: broken } });
     expect(await screen.findByRole('heading', { level: 1, name: vi.errors.loadViewTitle })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: vi.common.retry })).toBeInTheDocument();
+    expect(scanVi()).toEqual([]);
+  });
+});
+
+// ---- v4.0 (M11-AC10, DESIGN S6): Progress / note measured up to today for an open-ended goal ----
+describe('Review — open-ended goal O1 (M11-AC10, FR-24, A-51)', () => {
+  async function withS1O1(locale: 'en' | 'vi' = 'en') {
+    await withS1(locale);
+    const o1 = datasetO1();
+    await tc!.container.db.goals.bulkPut(o1.goals);
+    await tc!.container.db.entries.bulkPut(o1.entries);
+    return tc!;
+  }
+
+  it('o1 / 2026: Progress 61.1 % "55 of 90 min expected so far", Pace 35 min behind, streaks 1 / 2, note "measured up to today", 09-30 outside, 10-01 not', async () => {
+    await withS1O1();
+    await renderApp({ route: '/review?goal=o1&year=2026', container: tc });
+    await screen.findByRole('heading', { level: 1, name: en.review.title });
+    await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('61.1%'), SLOW);
+    expect(stat('stat-progress')).toHaveTextContent('55 of 90 min expected so far');
+    expect(within(stat('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '61.1');
+    expect(stat('stat-pace')).toHaveTextContent('35 min behind');
+    expect(stat('stat-pace')).toHaveTextContent('Expected 90 min by today');
+    expect(stat('stat-current')).toHaveTextContent('1 day');
+    expect(stat('stat-longest')).toHaveTextContent('2 days');
+    expect(stat('stat-time')).toHaveTextContent('0.9 h');
+    expect(screen.getByTestId('stats-note')).toHaveTextContent(en.review.progressNoteOpen);
+    expect(screen.getByTestId('stats-note')).not.toHaveTextContent(en.review.progressNote);
+    expect(cell('2026-09-30')).toHaveAttribute('aria-disabled', 'true');
+    expect(cell('2026-10-01')).not.toHaveAttribute('aria-disabled');
+    expect(cell('2026-10-09')).not.toHaveAttribute('aria-disabled');
+    expect(cell('2026-10-08').getAttribute('aria-label')).toContain('20');
+    // A finite goal keeps the old copy.
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: en.review.goalLabel }), 'g1');
+    await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('240 of 930 min'));
+    expect(screen.getByTestId('stats-note')).toHaveTextContent(en.review.progressNote);
+  });
+
+  it('year 2025 for o1: outside-year note wins; vi copy "55/90 phút dự kiến đến nay" and the vi note, no leaks', async () => {
+    await withS1O1();
+    const app = await renderApp({ route: '/review?goal=o1&year=2025', container: tc });
+    await screen.findByRole('heading', { level: 1, name: en.review.title });
+    await waitFor(() => expect(screen.getByTestId('stats-note')).toHaveTextContent("This goal doesn't run in 2025."), SLOW);
+    app.unmount();
+    await tc!.dispose();
+    await withS1O1('vi');
+    await renderApp({ route: '/review?goal=o1&year=2026', container: tc });
+    await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('61,1%'), SLOW);
+    expect(stat('stat-progress')).toHaveTextContent('55/90 phút dự kiến đến nay');
+    expect(stat('stat-pace')).toHaveTextContent('Chậm 35 phút');
+    expect(screen.getByTestId('stats-note')).toHaveTextContent(vi.review.progressNoteOpen);
+    await chartsReady();
     expect(scanVi()).toEqual([]);
   });
 });

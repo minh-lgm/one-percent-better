@@ -76,3 +76,23 @@ describe('v3.1 keys (M10-AC9, M10-AC10)', () => {
     expect(EXPORT_FAILED_KEY).toBe('errors.EXPORT_FAILED');
   });
 });
+
+describe('v4.0 keys — open-ended goals (M11-AC1, M11-T5, DESIGN §7.3)', () => {
+  it('GOAL_PERIOD_INVALID with variant openEndedTotal → its own key, present in both languages', () => {
+    const m = errorMessage({ code: 'GOAL_PERIOD_INVALID', message: '', params: { variant: 'openEndedTotal' } }, f);
+    expect(m.key).toBe('errors.GOAL_PERIOD_INVALID_openEndedTotal');
+    expect(() => i18n.t(m.key)).not.toThrow();
+    const enI18n = createI18n({ locale: 'en', strictMissingKeys: true });
+    expect(enI18n.t(m.key)).toBe('A Total hours goal needs an end date. Choose when it ends, or switch to Minutes per day.');
+    expect(i18n.t(m.key)).toBe('Mục tiêu Tổng số giờ cần có ngày kết thúc. Hãy chọn ngày kết thúc, hoặc chuyển sang Phút mỗi ngày.');
+  });
+
+  it('DATE_OUTSIDE_GOAL_PERIOD with params.end === null → the sentence with the start date only; a string end keeps the old key', () => {
+    expect(errorMessage({ code: 'DATE_OUTSIDE_GOAL_PERIOD', message: '', params: { start: '2026-10-01', end: null } }, f)).toEqual({
+      key: 'errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded',
+      params: { start: '01/10/2026' },
+    });
+    expect(i18n.t('errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded', { start: '01/10/2026' })).toBe('Ngày đó nằm trước ngày mục tiêu này bắt đầu (01/10/2026).');
+    expect(errorMessage({ code: 'DATE_OUTSIDE_GOAL_PERIOD', message: '', params: { start: '2026-10-01', end: '2026-10-31' } }, f).key).toBe('errors.DATE_OUTSIDE_GOAL_PERIOD');
+  });
+});

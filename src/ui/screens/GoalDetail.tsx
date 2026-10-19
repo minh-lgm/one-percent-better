@@ -79,6 +79,8 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
   const { goalService, entryService, timerService } = useServices();
   const today = toISODate(useNow());
   const status = goalStatus(goal, today);
+  // v4.0 (DESIGN S4 "Goal không thời hạn"): no Range control, "Day {k}" without a total, chart only once started.
+  const openEnded = goal.endDate === null;
   useDocumentTitle(goal.name);
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -148,11 +150,12 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
     }
   }
 
-  const rangeText = f.dateRange(goal.startDate, goal.endDate);
   const info =
-    goal.targetType === 'daily'
-      ? t('goals.rowDaily', { n: f.number(goal.targetMinutes), range: rangeText })
-      : t('goals.rowTotal', { daily: f.number(dailyTarget(goal)), hours: f.number(goal.targetMinutes / 60), range: rangeText });
+    goal.endDate === null
+      ? t('goals.rowDailyOpen', { n: f.number(goal.targetMinutes), start: f.dateShort(goal.startDate) })
+      : goal.targetType === 'daily'
+        ? t('goals.rowDaily', { n: f.number(goal.targetMinutes), range: f.dateRange(goal.startDate, goal.endDate) })
+        : t('goals.rowTotal', { daily: f.number(dailyTarget(goal)), hours: f.number(goal.targetMinutes / 60), range: f.dateRange(goal.startDate, goal.endDate) });
 
   const deleteBody = pending ? (pending.entryCount === 0 ? t('goal.delete.bodyNoEntries') : t('goal.delete.body', { count: pending.entryCount })) : '';
   const archiveErrorText = archiveError === null ? null : archiveError === 'write' ? t('errors.WRITE_FAILED') : (({ key, params }) => t(key, params))(errorMessage(archiveError, f));
@@ -168,17 +171,19 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
   } else {
     const { curve: c, stats } = model;
     const upcoming = c.elapsedDays === 0;
-    const visibleCount = range === 'sofar' && !upcoming ? c.elapsedDays : c.periodDays;
+    // Open-ended: the period IS the elapsed part (no future days), so Range would offer the same data twice (A-D55).
+    const visibleCount = range === 'sofar' && !upcoming && !openEnded ? c.elapsedDays : c.periodDays;
     const ideal = c.ideal.slice(0, visibleCount);
     // v3 (FR-27, DESIGN S4 / 7.6.4 "Biến thể nào dùng khi nào"): every % goes through the signed formatter.
     const down = c.headlinePercent < 0;
     const headline = t(down ? 'goal.detail.headlineDown' : 'goal.detail.headline', { value: f.signed1(c.headlinePercent) });
     const dayOf = { k: f.number(c.elapsedDays), total: f.number(c.periodDays) };
+    const dayLine = openEnded ? t('goal.detail.subDayOpen', { k: dayOf.k }) : t('goal.detail.subDay', dayOf);
     const summary = upcoming
       ? t('goal.detail.upcoming', { date: f.dateShort(goal.startDate) })
       : c.baseline === null
-        ? t('goal.detail.chartSummaryEmpty', { ...dayOf, y: f.signed1(c.idealPercent) })
-        : t('goal.detail.chartSummary', { ...dayOf, x: f.signed1(c.headlinePercent), y: f.signed1(c.idealPercent) });
+        ? t(openEnded ? 'goal.detail.chartSummaryEmptyOpen' : 'goal.detail.chartSummaryEmpty', { ...dayOf, y: f.signed1(c.idealPercent) })
+        : t(openEnded ? 'goal.detail.chartSummaryOpen' : 'goal.detail.chartSummary', { ...dayOf, x: f.signed1(c.headlinePercent), y: f.signed1(c.idealPercent) });
     let subVariant: 'upcoming' | 'empty' | 'start' | 'today' | 'earlier';
     let subText: string;
     if (upcoming) {
@@ -222,7 +227,7 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
           </p>
           {upcoming ? null : (
             <p className="muted num hl-day" data-testid="headline-day">
-              {t('goal.detail.subDay', dayOf)}
+              {dayLine}
             </p>
           )}
           <p className="muted num" data-testid="headline-sub" data-variant={subVariant}>
@@ -230,10 +235,12 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
           </p>
         </section>
 
+        {/* An open-ended goal that has not started has nothing to draw (A-52, A-D58): no chart card at all. */}
+        {openEnded && upcoming ? null : (
         <section className="card section" aria-labelledby="ch-h">
           <div className="chart-head">
             <h2 id="ch-h">{t('goal.detail.chartTitle')}</h2>
-            {upcoming ? null : (
+            {upcoming || openEnded ? null : (
               <SegmentedControl<Range>
                 name="curve-range"
                 legend={t('goal.detail.rangeLegend')}
@@ -319,13 +326,14 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
             ) : null}
           </details>
         </section>
+        )}
 
         <div className="stats" data-testid="stats">
           <StatCard
             testId="stat-progress"
             label={t('stat.progress')}
             value={f.percent1(stats.progressPercent)}
-            sub={t('stat.progressSub', { current: f.number(stats.minutesTotal), total: f.number(stats.totalTarget) })}
+            sub={t(openEnded ? 'stat.progressSubOpen' : 'stat.progressSub', { current: f.number(stats.minutesTotal), total: f.number(stats.totalTarget) })}
             progress={{ value: stats.progressPercent, label: t('stat.progress'), valueText: f.percent1(stats.progressPercent) }}
           />
           <StatCard testId="stat-pace" label={t('stat.pace')} value={paceText} sub={t('stat.paceExpected', { n: f.number(stats.expectedMinutes) })} textValue />
