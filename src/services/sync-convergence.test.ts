@@ -1,14 +1,17 @@
 // Two devices + one fake cloud converge (M7-AC6, M7-AC17, NFR-12). Scenarios (a)–(f) of the AC and
 // a seeded random test: 20 seeds × 200 operations; the seed is printed when a run fails.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { normalizeSyncMeta } from '../data/repositories';
 import type { GoalInput } from '../domain/goal';
 import { FakeRemoteServer, offlineError } from '../test/fake-remote-store';
 import { createDevice, serverSnapshot, U1, type Device } from '../test/two-devices';
-import { datasetS1 } from '../test/builders';
+import { datasetO1, datasetS1 } from '../test/builders';
 
 const T = (s: string) => new Date(s);
 const NOW = T('2026-10-09T03:00:00.000Z');
 const READ: GoalInput = { name: 'Read', why: 'Be smarter', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' };
+/** v4.0: the open-ended goal O1 as form input. */
+const MEDITATE: GoalInput = { name: 'Meditate', why: '', targetType: 'daily', targetValue: 10, startDate: '2026-10-01', endDate: null };
 
 let server: FakeRemoteServer;
 let devices: Device[] = [];
@@ -361,8 +364,10 @@ describe('random operations converge (NFR-12; 20 seeds × 200 ops)', () => {
           const goals = await d.goals.getAll();
           const op = rand();
           if (op < 0.18 || goals.length === 0) {
-            const g = await d.goalService.create({ ...READ, name: `G${step}` }, d.clock.now);
-            trace.push(`${d.name} create goal ${g.ok ? g.value.id.slice(0, 8) : 'fail'}`);
+            // v4.0 (M11-AC6): about a third of the goals have no end date.
+            const open = rand() < 0.34;
+            const g = await d.goalService.create({ ...READ, name: `G${step}`, endDate: open ? null : READ.endDate }, d.clock.now);
+            trace.push(`${d.name} create ${open ? 'open-ended ' : ''}goal ${g.ok ? g.value.id.slice(0, 8) : 'fail'}`);
           } else if (op < 0.45) {
             const g = pick(goals);
             const r = await d.entryService.add({ goalId: g.id, date: `2026-10-${String(1 + Math.floor(rand() * 8)).padStart(2, '0')}`, minutes: 1 + Math.floor(rand() * 60), note: `s${step}`, source: rand() < 0.5 ? 'manual' : 'timer' }, d.clock.now);
@@ -379,6 +384,11 @@ describe('random operations converge (NFR-12; 20 seeds × 200 ops)', () => {
               const r = rand() < 0.5 ? await d.entryService.update(e.id, { minutes: 1 + Math.floor(rand() * 30), note: 'u' }, d.clock.now) : await d.entryService.remove(e.id);
               trace.push(`${d.name} edit/remove entry ${e.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
             }
+          } else if (op < 0.74) {
+            // v4.0 (M11-AC6): switch the end date on/off (entries are dated 10-01 … 10-08, inside both periods).
+            const g = pick(goals);
+            const r = await d.goalService.update(g.id, { ...READ, name: g.name, startDate: g.startDate, endDate: g.endDate === null ? '2026-12-31' : null }, d.clock.now);
+            trace.push(`${d.name} end date ${g.endDate === null ? 'set' : 'removed'} on ${g.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
           } else if (op < 0.78) {
             const g = pick(goals);
             await d.goalService.setArchived(g.id, !g.archived, d.clock.now);
@@ -406,10 +416,109 @@ describe('random operations converge (NFR-12; 20 seeds × 200 ops)', () => {
         await syncOk(b);
         await syncOk(a);
         await expectConverged(a, b);
+        expect(trace.some((t) => t.includes('open-ended')), 'the run exercised open-ended goals').toBe(true);
       } catch (e) {
         console.error(`random convergence failed for seed ${seed}\n${trace.join('\n')}`);
         throw e;
       }
     });
   }
+});
+
+// ---- v4.0 (M11-AC6, M11-AC7): open-ended goals across two devices; a device that ran the old client ----
+describe('open-ended goals converge (M11-AC6, FR-57, NFR-12)', () => {
+  async function seedO1(d: Device) {
+    const g = await d.goalService.create(MEDITATE, d.clock.now);
+    if (!g.ok) throw new Error('setup');
+    const { entries } = datasetO1();
+    for (const e of entries) {
+      const r = await d.entryService.add({ goalId: g.value.id, date: e.date, minutes: e.minutes, note: '', source: 'manual' }, d.clock.now);
+      if (!r.ok) throw new Error(`setup entry ${e.date}: ${r.errors[0].code}`);
+    }
+    return g.value.id;
+  }
+
+  it('A creates O1 (+ 4 entries), sync A, sync B → B holds the goal with endDate null and the entries', async () => {
+    const a = await device('A');
+    const b = await device('B');
+    const id = await seedO1(a);
+    await syncOk(a);
+    expect(server.live('goals', U1)[0].end_date).toBeNull();
+    await syncOk(b);
+    const onB = await b.goals.getById(id);
+    expect(onB?.endDate).toBeNull();
+    expect(onB && 'endDate' in onB).toBe(true);
+    expect(await b.entries.getByGoal(id)).toHaveLength(4);
+    await expectConverged(a, b);
+  });
+
+  it('B sets an end date (10:01), A removes it later (10:02); sync A, B, A → both open-ended again (LWW)', async () => {
+    const a = await device('A');
+    const b = await device('B');
+    const id = await seedO1(a);
+    await syncOk(a);
+    await syncOk(b);
+    b.clock.now = T('2026-10-09T10:01:00.000Z');
+    const closed = await b.goalService.update(id, { ...MEDITATE, endDate: '2026-12-31' }, b.clock.now);
+    expect(closed.ok).toBe(true);
+    a.clock.now = T('2026-10-09T10:02:00.000Z');
+    const reopened = await a.goalService.update(id, MEDITATE, a.clock.now);
+    expect(reopened.ok).toBe(true);
+    serverNow = T('2026-10-09T10:03:00.000Z');
+    await syncOk(a);
+    await syncOk(b);
+    await syncOk(a);
+    expect((await a.goals.getById(id))?.endDate).toBeNull();
+    expect((await b.goals.getById(id))?.endDate).toBeNull();
+    expect(server.live('goals', U1).find((g) => g.id === id)?.end_date).toBeNull();
+    await expectConverged(a, b);
+    // The other order (B later than A) ends with the end date set on both.
+    b.clock.now = T('2026-10-09T10:05:00.000Z');
+    await b.goalService.update(id, { ...MEDITATE, endDate: '2026-12-31' }, b.clock.now);
+    a.clock.now = T('2026-10-09T10:04:00.000Z');
+    await a.goalService.update(id, { ...MEDITATE, name: 'Meditate!' }, a.clock.now);
+    serverNow = T('2026-10-09T10:06:00.000Z');
+    await syncOk(a);
+    await syncOk(b);
+    await syncOk(a);
+    expect((await a.goals.getById(id))?.endDate).toBe('2026-12-31');
+    await expectConverged(a, b);
+  });
+
+  it('(M11-AC7, ADR-33) a device running the old client skips the NULL row (entries stored but hidden, cursor past it); after updating, one cycle brings the goal and its entries back', async () => {
+    const a = await device('A');
+    const b = await device('B');
+    const id = await seedO1(a);
+    await syncOk(a);
+
+    // B is "a phone still on the pre-M11 build": its mapper drops end_date NULL rows.
+    b.remote.legacyMapper = true;
+    await syncOk(b);
+    expect(b.sync.current()).toMatchObject({ kind: 'idle', remoteInvalid: true, remoteSkipped: true });
+    expect(await b.goals.getById(id)).toBeUndefined();
+    expect((await b.db.entries.toArray()).filter((e) => e.goalId === id && e.deletedAt == null)).toHaveLength(4);
+    expect(await b.entries.getByGoal(id)).toEqual([]);
+    expect(await b.entries.getByDateRange('2026-10-01', '2026-10-09')).toEqual([]);
+    const legacyMeta = normalizeSyncMeta(await b.kv.get('sync'));
+    expect(legacyMeta.cursor.goals).toMatchObject({ id });
+    // Nothing was tombstoned or pushed: the server still has the goal and the entries.
+    expect(server.live('goals', U1).map((g) => g.id)).toEqual([id]);
+    expect(server.live('entries', U1)).toHaveLength(4);
+    expect(await b.store.countDirty()).toBe(0);
+
+    // B updates to M11: the new mapper reads the row, but the stored cursor is already past it. An old
+    // client never wrote `pullResetVersion`, so drop it to simulate the upgrade.
+    b.remote.legacyMapper = false;
+    await b.kv.update<Record<string, unknown>>('sync', (cur) => {
+      const { pullResetVersion: _v, ...rest } = cur ?? {};
+      return rest;
+    });
+    await syncOk(b);
+    expect((await b.goals.getById(id))?.endDate).toBeNull();
+    expect(await b.entries.getByGoal(id)).toHaveLength(4);
+    expect(b.sync.current().remoteInvalid).toBeUndefined();
+    expect(normalizeSyncMeta(await b.kv.get('sync')).pullResetVersion).toBe(1);
+    await syncOk(a);
+    await expectConverged(a, b);
+  });
 });

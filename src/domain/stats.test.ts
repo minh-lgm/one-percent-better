@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildEntry, buildGoal, datasetS1, TODAY } from '../test/builders';
-import { currentStreak, elapsedDays, entriesByGoal, goalMetDays, goalStats, longestStreak, monthlySeries, overallMetDays, overallStats, weeklySeries, weekStart } from './stats';
+import { buildEntry, buildGoal, datasetO1, datasetS1, TODAY } from '../test/builders';
+import { currentStreak, elapsedDays, entriesByGoal, goalMetDays, goalStats, isDayMet, longestStreak, monthlySeries, overallMetDays, overallStats, weeklySeries, weekStart } from './stats';
 
 const s1 = datasetS1();
 const byGoal = entriesByGoal(s1.entries);
@@ -173,5 +173,55 @@ describe('weekly / monthly series (M4-AC6, FR-25)', () => {
     expect(months[9]).toMatchObject({ month: 10, date: '2026-10-01', current: true });
     expect(months.filter((m) => m.current)).toHaveLength(1);
     expect(monthlySeries(s1.entries, 2025, TODAY).every((m) => m.minutes === 0 && !m.current)).toBe(true);
+  });
+});
+
+// ---- v4.0 (M11): statistics of an open-ended goal are measured up to today (A-51, ARCH §4.6 c) ----
+describe('open-ended goal O1 (M11-AC2, FR-22, FR-24)', () => {
+  const o1 = datasetO1();
+  const g = o1.goals[0];
+
+  it('at 2026-10-09: 55/90 min → 61.1 %, pace −35, 4 days on target, 4 logged, streak 1 / 2, not outside 2026', () => {
+    const s = goalStats(g, o1.entries, 2026, TODAY);
+    expect(s).toMatchObject({ minutesTotal: 55, minutesInYear: 55, totalTarget: 90, dailyTarget: 10, progressPercent: 61.1, elapsedDays: 9, expectedMinutes: 90, pace: -35, daysOnTarget: 4, daysLogged: 4, currentStreak: 1, longestStreak: 2, outsideYear: false });
+    expect(elapsedDays(g, TODAY)).toBe(9);
+  });
+
+  it('year 2025 is outside (before the start); 2027 and 2099 are not (no end date)', () => {
+    expect(goalStats(g, o1.entries, 2025, TODAY).outsideYear).toBe(true);
+    expect(goalStats(g, o1.entries, 2027, '2027-03-01').outsideYear).toBe(false);
+    expect(goalStats(g, o1.entries, 2099, '2099-03-01').outsideYear).toBe(false);
+  });
+
+  it('not started yet (start 2026-11-01 at 2026-10-09): elapsed 0, totalTarget 0, progress 0, pace 0, expected 0', () => {
+    const upcoming = { ...g, startDate: '2026-11-01' };
+    const s = goalStats(upcoming, [], 2026, TODAY);
+    expect(s).toMatchObject({ elapsedDays: 0, totalTarget: 0, progressPercent: 0, pace: 0, expectedMinutes: 0, currentStreak: 0, longestStreak: 0 });
+  });
+
+  it('keeps counting past 1,827 days: at 2031-10-02 elapsed 1828, totalTarget 18,280, progress 0.3 %', () => {
+    const s = goalStats(g, o1.entries, 2031, '2031-10-02');
+    expect(s.elapsedDays).toBe(1828);
+    expect(s.totalTarget).toBe(18_280);
+    expect(s.progressPercent).toBe(0.3);
+    expect(s.pace).toBe(55 - 18_280);
+  });
+
+  it('isDayMet / goalMetDays only exclude days before the start', () => {
+    expect(isDayMet(g, '2026-09-30', 10)).toBe(false);
+    expect(isDayMet(g, '2026-10-01', 10)).toBe(true);
+    expect(isDayMet(g, '2031-10-02', 10)).toBe(true);
+    expect([...goalMetDays(g, o1.entries)].sort()).toEqual(['2026-10-01', '2026-10-02', '2026-10-05', '2026-10-08']);
+    // Progress can exceed 100 % (A-51): 20 min on each of the first 2 days at day 2.
+    const ahead = goalStats(g, o1.entries.slice(0, 2).map((e) => ({ ...e, minutes: 20 })), 2026, '2026-10-02');
+    expect(ahead.progressPercent).toBe(200);
+    expect(ahead.pace).toBe(20);
+  });
+
+  it('overallStats over S1 + O1 counts O1 like any other goal', () => {
+    const { goals, entries } = datasetS1();
+    const all = overallStats([...goals, g], [...entries, ...o1.entries], 2026, TODAY);
+    expect(all.minutesInYear).toBe(565 + 55);
+    expect(all.daysOnTarget).toBe(20); // every O1 met day is already a met day of G1/G2
   });
 });

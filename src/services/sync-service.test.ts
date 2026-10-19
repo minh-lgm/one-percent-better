@@ -1,7 +1,8 @@
 // SyncService (M7-AC6 d/f, M7-AC8 backoff, M7-AC13 errors, ARCHITECTURE §5.10).
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { normalizeSyncMeta } from '../data/repositories';
-import type { SyncStatus } from '../domain/sync';
+import { normalizeSyncMeta, type KvKey, type KvRepository } from '../data/repositories';
+import { rewindCursor, type SyncStatus } from '../domain/sync';
+import { PULL_RESET_VERSION } from '../config/constants';
 import { buildEntry, buildGoal } from '../test/builders';
 import { FakeRemoteServer, offlineError, unauthorizedError, unreachableError } from '../test/fake-remote-store';
 import { createDevice, MemoryLockPort, serverSnapshot, U1, U2, type Device } from '../test/two-devices';
@@ -460,5 +461,100 @@ describe('sign-in, merge and sign-out (FR-47, FR-41)', () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(seen[seen.length - 1]).toMatchObject({ pending: 0, lastSyncedAt: NOW.toISOString() });
     expect(buildGoal).toBeDefined();
+  });
+});
+
+// ---- v4.0 (M11-AC7, ADR-33): reset the goals cursor once per device after a schema generation change ----
+describe('pull cursor reset once (M11-AC7, ADR-33)', () => {
+  const OLD_GOALS = { serverUpdatedAt: '2026-10-08T00:00:00.000Z', id: 'g-old' };
+  const OLD_ENTRIES = { serverUpdatedAt: '2026-10-08T00:00:01.000Z', id: 'e-old' };
+  const pulls = () => server.calls.filter((c) => c.method === 'pull');
+
+  it('kv sync with cursors and no pullResetVersion: the first cycle pulls goals from null (entries keep their cursor) and stamps version 1; the second cycle uses the stored goals cursor', async () => {
+    const a = await device('A');
+    await a.kv.set('sync', { userId: U1, lastUserId: U1, account: null, cursor: { goals: OLD_GOALS, entries: OLD_ENTRIES }, lastSyncedAt: null, lastError: null });
+    server.seedRow('goals', U1, { id: 'o1', name: 'Meditate', why: '', target_type: 'daily', target_minutes: 10, start_date: '2026-10-01', end_date: null, archived: false, created_at: '2026-09-30T06:00:00.000Z', updated_at: '2026-09-30T06:00:00.000Z', deleted_at: null, server_updated_at: '2026-10-01T00:00:00.000Z' });
+    expect(await a.sync.syncNow('manual')).toEqual({ status: 'ran', ok: true });
+    const meta = normalizeSyncMeta(await a.kv.get('sync'));
+    expect(meta.pullResetVersion).toBe(PULL_RESET_VERSION);
+    expect(meta.pullResetVersion).toBe(1);
+    expect(pulls().map((c) => [c.table, c.cursor])).toEqual([
+      ['goals', null],
+      ['entries', rewindCursor(OLD_ENTRIES)],
+    ]);
+    // The row an older client would have skipped (server stamp before the old cursor) is now on the device.
+    expect((await a.goals.getById('o1'))?.endDate).toBeNull();
+    expect(meta.cursor.goals).toMatchObject({ id: 'o1' });
+    server.calls.length = 0;
+    expect(await a.sync.syncNow('manual')).toEqual({ status: 'ran', ok: true });
+    expect(pulls()[0]).toMatchObject({ table: 'goals', cursor: rewindCursor(meta.cursor.goals) });
+    expect(pulls()[0].cursor).not.toBeNull();
+    expect(normalizeSyncMeta(await a.kv.get('sync')).pullResetVersion).toBe(1);
+  });
+
+  it('a device already at the current version is left alone (no reset, cursor used as stored)', async () => {
+    const a = await device('A');
+    await a.kv.set('sync', { userId: U1, lastUserId: U1, account: null, cursor: { goals: OLD_GOALS, entries: null }, lastSyncedAt: null, lastError: null, pullResetVersion: PULL_RESET_VERSION });
+    await a.sync.syncNow('manual');
+    expect(pulls()[0]).toMatchObject({ table: 'goals', cursor: rewindCursor(OLD_GOALS) });
+  });
+
+  /** Count the kv writes that stamp `pullResetVersion` for the first time (the atomic reset of ADR-33). */
+  function countStamps(d: Device): () => number {
+    const kv = d.kv as unknown as { update: KvRepository['update'] };
+    const original = kv.update.bind(d.kv);
+    let stamps = 0;
+    kv.update = async <T,>(key: KvKey, fn: (current: T | undefined) => T | undefined) => {
+      let stamped = false;
+      const r = await original<T>(key, (cur) => {
+        const out = fn(cur);
+        const had = !!cur && typeof cur === 'object' && 'pullResetVersion' in (cur as object);
+        if (out && typeof out === 'object' && 'pullResetVersion' in (out as object) && !had) stamped = true;
+        return out;
+      });
+      if (r.written && stamped) stamps += 1;
+      return r;
+    };
+    return () => stamps;
+  }
+
+  it('two SyncService instances on the same database running at once (no cross-tab lock) stamp the version exactly once, both cycles succeed', async () => {
+    const a1 = await device('A1', { locks: noLocks });
+    const a2 = await device('A2', { locks: noLocks, dbName: a1.db.name });
+    const stamps1 = countStamps(a1);
+    const stamps2 = countStamps(a2);
+    await a1.kv.set('sync', { userId: U1, lastUserId: U1, account: null, cursor: { goals: OLD_GOALS, entries: null }, lastSyncedAt: null, lastError: null });
+    server.seedRow('goals', U1, { id: 'g1', name: 'Cloud', why: '', target_type: 'daily', target_minutes: 15, start_date: '2026-10-01', end_date: '2026-12-31', archived: false, created_at: '2026-10-05T01:00:00.000Z', updated_at: '2026-10-05T01:00:00.000Z', deleted_at: null });
+    a1.remote.delayMs = 5;
+    a2.remote.delayMs = 5;
+    const [r1, r2] = await Promise.all([a1.sync.syncNow('manual'), a2.sync.syncNow('manual')]);
+    expect(r1).toEqual({ status: 'ran', ok: true });
+    expect(r2).toEqual({ status: 'ran', ok: true });
+    expect(stamps1() + stamps2()).toBe(1);
+    const goalPulls = pulls().filter((c) => c.table === 'goals');
+    expect(goalPulls).toHaveLength(2);
+    expect(goalPulls.some((c) => c.cursor === null)).toBe(true);
+    const meta = normalizeSyncMeta(await a1.kv.get('sync'));
+    expect(meta.pullResetVersion).toBe(1);
+    expect(meta.cursor.goals).toMatchObject({ id: 'g1' });
+    expect((await a1.goals.getAll()).map((g) => g.id)).toEqual(['g1']);
+    // With the cross-tab lock the second tab skips as busy; the stored state is the same.
+    const locks = new MemoryLockPort();
+    const b1 = await device('B1', { locks });
+    const b2 = await device('B2', { locks, dbName: b1.db.name });
+    await b1.kv.set('sync', { userId: U1, lastUserId: U1, account: null, cursor: { goals: OLD_GOALS, entries: null }, lastSyncedAt: null, lastError: null });
+    b1.remote.delayMs = 5;
+    const [s1, s2] = await Promise.all([b1.sync.syncNow('manual'), b2.sync.syncNow('change')]);
+    expect(s1).toEqual({ status: 'ran', ok: true });
+    expect(s2).toEqual({ status: 'skipped', why: 'busy' });
+    expect(normalizeSyncMeta(await b1.kv.get('sync')).pullResetVersion).toBe(1);
+  });
+
+  it('no kv sync (never signed in): nothing is written', async () => {
+    const a = await device('A');
+    a.user.id = null;
+    expect(await a.kv.get('sync')).toBeUndefined();
+    expect(await a.sync.syncNow('manual')).toEqual({ status: 'skipped', why: 'paused' });
+    expect(await a.kv.get('sync')).toBeUndefined();
   });
 });

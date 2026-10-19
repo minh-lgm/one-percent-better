@@ -7,7 +7,9 @@ import { parseBackup } from '../domain/backup';
 import { buildHeatmap } from '../domain/heatmap';
 import { monthlySeries, weeklySeries } from '../domain/stats';
 import type { Goal, LogEntry } from '../domain/types';
-import { buildEntry, buildGoal, datasetS1, TODAY } from '../test/builders';
+import { buildEntry, buildGoal, datasetO1, datasetS1, datasetS1O1, TODAY } from '../test/builders';
+import { OPEN_END_QUERY_MAX } from '../config/constants';
+import { addDays } from '../domain/dates';
 import { availableYears, goalsDateRange, StatsService, type StatsData } from './stats-service';
 
 let db: AppDatabase;
@@ -102,15 +104,24 @@ describe('StatsService (M4-T3, M4-AC4, M4-AC5)', () => {
 describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
   const parsed = parseBackup(JSON.stringify(large), 1);
   if (!parsed.ok) throw new Error('large-backup.json must be a valid backup');
-  const goals = parsed.value.goals as Goal[];
-  const entries = parsed.value.entries as LogEntry[];
+  const fixtureGoals = parsed.value.goals as Goal[];
+  const fixtureEntries = parsed.value.entries as LogEntry[];
+  // v4.0 (M11-AC3, NFR-03): plus one open-ended goal running for 3,650 days with an entry every day.
+  const OPEN_START = addDays(TODAY, -3649);
+  const openGoal = buildGoal({ id: 'o-bench', name: 'Open', why: '', targetType: 'daily', targetMinutes: 10, startDate: OPEN_START, endDate: null, createdAt: '2016-10-11T01:00:00.000Z', updatedAt: '2016-10-11T01:00:00.000Z' });
+  const openEntries: LogEntry[] = Array.from({ length: 3650 }, (_, i) => buildEntry({ id: `o-bench-${i}`, goalId: 'o-bench', date: addDays(OPEN_START, i), minutes: 5 + (i % 20), note: '' }));
+  const goals = [...fixtureGoals, openGoal];
+  const entries = [...fixtureEntries, ...openEntries];
 
-  it('fixture: 5 goals, ≈ 5 500 entries, 2023-10-10 → 2026-10-09, under 5 MB', () => {
-    expect(goals).toHaveLength(5);
-    expect(entries.length).toBeGreaterThan(5000);
-    expect(entries.length).toBeLessThan(6000);
-    expect(goalsDateRange(goals)).toEqual(['2023-10-10', '2026-10-09']);
+  it('fixture: 5 goals, ≈ 5 500 entries, 2023-10-10 → 2026-10-09, under 5 MB; bench adds an open-ended goal of 3,650 days', () => {
+    expect(fixtureGoals).toHaveLength(5);
+    expect(fixtureEntries.length).toBeGreaterThan(5000);
+    expect(fixtureEntries.length).toBeLessThan(6000);
+    expect(goalsDateRange(fixtureGoals)).toEqual(['2023-10-10', '2026-10-09']);
     expect(JSON.stringify(large).length).toBeLessThan(5 * 1024 * 1024);
+    expect(openEntries).toHaveLength(3650);
+    expect(openEntries[3649].date).toBe(TODAY);
+    expect(goalsDateRange(goals)).toEqual([OPEN_START, OPEN_END_QUERY_MAX]);
   });
 
   function median(times: number[]): number {
@@ -135,7 +146,7 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
     else expect(medianMs).toBeLessThan(60_000);
   };
 
-  it('StatsService.overallStats + goalStats for 5 goals (in-memory repositories): median of 5 runs (< 200 ms under npm run bench)', async () => {
+  it('StatsService.overallStats + goalStats for 5 goals + 1 open-ended goal (in-memory repositories): median of 5 runs (< 200 ms under npm run bench)', async () => {
     const svc = memoryService();
     const times: number[] = [];
     for (let run = 0; run < 5; run++) {
@@ -144,7 +155,26 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
       for (const g of goals) await svc.goalStats(g.id, 2026, TODAY);
       times.push(performance.now() - start);
     }
-    console.log(`[bench] service overallStats + 5×goalStats (in-memory repos): median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
+    console.log(`[bench] service overallStats + 6×goalStats (in-memory repos): median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
+    assertBench(median(times));
+  });
+
+  it('(v4.0) curve of the open-ended goal (3,650 ideal + 3,650 actual points) + its goalStats: median of 5 runs (< 200 ms under npm run bench)', async () => {
+    const svc = memoryService();
+    const times: number[] = [];
+    let points = 0;
+    for (let run = 0; run < 5; run++) {
+      const start = performance.now();
+      const c = (await svc.curve('o-bench', TODAY))!;
+      const s = (await svc.goalStats('o-bench', 2026, TODAY))!;
+      times.push(performance.now() - start);
+      points = c.ideal.length;
+      expect(c.actual).toHaveLength(3650);
+      expect(s.elapsedDays).toBe(3650);
+      expect(s.totalTarget).toBe(36_500);
+    }
+    expect(points).toBe(3650);
+    console.log(`[bench] open-ended goal curve (3,650 days) + goalStats: median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
     assertBench(median(times));
   });
 
@@ -158,7 +188,7 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
       for (const g of goals) await service.goalStats(g.id, 2026, TODAY);
       times.push(performance.now() - start);
     }
-    console.log(`[bench] service overallStats + 5×goalStats (fake-indexeddb): median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
+    console.log(`[bench] service overallStats + 6×goalStats (fake-indexeddb): median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
     expect(times.length).toBe(5);
   });
 
@@ -175,7 +205,7 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
       monthlySeries(entries, 2026, TODAY);
       times.push(performance.now() - start);
     }
-    console.log(`[bench] pure review model (all + 5 goals): median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
+    console.log(`[bench] pure review model (all + 6 goals): median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
     assertBench(median(times));
   });
 });
@@ -196,5 +226,43 @@ describe('StatsService.curve (M9-T1, M9-AC1/AC2)', () => {
     const g4 = (await service.curve('g4', TODAY))!;
     expect(g4.actual).toEqual([]);
     expect(g4.headlinePercent).toBe(0);
+  });
+});
+
+// ---- v4.0 (M11): reading entries over a range that includes an open-ended goal (ARCH §4.6 d) ----
+describe('StatsService with S1 + O1 (M11-AC2)', () => {
+  it('goalsDateRange(S1+O1) = [2026-01-01, 9999-12-31] (query bound only); load() returns all 27 entries; O1 alone', async () => {
+    const { goals, entries } = datasetS1O1();
+    expect(goalsDateRange(goals)).toEqual(['2026-01-01', OPEN_END_QUERY_MAX]);
+    expect(goalsDateRange(datasetO1().goals)).toEqual(['2026-10-01', OPEN_END_QUERY_MAX]);
+    expect(goalsDateRange(datasetS1().goals)).toEqual(['2026-01-01', '2026-12-31']);
+    await db.goals.bulkPut(goals);
+    await db.entries.bulkPut(entries);
+    const data = await service.load();
+    expect(data.goals).toHaveLength(6);
+    expect(data.entries).toHaveLength(27);
+    const o1 = (await service.goalStats('o1', 2026, TODAY))!;
+    expect(o1).toMatchObject({ minutesTotal: 55, totalTarget: 90, progressPercent: 61.1, pace: -35, currentStreak: 1, longestStreak: 2 });
+    const c = (await service.curve('o1', TODAY))!;
+    expect(c.ideal).toHaveLength(9);
+    expect(c.headlinePercent).toBe(100);
+    // Nothing with the sentinel ever reaches storage: only the goals' own dates are stored.
+    expect((await db.goals.toArray()).map((g) => g.endDate)).not.toContain(OPEN_END_QUERY_MAX);
+  });
+
+  it('watch() keeps following entries after an open-ended goal appears (range widens to the query bound)', async () => {
+    const { goals, entries } = datasetS1();
+    await db.goals.bulkPut(goals);
+    await db.entries.bulkPut(entries);
+    const seen: StatsData[] = [];
+    const unsubscribe = service.watch().subscribe((d) => seen.push(d));
+    await expect.poll(() => seen.length).toBeGreaterThan(0);
+    const o1 = datasetO1();
+    await db.goals.put(o1.goals[0]);
+    await db.entries.bulkPut(o1.entries);
+    await expect.poll(() => seen.at(-1)!.entries.length).toBe(27);
+    await db.entries.put(buildEntry({ id: 'far', goalId: 'o1', date: '2031-10-02', minutes: 10 }));
+    await expect.poll(() => seen.at(-1)!.entries.some((e) => e.id === 'far')).toBe(true);
+    unsubscribe();
   });
 });

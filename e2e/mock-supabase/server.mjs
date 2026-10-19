@@ -110,7 +110,10 @@ function checkRow(table, row) {
     if (typeof row.why !== 'string' || row.why.length > 280) return 'why';
     if (!['daily', 'total'].includes(row.target_type)) return 'target_type';
     if (!Number.isInteger(row.target_minutes) || row.target_minutes < 1 || row.target_minutes > 600000) return 'target_minutes';
-    if (String(row.end_date) < String(row.start_date)) return 'end_date';
+    // v4.0 (20261019000000_goal_open_ended.sql): end_date NULL only for daily goals; no date comparison when NULL.
+    if (row.end_date === null || row.end_date === undefined) {
+      if (row.target_type !== 'daily') return 'goals_open_ended_daily_check';
+    } else if (String(row.end_date) < String(row.start_date)) return 'goals_period_check';
     if (ms(row.updated_at) === Number.NEGATIVE_INFINITY || ms(row.created_at) === Number.NEGATIVE_INFINITY) return 'timestamps';
   } else if (table === 'entries') {
     if (typeof row.id !== 'string' || row.id.length < 1 || row.id.length > 64) return 'id';

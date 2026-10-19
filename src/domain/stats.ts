@@ -1,8 +1,8 @@
 // Statistics (ARCHITECTURE §4 "Giá trị suy ra", FR-23 … FR-25). Pure functions
 // over goals + entries; no dates from the clock (callers pass `today`).
 // Hot paths use integer day numbers instead of date parsing (NFR-03).
-import { dayNumber, daysInclusive, isoFromDayNumber, yearOf } from './dates';
-import { dailyTarget, totalTarget } from './goal';
+import { dayNumber, isoFromDayNumber, yearOf } from './dates';
+import { dailyTarget, daysElapsed, isWithinGoal, totalTarget } from './goal';
 import type { Goal, ISODate, LogEntry } from './types';
 
 /** Minutes per day for the given entries (all goals mixed). */
@@ -28,7 +28,7 @@ export function entriesByGoal(entries: readonly LogEntry[]): Map<string, LogEntr
  * Pass `target` (= `dailyTarget(goal)`) when calling in a loop.
  */
 export function isDayMet(goal: Goal, date: ISODate, minutes: number, target: number = dailyTarget(goal)): boolean {
-  return date >= goal.startDate && date <= goal.endDate && minutes >= target;
+  return isWithinGoal(date, goal) && minutes >= target;
 }
 
 /** Days (within the goal period) on which the goal hit its daily target. */
@@ -99,6 +99,7 @@ export interface GoalStats {
   minutesInYear: number;
   /** Minutes logged over the whole goal period. */
   minutesTotal: number;
+  /** Whole-period target; for an open-ended goal (v4.0, A-51) the target accumulated up to today. */
   totalTarget: number;
   dailyTarget: number;
   /** Met days in `year`. */
@@ -107,7 +108,7 @@ export interface GoalStats {
   daysLogged: number;
   currentStreak: number;
   longestStreak: number;
-  /** `minutesTotal / totalTarget × 100`, rounded to 1 decimal; may exceed 100. */
+  /** `minutesTotal / totalTarget × 100`, rounded to 1 decimal; may exceed 100 (0 when `totalTarget` is 0: open-ended goal not started). */
   progressPercent: number;
   /** Elapsed days of the period up to today (0 for upcoming goals). */
   elapsedDays: number;
@@ -115,7 +116,7 @@ export interface GoalStats {
   expectedMinutes: number;
   /** `minutesTotal − expectedMinutes`; positive = ahead. 0 for upcoming goals. */
   pace: number;
-  /** True when the goal period does not overlap `year`. */
+  /** True when the goal period does not overlap `year` (open-ended goal: only years before it starts). */
   outsideYear: boolean;
 }
 
@@ -123,13 +124,13 @@ export function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-/** Days of the goal period that have elapsed up to `today` (both ends inclusive; whole period once ended). */
+/**
+ * Days of the goal period that have elapsed up to `today` (both ends inclusive; whole period once
+ * ended; open-ended goal: `startDate → today`). Not started yet → 0, whether or not the goal is
+ * archived (M4-D1: `goalStatus` reports `archived` before `upcoming`, so do not rely on it here).
+ */
 export function elapsedDays(goal: Pick<Goal, 'startDate' | 'endDate' | 'archived'>, today: ISODate): number {
-  // Not started yet → nothing elapsed, whether or not the goal is archived (M4-D1:
-  // `goalStatus` reports `archived` before `upcoming`, so do not rely on it here).
-  if (today < goal.startDate) return 0;
-  const end = today < goal.endDate ? today : goal.endDate;
-  return daysInclusive(goal.startDate, end);
+  return daysElapsed(goal, today);
 }
 
 function countInYear(dates: Iterable<ISODate>, year: number): number {
@@ -143,7 +144,8 @@ export function goalStats(goal: Goal, goalEntries: readonly LogEntry[], year: nu
   const yearEntries = goalEntries.filter(inYear(year));
   const met = goalMetDays(goal, goalEntries);
   const daily = dailyTarget(goal);
-  const total = totalTarget(goal);
+  // v4.0 (A-51): an open-ended goal is measured up to today (`today` is ignored by finite goals).
+  const total = totalTarget(goal, today);
   const minutesTotal = sumMinutes(goalEntries);
   const elapsed = elapsedDays(goal, today);
   const expected = daily * elapsed;
@@ -158,11 +160,11 @@ export function goalStats(goal: Goal, goalEntries: readonly LogEntry[], year: nu
     daysLogged: minutesByDate(yearEntries).size,
     currentStreak: currentStreak(met, today),
     longestStreak: longestStreak(met),
-    progressPercent: round1((minutesTotal / total) * 100),
+    progressPercent: total === 0 ? 0 : round1((minutesTotal / total) * 100),
     elapsedDays: elapsed,
     expectedMinutes: expected,
     pace: elapsed === 0 ? 0 : minutesTotal - expected,
-    outsideYear: yearOf(goal.endDate) < year || yearOf(goal.startDate) > year,
+    outsideYear: (goal.endDate !== null && yearOf(goal.endDate) < year) || yearOf(goal.startDate) > year,
   };
 }
 

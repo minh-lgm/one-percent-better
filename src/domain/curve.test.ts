@@ -2,7 +2,7 @@
 // to the previous logged day, compounded from the first logged day (ARCH §4.5 oracle).
 import { describe, expect, it } from 'vitest';
 import { addDays } from './dates';
-import { buildEntry, buildGoal, datasetR1, datasetR3, datasetR4, datasetS1, TODAY, TODAY_R1 } from '../test/builders';
+import { buildEntry, buildGoal, datasetO1, datasetR1, datasetR3, datasetR4, datasetS1, TODAY, TODAY_R1 } from '../test/builders';
 import { curve, curveYDomain, curveYScale, growth, growthPercent, lastElapsedDay, pct } from './curve';
 import type { LogEntry } from './types';
 
@@ -331,5 +331,74 @@ describe('growth helpers', () => {
     expect(growthPercent(growth(9))).toBe(9.4);
     expect(growthPercent(1)).toBe(0);
     expect(growthPercent(growth(365))).toBe(3678.3);
+  });
+});
+
+// ---- v4.0 (M11): the curve of an open-ended goal runs startDate → today (A-52, ARCH §4.6 c) ----
+describe('curve — open-ended goal O1 (M11-AC3, FR-27 v4.0)', () => {
+  const o1 = datasetO1();
+  const g = o1.goals[0];
+
+  it('today 2026-10-09: 9 ideal + 9 actual points, periodDays = elapsedDays = 9, no future day', () => {
+    const c = curve(g, o1.entries, TODAY);
+    expect(c.ideal).toHaveLength(9);
+    expect(c.actual).toHaveLength(9);
+    expect(c.periodDays).toBe(9);
+    expect(c.elapsedDays).toBe(9);
+    expect(c.ideal[0]).toEqual({ date: '2026-10-01', k: 1, value: growth(1) });
+    expect(c.ideal[8].date).toBe('2026-10-09');
+    expect(c.ideal.every((p) => p.date <= TODAY)).toBe(true);
+    expect(c.actual.map((p) => p.percent)).toEqual([0, 50, 50, 50, 0, 0, 0, 100, 100]);
+    expect(c.actual.map((p) => p.changePercent)).toEqual([null, 50, null, null, -33.3, null, null, 100, null]);
+    expect(c.actual.map((p) => p.minutes)).toEqual([10, 15, 0, 0, 10, 0, 0, 20, 0]);
+    expect(c.headlinePercent).toBe(100);
+    expect(c.actualFactor).toBe(2);
+    expect(c.baseline).toEqual({ date: '2026-10-01', minutes: 10 });
+    expect(c.latest).toEqual({ date: '2026-10-08', minutes: 20 });
+    expect(c.previous).toEqual({ date: '2026-10-05', minutes: 10 });
+    expect(c.latestChangePercent).toBe(100);
+    expect(c.loggedDays).toBe(4);
+    expect(c.idealPercent).toBe(9.4);
+    expect(c.idealFactor).toBeCloseTo(growth(9), 12);
+  });
+
+  it('today 2026-10-20: 20 + 20 points, headline still 100, nothing dated after today', () => {
+    const c = curve(g, o1.entries, '2026-10-20');
+    expect(c.ideal).toHaveLength(20);
+    expect(c.actual).toHaveLength(20);
+    expect(c.periodDays).toBe(20);
+    expect(c.headlinePercent).toBe(100);
+    expect(c.ideal.every((p) => p.date <= '2026-10-20')).toBe(true);
+    expect(c.actual.every((p) => p.date <= '2026-10-20')).toBe(true);
+    expect(c.actual[19]).toMatchObject({ date: '2026-10-20', k: 20, percent: 100, logged: false, changePercent: null });
+  });
+
+  it('today 2031-10-02: 1,828 points (> 1,827 — no period limit for open-ended goals, A-49)', () => {
+    const c = curve(g, o1.entries, '2031-10-02');
+    expect(c.ideal).toHaveLength(1828);
+    expect(c.actual).toHaveLength(1828);
+    expect(c.elapsedDays).toBe(1828);
+    expect(c.ideal[1827]).toMatchObject({ date: '2031-10-02', k: 1828 });
+    expect(c.headlinePercent).toBe(100);
+  });
+
+  it('not started yet (start 2026-11-01): no ideal and no actual points, headline 0, idealPercent 0, factors 1', () => {
+    const c = curve({ ...g, startDate: '2026-11-01' }, [], TODAY);
+    expect(c).toMatchObject({ ideal: [], actual: [], periodDays: 0, elapsedDays: 0, loggedDays: 0, baseline: null, latest: null, previous: null, latestChangePercent: null, actualFactor: 1, idealFactor: 1, headlinePercent: 0, idealPercent: 0 });
+  });
+
+  it('first day (start = today): one point per line', () => {
+    const c = curve({ ...g, startDate: TODAY }, [buildEntry({ id: 'x', goalId: 'o1', date: TODAY, minutes: 10 })], TODAY);
+    expect(c.ideal).toHaveLength(1);
+    expect(c.actual).toHaveLength(1);
+    expect(c.actual[0]).toMatchObject({ k: 1, logged: true, percent: 0, changePercent: null });
+    expect(c.idealPercent).toBe(1);
+  });
+
+  it('lastElapsedDay: today for a running open-ended goal, null before it starts; finite goals unchanged', () => {
+    expect(lastElapsedDay(g, TODAY)).toBe(TODAY);
+    expect(lastElapsedDay(g, '2031-10-02')).toBe('2031-10-02');
+    expect(lastElapsedDay(g, '2026-09-30')).toBeNull();
+    expect(lastElapsedDay(datasetS1().goals[0], '2026-12-01')).toBe('2026-10-31');
   });
 });

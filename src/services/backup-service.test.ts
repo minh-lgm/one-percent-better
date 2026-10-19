@@ -4,7 +4,7 @@ import { DexieBackupRepository } from '../data/dexie/backup-repo';
 import { openDatabase, type AppDatabase } from '../data/dexie/db';
 import { DexieKvRepository } from '../data/dexie/kv-repo';
 import { DEFAULT_SETTINGS } from '../domain/types';
-import { buildEntry, buildGoal, datasetS1, FIXED_NOW } from '../test/builders';
+import { buildEntry, buildGoal, datasetS1, datasetS1O1, FIXED_NOW } from '../test/builders';
 import { createTestDatabase } from '../test/db';
 import { BackupService, type BackupSchemaModule } from './backup-service';
 import { SettingsService } from './settings-service';
@@ -200,5 +200,38 @@ describe('BackupService.parse loads the schema lazily (M10-AC3, ADR-27)', () => 
     fail = false;
     expect((await svc2.parse(json, json.length)).ok).toBe(true);
     expect(flaky.n).toBe(2);
+  });
+});
+
+// ---- v4.0 (M11-AC5): export / import of an open-ended goal through the service ----
+describe('BackupService with an open-ended goal (M11-AC5, ADR-32)', () => {
+  it('export S1 + O1 → schemaVersion 1 and "endDate": null; parse counts 6 goals / 27 entries; import → exportAll deep-equals', async () => {
+    const d = datasetS1O1();
+    await db.goals.bulkPut(d.goals);
+    await db.entries.bulkPut(d.entries);
+    const { json } = await service.export(FIXED_NOW);
+    const file = JSON.parse(json) as { schemaVersion: number; goals: Array<{ id: string; endDate: unknown }> };
+    expect(file.schemaVersion).toBe(1);
+    expect(json).toMatch(/"endDate":\s*null/);
+    expect(file.goals.find((g) => g.id === 'o1')?.endDate).toBeNull();
+
+    const db2 = createTestDatabase();
+    await openDatabase(db2);
+    try {
+      const other = wire(db2);
+      const preview = await other.service.parse(json, json.length, '2026-10-09');
+      expect(preview.ok).toBe(true);
+      if (!preview.ok) return;
+      expect(preview.value).toMatchObject({ goals: 6, entries: 27 });
+      const r = await other.service.import(preview.value);
+      expect(r).toEqual({ ok: true, value: { goals: 6, entries: 27 } });
+      const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id));
+      const again = await new DexieBackupRepository(db2).exportAll();
+      expect(byId(again.goals)).toEqual(byId(d.goals));
+      expect(byId(again.entries)).toEqual(byId(d.entries));
+      expect(again.goals.find((g) => g.id === 'o1')?.endDate).toBeNull();
+    } finally {
+      await db2.delete();
+    }
   });
 });

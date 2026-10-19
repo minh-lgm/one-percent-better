@@ -1,7 +1,7 @@
 // Year heatmap grid (ARCHITECTURE §4 heatmap levels; DESIGN S6, §8). Pure.
 // Columns are ISO weeks (Monday first), rows Monday … Sunday.
 import { dayNumber, daysInclusive, isoFromDayNumber, weekdayIndex, yearOf } from './dates';
-import { dailyTarget } from './goal';
+import { dailyTarget, isWithinGoal } from './goal';
 import { entriesByGoal, isDayMet, minutesByDate } from './stats';
 import type { Goal, ISODate, LogEntry } from './types';
 
@@ -104,7 +104,7 @@ export function buildHeatmap({ year, goal, goals, entries, today }: HeatmapInput
 
     let state: CellState;
     if (date > today) state = 'future';
-    else if (goal && (date < goal.startDate || date > goal.endDate)) state = 'outside';
+    else if (goal && !isWithinGoal(date, goal)) state = 'outside'; // open-ended goal: only days before it starts (A-51)
     else state = minutes > 0 ? 'logged' : 'none';
 
     const level: HeatLevel = state === 'logged' ? (goal ? goalLevel(minutes, target) : allGoalsLevel(minutes)) : 0;

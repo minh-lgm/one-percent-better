@@ -5,8 +5,8 @@
 import { z } from 'zod';
 import { BACKUP_APP, BACKUP_SCHEMA_VERSION, type BackupFile } from './backup-file';
 import { DAILY_MINUTES_MAX, DAILY_MINUTES_MIN, DAY_MINUTES_LIMIT, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX, GOAL_NAME_MAX, GOAL_WHY_MAX, ID_MAX, IMPORT_MAX_BYTES, PERIOD_DAYS_MAX, TOTAL_HOURS_MAX, TOTAL_HOURS_MIN } from '../config/constants';
-import { daysInclusive, isValidISODate, isWithin } from './dates';
-import { dailyTarget } from './goal';
+import { daysInclusive, isValidISODate } from './dates';
+import { dailyTarget, isWithinGoal } from './goal';
 import { isValidReminderTime } from './reminder';
 import { fail, ok, type DomainError, type Goal, type ISODate, type LogEntry, type Result, type Settings } from './types';
 
@@ -26,6 +26,8 @@ const id = z.string().min(1).max(ID_MAX);
 // M3-D3: a backup must obey the same goal limits as the form (ARCH §4): daily
 // 1–1440 min, total 1–10,000 h (stored in minutes), period ≤ 1827 days, derived
 // daily target ≤ 1440. `endDate < startDate` stays an integrity error (M3-AC9).
+// v4.0 (M11, ADR-32): `endDate` may be `null` (open-ended goal, daily only); the key itself is still
+// required — a missing key is a structural error like any other missing field. `schemaVersion` stays 1.
 const goalSchema = z
   .object({
     id,
@@ -34,7 +36,7 @@ const goalSchema = z
     targetType: z.enum(['daily', 'total']),
     targetMinutes: z.number().int().min(1).max(TOTAL_HOURS_MAX * 60),
     startDate: isoDate,
-    endDate: isoDate,
+    endDate: isoDate.nullable(),
     archived: z.boolean(),
     createdAt: isoDateTime,
     updatedAt: isoDateTime,
@@ -47,8 +49,13 @@ const goalSchema = z
     if (g.targetType === 'total' && (g.targetMinutes < TOTAL_HOURS_MIN * 60 || g.targetMinutes > TOTAL_HOURS_MAX * 60)) {
       ctx.addIssue({ code: 'custom', path: ['targetMinutes'], message: `total target must be ${TOTAL_HOURS_MIN}-${TOTAL_HOURS_MAX} hours` });
     }
+    // v4.0 (A-48): a total goal needs a period to derive its daily target → a business-limit issue (outOfRange).
+    if (g.endDate === null && g.targetType === 'total') {
+      ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'a total goal needs an end date' });
+    }
     // M10-D3: the date refinements above may already have failed; never compute with an impossible date.
-    if (isValidISODate(g.startDate) && isValidISODate(g.endDate) && g.endDate >= g.startDate) {
+    // Open-ended goals (`endDate === null`) have no period limit (A-49).
+    if (g.endDate !== null && isValidISODate(g.startDate) && isValidISODate(g.endDate) && g.endDate >= g.startDate) {
       if (daysInclusive(g.startDate, g.endDate) > PERIOD_DAYS_MAX) {
         ctx.addIssue({ code: 'custom', path: ['endDate'], message: `period longer than ${PERIOD_DAYS_MAX} days` });
       } else if (g.targetType === 'total' && dailyTarget(g) > DAILY_MINUTES_MAX) {
@@ -167,7 +174,7 @@ export function checkIntegrity(goals: readonly Goal[], entries: readonly LogEntr
   const goalById = new Map<string, Goal>();
   for (const g of goals) {
     if (goalById.has(g.id)) return integrityError(`duplicate goal id ${g.id}`);
-    if (g.endDate < g.startDate) return integrityError(`goal ${g.id} ends before it starts`);
+    if (g.endDate !== null && g.endDate < g.startDate) return integrityError(`goal ${g.id} ends before it starts`);
     goalById.set(g.id, g);
   }
   const entryIds = new Set<string>();
@@ -177,7 +184,7 @@ export function checkIntegrity(goals: readonly Goal[], entries: readonly LogEntr
     entryIds.add(e.id);
     const goal = goalById.get(e.goalId);
     if (!goal) return integrityError(`entry ${e.id} references unknown goal ${e.goalId}`);
-    if (!isWithin(e.date, goal.startDate, goal.endDate)) return integrityError(`entry ${e.id} is outside the goal period`);
+    if (!isWithinGoal(e.date, goal)) return integrityError(`entry ${e.id} is outside the goal period`);
     if (today !== undefined && e.date > today) return integrityError(`entry ${e.id} is dated after today (${today})`);
     const key = `${e.goalId}\u0000${e.date}`;
     const total = (perDay.get(key) ?? 0) + e.minutes;

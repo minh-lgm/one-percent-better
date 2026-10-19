@@ -66,6 +66,31 @@ export function datasetS1(): { goals: Goal[]; entries: LogEntry[] } {
 export const FIXED_NOW = new Date('2026-10-09T10:00:00+07:00');
 export const TODAY = '2026-10-09';
 
+// ---- Phase 5 (M11, v4.0): dataset O1 — an open-ended goal (ARCH §4.6 c) ----
+
+const O1_STAMP = '2026-09-30T06:00:00.000Z';
+
+/**
+ * Dataset O1: goal `o1` "Meditate", 10 min/day from 2026-10-01 with **no end date**; manual entries
+ * 10-01 10, 10-02 15, 10-05 10, 10-08 20 minutes. Oracle at today 2026-10-09: 9 elapsed days,
+ * totalTarget 90, minutesTotal 55 -> 61.1 %, pace -35, streak 1/2, curve headline +100.0 % (x2).
+ */
+export function datasetO1(): { goals: Goal[]; entries: LogEntry[] } {
+  const goal = buildGoal({ id: 'o1', name: 'Meditate', why: '', targetType: 'daily', targetMinutes: 10, startDate: '2026-10-01', endDate: null, createdAt: O1_STAMP, updatedAt: O1_STAMP });
+  const days: Array<[string, number]> = [['2026-10-01', 10], ['2026-10-02', 15], ['2026-10-05', 10], ['2026-10-08', 20]];
+  const entries = days.map(([date, minutes], i) =>
+    buildEntry({ id: `e-o1-${i + 1}`, goalId: 'o1', date, minutes, note: '', source: 'manual', createdAt: `${date}T02:00:00.000Z`, updatedAt: `${date}T02:00:00.000Z` }),
+  );
+  return { goals: [goal], entries };
+}
+
+/** Dataset S1 + O1 (6 goals, 27 entries): finite and open-ended goals side by side. */
+export function datasetS1O1(): { goals: Goal[]; entries: LogEntry[] } {
+  const s1 = datasetS1();
+  const o1 = datasetO1();
+  return { goals: [...s1.goals, ...o1.goals], entries: [...s1.entries, ...o1.entries] };
+}
+
 // ---- Phase 3 (M9, FR-27 v3.0): datasets R1 / R3 / R4 (TASKS "Phase 3") ----
 
 /** Clock for the R-datasets: 2026-10-13 10:00 Asia/Ho_Chi_Minh. */

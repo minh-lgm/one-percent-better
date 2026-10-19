@@ -2,6 +2,7 @@
 // push dirty rows → read the canonical rows back → pull by keyset cursor → tombstone orphans →
 // preferences (push dirty groups or pull) → bookkeeping. Errors become a `SyncStatus`, never
 // exceptions. Single-flight inside the tab, `LockPort` (Web Locks) across tabs.
+import { PULL_RESET_VERSION } from '../config/constants';
 import type { KvRepository, LocalDataRepository, LocalSyncStore, PullCursor, Subscribable, SyncedPrefsRepository, SyncMeta } from '../data/repositories';
 import { normalizeSyncMeta } from '../data/repositories';
 import { backoffMs, rewindCursor, type SyncErrorCode, type SyncStatus } from '../domain/sync';
@@ -383,6 +384,9 @@ export class SyncService {
 
   /** Returns the number of invalid remote rows skipped (+ rows the cloud rejected). */
   private async cycle(run: CycleContext): Promise<number> {
+    // 0. v4.0 (ADR-33): a device that pulled goals with an older schema generation (and skipped rows
+    //    it could not read, e.g. open-ended goals before M11) re-pulls the whole goals table once.
+    await this.resetPullCursorOnce();
     const remote = await this.getRemote();
     let skippedInvalid = 0;
     this.cycleRejected = 0;
@@ -490,6 +494,21 @@ export class SyncService {
   }
 
   // ---- internals ----
+
+  /**
+   * ADR-33: one atomic `kv.update` — when kv `sync` exists and its `pullResetVersion` is below
+   * `PULL_RESET_VERSION`, drop `cursor.goals` (entries keep their cursor: their rows were stored, only
+   * hidden behind the missing goal) and stamp the version, so this runs once per device. No kv row
+   * (never signed in) → nothing is written. Pure callback, no await inside the transaction (ADR-14).
+   */
+  private async resetPullCursorOnce(): Promise<void> {
+    await this.deps.kv.update<unknown>('sync', (cur) => {
+      if (cur == null) return undefined;
+      const meta = normalizeSyncMeta(cur);
+      if ((meta.pullResetVersion ?? 0) >= PULL_RESET_VERSION) return undefined;
+      return { ...meta, cursor: { ...meta.cursor, goals: null }, pullResetVersion: PULL_RESET_VERSION };
+    });
+  }
 
   private async bindUser(userId: string, resetCursor: boolean): Promise<void> {
     await this.deps.kv.update<unknown>('sync', (cur) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildEntry, buildGoal } from '../test/builders';
+import { buildEntry, buildGoal, datasetO1 } from '../test/builders';
 import { checkDayLimit, minutesByGoal, sumMinutes, validateEntryDate, validateEntryFields } from './entry';
 
 describe('validateEntryFields (M1-AC6)', () => {
@@ -63,5 +63,29 @@ describe('sums', () => {
     expect(minutesByGoal(entries).get('a')).toBe(30);
     expect(minutesByGoal(entries).get('b')).toBe(5);
     expect(minutesByGoal([]).size).toBe(0);
+  });
+});
+
+// ---- v4.0 (M11): open-ended goal — valid entry dates are startDate ≤ date ≤ today (A-49) ----
+describe('validateEntryDate — open-ended goal O1 (M11-AC2, FR-17)', () => {
+  const o1 = datasetO1().goals[0];
+
+  it('today ok; tomorrow DATE_IN_FUTURE; before the start DATE_OUTSIDE_GOAL_PERIOD with params.end === null', () => {
+    expect(validateEntryDate('2026-10-09', o1, '2026-10-09')).toBeNull();
+    expect(validateEntryDate('2026-10-01', o1, '2026-10-09')).toBeNull();
+    expect(validateEntryDate('2026-10-10', o1, '2026-10-09')?.code).toBe('DATE_IN_FUTURE');
+    const before = validateEntryDate('2026-09-30', o1, '2026-10-09');
+    expect(before).toMatchObject({ code: 'DATE_OUTSIDE_GOAL_PERIOD', field: 'date', params: { start: '2026-10-01', end: null } });
+    expect(before?.params?.end).toBeNull();
+  });
+
+  it('years later the goal still accepts today (no end date, no 1827-day limit)', () => {
+    expect(validateEntryDate('2031-10-02', o1, '2031-10-02')).toBeNull();
+    expect(validateEntryDate('2031-10-03', o1, '2031-10-02')?.code).toBe('DATE_IN_FUTURE');
+  });
+
+  it('a finite goal keeps params.end as its end date', () => {
+    const g = buildGoal({ startDate: '2026-10-01', endDate: '2026-10-31' });
+    expect(validateEntryDate('2026-11-01', g, '2026-12-01')?.params).toEqual({ start: '2026-10-01', end: '2026-10-31' });
   });
 });

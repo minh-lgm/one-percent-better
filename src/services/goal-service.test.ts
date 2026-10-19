@@ -3,7 +3,7 @@ import { openDatabase, type AppDatabase } from '../data/dexie/db';
 import { DexieEntryRepository } from '../data/dexie/entry-repo';
 import { DexieGoalRepository } from '../data/dexie/goal-repo';
 import { DexieKvRepository } from '../data/dexie/kv-repo';
-import { buildEntry, FIXED_NOW } from '../test/builders';
+import { buildEntry, datasetO1, datasetS1, FIXED_NOW } from '../test/builders';
 import { createTestDatabase } from '../test/db';
 import { GoalService } from './goal-service';
 import type { GoalInput } from '../domain/goal';
@@ -168,5 +168,64 @@ describe('GoalService.setArchived (FR-30, M5-AC4)', () => {
     expect((await withKv.setArchived(created.value.id, true, later)).ok).toBe(true);
     await kv.set('activeTimer', { goalId: created.value.id, startedAt: FIXED_NOW.toISOString() });
     expect((await withKv.setArchived(created.value.id, false, later)).ok).toBe(true);
+  });
+});
+
+// ---- v4.0 (M11): create/update open-ended goals through the service and the repository (A-53) ----
+describe('GoalService — open-ended goals (M11-AC4, FR-01, FR-03)', () => {
+  const open: GoalInput = { ...input, targetValue: 10, endDate: null };
+
+  it('create stores endDate === null (not undefined, not a string): raw IndexedDB row has the key with null and dirty 1', async () => {
+    const r = await service.create(open, FIXED_NOW);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.endDate).toBeNull();
+    const read = await service.getById(r.value.id);
+    expect(read?.endDate).toBeNull();
+    expect(typeof read?.endDate).toBe('object');
+    const raw = await db.goals.get(r.value.id);
+    expect(raw && 'endDate' in raw).toBe(true);
+    expect(raw?.endDate).toBeNull();
+    expect(raw?.dirty).toBe(1);
+  });
+
+  it('G1 (finite, entries 10-01 … 10-08) → endDate null is always fine', async () => {
+    const { goals, entries } = datasetS1();
+    await db.goals.put({ ...goals[0], deletedAt: null, dirty: 0 });
+    for (const e of entries.filter((x) => x.goalId === 'g1')) await entryRepo.put(e);
+    const r = await service.update('g1', { name: 'Read', why: 'Be smarter', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: null }, FIXED_NOW);
+    expect(r.ok).toBe(true);
+    expect((await service.getById('g1'))?.endDate).toBeNull();
+  });
+
+  it('O1 (entries up to 10-08) → endDate 2026-10-07 is refused (GOAL_PERIOD_EXCLUDES_ENTRIES, goal unchanged); 2026-10-31 is fine; back to null is fine', async () => {
+    const { goals, entries } = datasetO1();
+    await db.goals.put({ ...goals[0], deletedAt: null, dirty: 0 });
+    for (const e of entries) await entryRepo.put(e);
+    const base: GoalInput = { name: 'Meditate', why: '', targetType: 'daily', targetValue: 10, startDate: '2026-10-01', endDate: null };
+    const before = await storedGoal('o1');
+    const tooShort = await service.update('o1', { ...base, endDate: '2026-10-07' }, FIXED_NOW);
+    expect(tooShort.ok).toBe(false);
+    if (!tooShort.ok) expect(tooShort.errors[0].code).toBe('GOAL_PERIOD_EXCLUDES_ENTRIES');
+    expect(await storedGoal('o1')).toEqual(before);
+    const finite = await service.update('o1', { ...base, endDate: '2026-10-31' }, FIXED_NOW);
+    expect(finite.ok).toBe(true);
+    expect((await service.getById('o1'))?.endDate).toBe('2026-10-31');
+    const reopened = await service.update('o1', base, new Date('2026-10-09T11:00:00+07:00'));
+    expect(reopened.ok).toBe(true);
+    expect((await service.getById('o1'))?.endDate).toBeNull();
+  });
+
+  it('O1 → total 100 h with no end date is refused (GOAL_PERIOD_INVALID openEndedTotal), goal unchanged', async () => {
+    const { goals } = datasetO1();
+    await db.goals.put({ ...goals[0], deletedAt: null, dirty: 0 });
+    const before = await storedGoal('o1');
+    const r = await service.update('o1', { name: 'Meditate', why: '', targetType: 'total', targetValue: 100, startDate: '2026-10-01', endDate: null }, FIXED_NOW);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors).toEqual([expect.objectContaining({ code: 'GOAL_PERIOD_INVALID', field: 'endDate', params: { variant: 'openEndedTotal' } })]);
+    expect(await storedGoal('o1')).toEqual(before);
+    const created = await service.create({ ...open, targetType: 'total', targetValue: 100 }, FIXED_NOW);
+    expect(created.ok).toBe(false);
+    expect(await liveGoals()).toBe(1);
   });
 });

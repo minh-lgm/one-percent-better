@@ -7,7 +7,7 @@ import {
   TOTAL_HOURS_MAX,
   TOTAL_HOURS_MIN,
 } from '../config/constants';
-import { daysInclusive, isValidISODate, isWithin } from './dates';
+import { daysInclusive, isValidISODate } from './dates';
 import { charLength } from './text';
 import { fail, ok, type DomainError, type Goal, type GoalStatus, type ISODate, type Result, type TargetType } from './types';
 
@@ -19,7 +19,8 @@ export interface GoalInput {
   /** daily: minutes per day; total: hours in the period. */
   targetValue: number;
   startDate: string;
-  endDate: string;
+  /** `null` = the user chose "No end date" (v4.0, only valid with `targetType: 'daily'`). */
+  endDate: string | null;
 }
 
 export interface GoalFields {
@@ -28,7 +29,19 @@ export interface GoalFields {
   targetType: TargetType;
   targetMinutes: number;
   startDate: ISODate;
-  endDate: ISODate;
+  endDate: ISODate | null;
+}
+
+type Period = Pick<Goal, 'startDate' | 'endDate'>;
+
+/** v4.0 (ADR-31): a goal with no end date runs until it is archived or deleted. */
+export function isOpenEnded(goal: Pick<Goal, 'endDate'>): boolean {
+  return goal.endDate === null;
+}
+
+/** `start ≤ date ≤ end`; for an open-ended goal just `date ≥ start` (ARCH §4.6 b). */
+export function isWithinGoal(date: ISODate, goal: Period): boolean {
+  return date >= goal.startDate && (goal.endDate === null || date <= goal.endDate);
 }
 
 /** Integer in `[min, max]` (v3.1, ADR-27: plain check, no zod on the cold-load path). `NaN`/non-number → `false`. */
@@ -41,22 +54,44 @@ function trimmed(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-export function periodDays(goal: Pick<Goal, 'startDate' | 'endDate'>): number {
+/** Days of the period, both ends inclusive; `null` for an open-ended goal (v4.0: callers decide). */
+export function periodDays(goal: Period): number | null {
+  if (goal.endDate === null) return null;
   return daysInclusive(goal.startDate, goal.endDate);
 }
 
+/** Days from `startDate` to `today` inclusive, 0 before the goal starts (shared by stats/curve, v4.0). */
+export function daysElapsed(goal: Period, today: ISODate): number {
+  if (today < goal.startDate) return 0;
+  const end = goal.endDate === null || today < goal.endDate ? today : goal.endDate;
+  return daysInclusive(goal.startDate, end);
+}
+
 export function dailyTarget(goal: Pick<Goal, 'targetType' | 'targetMinutes' | 'startDate' | 'endDate'>): number {
-  return goal.targetType === 'daily' ? goal.targetMinutes : Math.ceil(goal.targetMinutes / periodDays(goal));
+  if (goal.targetType === 'daily') return goal.targetMinutes;
+  const days = periodDays(goal);
+  // Invariant (ADR-31): `endDate === null ⇒ targetType === 'daily'`; a total goal always has a period.
+  if (days === null) throw new RangeError('a total goal must have an end date');
+  return Math.ceil(goal.targetMinutes / days);
 }
 
-export function totalTarget(goal: Pick<Goal, 'targetType' | 'targetMinutes' | 'startDate' | 'endDate'>): number {
-  return goal.targetType === 'daily' ? goal.targetMinutes * periodDays(goal) : goal.targetMinutes;
+/**
+ * Total minutes the goal asks for. Finite goals ignore `today` (whole period); an open-ended goal
+ * (v4.0, A-51) is measured up to `today` — `dailyTarget × daysElapsed` — so `today` is required there.
+ */
+export function totalTarget(goal: Pick<Goal, 'targetType' | 'targetMinutes' | 'startDate' | 'endDate'>, today?: ISODate): number {
+  if (goal.targetType !== 'daily') return goal.targetMinutes;
+  const days = periodDays(goal);
+  if (days !== null) return goal.targetMinutes * days;
+  if (today === undefined) throw new RangeError('totalTarget of an open-ended goal needs `today`');
+  return goal.targetMinutes * daysElapsed(goal, today);
 }
 
+/** v4.0: an open-ended goal is never `ended` (A-50); only archive/delete removes it from Active. */
 export function goalStatus(goal: Pick<Goal, 'archived' | 'startDate' | 'endDate'>, today: ISODate): GoalStatus {
   if (goal.archived) return 'archived';
   if (today < goal.startDate) return 'upcoming';
-  if (today > goal.endDate) return 'ended';
+  if (goal.endDate !== null && today > goal.endDate) return 'ended';
   return 'active';
 }
 
@@ -101,12 +136,21 @@ export function validateGoalInput(input: GoalInput): Result<GoalFields> {
   }
 
   const startValid = isValidISODate(input.startDate);
-  const endValid = isValidISODate(input.endDate);
+  // v4.0 (ADR-31): `null` is "no end date" — valid for daily goals, no 1827-day limit (A-49); a total
+  // goal needs a period to derive its daily target (A-48). An empty/malformed string stays the
+  // generic GOAL_PERIOD_INVALID as before (different from `null`).
+  const openEnded = input.endDate === null;
+  const endValid = input.endDate === null || isValidISODate(input.endDate);
   if (!startValid) errors.push({ code: 'GOAL_PERIOD_INVALID', field: 'startDate', message: 'invalid start date' });
   if (!endValid) errors.push({ code: 'GOAL_PERIOD_INVALID', field: 'endDate', message: 'invalid end date' });
+  if (openEnded && input.targetType === 'total') {
+    errors.push({ code: 'GOAL_PERIOD_INVALID', field: 'endDate', message: 'a total goal needs an end date', params: { variant: 'openEndedTotal' } });
+  }
 
   let periodOk = false;
-  if (startValid && endValid) {
+  if (startValid && openEnded) {
+    periodOk = input.targetType === 'daily';
+  } else if (startValid && endValid && input.endDate !== null) {
     if (input.endDate < input.startDate) {
       errors.push({ code: 'GOAL_PERIOD_INVALID', field: 'endDate', message: 'end before start', params: { variant: 'endBeforeStart' } });
     } else if (daysInclusive(input.startDate, input.endDate) > PERIOD_DAYS_MAX) {
@@ -134,9 +178,9 @@ export function validateGoalInput(input: GoalInput): Result<GoalFields> {
   });
 }
 
-/** Dates of entries that would fall outside a new period (FR-03). */
-export function entriesOutsidePeriod(entryDates: readonly ISODate[], startDate: ISODate, endDate: ISODate): ISODate[] {
-  return entryDates.filter((d) => !isWithin(d, startDate, endDate));
+/** Dates of entries that would fall outside a new period (FR-03). `endDate: null` → only days before the start. */
+export function entriesOutsidePeriod(entryDates: readonly ISODate[], startDate: ISODate, endDate: ISODate | null): ISODate[] {
+  return entryDates.filter((d) => !isWithinGoal(d, { startDate, endDate }));
 }
 
 export interface GroupedGoals {
@@ -152,7 +196,8 @@ export function groupGoals(goals: readonly Goal[], today: ISODate): GroupedGoals
   for (const g of goals) groups[goalStatus(g, today)].push(g);
   groups.active.sort(byCreatedAt);
   groups.upcoming.sort((a, b) => a.startDate.localeCompare(b.startDate) || byId(a, b));
-  groups.ended.sort((a, b) => b.endDate.localeCompare(a.endDate) || byId(a, b));
+  // Open-ended goals never land in `ended` (goalStatus); the fallback keeps TypeScript honest.
+  groups.ended.sort((a, b) => (b.endDate ?? '').localeCompare(a.endDate ?? '') || byId(a, b));
   groups.archived.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || byId(a, b));
   return groups;
 }

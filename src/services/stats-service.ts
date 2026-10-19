@@ -1,3 +1,4 @@
+import { OPEN_END_QUERY_MAX } from '../config/constants';
 import type { EntryRepository, GoalRepository, Subscribable } from '../data/repositories';
 import { curve, type CurveData } from '../domain/curve';
 import { yearOf } from '../domain/dates';
@@ -11,16 +12,19 @@ export interface StatsData {
   entries: LogEntry[];
 }
 
-/** `[min startDate, max endDate]` over goals, or `null` without goals. */
+/**
+ * `[min startDate, max endDate]` over goals, or `null` without goals. v4.0 (ARCH §4.6 d): an
+ * open-ended goal makes the upper bound `OPEN_END_QUERY_MAX` — a query bound only, never stored.
+ */
 export function goalsDateRange(goals: readonly Pick<Goal, 'startDate' | 'endDate'>[]): [ISODate, ISODate] | null {
   if (goals.length === 0) return null;
   let from = goals[0].startDate;
-  let to = goals[0].endDate;
+  let to: ISODate | null = goals[0].endDate;
   for (const g of goals) {
     if (g.startDate < from) from = g.startDate;
-    if (g.endDate > to) to = g.endDate;
+    if (to !== null && (g.endDate === null || g.endDate > to)) to = g.endDate;
   }
-  return [from, to];
+  return [from, to ?? OPEN_END_QUERY_MAX];
 }
 
 /** Years offered by the Review year picker: earliest goal/entry year … `currentYear`. */

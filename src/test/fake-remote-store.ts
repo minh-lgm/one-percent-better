@@ -9,6 +9,7 @@ import { compareStamps } from '../domain/sync';
 import type { Goal, ISODateTime, LogEntry } from '../domain/types';
 import { entryRowSchema, entryToRow, goalRowSchema, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, prefsToRow } from '../integration/supabase/mapper';
 import { chunk, FETCH_IDS_BATCH_MAX, NO_REJECTS, PUSH_BATCH_MAX, RemoteError, type FetchedRows, type PulledPrefs, type PullPage, type PushResult, type RemoteStore, type RemoteTable } from '../services/remote-store';
+import type { Mapped } from '../integration/supabase/mapper';
 
 type Row = Record<string, unknown> & { id: string; user_id: string; updated_at: string; server_updated_at: string };
 type PrefRow = Record<string, unknown> & { user_id: string; server_updated_at: string };
@@ -17,6 +18,19 @@ export interface FakeCall {
   method: 'push' | 'fetchByIds' | 'pull' | 'pushPrefs' | 'pullPrefs';
   user: string;
   size: number;
+  /** `pull` only (v4.0, ADR-33 tests): which table and the cursor the client asked for. */
+  table?: RemoteTable;
+  cursor?: PullCursor | null;
+}
+
+/**
+ * The check constraints of the SQL schema that a raw write can violate (M6 + v4.0 migration): the
+ * returned string names the constraint, like Postgres SQLSTATE 23514 does. `null` = row accepted.
+ */
+export function violatedCheck(table: RemoteTable, row: Record<string, unknown>): string | null {
+  if (table !== 'goals') return null;
+  if (row.end_date === null || row.end_date === undefined) return row.target_type === 'daily' ? null : 'goals_open_ended_daily_check';
+  return String(row.end_date) < String(row.start_date) ? 'goals_period_check' : null;
 }
 
 /** The "Postgres" of the tests. `now` is the server clock. */
@@ -44,8 +58,10 @@ export class FakeRemoteServer {
     return m;
   }
 
-  /** `sync_before_write`: insert, or update only when strictly newer. */
+  /** `sync_before_write`: insert, or update only when strictly newer. Check constraints first (whole batch fails, like Postgres). */
   upsert(table: RemoteTable, user: string, incoming: Record<string, unknown>): void {
+    const violated = violatedCheck(table, incoming);
+    if (violated) throw new RemoteError('SYNC_UNREACHABLE', `HTTP 400 23514: new row for relation "${table}" violates check constraint "${violated}"`);
     const rows = this.userTable(table, user);
     const id = String(incoming.id);
     const old = rows.get(id);
@@ -119,14 +135,27 @@ export class FakeRemoteStore implements RemoteStore {
   failTimes: number | null = null;
   /** Artificial latency per call (ms), for concurrency tests. */
   delayMs = 0;
+  /**
+   * v4.0 (ADR-33 tests): behave like a client built before M11, whose mapper treated `end_date`
+   * NULL as an invalid row — the goal is skipped and counted, the cursor still moves past it.
+   */
+  legacyMapper = false;
 
   constructor(
     readonly server: FakeRemoteServer,
     readonly userId: string,
   ) {}
 
-  private async guard(method: FakeCall['method'], size: number): Promise<void> {
-    this.server.calls.push({ method, user: this.userId, size });
+  /** The pre-M11 mapper, when `legacyMapper` is on: drop open-ended goals as "invalid". */
+  private mapGoals(rows: Row[]): Mapped<Goal> {
+    const m = mapGoalRows(rows);
+    if (!this.legacyMapper) return m;
+    const kept = m.rows.filter((g) => g.endDate !== null);
+    return { rows: kept, serverUpdatedAt: m.serverUpdatedAt, skippedInvalid: m.skippedInvalid + (m.rows.length - kept.length) };
+  }
+
+  private async guard(method: FakeCall['method'], size: number, pull?: { table: RemoteTable; cursor: PullCursor | null }): Promise<void> {
+    this.server.calls.push(pull ? { method, user: this.userId, size, table: pull.table, cursor: pull.cursor } : { method, user: this.userId, size });
     if (this.delayMs > 0) await new Promise((r) => setTimeout(r, this.delayMs));
     if (this.failure) {
       if (this.failTimes === null) throw this.failure;
@@ -159,7 +188,7 @@ export class FakeRemoteStore implements RemoteStore {
     for (const batch of chunk(ids.goals, FETCH_IDS_BATCH_MAX)) {
       await this.guard('fetchByIds', batch.length);
       const rows = batch.map((id) => this.server.rows('goals', this.userId).find((r) => r.id === id)).filter((r): r is Row => !!r);
-      const m = mapGoalRows(rows);
+      const m = this.mapGoals(rows);
       out.goals.push(...m.rows);
       Object.assign(out.serverUpdatedAt, m.serverUpdatedAt);
       out.skippedInvalid += m.skippedInvalid;
@@ -178,11 +207,11 @@ export class FakeRemoteStore implements RemoteStore {
   pull(table: 'goals', cursor: PullCursor | null, limit: number): Promise<PullPage<Goal>>;
   pull(table: 'entries', cursor: PullCursor | null, limit: number): Promise<PullPage<LogEntry>>;
   async pull(table: RemoteTable, cursor: PullCursor | null, limit: number): Promise<PullPage<Goal> | PullPage<LogEntry>> {
-    await this.guard('pull', limit);
+    await this.guard('pull', limit, { table, cursor });
     const { rows, hasMore } = this.server.page(table, this.userId, cursor, limit);
     const last = rows[rows.length - 1];
     const next = last ? { serverUpdatedAt: last.server_updated_at, id: last.id } : null;
-    const m = table === 'goals' ? mapGoalRows(rows) : mapEntryRows(rows);
+    const m = table === 'goals' ? this.mapGoals(rows) : mapEntryRows(rows);
     return { rows: m.rows as never, serverUpdatedAt: m.serverUpdatedAt, next, hasMore, skippedInvalid: m.skippedInvalid };
   }
 

@@ -94,6 +94,29 @@ describe('SupabaseRemoteStore error mapping (M7-AC5, NFR-15)', () => {
     await fetch(`${mock.url}/__test/reset`);
   });
 
+  it('(v4.0, M11-AC6) the mock enforces the v4.0 constraints on raw rows: total + NULL → 400 23514, daily + NULL stored and pulled back with endDate null', async () => {
+    const session = (await (await fetch(`${mock.url}/__test/token?user=u1`)).json()) as { access_token: string };
+    const post = (row: Record<string, unknown>) =>
+      fetch(`${mock.url}/rest/v1/goals?on_conflict=user_id,id`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', apikey: 'sb_publishable_mock', authorization: `Bearer ${session.access_token}`, prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ ...row, user_id: USERS.u1.id }]),
+      });
+    const bad = await post(goalRaw('bad-total', '2026-10-09T03:00:00.000Z', { target_type: 'total', target_minutes: 6000, end_date: null }));
+    expect(bad.status).toBe(400);
+    expect(((await bad.json()) as { code: string }).code).toBe('23514');
+    const before = await post(goalRaw('bad-order', '2026-10-09T03:00:00.000Z', { end_date: '2026-09-01' }));
+    expect(before.status).toBe(400);
+    const good = await post(goalRaw('o1', '2026-10-09T03:00:00.000Z', { target_minutes: 10, end_date: null }));
+    expect(good.status).toBeLessThan(300);
+    const store = await storeFor('u1');
+    const page = await store.pull('goals', null, 100);
+    expect(page.rows.map((g) => g.id)).toEqual(['o1']);
+    expect(page.rows[0].endDate).toBeNull();
+    expect(page.skippedInvalid).toBe(0);
+    await fetch(`${mock.url}/__test/reset`);
+  });
+
   it('(NV-8) ids with quotes, backslashes, commas and parentheses round-trip through fetchByIds (`in.(…)` quoting)', async () => {
     const store = await storeFor('u1');
     const ids = ['plain', 'with,comma', 'with(paren)', 'with"quote', 'back\\slash', 'mix",\\(x)'];

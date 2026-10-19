@@ -14,6 +14,7 @@ import { GoalService } from '../services/goal-service';
 import { LocaleService } from '../services/locale-service';
 import { MemoryLockPort, noLocks, type LockPort } from '../services/lock-port';
 import { SettingsService } from '../services/settings-service';
+import { goalsDateRange } from '../services/stats-service';
 import { SyncService, type SyncServiceDeps } from '../services/sync-service';
 import { FakeRemoteServer, FakeRemoteStore } from './fake-remote-store';
 
@@ -114,7 +115,7 @@ export async function createDevice(name: string, server: FakeRemoteServer, optio
     user,
     async snapshot() {
       const g = (await goals.getAll()).sort((a, b) => a.id.localeCompare(b.id));
-      const range = g.length ? [g.reduce((m, x) => (x.startDate < m ? x.startDate : m), g[0].startDate), g.reduce((m, x) => (x.endDate > m ? x.endDate : m), g[0].endDate)] : null;
+      const range = goalsDateRange(g);
       const e = range ? (await entries.getByDateRange(range[0], range[1])).sort((a, b) => a.id.localeCompare(b.id)) : [];
       return { goals: g as unknown as Record<string, unknown>[], entries: e as unknown as Record<string, unknown>[] };
     },

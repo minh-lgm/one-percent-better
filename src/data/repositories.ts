@@ -46,6 +46,11 @@ export interface SyncMeta {
   cursor: { goals: PullCursor | null; entries: PullCursor | null };
   lastSyncedAt: ISODateTime | null;
   lastError: { code: SyncErrorCode; at: ISODateTime } | null;
+  /**
+   * v4.0 (M11, ADR-33): the schema generation this device last re-pulled `goals` for. Missing = 0;
+   * below `PULL_RESET_VERSION` → `SyncService` resets `cursor.goals` once at the start of its next cycle.
+   */
+  pullResetVersion?: number;
 }
 
 export const EMPTY_SYNC_META: SyncMeta = {
@@ -72,6 +77,7 @@ export function normalizeSyncMeta(raw: unknown): SyncMeta {
     cursor: { goals: isCursor(cursor?.goals) ? cursor.goals : null, entries: isCursor(cursor?.entries) ? cursor.entries : null },
     lastSyncedAt: typeof r.lastSyncedAt === 'string' ? r.lastSyncedAt : null,
     lastError: lastError && typeof lastError.code === 'string' && typeof lastError.at === 'string' ? { code: lastError.code as SyncErrorCode, at: lastError.at } : null,
+    ...(typeof r.pullResetVersion === 'number' && Number.isFinite(r.pullResetVersion) ? { pullResetVersion: r.pullResetVersion } : {}),
   };
 }
 

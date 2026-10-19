@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { entryToRow, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, normalizeTimestamp, prefsToRow } from './mapper';
+import { entryToRow, goalRowSchema, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, normalizeTimestamp, prefsToRow } from './mapper';
 
 const goalRow = (extra: Record<string, unknown> = {}) => ({
   user_id: 'u',
@@ -83,5 +83,39 @@ describe('mapper (M7-AC5)', () => {
     expect(mapPrefsRow({ reminder_enabled: true, reminder_time: '07:30', reminder_updated_at: null, locale: null, locale_updated_at: null })).toEqual({ prefs: { reminder: null, locale: null }, skippedInvalid: 1 });
     const row = prefsToRow({ reminder: null, locale: { value: 'en', updatedAt: '2026-10-09T03:00:00.000Z' } }, 'u');
     expect(row).toEqual({ user_id: 'u', reminder_enabled: null, reminder_time: null, reminder_updated_at: null, locale: 'en', locale_updated_at: '2026-10-09T03:00:00.000Z' });
+  });
+});
+
+// ---- v4.0 (M11-AC6, ADR-33): end_date NULL = open-ended, daily only ----
+describe('mapper — open-ended goals (M11-AC6, FR-57)', () => {
+  it('a daily row with end_date null maps to endDate null (key present); the same row as total is skipped and counted', () => {
+    const ok = mapGoalRows([goalRow({ id: 'o1', target_type: 'daily', target_minutes: 10, end_date: null })]);
+    expect(ok.skippedInvalid).toBe(0);
+    expect(ok.rows).toHaveLength(1);
+    expect(ok.rows[0].endDate).toBeNull();
+    expect('endDate' in ok.rows[0]).toBe(true);
+    const bad = mapGoalRows([goalRow({ id: 'bad', target_type: 'total', target_minutes: 6000, end_date: null })]);
+    expect(bad.rows).toEqual([]);
+    expect(bad.skippedInvalid).toBe(1);
+  });
+
+  it('an old row with an end date maps as before; end_date before start_date is still invalid; null never fails the date order', () => {
+    const old = mapGoalRows([goalRow()]);
+    expect(old.rows[0].endDate).toBe('2026-10-31');
+    expect(mapGoalRows([goalRow({ end_date: '2026-09-01' })]).skippedInvalid).toBe(1);
+    expect(mapGoalRows([goalRow({ end_date: null, start_date: '2099-01-01' })]).rows[0].endDate).toBeNull();
+    // A missing end_date column value (undefined) is not the same as NULL: the row is invalid.
+    const { end_date: _e, ...noColumn } = goalRow();
+    expect(mapGoalRows([noColumn]).skippedInvalid).toBe(1);
+  });
+
+  it('goalToRow(o1).end_date === null and the schema accepts that row (push pre-validation lets it through)', () => {
+    const o1 = { id: 'o1', name: 'Meditate', why: '', targetType: 'daily' as const, targetMinutes: 10, startDate: '2026-10-01', endDate: null, archived: false, createdAt: '2026-09-30T06:00:00.000Z', updatedAt: '2026-09-30T06:00:00.000Z', deletedAt: null };
+    const row = goalToRow(o1, 'u');
+    expect(row.end_date).toBeNull();
+    expect('end_date' in row).toBe(true);
+    expect(goalRowSchema.safeParse(row).success).toBe(true);
+    expect(goalRowSchema.safeParse({ ...row, target_type: 'total', target_minutes: 6000 }).success).toBe(false);
+    expect(goalRowSchema.safeParse({ ...row, end_date: '2026-12-31' }).success).toBe(true);
   });
 });

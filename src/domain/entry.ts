@@ -1,6 +1,5 @@
 import { DAY_MINUTES_LIMIT, ENTRY_MINUTES_MAX, ENTRY_MINUTES_MIN, ENTRY_NOTE_MAX } from '../config/constants';
-import { isWithin } from './dates';
-import { isIntInRange } from './goal';
+import { isIntInRange, isWithinGoal } from './goal';
 import { charLength } from './text';
 import { fail, ok, type DomainError, type Goal, type ISODate, type LogEntry, type Result } from './types';
 
@@ -26,14 +25,18 @@ export function validateEntryFields(input: EntryFieldsInput): Result<EntryFields
   return ok({ minutes: minutesOk ? input.minutes : 0, note: noteOk ? note : '' });
 }
 
-/** Date rules: not in the future, inside the goal period (FR-07, FR-17). */
+/**
+ * Date rules: not in the future, inside the goal period (FR-07, FR-17). v4.0: for an open-ended goal
+ * the period is `startDate → today`; the error then carries `params.end = null` (the UI picks the
+ * sentence without an end date, DESIGN §7.3).
+ */
 export function validateEntryDate(date: ISODate, goal: Pick<Goal, 'startDate' | 'endDate'>, today: ISODate): DomainError | null {
   if (date > today) return { code: 'DATE_IN_FUTURE', field: 'date', message: `date ${date} is after today ${today}` };
-  if (!isWithin(date, goal.startDate, goal.endDate)) {
+  if (!isWithinGoal(date, goal)) {
     return {
       code: 'DATE_OUTSIDE_GOAL_PERIOD',
       field: 'date',
-      message: `date ${date} outside ${goal.startDate}–${goal.endDate}`,
+      message: `date ${date} outside ${goal.startDate}–${goal.endDate ?? 'open'}`,
       params: { start: goal.startDate, end: goal.endDate },
     };
   }

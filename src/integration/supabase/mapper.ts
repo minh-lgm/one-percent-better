@@ -47,14 +47,17 @@ export const goalRowSchema = z
     target_type: z.enum(['daily', 'total']),
     target_minutes: z.number().int().min(1).max(TOTAL_HOURS_MAX * 60),
     start_date: isoDate,
-    end_date: isoDate,
+    // v4.0 (M11, ADR-33): NULL = open-ended, only for `daily` — the same two check constraints as
+    // `20261019000000_goal_open_ended.sql` (`goals_period_check`, `goals_open_ended_daily_check`).
+    end_date: isoDate.nullable(),
     archived: z.boolean(),
     created_at: timestamp,
     updated_at: timestamp,
     deleted_at: nullableTimestamp,
     server_updated_at: timestamp.optional(),
   })
-  .refine((g) => g.end_date >= g.start_date, 'end before start')
+  .refine((g) => g.end_date === null || g.end_date >= g.start_date, 'end before start')
+  .refine((g) => g.end_date !== null || g.target_type === 'daily', 'open-ended goals must be daily')
   .refine((g) => (g.target_type === 'daily' ? g.target_minutes >= DAILY_MINUTES_MIN && g.target_minutes <= DAILY_MINUTES_MAX : g.target_minutes >= TOTAL_HOURS_MIN * 60), 'target');
 
 export const entryRowSchema = z.object({

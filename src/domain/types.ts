@@ -14,7 +14,12 @@ export interface Goal {
   targetType: TargetType;
   targetMinutes: number;
   startDate: ISODate;
-  endDate: ISODate;
+  /**
+   * v4.0 (M11, ADR-31): `null` = no end date ("open-ended"), allowed ONLY when `targetType === 'daily'`.
+   * The field is always present (never optional, never a sentinel date); every derived value of an
+   * open-ended goal is measured up to today (ARCHITECTURE §4.6).
+   */
+  endDate: ISODate | null;
   archived: boolean;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
@@ -95,7 +100,8 @@ export interface DomainError {
   code: ErrorCode;
   field?: string;
   message: string;
-  params?: Record<string, string | number>;
+  /** `null` only for `DATE_OUTSIDE_GOAL_PERIOD.end` of an open-ended goal (v4.0). */
+  params?: Record<string, string | number | null>;
 }
 
 export type Result<T> = { ok: true; value: T } | { ok: false; errors: DomainError[] };

@@ -166,3 +166,31 @@ describe('limits parity with astral characters (M10-D1): form = importer = cloud
     expect(mismatches.slice(0, 5)).toEqual([]);
   });
 });
+
+// ---- v4.0 (M11-AC6): the open-ended rule is one rule on all three boundaries (form, file, cloud) ----
+describe('limits parity — open-ended goals (M11-AC6, ADR-31)', () => {
+  const o1 = (): Goal => ({ ...datasetS1().goals[0], id: 'o1', targetType: 'daily', targetMinutes: 10, startDate: '2000-01-01', endDate: null });
+
+  it('daily + null (start 2000-01-01, no period limit) → form, importer and mapper all accept', () => {
+    const g = o1();
+    expect(validateGoalInput(toInput(g)).ok, 'form').toBe(true);
+    expect(fileWith([g], []), 'file').toBe(true);
+    expect(mapperAcceptsGoal(g), 'mapper').toBe(true);
+  });
+
+  it('total + null → form, importer and mapper all reject', () => {
+    const g: Goal = { ...o1(), targetType: 'total', targetMinutes: 6000 };
+    expect(validateGoalInput(toInput(g)).ok, 'form').toBe(false);
+    expect(fileWith([g], []), 'file').toBe(false);
+    expect(mapperAcceptsGoal(g), 'mapper').toBe(false);
+  });
+
+  it('entries of an open-ended goal: any day from the start on is accepted by the importer (checked at today), earlier days are not', () => {
+    const g = { ...o1(), startDate: '2026-10-01' };
+    const e = (date: string) => ({ ...datasetS1().entries[0], id: `e-${date}`, goalId: 'o1', date });
+    const text = (entries: LogEntry[]) => JSON.stringify({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals: [g], entries, settings: {} });
+    expect(parseBackup(text([e('2026-10-01'), e('2026-10-09')]), 1, '2026-10-09').ok).toBe(true);
+    expect(parseBackup(text([e('2026-09-30')]), 1, '2026-10-09').ok).toBe(false);
+    expect(parseBackup(text([e('2026-10-10')]), 1, '2026-10-09').ok).toBe(false);
+  });
+});

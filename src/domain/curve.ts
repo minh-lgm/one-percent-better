@@ -8,6 +8,9 @@
 // telescopes to that direct ratio — so it is computed as one division, never as a
 // running product of floats. Days without time keep the line flat; the line can
 // go down. The daily target plays no part here (A-42).
+//
+// v4.0 (M11, A-52): an open-ended goal (`endDate = null`) has no future days — the ideal line runs
+// startDate → today only (`periodDays` = `elapsedDays`), and before it starts there is nothing to draw.
 import { dayNumber, daysInclusive, isoFromDayNumber } from './dates';
 import type { Goal, ISODate, LogEntry } from './types';
 
@@ -43,10 +46,11 @@ export interface LoggedDayRef {
 }
 
 export interface CurveData {
-  /** One point per day of the whole period (`periodDays` points). */
+  /** One point per day of the whole period (`periodDays` points); open-ended goal: one per elapsed day. */
   ideal: IdealPoint[];
   /** One point per elapsed day, startDate → min(today, endDate); empty before the goal starts. */
   actual: ActualPoint[];
+  /** Days of the period; for an open-ended goal equal to `elapsedDays` (0 when upcoming). */
   periodDays: number;
   /** Days of the period elapsed up to today (0 when upcoming). */
   elapsedDays: number;
@@ -91,15 +95,17 @@ export function pct(a: number, b: number): number {
   return out === 0 ? 0 : out;
 }
 
-/** Last day of the period that has already happened, or `null` before the goal starts. */
+/** Last day of the period that has already happened (open-ended goal: today), or `null` before the goal starts. */
 export function lastElapsedDay(goal: Pick<Goal, 'startDate' | 'endDate'>, today: ISODate): ISODate | null {
   if (today < goal.startDate) return null;
-  return today < goal.endDate ? today : goal.endDate;
+  return goal.endDate === null || today < goal.endDate ? today : goal.endDate;
 }
 
 /** Build the ideal and actual series of one goal (`goalEntries` must belong to `goal`). */
 export function curve(goal: Goal, goalEntries: readonly LogEntry[], today: ISODate): CurveData {
-  const periodDays = daysInclusive(goal.startDate, goal.endDate);
+  const lastDay = lastElapsedDay(goal, today);
+  // Finite goal: the whole period (future days included). Open-ended: startDate → today, nothing before the start.
+  const periodDays = goal.endDate !== null ? daysInclusive(goal.startDate, goal.endDate) : lastDay ? daysInclusive(goal.startDate, lastDay) : 0;
   const start = dayNumber(goal.startDate);
   const ideal: IdealPoint[] = new Array(periodDays);
   for (let i = 0; i < periodDays; i++) {
@@ -107,7 +113,6 @@ export function curve(goal: Goal, goalEntries: readonly LogEntry[], today: ISODa
   }
 
   const actual: ActualPoint[] = [];
-  const lastDay = lastElapsedDay(goal, today);
   let baseline: LoggedDayRef | null = null;
   let latest: LoggedDayRef | null = null;
   let previous: LoggedDayRef | null = null;

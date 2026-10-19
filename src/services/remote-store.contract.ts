@@ -187,6 +187,31 @@ export function describeRemoteStoreContract(name: string, setup: () => Promise<C
       expect(await u1.push({ goals: [G('g4', T0)], entries: [] })).toEqual({ rejected: { goals: [], entries: [] } });
     });
 
+    it('(v4.0, M11-AC6) an open-ended daily goal round-trips with endDate null; a total goal without an end date is rejected before it is sent', async () => {
+      const h = await setup();
+      await h.reset();
+      const u1 = h.as('u1');
+      const open: SyncRecord<Goal> = { ...G('o1', T0, 'Meditate'), targetMinutes: 10, endDate: null };
+      const totalOpen: SyncRecord<Goal> = { ...G('bad-total', T0), targetType: 'total', targetMinutes: 6000, endDate: null };
+      const r = await u1.push({ goals: [open, totalOpen, G('g2', T0)], entries: [E('e1', 'o1', T0)] });
+      expect(r.rejected).toEqual({ goals: ['bad-total'], entries: [] });
+      const fetched = await u1.fetchByIds({ goals: ['o1', 'bad-total', 'g2'], entries: ['e1'] });
+      expect(fetched.goals.map((g) => g.id).sort()).toEqual(['g2', 'o1']);
+      const o1 = fetched.goals.find((g) => g.id === 'o1')!;
+      expect(o1.endDate).toBeNull();
+      expect('endDate' in o1).toBe(true);
+      expect(o1).toMatchObject({ targetType: 'daily', targetMinutes: 10, startDate: '2026-10-01', deletedAt: null });
+      expect(fetched.skippedInvalid).toBe(0);
+      const page = await u1.pull('goals', null, 500);
+      expect(page.rows.find((g) => g.id === 'o1')?.endDate).toBeNull();
+      expect(page.skippedInvalid).toBe(0);
+      // Finite → open-ended and back is an ordinary LWW edit.
+      await u1.push({ goals: [{ ...G('g2', T1), endDate: null }], entries: [] });
+      expect((await u1.fetchByIds({ goals: ['g2'], entries: [] })).goals[0].endDate).toBeNull();
+      await u1.push({ goals: [{ ...G('g2', T2), endDate: '2026-12-31' }], entries: [] });
+      expect((await u1.fetchByIds({ goals: ['g2'], entries: [] })).goals[0].endDate).toBe('2026-12-31');
+    });
+
     it('invalid rows on the server are skipped and counted; valid ones still come back', async ({ skip }) => {
       const h = await setup();
       const seedRaw = h.seedRaw;

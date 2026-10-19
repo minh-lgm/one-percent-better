@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildEntry, buildGoal, datasetS1, TODAY } from '../test/builders';
+import { buildEntry, buildGoal, datasetO1, datasetS1, TODAY } from '../test/builders';
 import { allGoalsLevel, buildHeatmap, goalLevel, type HeatmapCell } from './heatmap';
 
 const s1 = datasetS1();
@@ -77,5 +77,29 @@ describe('heatmap levels (M4-AC2)', () => {
     const grid = buildHeatmap({ year: 2026, goal: null, goals: [g], entries, today: TODAY });
     expect(cellOf(grid.cells, '2026-10-04')).toMatchObject({ level: 4, met: false, minutes: 200 });
     expect(cellOf(grid.cells, '2026-10-06')).toMatchObject({ level: 1, met: false });
+  });
+});
+
+// ---- v4.0 (M11): heatmap of an open-ended goal — `outside` only before the start (A-51) ----
+describe('heatmap — open-ended goal O1 in 2026 (M11-AC2)', () => {
+  const o1 = datasetO1();
+
+  it('2026-09-30 outside; 2026-10-09 (today) none; 2026-10-08 logged 20 min level 4; 2026-12-31 future; no outside cell after the start', () => {
+    const grid = buildHeatmap({ year: 2026, goal: o1.goals[0], goals: o1.goals, entries: o1.entries, today: TODAY });
+    expect(cellOf(grid.cells, '2026-09-30').state).toBe('outside');
+    expect(cellOf(grid.cells, '2026-01-01').state).toBe('outside');
+    expect(cellOf(grid.cells, '2026-10-09')).toMatchObject({ state: 'none', today: true, navigable: true });
+    expect(cellOf(grid.cells, '2026-10-08')).toMatchObject({ state: 'logged', minutes: 20, level: 4, met: true });
+    expect(cellOf(grid.cells, '2026-10-02')).toMatchObject({ state: 'logged', minutes: 15, level: 3, met: true });
+    expect(cellOf(grid.cells, '2026-12-31').state).toBe('future');
+    expect(grid.cells.filter((c) => c.date >= '2026-10-01' && c.state === 'outside')).toEqual([]);
+  });
+
+  it('a later year has no outside cells at all; "All goals" with S1 + O1 is unchanged for the other goals', () => {
+    const later = buildHeatmap({ year: 2027, goal: o1.goals[0], goals: o1.goals, entries: o1.entries, today: '2027-06-01' });
+    expect(later.cells.filter((c) => c.state === 'outside')).toEqual([]);
+    const all = buildHeatmap({ year: 2026, goal: null, goals: [...s1.goals, ...o1.goals], entries: [...s1.entries, ...o1.entries], today: TODAY });
+    expect(cellOf(all.cells, '2026-10-08').minutes).toBe(30 + 20 + 20);
+    expect(cellOf(all.cells, '2026-10-08').met).toBe(true);
   });
 });

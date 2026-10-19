@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { IMPORT_MAX_BYTES } from '../config/constants';
-import { buildEntry, buildGoal, datasetS1, FIXED_NOW } from '../test/builders';
+import { buildEntry, buildGoal, datasetO1, datasetS1, datasetS1O1, FIXED_NOW } from '../test/builders';
 import { backupFileName, backupReminder, buildBackup, checkIntegrity, parseBackup, type BackupFile } from './backup';
 import { DEFAULT_SETTINGS } from './types';
 
@@ -217,5 +217,77 @@ describe('M10-D3: malformed calendar dates are a structured schema error, never 
   it('a real but too long period still carries the outOfRange variant', () => {
     const r = parseBackup(withGoal({ startDate: '2000-01-01', endDate: '2099-12-31' }), 1000);
     expect(r.ok ? 'ok' : r.errors[0].params?.variant).toBe('outOfRange');
+  });
+});
+
+// ---- v4.0 (M11, ADR-32): open-ended goals in the backup file, schemaVersion stays 1 ----
+describe('backup with "endDate": null (M11-AC5, FR-19, FR-20, A-54)', () => {
+  const fileS1O1 = () => {
+    const d = datasetS1O1();
+    return buildBackup({ goals: d.goals, entries: d.entries, settings: { ...DEFAULT_SETTINGS } }, FIXED_NOW);
+  };
+  const fileO1 = (goalPatch: Partial<ReturnType<typeof buildGoal>> = {}, extraEntries: ReturnType<typeof buildEntry>[] = []) => {
+    const d = datasetO1();
+    return text({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals: [{ ...d.goals[0], ...goalPatch }], entries: [...d.entries, ...extraEntries], settings: {} });
+  };
+  const resultOf = (t: string, today?: string) => {
+    const r = parseBackup(t, t.length, today);
+    if (r.ok) return 'ok';
+    return `${r.errors[0].code}${r.errors[0].params?.variant ? `:${String(r.errors[0].params.variant)}` : ''}`;
+  };
+
+  it('buildBackup keeps schemaVersion 1 and writes the key with a JSON null; parse accepts it and round-trips S1 + O1 (6 goals, 27 entries)', () => {
+    const file = fileS1O1();
+    expect(file.schemaVersion).toBe(1);
+    const json = JSON.stringify(file);
+    expect(json).toContain('"endDate":null');
+    const o1 = (JSON.parse(json) as { goals: Array<Record<string, unknown>> }).goals.find((g) => g.id === 'o1')!;
+    expect('endDate' in o1).toBe(true);
+    expect(o1.endDate).toBeNull();
+    const r = parseBackup(json, json.length, '2026-10-09');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.goals).toHaveLength(6);
+    expect(r.value.entries).toHaveLength(27);
+    expect(r.value.goals.find((g) => g.id === 'o1')?.endDate).toBeNull();
+    expect(r.value).toEqual(file);
+  });
+
+  it('total + endDate null → IMPORT_INVALID_SCHEMA with variant outOfRange (a business rule, A-48)', () => {
+    expect(resultOf(fileO1({ targetType: 'total', targetMinutes: 6000 }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+  });
+
+  it('a goal whose endDate key is missing → IMPORT_INVALID_SCHEMA without a variant (structural, like any missing field)', () => {
+    const d = datasetO1();
+    const { endDate: _e, ...noKey } = d.goals[0];
+    const t = text({ app: 'one-percent-better', schemaVersion: 1, exportedAt: FIXED_NOW.toISOString(), goals: [noKey], entries: [], settings: {} });
+    expect(resultOf(t)).toBe('IMPORT_INVALID_SCHEMA');
+    expect(resultOf(fileO1({ endDate: undefined as unknown as null }))).toBe('IMPORT_INVALID_SCHEMA');
+  });
+
+  it('no period limit for an open-ended goal: startDate 2000-01-01 is fine (a finite 2000 → 2099 goal is outOfRange)', () => {
+    expect(resultOf(fileO1({ startDate: '2000-01-01' }))).toBe('ok');
+    expect(resultOf(fileO1({ startDate: '2000-01-01', endDate: '2099-12-31' }))).toBe('IMPORT_INVALID_SCHEMA:outOfRange');
+  });
+
+  it('integrity: an entry before the start → IMPORT_INTEGRITY; an entry after today → IMPORT_INTEGRITY; far-future entries are fine without today', () => {
+    expect(resultOf(fileO1({}, [buildEntry({ id: 'early', goalId: 'o1', date: '2026-09-30', minutes: 5 })]), '2026-10-09')).toBe('IMPORT_INTEGRITY');
+    expect(resultOf(fileO1({}, [buildEntry({ id: 'future', goalId: 'o1', date: '2026-10-10', minutes: 5 })]), '2026-10-09')).toBe('IMPORT_INTEGRITY');
+    expect(resultOf(fileO1({}, [buildEntry({ id: 'later', goalId: 'o1', date: '2031-10-02', minutes: 5 })]), '2031-10-02')).toBe('ok');
+    const d = datasetO1();
+    expect(checkIntegrity(d.goals, [...d.entries, buildEntry({ id: 'early', goalId: 'o1', date: '2026-09-30', minutes: 5 })])?.code).toBe('IMPORT_INTEGRITY');
+    expect(checkIntegrity(d.goals, d.entries, '2026-10-09')).toBeNull();
+  });
+
+  it('null endDate plus an impossible start date is still the plain schema error; endDate null never counts as "ends before it starts"', () => {
+    expect(resultOf(fileO1({ startDate: '2026-02-30' }))).toBe('IMPORT_INVALID_SCHEMA');
+    expect(checkIntegrity([buildGoal({ id: 'x', endDate: null, startDate: '2026-10-01' })], [])).toBeNull();
+  });
+
+  it('an older backup (every goal with an end date) is read exactly as before', () => {
+    const s1 = sampleFile();
+    const r = parseBackup(text(s1), 1000);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.goals.every((g) => typeof g.endDate === 'string')).toBe(true);
   });
 });
