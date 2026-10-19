@@ -2,7 +2,7 @@
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
 **Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-19 (M11 QC round 1 PASS; chờ user làm U12 rồi push/deploy)
-**Next step:** user làm **U12** (chạy `supabase/migrations/20261019000000_goal_open_ended.sql` trên Supabase SQL Editor, xem TASKS.md mục User setup) → báo orchestrator → push `main` → deploy Pages → user làm U13 (kiểm 2 thiết bị). Quyết định sản phẩm còn mở: M11-D1 (giới hạn startDate goal không hạn), OQ-D21 (Ideal lấn át "Bạn" khi goal chạy lâu)
+**Next step:** push `main` → Pages deploy → user làm U13 (kiểm 2 thiết bị). Quyết định sản phẩm còn mở: M11-D1, OQ-D21
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -28,6 +28,8 @@
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
 
 - 2026-10-19 — Phase 5: user yêu cầu thêm option "Không có thời hạn" ở section Kết thúc (Ends) của form goal (ảnh chụp: radio "Trong năm nay — kết thúc 31/12/2026" / "Vào một ngày cụ thể"). Intake: (1) áp dụng cho loại nào? → **chỉ goal `daily` (Phút/ngày)**; chọn `total` thì option ẩn/khoá kèm ghi chú, công thức dailyTarget không đổi. (2) Supabase `end_date NOT NULL` → **migration SQL mới cho phép NULL** (user tự dán vào SQL Editor như U6 trước khi deploy; dữ liệu cũ giữ nguyên). (3) Gate? → **Làm thẳng** (planner revise → designer revise → developer → qc, không chờ duyệt plan/design; báo khi xong hoặc khi có câu hỏi)
+
+- 2026-10-19 — U12 (migration goal_open_ended trên Supabase thật)? → User đã chạy, ảnh chụp SQL Editor: `goals_period_check` = `end_date IS NULL OR end_date >= start_date`, `goals_open_ended_daily_check` = `end_date IS NOT NULL OR target_type = 'daily'`, không còn check cũ → NV-9 PASS (phần ràng buộc). User nói không cần backup (chỉ mình anh dùng, dữ liệu test) → bỏ bước Export. Push/deploy M11
 
 ## Tham chiếu
 - App (GitHub Pages, HTTPS): https://minh-lgm.github.io/one-percent-better/
