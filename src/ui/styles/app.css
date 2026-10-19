@@ -567,7 +567,7 @@ fieldset {
   margin: 2px 0 0;
   flex: none;
 }
-/* v4.0 (M11, DESIGN S3 / §8.2): a locked radio keeps readable text (--text-muted, no opacity) and a not-allowed cursor. */
+/* v4.0 (M11, DESIGN S3 / 8.2): a locked radio keeps readable text (--text-muted, no opacity) and a not-allowed cursor. */
 .radio input:disabled,
 .radio:has(input:disabled) {
   cursor: not-allowed;
@@ -575,7 +575,7 @@ fieldset {
 .radio input:disabled + span {
   color: var(--text-muted);
 }
-/* v4.0: End date nested under "On a specific date", description under "No end date" — both aligned with the label text (30 px). */
+/* v4.0: End date nested under "On a specific date", description under "No end date" - both aligned with the label text (30 px). */
 .nested {
   margin-left: 30px;
 }

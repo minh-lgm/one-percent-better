@@ -163,6 +163,8 @@ export interface GoalSpec {
   targetValue: number;
   startDate?: string;
   endDate?: string; // undefined = "This year"
+  /** v4.0 (M11): pick the third Ends radio "No end date" (daily goals only). */
+  endsNever?: boolean;
 }
 
 type Copy = typeof en | typeof vi;
@@ -180,7 +182,9 @@ export async function createGoal(page: Page, goal: GoalSpec, copy: Copy = en): P
     await page.getByRole('textbox', { name: new RegExp(`^${copy.goal.form.targetDaily}`) }).fill(String(goal.targetValue));
   }
   if (goal.startDate) await page.getByLabel(new RegExp(`^${copy.goal.form.startLabel}`)).fill(goal.startDate);
-  if (goal.endDate) {
+  if (goal.endsNever) {
+    await page.getByRole('radio', { name: copy.goal.form.endsNever }).check();
+  } else if (goal.endDate) {
     await page.getByRole('radio', { name: copy.goal.form.endsSpecific }).check();
     await page.getByLabel(new RegExp(`^${copy.goal.form.endLabel}`)).fill(goal.endDate);
   }

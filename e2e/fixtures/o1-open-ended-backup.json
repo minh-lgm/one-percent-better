@@ -1,0 +1,68 @@
+{
+  "app": "one-percent-better",
+  "schemaVersion": 1,
+  "exportedAt": "2026-10-09T03:00:00.000Z",
+  "goals": [
+    {
+      "id": "o1",
+      "name": "Meditate",
+      "why": "",
+      "targetType": "daily",
+      "targetMinutes": 10,
+      "startDate": "2026-10-01",
+      "endDate": null,
+      "archived": false,
+      "createdAt": "2026-09-30T06:00:00.000Z",
+      "updatedAt": "2026-09-30T06:00:00.000Z"
+    }
+  ],
+  "entries": [
+    {
+      "id": "e-o1-1",
+      "goalId": "o1",
+      "date": "2026-10-01",
+      "minutes": 10,
+      "note": "",
+      "source": "manual",
+      "createdAt": "2026-10-01T02:00:00.000Z",
+      "updatedAt": "2026-10-01T02:00:00.000Z"
+    },
+    {
+      "id": "e-o1-2",
+      "goalId": "o1",
+      "date": "2026-10-02",
+      "minutes": 15,
+      "note": "",
+      "source": "manual",
+      "createdAt": "2026-10-02T02:00:00.000Z",
+      "updatedAt": "2026-10-02T02:00:00.000Z"
+    },
+    {
+      "id": "e-o1-3",
+      "goalId": "o1",
+      "date": "2026-10-05",
+      "minutes": 10,
+      "note": "",
+      "source": "manual",
+      "createdAt": "2026-10-05T02:00:00.000Z",
+      "updatedAt": "2026-10-05T02:00:00.000Z"
+    },
+    {
+      "id": "e-o1-4",
+      "goalId": "o1",
+      "date": "2026-10-08",
+      "minutes": 20,
+      "note": "",
+      "source": "manual",
+      "createdAt": "2026-10-08T02:00:00.000Z",
+      "updatedAt": "2026-10-08T02:00:00.000Z"
+    }
+  ],
+  "settings": {
+    "reminderEnabled": false,
+    "reminderTime": "20:00",
+    "lastReminderDate": null,
+    "lastBackupAt": null,
+    "plusOneShown": {}
+  }
+}
