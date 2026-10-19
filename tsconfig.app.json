@@ -22,11 +22,5 @@
     "skipLibCheck": true
   },
   "include": ["src", "tests/qc/**/*.test.ts", "tests/qc/**/*.test.tsx", "tests/db/**/*.test.ts"],
-  "exclude": [
-    "src/sw.ts",
-    // M11 (temporary, like M9/M10): these two QC files type `Goal.endDate` as a plain string (finite goals only).
-    // They still run under Vitest and pass; QC re-targets them (dev-M11 handoff §8) and this exclude goes away.
-    "tests/qc/m4-r1-domain.test.ts",
-    "tests/qc/m5-r1-domain.test.ts"
-  ]
+  "exclude": ["src/sw.ts"]
 }
