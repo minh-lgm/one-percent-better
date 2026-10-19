@@ -70,6 +70,13 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 .badge.ok{background:var(--primary-soft);color:var(--on-primary-soft);border-color:transparent}
 .badge.info{background:var(--info-soft);color:var(--info);border-color:transparent}
 .mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+.mock-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-bottom:12px;padding:12px;border:1px dashed var(--border-input);border-radius:var(--r-md);font-size:14px;line-height:20px}
+.seg{display:flex;border:1px solid var(--border-input);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.seg label{flex:1;position:relative;margin:0;font-weight:600;cursor:pointer}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:flex;align-items:center;justify-content:center;min-height:calc(var(--tap) - 2px);padding:0 12px;text-align:center;font-size:15px}
+.seg input:checked+span{background:var(--primary);color:var(--on-primary)}
+.seg input:focus-visible+span{outline:2px solid var(--focus);outline-offset:-4px}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 /* screen-specific */
 .group+.group{margin-top:24px}
@@ -97,113 +104,203 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 </defs></svg>
-<a class="skip" href="#main">Skip to content</a>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
 
-<nav class="nav" aria-label="Main">
+<nav class="nav" data-i18n-aria="navLabel" aria-label="Main">
   <a class="brand" href="01-today.html" aria-label="1% Better per Day"><span class="mark" aria-hidden="true"><img src="../../../public/brand-mark-96.png" width="28" height="28" alt="" decoding="async"></span><span>1% Better per Day</span></a>
-  <a class="item" href="01-today.html"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span>Today</span></a>
-  <a class="item" href="02-goals.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span>Goals</span></a>
-  <a class="item" href="06-review.html"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span>Review</span></a>
-  <a class="item" href="08-settings.html"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></a>
+  <a class="item" href="01-today.html"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span data-i18n="navToday">Today</span></a>
+  <a class="item" href="02-goals.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span data-i18n="navGoals">Goals</span></a>
+  <a class="item" href="06-review.html"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span data-i18n="navReview">Review</span></a>
+  <a class="item" href="08-settings.html"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span data-i18n="navSettings">Settings</span></a>
 </nav>
 
 <div class="content">
 <main id="main" tabindex="-1">
+  <div class="mock-bar" role="group" aria-label="Mockup controls (not part of the app)">
+    <fieldset style="border:0;margin:0;padding:0;min-width:0">
+      <legend class="small muted" style="font-weight:600;padding:0 0 4px">Language</legend>
+      <div class="seg"><label><input type="radio" name="lang" value="en" checked><span lang="en">English</span></label><label><input type="radio" name="lang" value="vi"><span lang="vi">Tiếng Việt</span></label></div>
+    </fieldset>
+  </div>
+
   <header class="page-head">
-    <h1>Goals</h1>
-    <a class="btn primary" href="03-goal-form.html"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>New goal</a>
+    <h1 data-i18n="goalsTitle">Goals</h1>
+    <a class="btn primary" href="03-goal-form.html"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="newGoal">New goal</span></a>
   </header>
 
   <section class="group" aria-labelledby="h-active">
-    <h2 id="h-active">Active (3)</h2>
+    <h2 id="h-active" data-i18n="groupActive" data-n="4">Active (4)</h2>
     <ul class="stack">
       <li class="card goal-row">
         <div>
-          <div class="top"><h3><a href="07-goal-detail.html">Read</a></h3><span class="badge ok">Active</span></div>
-          <p class="muted small num">30 min/day · 2026-10-01 – 2026-10-31</p>
+          <div class="top"><h3><a href="07-goal-detail.html">Read</a></h3><span class="badge ok" data-i18n="stActive">Active</span></div>
+          <p class="muted small num" data-row="daily" data-n="30" data-start="2026-10-01" data-end="2026-10-31">30 min/day · 2026-10-01 – 2026-10-31</p>
           <p class="muted small why">Be smarter</p>
         </div>
         <div class="gr-actions">
-          <a class="btn secondary" href="03-goal-form.html">Edit</a>
-          <button class="btn secondary" type="button">Archive</button>
-          <button class="btn danger-ghost" type="button">Delete</button>
+          <a class="btn secondary" href="03-goal-form.html" data-i18n="edit">Edit</a>
+          <button class="btn secondary" type="button" data-i18n="archive">Archive</button>
+          <button class="btn danger-ghost" type="button" data-i18n="delete">Delete</button>
         </div>
       </li>
       <li class="card goal-row">
         <div>
-          <div class="top"><h3><a href="07-goal-detail.html">Guitar</a></h3><span class="badge ok">Active</span></div>
-          <p class="muted small num">20 min/day · 2026-09-01 – 2026-12-31</p>
+          <div class="top"><h3><a href="07-goal-detail.html">Guitar</a></h3><span class="badge ok" data-i18n="stActive">Active</span></div>
+          <p class="muted small num" data-row="daily" data-n="20" data-start="2026-09-01" data-end="2026-12-31">20 min/day · 2026-09-01 – 2026-12-31</p>
           <p class="muted small why">Play a full song by Christmas</p>
         </div>
         <div class="gr-actions">
-          <a class="btn secondary" href="03-goal-form.html">Edit</a>
-          <button class="btn secondary" type="button">Archive</button>
-          <button class="btn danger-ghost" type="button">Delete</button>
+          <a class="btn secondary" href="03-goal-form.html" data-i18n="edit">Edit</a>
+          <button class="btn secondary" type="button" data-i18n="archive">Archive</button>
+          <button class="btn danger-ghost" type="button" data-i18n="delete">Delete</button>
         </div>
       </li>
       <li class="card goal-row">
         <div>
-          <div class="top"><h3><a href="07-goal-detail.html">Spanish</a></h3><span class="badge ok">Active</span></div>
-          <p class="muted small num">17 min/day (100 h total) · 2026-01-01 – 2026-12-31</p>
+          <div class="top"><h3><a href="07-goal-detail.html">Spanish</a></h3><span class="badge ok" data-i18n="stActive">Active</span></div>
+          <p class="muted small num" data-row="total" data-n="17" data-hours="100" data-start="2026-01-01" data-end="2026-12-31">17 min/day (100 h total) · 2026-01-01 – 2026-12-31</p>
           <p class="muted small why">Talk with my grandmother in her language</p>
         </div>
         <div class="gr-actions">
-          <a class="btn secondary" href="03-goal-form.html">Edit</a>
-          <button class="btn secondary" type="button">Archive</button>
-          <button class="btn danger-ghost" type="button">Delete</button>
+          <a class="btn secondary" href="03-goal-form.html" data-i18n="edit">Edit</a>
+          <button class="btn secondary" type="button" data-i18n="archive">Archive</button>
+          <button class="btn danger-ghost" type="button" data-i18n="delete">Delete</button>
+        </div>
+      </li>
+      <li class="card goal-row" id="open-active">
+        <div>
+          <div class="top"><h3><a href="07-goal-detail.html">Meditate</a></h3><span class="badge ok" data-i18n="stActive">Active</span></div>
+          <p class="muted small num" data-row="open" data-n="10" data-start="2026-10-01">10 min/day · from 2026-10-01, no end date</p>
+        </div>
+        <div class="gr-actions">
+          <a class="btn secondary" href="03-goal-form.html" data-i18n="edit">Edit</a>
+          <button class="btn secondary" type="button" data-i18n="archive">Archive</button>
+          <button class="btn danger-ghost" type="button" data-i18n="delete">Delete</button>
         </div>
       </li>
     </ul>
   </section>
 
   <section class="group" aria-labelledby="h-upcoming">
-    <h2 id="h-upcoming">Upcoming (1)</h2>
+    <h2 id="h-upcoming" data-i18n="groupUpcoming" data-n="2">Upcoming (2)</h2>
     <ul class="stack">
       <li class="card goal-row">
         <div>
-          <div class="top"><h3><a href="07-goal-detail.html">Marathon prep</a></h3><span class="badge info">Upcoming</span></div>
-          <p class="muted small num">45 min/day · 2026-11-01 – 2026-11-30</p>
-          <p class="muted small">Starts 2026-11-01</p>
+          <div class="top"><h3><a href="07-goal-detail.html">Marathon prep</a></h3><span class="badge info" data-i18n="stUpcoming">Upcoming</span></div>
+          <p class="muted small num" data-row="daily" data-n="45" data-start="2026-11-01" data-end="2026-11-30">45 min/day · 2026-11-01 – 2026-11-30</p>
+          <p class="muted small num" data-starts="2026-11-01">Starts 2026-11-01</p>
         </div>
         <div class="gr-actions">
-          <a class="btn secondary" href="03-goal-form.html">Edit</a>
-          <button class="btn secondary" type="button">Archive</button>
-          <button class="btn danger-ghost" type="button">Delete</button>
+          <a class="btn secondary" href="03-goal-form.html" data-i18n="edit">Edit</a>
+          <button class="btn secondary" type="button" data-i18n="archive">Archive</button>
+          <button class="btn danger-ghost" type="button" data-i18n="delete">Delete</button>
+        </div>
+      </li>
+      <li class="card goal-row" id="open-upcoming">
+        <div>
+          <div class="top"><h3><a href="07-goal-detail.html">Piano</a></h3><span class="badge info" data-i18n="stUpcoming">Upcoming</span></div>
+          <p class="muted small num" data-row="open" data-n="15" data-start="2026-12-01">15 min/day · from 2026-12-01, no end date</p>
+          <p class="muted small num" data-starts="2026-12-01">Starts 2026-12-01</p>
+        </div>
+        <div class="gr-actions">
+          <a class="btn secondary" href="03-goal-form.html" data-i18n="edit">Edit</a>
+          <button class="btn secondary" type="button" data-i18n="archive">Archive</button>
+          <button class="btn danger-ghost" type="button" data-i18n="delete">Delete</button>
         </div>
       </li>
     </ul>
   </section>
 
   <section class="group" aria-labelledby="h-ended">
-    <h2 id="h-ended">Ended (1)</h2>
+    <h2 id="h-ended" data-i18n="groupEnded" data-n="1">Ended (1)</h2>
     <ul class="stack">
       <li class="card goal-row">
         <div>
-          <div class="top"><h3><a href="07-goal-detail.html">Old course</a></h3><span class="badge">Ended</span></div>
-          <p class="muted small num">15 min/day · 2026-01-01 – 2026-06-30</p>
-          <p class="muted small">Ended 2026-06-30</p>
+          <div class="top"><h3><a href="07-goal-detail.html">Old course</a></h3><span class="badge" data-i18n="stEnded">Ended</span></div>
+          <p class="muted small num" data-row="daily" data-n="15" data-start="2026-01-01" data-end="2026-06-30">15 min/day · 2026-01-01 – 2026-06-30</p>
+          <p class="muted small num" data-ended="2026-06-30">Ended 2026-06-30</p>
         </div>
         <div class="gr-actions">
-          <a class="btn secondary" href="03-goal-form.html">Edit</a>
-          <button class="btn secondary" type="button">Archive</button>
-          <button class="btn danger-ghost" type="button">Delete</button>
+          <a class="btn secondary" href="03-goal-form.html" data-i18n="edit">Edit</a>
+          <button class="btn secondary" type="button" data-i18n="archive">Archive</button>
+          <button class="btn danger-ghost" type="button" data-i18n="delete">Delete</button>
         </div>
       </li>
     </ul>
   </section>
 
-  <h2 class="preview-title">Dialog preview — Delete goal (D2). Real app opens it as a modal &lt;dialog&gt;; initial focus on Cancel.</h2>
+  <h2 class="preview-title" data-i18n="dlgPreview">Dialog preview — Delete goal (D2). Real app opens it as a modal &lt;dialog&gt;; initial focus on Cancel.</h2>
   <div class="dialog" role="group" aria-labelledby="dlg-h">
-    <h2 id="dlg-h">Delete "Read"?</h2>
-    <p>This permanently deletes the goal and its 8 entries. This can't be undone.</p>
+    <h2 id="dlg-h" data-i18n="dlgTitle">Delete "Read"?</h2>
+    <p data-i18n="dlgBody">This permanently deletes the goal and its 8 entries. This can't be undone.</p>
     <div class="actions">
-      <button class="btn danger" type="button">Delete goal</button>
-      <button class="btn secondary" type="button">Cancel</button>
+      <button class="btn danger" type="button" data-i18n="dlgConfirm">Delete goal</button>
+      <button class="btn secondary" type="button" data-i18n="cancel">Cancel</button>
     </div>
   </div>
 
-  <aside class="mock-note">Mockup S2 Goals (M1). Goal-name links arrive with M3 (Goal detail); the Archive button and the "Archived" group arrive with M5. Empty state ("No goals yet") is specified in DESIGN.md section 7.4.</aside>
+  <aside class="mock-note">Mockup S2 Goals (M1; v4.0 adds the goals with no end date, "Meditate" in Active and "Piano" in Upcoming, and the Language switch, which is mockup-only). A goal with no end date uses one info line, "{n} min/day · from {start}, no end date" (<span lang="vi">"{n} phút/ngày · từ {start}, không có thời hạn"</span>), has no end date, and is never in the Ended group or shows an Ended badge, however long it has been running. Goal-name links arrive with M3 (Goal detail); the Archive button and the "Archived" group arrive with M5. Empty state ("No goals yet") is specified in DESIGN.md section 7.4. Spec: DESIGN.md S2 and 7.6.2.</aside>
 </main>
 </div>
+
+<script>
+(function () {
+  'use strict';
+  var lang = 'en';
+  /* Copy: verbatim from DESIGN.md 7.2 / 7.6.2 (en and vi) */
+  var S = {
+    en: {
+      skip: 'Skip to content', navLabel: 'Main', navToday: 'Today', navGoals: 'Goals', navReview: 'Review', navSettings: 'Settings',
+      goalsTitle: 'Goals', newGoal: 'New goal',
+      groupActive: 'Active ({{n}})', groupUpcoming: 'Upcoming ({{n}})', groupEnded: 'Ended ({{n}})',
+      stActive: 'Active', stUpcoming: 'Upcoming', stEnded: 'Ended',
+      startsOn: 'Starts {{date}}', endedOn: 'Ended {{date}}',
+      rowDaily: '{{n}} min/day · {{range}}', rowTotal: '{{daily}} min/day ({{hours}} h total) · {{range}}',
+      rowDailyOpen: '{{n}} min/day · from {{start}}, no end date',
+      edit: 'Edit', archive: 'Archive', delete: 'Delete', cancel: 'Cancel',
+      dlgPreview: 'Dialog preview — Delete goal (D2). Real app opens it as a modal <dialog>; initial focus on Cancel.',
+      dlgTitle: 'Delete "Read"?', dlgBody: "This permanently deletes the goal and its 8 entries. This can't be undone.", dlgConfirm: 'Delete goal'
+    },
+    vi: {
+      skip: 'Chuyển đến nội dung chính', navLabel: 'Chính', navToday: 'Hôm nay', navGoals: 'Mục tiêu', navReview: 'Tổng kết', navSettings: 'Cài đặt',
+      goalsTitle: 'Mục tiêu', newGoal: 'Mục tiêu mới',
+      groupActive: 'Đang chạy ({{n}})', groupUpcoming: 'Sắp tới ({{n}})', groupEnded: 'Đã kết thúc ({{n}})',
+      stActive: 'Đang chạy', stUpcoming: 'Sắp tới', stEnded: 'Đã kết thúc',
+      startsOn: 'Bắt đầu {{date}}', endedOn: 'Đã kết thúc {{date}}',
+      rowDaily: '{{n}} phút/ngày · {{range}}', rowTotal: '{{daily}} phút/ngày (tổng {{hours}} giờ) · {{range}}',
+      rowDailyOpen: '{{n}} phút/ngày · từ {{start}}, không có thời hạn',
+      edit: 'Sửa', archive: 'Lưu trữ', delete: 'Xóa', cancel: 'Hủy',
+      dlgPreview: 'Xem trước hộp thoại — Xóa mục tiêu (D2). App thật mở nó dạng <dialog> modal; focus ban đầu ở Hủy.',
+      dlgTitle: 'Xóa mục tiêu "Read"?', dlgBody: 'Thao tác này xóa vĩnh viễn mục tiêu và 8 lần ghi của nó. Bạn không thể hoàn tác.', dlgConfirm: 'Xóa mục tiêu'
+    }
+  };
+  function t(k, v) {
+    var s = S[lang][k], n;
+    if (v) for (n in v) s = s.split('{{' + n + '}}').join(v[n]);
+    return s;
+  }
+  function d(iso) { return lang === 'vi' ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : iso; }
+
+  function render() {
+    document.documentElement.lang = lang;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (n) {
+      var v = n.getAttribute('data-n');
+      n.textContent = t(n.getAttribute('data-i18n'), v ? { n: v } : null);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-aria]'), function (n) { n.setAttribute('aria-label', t(n.getAttribute('data-i18n-aria'))); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-row]'), function (n) {
+      var kind = n.getAttribute('data-row'), range = d(n.getAttribute('data-start')) + ' – ' + d(n.getAttribute('data-end') || n.getAttribute('data-start'));
+      if (kind === 'open') n.textContent = t('rowDailyOpen', { n: n.getAttribute('data-n'), start: d(n.getAttribute('data-start')) });
+      else if (kind === 'total') n.textContent = t('rowTotal', { daily: n.getAttribute('data-n'), hours: n.getAttribute('data-hours'), range: range });
+      else n.textContent = t('rowDaily', { n: n.getAttribute('data-n'), range: range });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-starts]'), function (n) { n.textContent = t('startsOn', { date: d(n.getAttribute('data-starts')) }); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ended]'), function (n) { n.textContent = t('endedOn', { date: d(n.getAttribute('data-ended')) }); });
+    document.title = (lang === 'vi' ? 'Mục tiêu' : 'Goals') + ' — 1% Better (mockup S2)';
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=lang]'), function (r) { r.addEventListener('change', function () { lang = r.value; render(); }); });
+  render();
+})();
+</script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Design — 1% Better per Day
 
-Phiên bản: **v3.1** (mode `revise`, 2026-10-17: M10-T8 — không thêm tính năng; **ghi nhận deviation đã ship** của phase 2/3 [brand mark ảnh logo, quy tắc một toast, hint Export chỉ khi online, `empty.day.noGoals` không dấu chấm] và **chốt copy/quy tắc còn mở**: 7 key hàng bị cloud từ chối, `settings.about.privacyLink`, `errors.IMPORT_INVALID_SCHEMA_outOfRange`, `errors.EXPORT_FAILED`, nhãn giá trị cột BarChart, câu chữ heatmap 1024–1191 px; chi tiết ở Changelog v3.1; PRD v3.1 A-44 … A-46, ARCH v3.1 ADR-28/30, TASKS v3.1 M10). Trước đó **v3.0** (mode `revise`, 2026-10-13: phase 3 — đường cong "Bạn" tính theo phút so với ngày có ghi trước, FR-27 v3.0; PRD v3.0, ARCHITECTURE v3.0 §4.5, TASKS v3.0 M9). **v3.0 chỉ đổi Goal detail (S4)**: headline, phụ đề, biểu đồ đường cong, bảng dữ liệu, chú thích và các key `goal.detail.*` / `empty.detail.curve` (xem Changelog); mọi màn khác, token màu/cỡ chữ, bố cục và copy giữ nguyên. Trước đó v2.0 (2026-10-12: phase 2 — đăng nhập Google tuỳ chọn + đồng bộ cloud; app build không cấu hình cloud giống hệt v1.1) và v1.1 (2026-10-09, thêm tiếng Việt). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
+Phiên bản: **v4.0** (mode `revise`, 2026-10-19: M11-T7 — thêm lựa chọn thứ ba **"Không có thời hạn"** (`No end date`) cho section Ends của form goal, chỉ với chỉ tiêu Phút mỗi ngày; kéo theo hàng goal ở Goals/Goal detail ("từ {start}"), "Day {k}" không tổng, bỏ Range, Stat Progress "tới hôm nay", hai câu lỗi mới; **12 key mới, không đổi chữ key cũ**; mọi goal có hạn hiển thị y như v3.1; chi tiết ở S2, S3, S4, S6, 7.3, 7.6.2 … 7.6.4, 7.6.6, 8.2, Changelog v4.0; PRD v4.0 FR-56/FR-57 A-47 … A-56, ARCH v4.0 §4.6, TASKS v4.0 M11). Trước đó **v3.1** (mode `revise`, 2026-10-17: M10-T8 — không thêm tính năng; **ghi nhận deviation đã ship** của phase 2/3 [brand mark ảnh logo, quy tắc một toast, hint Export chỉ khi online, `empty.day.noGoals` không dấu chấm] và **chốt copy/quy tắc còn mở**: 7 key hàng bị cloud từ chối, `settings.about.privacyLink`, `errors.IMPORT_INVALID_SCHEMA_outOfRange`, `errors.EXPORT_FAILED`, nhãn giá trị cột BarChart, câu chữ heatmap 1024–1191 px; chi tiết ở Changelog v3.1; PRD v3.1 A-44 … A-46, ARCH v3.1 ADR-28/30, TASKS v3.1 M10). Trước đó **v3.0** (mode `revise`, 2026-10-13: phase 3 — đường cong "Bạn" tính theo phút so với ngày có ghi trước, FR-27 v3.0; PRD v3.0, ARCHITECTURE v3.0 §4.5, TASKS v3.0 M9). **v3.0 chỉ đổi Goal detail (S4)**: headline, phụ đề, biểu đồ đường cong, bảng dữ liệu, chú thích và các key `goal.detail.*` / `empty.detail.curve` (xem Changelog); mọi màn khác, token màu/cỡ chữ, bố cục và copy giữ nguyên. Trước đó v2.0 (2026-10-12: phase 2 — đăng nhập Google tuỳ chọn + đồng bộ cloud; app build không cấu hình cloud giống hệt v1.1) và v1.1 (2026-10-09, thêm tiếng Việt). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
 Loại app: **GUI** (PWA một người dùng, mobile-first 360 px, dùng tốt trên desktop 1440 px). **UI song ngữ English (`en`) / Tiếng Việt (`vi`)**: mặc định theo `navigator.language`, đổi trong Settings (FR-32 … FR-36). Tài liệu bằng tiếng Việt. **Nguồn sự thật của mọi chuỗi UI là mục 7 (bảng key `en` / `vi`); developer copy nguyên văn từ đó vào `en.json` / `vi.json`.** Các khối "Copy" trong mục 4 là bản `en` để đọc nhanh theo ngữ cảnh; nếu lệch với mục 7 thì mục 7 thắng.
 
 Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 px, tự theo sáng/tối của hệ thống): xem `docs/design/mockups/index.html`. Các mockup viết bằng `en`; riêng Today có thêm bản `vi`. **(v3.1)** Brand mark trong nav của mọi mockup nạp ảnh `public/brand-mark-96.png` của repo bằng đường dẫn tương đối `../../../public/brand-mark-96.png` (không qua mạng; ngoại lệ có chủ đích của quy tắc "tự chứa" vì không nhúng được ảnh dạng base64 trong lượt làm này — nếu mở file mockup ngoài repo thì ô trắng sẽ trống, phần còn lại không ảnh hưởng).
@@ -9,12 +9,12 @@ Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 p
 | :- | :- | :- |
 | `mockups/01-today.html` | S1 Today (banner nhắc, form ghi nhanh, card đạt/chưa đạt). **v2:** bộ chọn trạng thái tài khoản (chưa đăng nhập + LoginPromptBanner, hoặc đã đăng nhập với SyncIndicator 5 trạng thái), nút đổi sáng/tối | M1 (+M2 banner); M7 (SyncIndicator); M8 (LoginPromptBanner) |
 | `mockups/01-today.vi.html` | S1 Today bản tiếng Việt (cùng dữ liệu; tham chiếu độ dài chuỗi `vi` ở 360 px). **v2:** cùng bộ chọn trạng thái tài khoản, chuỗi `vi` | M1 (+M2 banner); M7; M8 |
-| `mockups/02-goals.html` | S2 Goals (nhóm trạng thái, xác nhận xoá) | M1 |
-| `mockups/03-goal-form.html` | S3 Goal form (lỗi inline, gợi ý chỉ tiêu ngày) | M1 |
+| `mockups/02-goals.html` | S2 Goals (nhóm trạng thái, xác nhận xoá). **v4.0:** thêm 2 hàng goal không thời hạn (Active "Meditate", Upcoming "Piano"), nút đổi `English` / `Tiếng Việt` cho cả trang (kiểm hàng `vi` ở 360 px) | M1; M11 |
+| `mockups/03-goal-form.html` | S3 Goal form (lỗi inline, gợi ý chỉ tiêu ngày). **v4.0:** viết lại có tương tác: radio thứ ba "No end date" / "Không có thời hạn", khoá khi chọn Total hours + ghi chú, tự chuyển sang "This year" kèm thông báo, chế độ sửa goal không hạn, nút đổi `English` / `Tiếng Việt`, bộ chọn tình huống | M1; M11 |
 | `mockups/04-timer.html` | S1 khi timer chạy + D1 Stop dialog | M2 |
 | `mockups/05-day.html` | S5 Day (ghi bù) | M3 |
 | `mockups/06-review.html` | S6 Review (heatmap, streak, thống kê, biểu đồ tuần/tháng; đổi được All goals / Read) | M4 |
-| `mockups/07-goal-detail.html` | S4 Goal detail với đường cong 1%. **v3:** dữ liệu thật của user (R1: 5 → 10 → 14 → 27 phút = +440,0%), nút đổi `English` / `Tiếng Việt`, bộ chọn 7 tình huống (R1, R1 sang ngày chưa ghi, hôm nay ghi dở, R3 đi xuống, R4 cực trị, chỉ một ngày có ghi, chưa có entry), thang Y tự co giãn + đường 0% | M3 (lịch sử) / M5 (đầy đủ) / M9 (đường cong v3) |
+| `mockups/07-goal-detail.html` | S4 Goal detail với đường cong 1%. **v3:** dữ liệu thật của user (R1: 5 → 10 → 14 → 27 phút = +440,0%), nút đổi `English` / `Tiếng Việt`, bộ chọn 7 tình huống (R1, R1 sang ngày chưa ghi, hôm nay ghi dở, R3 đi xuống, R4 cực trị, chỉ một ngày có ghi, chưa có entry), thang Y tự co giãn + đường 0%. **v4.0:** thêm 3 tình huống goal không thời hạn (O1 ngày 9; O1 ngày đầu tiên; chưa bắt đầu): "Day {k}" không tổng, không có Range, Progress "tới hôm nay", chưa bắt đầu không có biểu đồ | M3 (lịch sử) / M5 (đầy đủ) / M9 (đường cong v3) / M11 (goal không thời hạn) |
 | `mockups/08-settings.html` | S7 Settings (ngôn ngữ, **card Account (v2)**, nhắc nhở, backup, storage, about). **v2:** bộ chọn trạng thái tài khoản (chưa đăng nhập / đang đăng nhập / đã đăng nhập / hết phiên / ngoại tuyến), ghi chú "theo tài khoản", Backup/Storage/About theo trạng thái, D3 biến thể đã đăng nhập | M1–M3; M6 (Account, About); M7 (đồng bộ, D3); M8 (gợi ý Backup/Storage) |
 | `mockups/09-account.html` | **Mới (v2):** bảng tham chiếu mọi trạng thái của card Account, nút Google, SyncIndicator, LoginPromptBanner, ExportSignInHint, dialog D3 (đã đăng nhập), D4, D5. Có nút đổi `English` / `Tiếng Việt` (bản `vi` đầy đủ để kiểm 360 px) và sáng/tối | M6, M7, M8 |
 
@@ -274,6 +274,34 @@ Quy tắc mốc thời gian (v3.1, A-46): mốc "Not now"/"đã gợi ý" lưu t
    số lần "Not now" đã đếm vẫn giữ. "Not now" bấm khi banner đang trong thời gian ẩn (ví dụ hai tab cùng bấm) không đếm thêm lượt. Không đổi gì ở giao diện.
 ```
 
+### F15 — Tạo hoặc chuyển goal sang "Không có thời hạn" (US-21, FR-56, FR-57) — M11
+
+```text
+[Goal form #/goals/new  hoặc  #/goals/:id/edit]
+   Target = "Minutes per day" (mặc định)
+   Ends:  ( ) This year — ends …   ( ) On a specific date [End date]   ( ) No end date   <-- radio thứ ba, bật
+        |
+        v  chọn "No end date"
+   hiện dưới radio: goal.form.endsNeverHint (mục tiêu chạy tới khi archive/xoá; tiến độ tính tới hôm nay); hint dưới Target ẩn
+        |
+        v  bấm "Save goal" / "Save changes"
+   <hợp lệ?>  (tên, chỉ tiêu phút, Start date)
+     |no--> (!) lỗi inline như F1
+     |yes--> lưu endDate = null --> [Goals] hàng "10 min/day · from 2026-10-01, no end date", badge Active (hoặc Upcoming nếu Start date ở tương lai)
+
+[Đang chọn "No end date" rồi đổi Target sang "Total hours"]   (A-D52, A-D53)
+   --> radio "No end date" bị KHOÁ (disabled) + ghi chú goal.form.endsNeverTotalNote dưới nó
+   --> Ends tự chuyển sang "This year — ends …" (không bao giờ để "total" + không hạn)
+   --> vùng role="status" (sr-only) đọc goal.form.endsNeverSwitched; focus ở lại trên Target
+   --> đổi Target về "Minutes per day": radio mở khoá; KHÔNG tự chọn lại "No end date"
+
+[Sửa goal không thời hạn → có hạn]   chọn "This year" / "On a specific date"
+   <hợp lệ?> ngày kết thúc phải bao mọi entry đã có
+     |no--> (!) errors.GOAL_PERIOD_EXCLUDES_ENTRIES dưới End date (như F1), không lưu
+[Sửa goal có hạn → không thời hạn]   luôn hợp lệ (không có entry tương lai)
+[Goal không thời hạn khi chạy]   badge Active mãi; KHÔNG BAO GIỜ nhóm "Ended"/badge "Ended"; rời Active chỉ bằng Archive hoặc Delete
+```
+
 ---
 
 ## 3. Sơ đồ màn hình và điều hướng
@@ -330,6 +358,7 @@ Không có thanh cuộn ngang ở `documentElement` ở 360–1440 px (NFR-06). 
 | **M8** *(v2)* | `LoginPromptBanner` (Today); `ExportSignInHint` (card Backup); gợi ý đăng nhập ở card Storage "Not protected"; mô tả Backup khi chưa đăng nhập; chuỗi `loginPrompt.*`, `exportHint.*`, `settings.backup.descSignedOut`, `settings.storage.notProtectedSignIn` (+ nút dùng `settings.account.goTo`) |
 | **M9** *(v3)* | Chỉ Goal detail (S4), không màn nào khác: headline có dấu + biến thể âm (`goal.detail.headlineDown`, màu `--text`), phụ đề 2 dòng (`subDay` + `subToday`/`subEarlier`/`subStart`/`empty.detail.curve`), `CurveChart` v3 (đường "Bạn" `stepAfter`, vạch 0%, thang Y theo `curveYDomain`, nhãn trục có dấu + compact, nhãn trực tiếp không đè nhau, tooltip 4 biến thể, chấm nhỏ ở ngày có ghi), legend 3 mục, chú thích mới, tóm tắt SR 2 biến thể, bảng dữ liệu 5 cột; formatter có dấu (`+`/`−` U+2212) và `f.factor` (`×5.4`). Chuỗi: mục 7.6.4 (cột MS = M9) và `empty.detail.curve` |
 | **M10** *(v3.1, M10-T6 đọc mục này)* | Không có màn hình mới. Việc UI/copy: (1) 7 key hàng bị cloud từ chối, 7.7.1 và 7.7.2 (**chỉ 2 chuỗi `en` đổi**: `auth.signOut.rejectedKeep`, `auth.signOut.rejectedRemove`; 5 key còn lại giữ nguyên văn đã ship) + vị trí hiển thị ở S7 (A9, D4); (2) `settings.about.privacyLink`, 7.7.5 (chuỗi đã ship, giữ); (3) `errors.IMPORT_INVALID_SCHEMA_outOfRange` và `errors.EXPORT_FAILED` (**key mới**), 7.3, vị trí ở S7 Backup; (4) `empty.day.noGoals`: chỉ sửa chữ ở S5 (đã không có dấu chấm trong 7.4 và `en.json`); (5) **nhãn giá trị cột BarChart** (S6, mục 5 `BarChart`: điều kiện đo được); (6) brand mark (3.1, mục 5 "Brand") và quy tắc một toast (mục 5 `Toast`): ghi nhận hành vi đã ship, không cần đổi code |
+| **M11** *(v4.0, M11-T4/T5 đọc mục này; không màn mới, không token mới)* | **T4 — Goal form (S3, 7.6.3):** radio thứ ba `goal.form.endsNever` (cuối nhóm Ends); `End date` chuyển lên nằm ngay dưới radio "On a specific date"; ghi chú/mô tả dưới radio thứ ba (`endsNeverHint` khi đang chọn, `endsNeverTotalNote` khi bị khoá); khoá khi Target = Total hours + tự chuyển sang "This year" + `role="status"` `endsNeverSwitched`; ẩn hint Target khi chọn "No end date"; form sửa goal `endDate = null`; lỗi `errors.GOAL_PERIOD_INVALID_openEndedTotal` (phòng hờ). **T5 — hiển thị:** S2 hàng `goals.rowDailyOpen` (Goals và đầu Goal detail), không bao giờ nhóm/badge Ended; S4 `goal.detail.subDayOpen`, `chartSummaryOpen`, `chartSummaryEmptyOpen`, **bỏ Range**, upcoming = không có thẻ biểu đồ; S4/S6 `stat.progressSubOpen`; S6 `review.progressNoteOpen`; `errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded`. Chuỗi: 7.3, 7.6.2 … 7.6.4, 7.6.6 (12 key mới) |
 
 ### 3.4 Bố cục với chuỗi tiếng Việt (rà 360 px)
 
@@ -376,6 +405,13 @@ Chuỗi `vi` thường dài hơn `en` khoảng 10–30 % (nhất là câu hướ
 | **(v3)** Goal detail: phụ đề `Hôm nay: 27 phút, +92,9% so với 12 thg 10 (14 phút). ×5,4 kể từ 10 thg 10 (5 phút).` | ≈ 100 ký tự | 3 dòng ở 294 px | Một `<p>` thường, tự xuống dòng; dòng `Ngày 4/83` đứng riêng phía trên nên không bao giờ bị đẩy mất |
 | **(v3)** Goal detail: nhãn trục Y `+143.900%` → compact `+144 N%`; tooltip dài (≈ 110 ký tự) | ≤ 8 ký tự; tooltip ≤ 280 px | OK | Lề trái trục tính theo nhãn dài nhất (≈ 6,6 px/ký tự + 14); tooltip `white-space: normal; max-width: min(280px, 100% - 16px)` |
 | **(v3)** Goal detail: bảng dữ liệu 5 cột (`Ngày`, `Lý tưởng`, `Bạn`, `Số phút`, `So với ngày có ghi trước`) | tiêu đề cột 4–24 ký tự | rộng hơn 294 px | Bảng nằm trong `.tbl-wrap` (đã `overflow: auto`) nên cuộn ngang **trong** vùng bảng; tiêu đề cột được xuống dòng; `document.scrollWidth` không đổi |
+| **(v4.0)** Goal form: radio thứ ba `Không có thời hạn` | 17 ký tự | ≈ 140 px + radio 20 px + khoảng 10 px, vừa **một dòng** | Không đổi bố cục radio (3 hàng xếp dọc, mỗi hàng `min-height: 44px`, khoảng cách giữa hai hàng ≥ 0 vì cả hàng là vùng chạm) |
+| **(v4.0)** Goal form: mô tả dưới radio thứ ba, `vi` khi chọn (`Mục tiêu chạy mỗi ngày cho đến khi bạn lưu trữ hoặc xóa nó. Tiến độ được tính đến hôm nay.`) | 89 ký tự | ≈ 590 px → **3 dòng** ở 266 px (294 − 28 thụt lề) | `.hint` thường: thụt lề trái 30 px (20 px radio + 10 px khoảng) để thẳng hàng với chữ nhãn; xuống dòng tự do, không cắt, không `nowrap` |
+| **(v4.0)** Goal form: ghi chú khoá, `vi` (`Chỉ dùng được với Phút mỗi ngày. Tổng số giờ cần có ngày kết thúc để tính chỉ tiêu mỗi ngày.`) | 100 ký tự | 3–4 dòng ở 264 px | Như trên. Form cao thêm ≈ 80 px, không cần cuộn riêng; nút `Lưu mục tiêu` vẫn rộng đầy, xếp dưới |
+| **(v4.0)** Goals / Goal detail đầu trang: `10 phút/ngày · từ 01/10/2026, không có thời hạn` | 47 ký tự | ≈ 330 px > 294 px (card) | `<p>` thường xuống **2 dòng** (giống hàng có hạn `17 phút/ngày (tổng 100 giờ) · 01/01/2026 – 31/12/2026`, dài hơn); không cắt. Hàng nút `Sửa` `Lưu trữ` `Xóa` giữ nguyên |
+| **(v4.0)** Goal detail: `Ngày 9` (không tổng) và tóm tắt `Ngày 9: đường của bạn ở mức +100,0% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức +9,4%.` | ngắn hơn bản có tổng (`Ngày 9/83`) | không tràn | Không đổi bố cục; hàng Range **không còn** (chart-head chỉ có h2) nên tiêu đề chart không bao giờ phải xuống dòng vì Range |
+| **(v4.0)** StatCard Progress, phụ đề `55/90 phút dự kiến đến nay` | 26 ký tự, 14 px | ≈ 160 px > 124 px nội dung thẻ | Phụ đề xuống 2 dòng (quy tắc StatCard 3.4: nhãn/phụ được xuống dòng, thẻ cao theo nội dung, thẻ cùng hàng giãn bằng nhau). Thẻ Pace vẫn chiếm cả hàng < 640 px |
+| **(v4.0)** Review: `Tiến độ và nhịp độ của mục tiêu không có thời hạn được tính đến hôm nay.` | 73 ký tự | 2–3 dòng | `<p>` thường dưới hàng stat |
 
 **Kiểm chứng** (NFR-11e, M1-AC18): Playwright viewport 360×740 ở `vi-VN`, `document.documentElement.scrollWidth <= clientWidth` trên Today (có form mở), Goals (đủ 3 nhóm), Goal form (có lỗi ở mọi field), Settings; từ M4 thêm Review (ngoại lệ `.heatmap-scroll`). Mockup tham chiếu: `mockups/01-today.vi.html` (mở ở 360 px, so với `01-today.html`).
 
@@ -492,7 +528,7 @@ Quy ước chung cho mọi màn hình:
   - Link: `Missed a day? Log time for a past day`.
   - (v2) Banner đăng nhập: tiêu đề `Keep your progress safe`; thân `Sign in to back up your goals and entries online and use them on all your devices. It's optional.`; nút `Sign in with Google`, `Not now`; toast sau `Not now`: `OK. You can sign in any time from Settings.` Chỉ báo đồng bộ: mục 5 (bảng trạng thái) và 7.7.3. Key: `loginPrompt.*`, `sync.indicator.*`.
 
-### S2 — Goals  (Milestone: M1; tên goal thành link M3; Archive/Restore + nhóm Archived M5. User story: US-01, US-02, US-12)
+### S2 — Goals  (Milestone: M1; tên goal thành link M3; Archive/Restore + nhóm Archived M5; **hàng goal không thời hạn M11**. User story: US-01, US-02, US-12, US-21)
 
 - **Mục đích:** Xem, sửa, xoá, (M5) archive mọi goal. Primary action: `New goal`.
 - **Layout:**
@@ -516,11 +552,17 @@ Quy ước chung cho mọi màn hình:
   - *default*: nhóm theo thứ tự `Active`, `Upcoming`, `Ended`, `Archived` (nhóm rỗng không hiện). Sắp xếp: Active theo `createdAt` ↑; Upcoming theo `startDate` ↑; Ended theo `endDate` ↓; Archived theo `updatedAt` ↓.
   - *loading*: 3 skeleton row. *empty*: EmptyState "No goals yet" + `Create your first goal`. *error*: ErrorState nếu đọc lỗi. *success*: toast sau tạo/sửa/xoá/archive.
   - Badge: `Active` (xanh), `Upcoming` (xanh dương) kèm dòng "Starts 2026-11-01", `Ended` (xám) kèm "Ended 2026-06-30", `Archived` (xám viền).
+  - **(v4.0) Goal không thời hạn** (`endDate = null`, chỉ `daily`): cùng một `GoalRow`, **chỉ đổi dòng thông tin** — `goals.rowDailyOpen` thay cho `goals.rowDaily` (không có ` – {end}`). Ví dụ `en`: `10 min/day · from 2026-10-01, no end date`; `vi`: `10 phút/ngày · từ 01/10/2026, không có thời hạn`. Badge: `Active` từ `startDate` trở đi, `Upcoming` (kèm dòng `Starts {date}` như mọi goal sắp tới) trước đó, `Archived` khi lưu trữ; **không bao giờ có badge `Ended`, dòng `Ended {date}` hay nằm trong nhóm `Ended`** (dù chạy 10 năm). Vị trí trong nhóm: Active theo `createdAt` ↑, Upcoming theo `startDate` ↑ (cùng quy tắc, A-50). Tên goal, `why`, các nút và vùng chạm giữ nguyên. Goal có hạn hiển thị y như v3.1.
+  ```text
+  │ Meditate                         [Active]  │
+  │ 10 min/day · from 2026-10-01, no end date  │   (vi: 10 phút/ngày · từ 01/10/2026, không có thời hạn — xuống 2 dòng ở 360 px)
+  │ [Edit] [Archive] [Delete]                  │
+  ```
 - **Tương tác:** `New goal` → `#/goals/new`; `Edit` → `#/goals/:id/edit`; `Delete` → D2; xác nhận → xoá, toast `Goal deleted`, focus về `<h1>`; `Archive` → toast `Goal archived` (hoặc lỗi GOAL_TIMER_RUNNING); `Restore` (nhóm Archived) → toast `Goal restored`.
-- **Copy:** `Goals`, `New goal`, `Active ({n})`, `Upcoming ({n})`, `Ended ({n})`, `Archived ({n})`, `Starts {date}`, `Ended {date}`, `Edit`, `Archive`, `Restore`, `Delete`. Hàng goal `daily`: `{n} min/day · {start} – {end}`; goal `total`: `{dailyTarget} min/day ({hours} h total) · {start} – {end}`.
+- **Copy:** `Goals`, `New goal`, `Active ({n})`, `Upcoming ({n})`, `Ended ({n})`, `Archived ({n})`, `Starts {date}`, `Ended {date}`, `Edit`, `Archive`, `Restore`, `Delete`. Hàng goal `daily`: `{n} min/day · {start} – {end}`; goal `total`: `{dailyTarget} min/day ({hours} h total) · {start} – {end}`; **(v4.0)** goal `daily` không thời hạn: `{n} min/day · from {start}, no end date` (`goals.rowDailyOpen`, 7.6.2).
 - **D2 — Delete goal dialog** (M1): tiêu đề `Delete "{name}"?`; nội dung `This permanently deletes the goal and its {n} entries. This can't be undone.` (n = 0: `This permanently deletes the goal. It has no entries yet. This can't be undone.`; có timer chạy thêm: ` Its running timer will be discarded.`); nút `Delete goal` (danger), `Cancel` (focus ban đầu ở `Cancel`).
 
-### S3 — Goal form (tạo/sửa)  (Milestone: M1. User story: US-01)
+### S3 — Goal form (tạo/sửa)  (Milestone: M1; **radio "No end date" M11**. User story: US-01, US-21)
 
 - **Mục đích:** Đặt cam kết rõ ràng. Primary action: `Save goal` (tạo) / `Save changes` (sửa).
 - **Layout:**
@@ -536,22 +578,34 @@ Quy ước chung cho mọi màn hình:
 │ Start date *      [2026-10-09]       │
 │ Ends                                 │
 │   (•) This year — ends 2026-12-31    │
-│   ( ) On a specific date  [date]     │
+│   ( ) On a specific date             │
+│       End date *  [2026-12-31]       │  chỉ hiện khi chọn "On a specific date" (v4.0: nằm NGAY DƯỚI radio này)
+│   ( ) No end date                    │  (v4.0) radio thứ ba, cuối nhóm
+│       <mô tả / ghi chú, 14 px muted> │  v4.0: chỉ có khi đang chọn (endsNeverHint) hoặc khi bị khoá (endsNeverTotalNote)
 │ [Save goal]            [Cancel]      │
 └──────────────────────────────────────┘
 ```
   Desktop: form rộng tối đa 560 px, nút xếp ngang; mobile: `Save goal` full-width.
-- **Component dùng:** PageHeader (nút Back), TextField, TextArea (có counter), SegmentedControl (radio group), NumberField, DateField, RadioGroup, Button.
+
+  **(v4.0) Section Ends — chi tiết bố cục.** Fieldset `Ends` có **3 radio xếp dọc**, thứ tự cố định: `This year — ends {date}`, `On a specific date`, `No end date`. Mỗi radio giữ kiểu hiện tại (hàng cao ≥ 44 px, radio 20 px, khoảng 10 px, chữ 16 px). Khác v3.1 duy nhất về vị trí: field **End date** (hiện khi chọn "On a specific date") nằm **ngay dưới radio thứ hai** (thụt lề trái 30 px, thẳng với chữ nhãn) thay vì dưới cả nhóm, để radio thứ ba nằm cuối mà không tách field khỏi radio của nó. Dòng mô tả dưới radio thứ ba là `<p class="hint">` thụt lề 30 px, có `id` và được nối bằng `aria-describedby` vào chính radio đó. Không icon, không viền, không đổi màu.
+- **Component dùng:** PageHeader (nút Back), TextField, TextArea (có counter), SegmentedControl (radio group), NumberField, DateField, RadioGroup (**v4.0:** mỗi lựa chọn có thể `disabled` + `describedBy` + dòng mô tả bên dưới), Button.
 - **Trạng thái:**
   - *default*: tạo → Start date = hôm nay, Ends = "This year", Target = Minutes per day, giá trị trống. Sửa → điền sẵn từ goal. Id không tồn tại → Not found.
   - *error*: lỗi inline dưới từng field (`aria-invalid="true"`, `aria-describedby` trỏ tới lỗi + hint, icon + chữ, màu `--danger`). Khi submit: focus field lỗi đầu tiên; vùng `role="alert"` trên đầu form: `Fix {n} field to save.` / `Fix {n} fields to save.`. Goal không được lưu khi còn lỗi. Lỗi GOAL_PERIOD_EXCLUDES_ENTRIES hiện dưới Start date/End date.
   - *loading*: (sửa) skeleton form trong lúc đọc goal. *success*: về `#/goals` + toast `Goal created` / `Goal updated`. *empty*: không áp dụng. *offline*: bình thường.
   - Hint chỉ tiêu: `daily` → `That's {totalMin} min ({hours} h) over {days} days.`; `total` → `That's about {dailyTarget} min per day over {days} days.` (cập nhật khi gõ; nếu `dailyTarget` > 1440 thì thay bằng lỗi).
   - Chế độ sửa, nếu goal đã có entry: hint dưới Start date: `Your entries run from {firstDate} to {lastDate}, so the period must include those dates.`
-- **Tương tác:** Chọn "On a specific date" → hiện DateField "End date" (mặc định = Start date); đổi Start date → nhãn "This year — ends {YYYY-12-31}" cập nhật theo năm của Start date. Đổi loại chỉ tiêu → đổi nhãn/đơn vị field số, giữ giá trị nếu hợp lệ. `Save goal` → validate (zod) → lưu. `Cancel`/Back → `#/goals` (hỏi xác nhận nếu form đã sửa? **không**, giữ đơn giản; xem Assumptions).
-- **Copy:** nhãn `Name`, `Why (optional)`, `Target`, `Minutes per day`, `Total hours`, `Start date`, `Ends`, `This year — ends {date}`, `On a specific date`, `End date`; placeholder Name `e.g. Read`, Why `Why does this matter to you?`; nút `Save goal`, `Save changes`, `Cancel`; counter `{n}/60`, `{n}/280`. Thông báo lỗi: bảng 7.3.
+  - **(v4.0) Radio "No end date" — các trạng thái:**
+    1. *Mở khoá, chưa chọn* (Target = Minutes per day): radio bình thường, không có dòng mô tả.
+    2. *Đang chọn* (Target = Minutes per day): hiện `goal.form.endsNeverHint` dưới radio; **ẩn hint dưới field Target** (hint `hintDaily` nói "over N days" nên vô nghĩa khi không có ngày cuối); field End date ẩn; Save gửi `endDate: null`.
+    3. *Khoá* (Target = Total hours): radio `disabled` (không chọn được bằng chuột, bàn phím, chạm), chữ nhãn giữ `--text-muted` (**không** giảm opacity, tương phản chữ ≥ 4.5:1), con trỏ `not-allowed`; **luôn hiện** `goal.form.endsNeverTotalNote` dưới radio (không phải tooltip, không chỉ hiện khi hover); radio có `aria-describedby` trỏ ghi chú. Hai radio còn lại hoạt động bình thường. (Chọn **khoá + ghi chú thay vì ẩn** vì ẩn làm người dùng không biết lựa chọn tồn tại hay vì sao biến mất, và làm nhóm Ends nhảy từ 3 xuống 2 radio khi đổi Target; xem A-D52.)
+    4. *Sửa goal có `endDate = null`*: mở form với "No end date" **đã chọn** (trạng thái 2), End date (ẩn) được khởi tạo = cuối năm của Start date để nếu người dùng chọn "On a specific date" thì ô không trống.
+    5. *Lỗi `openEndedTotal`* (dự phòng — UI không để xảy ra): `errors.GOAL_PERIOD_INVALID_openEndedTotal` hiện dưới nhóm Ends (icon + chữ `--danger`, `id` nối vào `aria-describedby` của fieldset); focus vào radio đang chọn của nhóm Ends (hoặc radio đầu nếu không có); vẫn tính vào số lỗi của `goal.form.summary`.
+- **Tương tác:** Chọn "On a specific date" → hiện DateField "End date" (mặc định = Start date); đổi Start date → nhãn "This year — ends {YYYY-12-31}" cập nhật theo năm của Start date.
+  **(v4.0)** Chọn "No end date" → ẩn End date (giá trị đã gõ được giữ nếu quay lại "On a specific date"), thay hint Target bằng mô tả dưới radio. Đổi Target sang **Total hours** khi đang chọn "No end date" → (a) radio bị khoá + hiện ghi chú, (b) Ends **tự chuyển sang "This year — ends …"** (chọn "This year" vì luôn hợp lệ, không cần nhập thêm, và là mặc định của form tạo), (c) vùng `role="status"` sr-only (luôn có trong DOM, trong fieldset Ends) đặt nội dung `goal.form.endsNeverSwitched` để SR đọc một lần, (d) focus **ở lại** control Target (người dùng vừa thao tác ở đó). Đổi Target về Minutes per day → mở khoá, xoá nội dung vùng status, **không** tự chọn lại "No end date" (không nhớ lựa chọn cũ; A-D53). Radio thứ ba chỉ gửi `endDate: null` khi `targetType = daily`; form không bao giờ gọi service với `total` + `null`. Đổi loại chỉ tiêu → đổi nhãn/đơn vị field số, giữ giá trị nếu hợp lệ. `Save goal` → validate (zod) → lưu. `Cancel`/Back → `#/goals` (hỏi xác nhận nếu form đã sửa? **không**, giữ đơn giản; xem Assumptions).
+- **Copy:** nhãn `Name`, `Why (optional)`, `Target`, `Minutes per day`, `Total hours`, `Start date`, `Ends`, `This year — ends {date}`, `On a specific date`, `End date`, **(v4.0)** `No end date`; placeholder Name `e.g. Read`, Why `Why does this matter to you?`; nút `Save goal`, `Save changes`, `Cancel`; counter `{n}/60`, `{n}/280`. Thông báo lỗi: bảng 7.3. **(v4.0)** Mô tả/ghi chú dưới radio thứ ba: `goal.form.endsNeverHint` (`The goal keeps running every day until you archive or delete it. Progress is measured up to today.`), `goal.form.endsNeverTotalNote` (`Only available for Minutes per day. Total hours needs an end date to work out your daily target.`), thông báo SR `goal.form.endsNeverSwitched` (`Ends changed to This year, because No end date only works with Minutes per day.`); nguồn là 7.6.3.
 
-### S4 — Goal detail  (Milestone: M3 bản cơ bản [thông tin + lịch sử]; M5 đầy đủ [headline, đường cong, stat, archive]; **M9 đường cong v3** [headline có dấu, phụ đề, biểu đồ, bảng, chú thích, copy]. User story: US-08, FR-18, FR-27 (v3.0), FR-28)
+### S4 — Goal detail  (Milestone: M3 bản cơ bản [thông tin + lịch sử]; M5 đầy đủ [headline, đường cong, stat, archive]; **M9 đường cong v3** [headline có dấu, phụ đề, biểu đồ, bảng, chú thích, copy]; **M11 goal không thời hạn** [dòng khoảng thời gian, "Day {k}", tóm tắt, bỏ Range, upcoming, Progress tới hôm nay]. User story: US-08, US-21, FR-18, FR-27 (v3.0), FR-28, FR-56)
 
 - **Mục đích:** Một goal trong một trang: lý do, tiến độ, và hình dung "mỗi ngày tốt hơn một chút". Primary action: không có hành động nổi bật (trang đọc); `Edit` là secondary.
 - **Layout (v3, dữ liệu thật của user R1 tại 2026-10-13, `en`):**
@@ -594,7 +648,17 @@ Quy ước chung cho mọi màn hình:
   - *archived*: badge `Archived`, nút `Restore` thay `Archive`.
   - *error*: chunk lazy lỗi → ErrorState `Couldn't load this view` + `Retry`; id không tồn tại → Not found.
   - *offline*: bình thường (chunk đã precache).
-  - Mặc định **Range**: `Whole period` nếu khoảng ≤ 120 ngày, ngược lại `So far` (đọc Assumptions A-D4). Control chỉ lọc dữ liệu hiển thị.
+  - Mặc định **Range**: `Whole period` nếu khoảng ≤ 120 ngày, ngược lại `So far` (đọc Assumptions A-D4). Control chỉ lọc dữ liệu hiển thị. **(v4.0)** Không áp dụng cho goal không thời hạn (xem ngay dưới: control bị bỏ).
+  - **(v4.0) Goal không thời hạn (`endDate = null`, M11; FR-56, A-51, A-52).** Chỉ khác goal có hạn ở các điểm sau; mọi thứ còn lại (headline, phụ đề dòng 2, quy tắc vẽ, nhãn, tooltip, bảng, History, nút) **giữ nguyên v3.0/v3.1**. Goal có hạn hiển thị y như cũ.
+    1. **Dòng khoảng thời gian đầu trang** (dưới tên goal, cạnh badge): `goals.rowDailyOpen` — `10 min/day · from 2026-10-01, no end date`. Cùng key với hàng ở Goals (không có key riêng cho Goal detail). Không có ngày kết thúc, không có `–`.
+    2. **Phụ đề dòng 1** (`headline-day`): `goal.detail.subDayOpen` — `Day {k}` (k = `elapsedDays`, ví dụ `Day 9`, `Day 1,828`), **không** có `of {total}`. Goal có hạn vẫn dùng `goal.detail.subDay`. Ẩn khi chưa bắt đầu (như mọi goal upcoming).
+    3. **Tóm tắt dưới chart (SR)**: `goal.detail.chartSummaryOpen` (có ≥ 1 ngày có ghi) / `goal.detail.chartSummaryEmptyOpen` (chưa có entry) thay cho `chartSummary` / `chartSummaryEmpty`; chỉ khác là `Day {k}` thay `Day {k} of {total}`, các biến `{x}`, `{y}` giữ nguyên.
+    4. **Range bị bỏ**: với goal không thời hạn, "Whole period" và "So far" là cùng một dữ liệu (không có ngày tương lai) nên **không hiện control Range** (hàng `chart-head` chỉ còn h2 `Ideal vs. you`). Biểu đồ và bảng luôn là `startDate → hôm nay`; trục X luôn kết thúc ở hôm nay. Không có vạch "hôm nay" riêng (đã trùng điểm cuối).
+    5. **Số điểm**: Ideal và "Bạn" cùng có `elapsedDays` điểm (không có điểm tương lai); bảng dữ liệu có đúng `elapsedDays` hàng, hàng cuối là hôm nay (O1 ngày 9 = 9 hàng). Goal chạy rất lâu (> 1.827 ngày) vẫn vẽ đủ; thang Y theo `curveYDomain` như mọi goal (hệ quả: Ideal `1.01^k` sau vài trăm ngày làm "Bạn" nằm sát vạch 0% — đọc giá trị ở nhãn trực tiếp, tooltip, bảng; xem A-D55 và OQ-D21).
+    6. **Ngày đầu tiên (`elapsedDays = 1`, tức `startDate` = hôm nay)**: chỉ có một điểm mỗi đường → x-domain suy biến; vẽ chấm Ideal và chấm "Bạn" (nếu có entry) **ở giữa chiều ngang vùng vẽ**, một nhãn trục X (hôm nay), không đường nối; nhãn trực tiếp, tooltip, tóm tắt, bảng (1 hàng) hoạt động như thường. Không dùng điểm giả cho ngày mai.
+    7. **Chưa bắt đầu (`upcoming`: hôm nay < `startDate`)**: `ideal = []`, `actual = []` nên **không có gì để vẽ** (khác goal có hạn chưa bắt đầu, vốn vẽ đường Ideal cả khoảng). Màn hiển thị: badge `Upcoming`; thẻ headline: `+0.0% better`, dòng `goal.detail.upcoming` (`Starts {date}. Your line will appear once the goal begins.`, **không đổi**), không có `subDay`; **bỏ hẳn thẻ biểu đồ** (h2, chart, legend, tóm tắt, chú thích, bảng — không có khung rỗng, không có Range); giữ nguyên hàng StatCard (Progress `0.0%` / `0 of 0 min expected so far`, Pace `On pace` / `Expected 0 min by today`, hai streak `0 days`) và History (rỗng → EmptyState nhỏ như hiện tại). Tóm tắt SR của trạng thái này chính là dòng `goal.detail.upcoming`.
+    8. **StatCard Progress** (và Review): giá trị `61.1%` tính **tới hôm nay** (A-51; có thể > 100%, thanh progress chặn ở 100%, `StatCard` giữ nguyên hành vi hiện có; xem 8.2); phụ đề dùng `stat.progressSubOpen` (`55 of 90 min expected so far`) thay `stat.progressSub` để người đọc hiểu "90" là chỉ tiêu tích luỹ tới hôm nay chứ không phải tổng cả goal. Thẻ Pace giữ `stat.pace*` và `stat.paceExpected` (câu `Expected {n} min by today` vốn đã đúng). Hai thẻ streak không đổi.
+    9. **Archive / Ended**: goal không thời hạn không bao giờ `ended` nên không có biến thể "ended" của S4; `archived` giữ nguyên (badge `Archived`, nút `Restore`).
 - **Tương tác:** `Edit` → form; `Delete` → D2 (xong về `#/goals`); `Archive` → toast; bấm ngày trong History → `#/day/:date` (M3); hover/focus trên chart hiện tooltip (v3, R1, ngày 12/10): `Oct 12 · 14 min, +40.0% vs previous logged day · You +180.0% since your first day · Ideal +3.0%`; bàn phím: chart focus được, mũi tên trái/phải di chuyển điểm đọc (mỗi lần một ngày, đọc cùng chuỗi tooltip); vùng `details` "Show data as table" có bảng đầy đủ. Đổi `Range` → vẽ lại với miền Y tính lại theo các điểm đang hiển thị.
 - **Biểu đồ v3 — quy tắc vẽ (M9-T3).**
   1. **Đường "Bạn"**: nét liền dày `--chart-actual`, kiểu **bậc thang `stepAfter`** (giữ giá trị tới ngày kế rồi nhảy tại ngày có ghi; ngày 0 phút là đoạn ngang, ngày ghi ít hơn là bậc đi xuống). Vẽ mọi điểm `ActualPoint` (trước baseline là 0%); **không vẽ** khi `baseline = null`. Chấm nhỏ (r = 3) ở mỗi ngày **có ghi** khi số điểm "Bạn" đang hiển thị ≤ 45; chấm lớn (r = 5,5) ở hôm nay / ngày cuối. **Đường Ideal**: nét đứt xám, tuyến tính, như M5.
@@ -614,8 +678,9 @@ Quy ước chung cho mọi màn hình:
   - Stat: `Progress` (`25.8%`, phụ `240 of 930 min`), `Pace` (`30 min behind`, phụ `Expected 270 min by today`), `Current streak` (`8 days`), `Longest streak` (`8 days`).
   - History: tiêu đề `History`; cột `Date`, `Minutes`, `Note`, `Source`; nguồn `Manual` / `Timer`; ngày dạng `YYYY-MM-DD`; ghi chú rỗng hiển thị `—`.
   - Nút: `Edit`, `Archive`, `Restore`, `Delete`, `Retry`; toggle `Whole period` / `So far`; `Show data as table`.
+  - **(v4.0) Goal không thời hạn, dataset O1 (`Meditate`, 10 min/day từ 2026-10-01, entry 10/15/10/20 phút), hôm nay 2026-10-09, `en`:** dòng khoảng thời gian `10 min/day · from 2026-10-01, no end date`; headline `+100.0% better`; phụ đề dòng 1 `Day 9`; dòng 2 `Last logged Oct 8: 20 min, +100.0% vs Oct 5 (10 min). ×2 since Oct 1 (10 min).`; tóm tắt SR `Day 9: your line is +100.0% compared with your first logged day. The ideal line is +9.4%.`; không có Range; Progress `61.1%` + phụ `55 of 90 min expected so far`; Pace `35 min behind` + phụ `Expected 90 min by today`; Current streak `1 day`; Longest streak `2 days`. `vi` tương ứng: `10 phút/ngày · từ 01/10/2026, không có thời hạn`; `Tốt hơn +100,0%`; `Ngày 9`; `Ngày 9: đường của bạn ở mức +100,0% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức +9,4%.`; `61,1%` + `55/90 phút dự kiến đến nay`; `Chậm 35 phút`.
 
-### S5 — Day  (Milestone: M3. User story: US-05)
+### S5 — Day  (Milestone: M3; **M11: goal không thời hạn có mặt ở mọi ngày từ `startDate` tới hôm nay**. User story: US-05)
 
 - **Mục đích:** Xem/ghi bù/sửa entry của một ngày. Primary action: `Add entry`.
 - **Layout:**
@@ -637,7 +702,7 @@ Quy ước chung cho mọi màn hình:
 ```
 - **Component dùng:** PageHeader, DateNav, GoalCard (day), EntryForm, EntryRow (có Badge nguồn), EmptyState, Toast, Skeleton.
 - **Trạng thái:**
-  - *default*: liệt kê goal (kể cả `ended`, `archived`) có `startDate ≤ date ≤ endDate`.
+  - *default*: liệt kê goal (kể cả `ended`, `archived`) có `startDate ≤ date ≤ endDate`. **(v4.0)** Goal không thời hạn: `date ≥ startDate` (ngày tương lai đã bị chặn riêng ở trên). Bố cục, copy không đổi. Nếu một thao tác vẫn bị từ chối vì ngày < `startDate` của goal không thời hạn (ví dụ lưu từ dialog Stop timer sau khi sửa Start date), Alert dùng `errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded` (`That date is before this goal starts (2026-10-01).`) thay câu có hai ngày.
   - *loading*: skeleton. *empty*: không goal nào chứa ngày đó → tiêu đề `No goals were running on this day` (**không có dấu chấm cuối**: là tiêu đề `empty.day.noGoals`, đúng `en.json`; v3.1) + thân `empty.day.noGoalsBody` + `View goals`.
   - *goal chưa có entry ngày đó*: `No time logged for this goal on this day.` + nút `Add entry`.
   - *ngày tương lai* (kể cả mở bằng URL): không có form; thông báo `You can't log time for a future date.` + `Go to today`.
@@ -646,7 +711,7 @@ Quy ước chung cho mọi màn hình:
 - **Tương tác:** `Previous day`/`Next day` → đổi route (focus giữ ở nút bấm); ô chọn ngày (`<input type="date" max=hôm nay>`) → đổi route; `Add entry`/`Edit`/`Delete` như Today. Ngày hợp lệ nhưng ngoài mọi khoảng → empty.
 - **Copy:** `Day`, `Previous day`, `Next day`, `Go to today`, `Date`, heading ngày `Thursday, October 8, 2026`, `Add entry`, `Only goals running on this day are shown.`, nhãn nguồn `Manual`/`Timer`, các thông báo ở trên.
 
-### S6 — Review  (Milestone: M4; M5 xử lý rỗng/archived. User story: US-06, US-07)
+### S6 — Review  (Milestone: M4; M5 xử lý rỗng/archived; **M11 Progress/ghi chú "tới hôm nay" cho goal không thời hạn**. User story: US-06, US-07, US-21)
 
 - **Mục đích:** Nhìn lại cả năm. Primary action: không có (màn đọc); điều khiển chính là bộ chọn Goal/Year.
 - **Layout (desktop; mobile xếp dọc, heatmap cuộn ngang):**
@@ -673,6 +738,7 @@ Quy ước chung cho mọi màn hình:
   - *loading*: skeleton stat + khung heatmap + 2 khung chart (chunk Recharts lazy). Heatmap hiển thị < 1,5 s (NFR-03).
   - *empty — chưa có goal*: EmptyState "Nothing to review yet" + `Create a goal`. *Có goal, chưa có entry trong năm*: heatmap toàn ô trống, stat = 0, dòng `No time logged in {year} yet.`, chart rỗng kèm text.
   - *Một goal, năm ngoài khoảng goal*: mọi ô ở trạng thái `outside`; dòng `This goal doesn't run in {year}.`
+  - **(v4.0) Một goal không thời hạn** (M11; A-51): bố cục và 6 thẻ giữ nguyên. Khác ở hai chỗ chữ: (1) thẻ **Progress** có phụ đề `stat.progressSubOpen` (`55 of 90 min expected so far`) thay `stat.progressSub` — giá trị `61.1%` là tổng phút ÷ chỉ tiêu tích luỹ tới hôm nay (0 khi chưa bắt đầu; có thể > 100%); thẻ Pace giữ nguyên chữ; (2) ghi chú dưới hàng stat dùng `review.progressNoteOpen` (`Progress and pace for a goal with no end date are measured up to today.`) thay `review.progressNote` (câu cũ nói "toàn bộ thời gian của mục tiêu", sai với goal không có ngày cuối). Khi năm đang xem < năm của `startDate`: vẫn là `review.outsideYear` (`This goal doesn't run in {year}.`) thay ghi chú, mọi ô `outside`. Ô heatmap `outside` của goal này chỉ là ngày trước `startDate`; không có ô `outside` ở phía sau (tới hôm nay là ô tương lai nét đứt như mọi goal). All goals: không đổi (không có Progress/Pace).
   - *error*: tính toán/chunk lỗi → ErrorState `Couldn't load this view` + `Retry`. *offline*: bình thường.
   - *Heatmap — ô*: mức 0–4 (màu `--heat-0..4`), hôm nay có viền đậm, ô tương lai viền nét đứt nhạt, ô `outside` (ngoài khoảng goal, hoặc ngoài năm) kẻ sọc nhạt.
   - *Heatmap — chiều rộng (v3.1, M4-P1a)*: lưới 53 tuần cần ≈ 959 px (845 lưới + 34 cột nhãn thứ + 2 × 16 padding card + 2 × 24 padding `main.wide`), nên **chỉ vừa khít, không cuộn khi vùng nội dung đạt 960 px, tức viewport ≥ 232 (sidebar) + 960 = 1192 px**. Từ 640 đến 1191 px (kể cả 1024–1191 px, nơi sidebar 232 px chỉ chừa 792–959 px) heatmap vẫn cuộn ngang **trong** `.heatmap-scroll`, tự cuộn tới tuần hiện tại khi mở; trang không cuộn ngang. Đây là hành vi đúng (không có ô nào bị cắt ở 1192 px trở lên); không đổi cỡ ô để ép vừa.
@@ -854,7 +920,7 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 | `Button` | Hành động | `variant`: primary / secondary / ghost / danger / danger-ghost; `size`: md (44 px) / sm (44 px cao, padding nhỏ); `full` | default, hover, active, focus-visible, disabled, `aria-disabled`, busy | tất cả (M1) |
 | `IconButton` | Edit/Delete entry (icon + `aria-label`) | `icon`, `label` | như Button; vùng chạm 44×44 | Today, Day (M1) |
 | `TextField` / `NumberField` / `TextArea` / `DateField` / `TimeField` | Field có label | `label`, `hint?`, `error?`, `counter?`, `required?`, `suffix?` | default, focus, filled, error (`aria-invalid`), disabled | Goal form, EntryForm, Day, Settings (M1) |
-| `SegmentedControl` / `RadioGroup` | Chọn 1 trong ít lựa chọn | `legend`, `options`, `value` | default, selected, focus, disabled | Goal form (M1), Goal detail Range (M5) |
+| `SegmentedControl` / `RadioGroup` | Chọn 1 trong ít lựa chọn | `legend`, `options`, `value`; **(v4.0)** `options[].disabled?`, `options[].describedBy?` + dòng mô tả `.hint` thụt lề 30 px dưới lựa chọn | default, selected, focus, disabled (**v4.0:** chữ `--text-muted` giữ tương phản ≥ 4.5:1, kèm ghi chú luôn hiện; xem S3 và 8.2) | Goal form (M1; radio "No end date" M11), Goal detail Range (M5) |
 | `Select` | Chọn Goal/Year | `label`, `options` | default, focus, disabled | Review (M4) |
 | `Switch` | Bật/tắt (role switch) | `label`, `description?`, `checked` | on, off, focus, disabled | Settings (M2) |
 | `LanguageSwitcher` | Chọn `en` / `vi` (dựng trên `SegmentedControl`/radio group; áp dụng ngay, không nút Save) | `value: 'en' \| 'vi'`, `onChange`; mỗi lựa chọn có `lang` riêng và nhãn endonym `English` / `Tiếng Việt` | default (1 lựa chọn đang chọn), hover, focus-visible, error (Alert khi ghi kv lỗi) | Settings card Language (M1) |
@@ -872,10 +938,10 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 | `Toast` / `ToastRegion` | Phản hồi tạm 4 s (`role="status"`, `aria-live="polite"`), tối đa 1 toast hiển thị | `message`, `action?`; **(v2)** `tone`: default / error (viền trái `--danger`, icon cảnh báo, 8 s, vẫn `role="status"`), dùng cho lỗi đăng nhập ở màn ngoài Settings | enter, exit | tất cả (M1; error + action M6) |
 | `UpdateToast` | `A new version is available.` + `Reload` (SW cập nhật) | — | persistent đến khi bấm | AppShell (M1) |
 | `OfflineChip` | Báo offline | — | hiện/ẩn theo `navigator.onLine` | AppShell (M1) |
-| `StatCard` | Một chỉ số | `label`, `value`, `sub?`, `progress?` | default, loading (skeleton), zero | Review, Goal detail (M4, M5) |
+| `StatCard` | Một chỉ số | `label`, `value`, `sub?`, `progress?` | default, loading (skeleton), zero. **(v4.0)** không đổi component; goal không thời hạn chỉ đổi chuỗi `sub` của thẻ Progress (`stat.progressSubOpen`) | Review, Goal detail (M4, M5; M11) |
 | `Heatmap` | Lưới năm 53×7 | `year`, `cells`, `mode`: goal / all, `onSelect` | cell levels 0–4, today, future, outside; focus; tooltip | Review (M4) |
 | `BarChart` | Cột tuần/tháng (Recharts, lazy). **(v3.1)** có nhãn giá trị trên cột khi "đủ chỗ" (điều kiện đo được ở S6 "Nhãn giá trị trên cột BarChart": `(chartWidth − 38) / 12 ≥ 30 px`; cột ≥ 3 phút; số giờ không đơn vị) | `series`, `unit`, `title` | default, empty (text), loading; **labels-on / labels-off** theo chiều rộng | Review (M4; nhãn M10) |
-| `CurveChart` | Đường Ideal vs You (Recharts, lazy). **v3:** "You" = `ActualPoint.percent` (bậc thang, đi xuống được), vạch 0%, thang Y theo `curveYDomain`, nhãn trục có dấu/compact, tooltip 4 biến thể, bảng 5 cột (S4 "Biểu đồ v3") | `ideal[]`, `actual[]` (`ActualPoint` v3: `minutes`, `logged`, `percent`, `changePercent`), `today`, `range` | default, empty-actual (`baseline = null`: chỉ Ideal + vạch 0%), negative, flat (ngày cuối không ghi), upcoming | Goal detail (M5; v3 M9) |
+| `CurveChart` | Đường Ideal vs You (Recharts, lazy). **v3:** "You" = `ActualPoint.percent` (bậc thang, đi xuống được), vạch 0%, thang Y theo `curveYDomain`, nhãn trục có dấu/compact, tooltip 4 biến thể, bảng 5 cột (S4 "Biểu đồ v3") | `ideal[]`, `actual[]` (`ActualPoint` v3: `minutes`, `logged`, `percent`, `changePercent`), `today`, `range` | default, empty-actual (`baseline = null`: chỉ Ideal + vạch 0%), negative, flat (ngày cuối không ghi), upcoming (goal có hạn). **(v4.0)** goal không thời hạn: không có ngày tương lai, **không nhận prop `range`**, một điểm duy nhất → chấm ở giữa; chưa bắt đầu → **không render** (S4 mục 7 v4.0) | Goal detail (M5; v3 M9; M11) |
 | `HistoryTable` | Lịch sử entry | `entries` | default, empty | Goal detail (M3) |
 | `DateNav` | Điều hướng ngày | `date`, `today` | next vô hiệu ở hôm nay | Day (M3) |
 | `EmptyState` | Trạng thái rỗng | `title`, `body`, `action?` | — | Today, Goals, Review, Day, Goal detail (M1 tối thiểu / M5 đủ) |
@@ -1015,6 +1081,8 @@ Font hệ thống (NFR-01: không font ngoài): `--font: system-ui, -apple-syste
 | Breakpoint | `sm` 640, `lg` 1024 (xem 3.2) |
 
 Heatmap: ô 11 px + khoảng 2 px (mobile < 640 px; cuộn ngang trong vùng chứa), 13 px + 3 px (≥ 640 px; 53 cột = 845 px); bo 2 px. Biến CSS `--cell`, `--gap`. **(v3.1, M4-P1a; thay câu của v1 nói lưới không cần cuộn ngay từ 1024 px, vốn không đúng vì sidebar chiếm 232 px)** Tổng chiều rộng cần = 845 (lưới) + 34 (cột nhãn thứ) + 32 (padding card 2 × 16) + 48 (padding `main.wide` 2 × 24, ≥ 1024 px) ≈ 959 px ≤ 960 px (`--content-max`). Heatmap **vừa khít và không cuộn chỉ khi vùng nội dung đạt ≈ 959–960 px, tức viewport ≥ 232 (`--nav-w`) + 960 = 1192 px** (ngưỡng làm tròn; đo ở trình duyệt có thanh cuộn dạng overlay như Chromium headless — trên máy có thanh cuộn dọc cổ điển ≈ 15 px, ngưỡng thực tế dịch lên ≈ 1207 px). Dưới ngưỡng đó, gồm 640–1023 px (tab bar, nội dung ≤ viewport) và **1024–1191 px** (sidebar chừa 792–959 px; ở 1024 px ẩn ≈ 169 px), heatmap cuộn ngang bên trong `.heatmap-scroll` và tự cuộn tới tuần hiện tại; trang không cuộn ngang. Biến CSS `--cell`/`--gap` **không đổi** theo viewport trong khoảng này (không co ô để ép vừa). QC kiểm: `scrollWidth − clientWidth` của `.heatmap-scroll` ≤ 2 ở 1200, 1280, 1440, 1920 px (khớp QC M4 r2); > 0 ở 1024 và 1100 px; `documentElement` không cuộn ngang ở mọi viewport (khớp QC M4 r2: 360 … 1920 px). Không kiểm chính xác 1191/1192 px (sai số làm tròn).
+
+**(v4.0) Token:** không thêm, không đổi giá trị token nào. Radio "No end date" bị khoá dùng chữ `--text-muted` (≈ 6,3:1 trên `--surface`, đủ 4.5:1) và ghi chú `.hint` có sẵn; không dùng `opacity` để làm mờ (sẽ kéo tương phản xuống dưới 4.5:1). Con trỏ chuột `not-allowed` trên nhãn khoá là kiểu, không phải token.
 
 ---
 
@@ -1187,6 +1255,9 @@ Nguyên tắc: nói rõ chuyện gì, và làm gì tiếp. **`src/ui/error-messa
 | `GOAL_PERIOD_INVALID` | ngày trống/sai định dạng | `errors.GOAL_PERIOD_INVALID` |
 | | `endDate < startDate` | `errors.GOAL_PERIOD_INVALID_endBeforeStart` |
 | | khoảng > 1827 ngày | `errors.GOAL_PERIOD_INVALID_tooLong` |
+| | **(v4.0)** `params.variant = 'openEndedTotal'` (`endDate = null` với `targetType = total`; dự phòng, UI không để xảy ra) | `errors.GOAL_PERIOD_INVALID_openEndedTotal` (hiện dưới nhóm Ends, S3 trạng thái 5). Chuỗi rỗng/sai định dạng **không** có biến thể này: vẫn `errors.GOAL_PERIOD_INVALID` |
+| `DATE_OUTSIDE_GOAL_PERIOD` | **(v4.0)** `params.end === null` (goal không thời hạn; chỉ truyền `start`) | `errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded` |
+| | `params.end` là ngày (goal có hạn) | `errors.DATE_OUTSIDE_GOAL_PERIOD` (như cũ) |
 | `ENTRY_DAY_LIMIT_EXCEEDED` | `remaining > 0` (truyền `remaining`) | `errors.ENTRY_DAY_LIMIT_EXCEEDED` |
 | | `remaining = 0` | `errors.ENTRY_DAY_LIMIT_EXCEEDED_full` |
 | mọi code khác ở bảng dưới | — | `errors.<CODE>` |
@@ -1214,6 +1285,7 @@ Nguyên tắc: nói rõ chuyện gì, và làm gì tiếp. **`src/ui/error-messa
 | `errors.GOAL_PERIOD_INVALID` | M1 | dưới Start/End date | `Choose a valid date.` | `Hãy chọn một ngày hợp lệ.` |
 | `errors.GOAL_PERIOD_INVALID_endBeforeStart` | M1 | dưới End date | `End date must be on or after the start date.` | `Ngày kết thúc phải trùng hoặc sau ngày bắt đầu.` |
 | `errors.GOAL_PERIOD_INVALID_tooLong` | M1 | dưới End date | `A goal can last up to 1,827 days (about 5 years). Choose an earlier end date.` | `Một mục tiêu kéo dài tối đa 1.827 ngày (khoảng 5 năm). Hãy chọn ngày kết thúc sớm hơn.` |
+| `errors.GOAL_PERIOD_INVALID_openEndedTotal` | M11 *(mới v4.0)* | dưới nhóm Ends (dự phòng; xem quy tắc chọn key ở trên) | `A Total hours goal needs an end date. Choose when it ends, or switch to Minutes per day.` | `Mục tiêu Tổng số giờ cần có ngày kết thúc. Hãy chọn ngày kết thúc, hoặc chuyển sang Phút mỗi ngày.` |
 | `errors.GOAL_PERIOD_EXCLUDES_ENTRIES` | M1 | dưới Start/End date | `Some of your entries fall outside these dates. Choose dates that include every logged day, or delete those entries first.` | `Một số lần ghi của bạn nằm ngoài các ngày này. Hãy chọn khoảng thời gian bao gồm mọi ngày đã ghi, hoặc xóa các lần ghi đó trước.` |
 | `errors.GOAL_NOT_FOUND` | M1 | Not found / Alert | `This goal doesn't exist anymore. It may have been deleted.` | `Mục tiêu này không còn tồn tại. Có thể nó đã bị xóa.` |
 | `errors.ENTRY_NOT_FOUND` | M1 | Alert | `This entry doesn't exist anymore. It may have been deleted.` | `Lần ghi này không còn tồn tại. Có thể nó đã bị xóa.` |
@@ -1223,6 +1295,7 @@ Nguyên tắc: nói rõ chuyện gì, và làm gì tiếp. **`src/ui/error-messa
 | `errors.ENTRY_DAY_LIMIT_EXCEEDED_full` | M1 | dưới Minutes | `This day is already full (1,440 minutes).` | `Ngày này đã đầy (1.440 phút).` |
 | `errors.DATE_IN_FUTURE` | M3 | Day / dialog | `You can't log time for a future date.` | `Bạn không thể ghi thời gian cho một ngày trong tương lai.` |
 | `errors.DATE_OUTSIDE_GOAL_PERIOD` | M2 | Alert trong form/dialog | `That date is outside this goal's dates ({{start}} – {{end}}).` | `Ngày đó nằm ngoài thời gian của mục tiêu này ({{start}} – {{end}}).` |
+| `errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded` | M11 *(mới v4.0)* | Alert trong form/dialog, khi goal không thời hạn và ngày < `startDate`; `{{start}}` = ngày ngắn của `startDate` | `That date is before this goal starts ({{start}}).` | `Ngày đó nằm trước ngày mục tiêu này bắt đầu ({{start}}).` |
 | `errors.GOAL_NOT_ACTIVE` | M2 | Alert (Start timer) | `Timers can only run on active goals.` | `Chỉ có thể đếm giờ cho mục tiêu đang chạy.` |
 | `errors.TIMER_ALREADY_RUNNING` | M2 | Alert | `A timer is already running. Stop it before starting another.` | `Đang có một bộ đếm giờ chạy. Hãy dừng nó trước khi bắt đầu bộ khác.` |
 | `errors.TIMER_NOT_RUNNING` | M2 | Alert | `There's no timer running.` | `Hiện không có bộ đếm giờ nào đang chạy.` |
@@ -1368,7 +1441,7 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `entry.source.manual` | M3 | badge nguồn | `Manual` | `Thủ công` |
 | `entry.source.timer` | M3 | badge nguồn | `Timer` | `Đếm giờ` |
 
-#### 7.6.2 Goals (S2) và dialog xóa goal (D2) — M1 (Archive/Restore M5)
+#### 7.6.2 Goals (S2) và dialog xóa goal (D2) — M1 (Archive/Restore M5; hàng không thời hạn M11)
 
 | Key | MS | Ngữ cảnh | `en` | `vi` |
 | :- | :- | :- | :- | :- |
@@ -1386,6 +1459,7 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `goals.endedOn` | M1 | dòng phụ goal ended | `Ended {{date}}` | `Đã kết thúc {{date}}` |
 | `goals.rowDaily` | M1 | `{{range}}` = `format.dateRange` | `{{n}} min/day · {{range}}` | `{{n}} phút/ngày · {{range}}` |
 | `goals.rowTotal` | M1 | | `{{daily}} min/day ({{hours}} h total) · {{range}}` | `{{daily}} phút/ngày (tổng {{hours}} giờ) · {{range}}` |
+| `goals.rowDailyOpen` | M11 *(mới v4.0)* | hàng goal `daily` không thời hạn, ở Goals **và** dòng khoảng thời gian đầu trang Goal detail; `{{n}}` = `f.number(targetMinutes)`, `{{start}}` = `f.dateShort(startDate)` (`en` `2026-10-01`, `vi` `01/10/2026`). Dùng cho mọi trạng thái (Active/Upcoming/Archived); **không bao giờ** đi cùng `goals.endedOn` | `{{n}} min/day · from {{start}}, no end date` | `{{n}} phút/ngày · từ {{start}}, không có thời hạn` |
 | `goals.archive` | M5 | nút | `Archive` | `Lưu trữ` |
 | `goals.restore` | M5 | nút | `Restore` | `Khôi phục` |
 | `goal.delete.title` | M1 | D2 | `Delete "{{name}}"?` | `Xóa mục tiêu "{{name}}"?` |
@@ -1395,7 +1469,7 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `goal.delete.timerNote` | M2 | đoạn riêng thêm khi có timer chạy | `Its running timer will be discarded.` | `Bộ đếm giờ đang chạy của mục tiêu này sẽ bị bỏ.` |
 | `goal.delete.confirm` | M1 | nút danger | `Delete goal` | `Xóa mục tiêu` |
 
-#### 7.6.3 Goal form (S3) — M1
+#### 7.6.3 Goal form (S3) — M1 (radio "No end date" và ghi chú: M11)
 
 | Key | MS | Ngữ cảnh | `en` | `vi` |
 | :- | :- | :- | :- | :- |
@@ -1422,10 +1496,14 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `goal.form.endsThisYear` | M1 | radio | `This year — ends {{date}}` | `Trong năm nay — kết thúc {{date}}` |
 | `goal.form.endsSpecific` | M1 | radio | `On a specific date` | `Vào một ngày cụ thể` |
 | `goal.form.endLabel` | M1 | label field ngày | `End date` | `Ngày kết thúc` |
+| `goal.form.endsNever` | M11 *(mới v4.0)* | radio **thứ ba** (cuối nhóm Ends); `vi` là nguyên văn yêu cầu của user 2026-10-19 (A-56) | `No end date` | `Không có thời hạn` |
+| `goal.form.endsNeverHint` | M11 *(mới v4.0)* | `.hint` dưới radio thứ ba, **chỉ khi đang chọn** (Target = Minutes per day); `id` nối `aria-describedby` của radio | `The goal keeps running every day until you archive or delete it. Progress is measured up to today.` | `Mục tiêu chạy mỗi ngày cho đến khi bạn lưu trữ hoặc xóa nó. Tiến độ được tính đến hôm nay.` |
+| `goal.form.endsNeverTotalNote` | M11 *(mới v4.0)* | `.hint` dưới radio thứ ba **luôn hiện khi radio bị khoá** (Target = Total hours); nối `aria-describedby` | `Only available for Minutes per day. Total hours needs an end date to work out your daily target.` | `Chỉ dùng được với Phút mỗi ngày. Tổng số giờ cần có ngày kết thúc để tính chỉ tiêu mỗi ngày.` |
+| `goal.form.endsNeverSwitched` | M11 *(mới v4.0)* | vùng `role="status"` sr-only trong fieldset Ends; đặt nội dung **một lần** khi Ends bị ép từ "No end date" sang "This year" do đổi Target sang Total hours; xoá khi đổi Target về Minutes per day | `Ends changed to This year, because No end date only works with Minutes per day.` | `Mục Kết thúc đã chuyển sang Trong năm nay, vì Không có thời hạn chỉ dùng được với Phút mỗi ngày.` |
 | `goal.form.save` | M1 | nút primary (tạo) | `Save goal` | `Lưu mục tiêu` |
 | `goal.form.saveChanges` | M1 | nút primary (sửa) | `Save changes` | `Lưu thay đổi` |
 
-#### 7.6.4 Goal detail (S4) và stat card dùng chung — M3 (lịch sử), M5 (phần còn lại), M4 (`stat.*` ở Review)
+#### 7.6.4 Goal detail (S4) và stat card dùng chung — M3 (lịch sử), M5 (phần còn lại), M4 (`stat.*` ở Review), M11 (biến thể goal không thời hạn)
 
 | Key | MS | Ngữ cảnh | `en` | `vi` |
 | :- | :- | :- | :- | :- |
@@ -1433,6 +1511,7 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `goal.detail.headline` | M9 *(sửa: dấu nằm trong `{{value}}`)* | headline khi `headlinePercent` ≥ 0 (kể cả `+0.0`); `{{value}}` = % **có dấu** (7.1), vd. `+440.0`; màu `--primary` | `{{value}}% better` | `Tốt hơn {{value}}%` |
 | `goal.detail.headlineDown` | M9 *(mới)* | headline khi `headlinePercent` < 0; `{{value}}` = % có dấu, vd. `−40.0`; màu `--text` (không đỏ) | `{{value}}% vs your first day` | `{{value}}% so với ngày đầu` |
 | `goal.detail.subDay` | M9 *(mới)* | phụ đề dòng 1 (mọi trạng thái trừ upcoming); `{{k}}` = `elapsedDays`, `{{total}}` = `periodDays` | `Day {{k}} of {{total}}` | `Ngày {{k}}/{{total}}` |
+| `goal.detail.subDayOpen` | M11 *(mới v4.0)* | như `subDay` nhưng cho goal **không thời hạn** (không có tổng); `{{k}}` = `elapsedDays` (đã qua `f.number`, vd. `9`, `1,828`) | `Day {{k}}` | `Ngày {{k}}` |
 | `goal.detail.subToday` | M9 *(mới)* | phụ đề dòng 2: ≥ 2 ngày có ghi và `latest.date` = hôm nay. `{{minutes}}`, `{{prevMinutes}}`, `{{firstMinutes}}` = `format.minutes`; `{{change}}` = `latestChangePercent` có dấu (7.1); `{{prevDate}}`, `{{firstDate}}` = ngày ngắn không năm (`Oct 12` / `12 thg 10`); `{{factor}}` = `f.factor(actualFactor)` | `Today: {{minutes}}, {{change}}% vs {{prevDate}} ({{prevMinutes}}). ×{{factor}} since {{firstDate}} ({{firstMinutes}}).` | `Hôm nay: {{minutes}}, {{change}}% so với {{prevDate}} ({{prevMinutes}}). ×{{factor}} kể từ {{firstDate}} ({{firstMinutes}}).` |
 | `goal.detail.subEarlier` | M9 *(mới)* | phụ đề dòng 2: ≥ 2 ngày có ghi và `latest.date` ≠ hôm nay (đường đi ngang, goal đã kết thúc…); thêm `{{date}}` = ngày ngắn không năm của `latest.date`; các biến khác như `subToday` | `Last logged {{date}}: {{minutes}}, {{change}}% vs {{prevDate}} ({{prevMinutes}}). ×{{factor}} since {{firstDate}} ({{firstMinutes}}).` | `Lần ghi gần nhất {{date}}: {{minutes}}, {{change}}% so với {{prevDate}} ({{prevMinutes}}). ×{{factor}} kể từ {{firstDate}} ({{firstMinutes}}).` |
 | `goal.detail.subStart` | M9 *(mới)* | phụ đề dòng 2: chỉ một ngày có ghi (`previous = null`); `{{minutes}}` = `format.minutes`, `{{date}}` = ngày ngắn không năm. **Không chứa `×`** | `Starting point: {{minutes}} on {{date}}. Your line moves once you log on another day.` | `Điểm xuất phát: {{minutes}} vào {{date}}. Đường của bạn sẽ di chuyển khi bạn ghi thêm vào một ngày khác.` |
@@ -1446,6 +1525,8 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `goal.detail.legendZero` | M9 *(mới)* | legend mục 3 (mẫu nét: vạch 0% liền, đậm) | `0% = your first logged day` | `0% = ngày có ghi đầu tiên` |
 | `goal.detail.chartSummary` | M9 *(sửa: bỏ `{{n}}`, dấu trong `{{x}}`/`{{y}}`)* | tóm tắt hiển thị dưới chart (SR) khi có ≥ 1 ngày có ghi; `{{x}}` = `headlinePercent` có dấu, `{{y}}` = `idealPercent` có dấu | `Day {{k}} of {{total}}: your line is {{x}}% compared with your first logged day. The ideal line is {{y}}%.` | `Ngày {{k}}/{{total}}: đường của bạn ở mức {{x}}% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức {{y}}%.` |
 | `goal.detail.chartSummaryEmpty` | M9 *(mới)* | như trên khi chưa có entry (`baseline = null`) | `Day {{k}} of {{total}}: nothing logged yet. The ideal line is {{y}}%.` | `Ngày {{k}}/{{total}}: chưa ghi gì. Đường lý tưởng ở mức {{y}}%.` |
+| `goal.detail.chartSummaryOpen` | M11 *(mới v4.0)* | như `chartSummary` cho goal không thời hạn (có ≥ 1 ngày có ghi); `{{k}}` = `elapsedDays`; `{{x}}`, `{{y}}` như `chartSummary` | `Day {{k}}: your line is {{x}}% compared with your first logged day. The ideal line is {{y}}%.` | `Ngày {{k}}: đường của bạn ở mức {{x}}% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức {{y}}%.` |
+| `goal.detail.chartSummaryEmptyOpen` | M11 *(mới v4.0)* | như `chartSummaryEmpty` cho goal không thời hạn (chưa có entry) | `Day {{k}}: nothing logged yet. The ideal line is {{y}}%.` | `Ngày {{k}}: chưa ghi gì. Đường lý tưởng ở mức {{y}}%.` |
 | `goal.detail.chartNote` | M9 *(sửa chữ)* | chú thích dưới chart (giải thích: so với ngày có ghi trước, nhân dồn, ngày trống đi ngang, có thể đi xuống) | `Each day you log is compared with your previous logged day, and the changes multiply from your first day. Days without time keep the line flat. Logging less than before moves it down.` | `Mỗi ngày bạn ghi được so với ngày có ghi trước đó, và các thay đổi được nhân dồn từ ngày đầu tiên. Ngày không ghi thời gian thì đường đi ngang. Ghi ít hơn trước thì đường đi xuống.` |
 | `goal.detail.tooltipChange` | M9 *(mới; thay `tooltip`)* | tooltip / đọc bằng phím: ngày có ghi và `changePercent` ≠ null; `{{date}}` = ngày ngắn không năm, `{{minutes}}` = `format.minutes`, `{{change}}`, `{{you}}`, `{{ideal}}` = % có dấu | `{{date}} · {{minutes}}, {{change}}% vs previous logged day · You {{you}}% since your first day · Ideal {{ideal}}%` | `{{date}} · {{minutes}}, {{change}}% so với ngày có ghi trước · Bạn {{you}}% so với ngày đầu · Lý tưởng {{ideal}}%` |
 | `goal.detail.tooltipBase` | M9 *(mới)* | tooltip: ngày đầu tiên có ghi (`logged`, `changePercent` = null) | `{{date}} · {{minutes}}, your first logged day · You {{you}}% · Ideal {{ideal}}%` | `{{date}} · {{minutes}}, ngày có ghi đầu tiên · Bạn {{you}}% · Lý tưởng {{ideal}}%` |
@@ -1484,11 +1565,23 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `stat.longestStreak` | M4 | StatCard | `Longest streak` | `Chuỗi dài nhất` |
 | `stat.progress` | M4 | StatCard (một goal) | `Progress` | `Tiến độ` |
 | `stat.progressSub` | M4 | phụ đề | `{{current}} of {{total}} min` | `{{current}}/{{total}} phút` |
+| `stat.progressSubOpen` | M11 *(mới v4.0)* | phụ đề thẻ Progress của goal **không thời hạn** (Goal detail và Review): `{{total}}` = chỉ tiêu tích luỹ tới hôm nay (`totalTarget(goal, today)`), chưa bắt đầu = `0` | `{{current}} of {{total}} min expected so far` | `{{current}}/{{total}} phút dự kiến đến nay` |
 | `stat.pace` | M4 | StatCard | `Pace` | `Nhịp độ` |
 | `stat.paceAhead` | M4 | `{{value}}` = `format.minutes` hoặc `format.duration` | `{{value}} ahead` | `Nhanh {{value}}` |
 | `stat.paceBehind` | M4 | | `{{value}} behind` | `Chậm {{value}}` |
 | `stat.paceOnTrack` | M4 | | `On pace` | `Đúng nhịp` |
 | `stat.paceExpected` | M4 | phụ đề | `Expected {{n}} min by today` | `Dự kiến {{n}} phút tính đến hôm nay` |
+
+**Tóm tắt thay đổi key của v4.0 (M11) — developer M11-T4/T5 áp dụng đúng danh sách này vào `en.json` / `vi.json` (mỗi key có cả `en` và `vi`; `vi` không có số nhiều nên không có `_one/_other`).**
+
+- **Key mới (12):** `goal.form.endsNever`, `goal.form.endsNeverHint`, `goal.form.endsNeverTotalNote`, `goal.form.endsNeverSwitched` (7.6.3); `goals.rowDailyOpen` (7.6.2); `goal.detail.subDayOpen`, `goal.detail.chartSummaryOpen`, `goal.detail.chartSummaryEmptyOpen`, `stat.progressSubOpen` (7.6.4); `review.progressNoteOpen` (7.6.6 / bảng Review); `errors.GOAL_PERIOD_INVALID_openEndedTotal`, `errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded` (7.3).
+- **Key sửa chữ: 0.** Mọi key hiện có giữ nguyên chữ `en` và `vi` (goal có hạn hiển thị y như v3.1). **Key bỏ: 0.**
+- **Chọn key khi nào (cho `GoalForm`, `Goals`, `GoalDetail`, `Review`, `error-messages.ts`):**
+  - `Goals`/`GoalDetail` dòng thông tin: `goal.endDate === null` → `goals.rowDailyOpen` (`{ n, start }`); ngược lại `goals.rowDaily` / `goals.rowTotal` như cũ. `goals.endedOn` không bao giờ được gọi với goal `endDate === null`.
+  - `GoalDetail`: `goal.endDate === null` → `goal.detail.subDayOpen` (`{ k }`) thay `subDay`; `chartSummaryOpen` / `chartSummaryEmptyOpen` thay `chartSummary` / `chartSummaryEmpty`; không render Range; `upcoming` (elapsedDays = 0) → không render thẻ biểu đồ; `stat.progressSubOpen` thay `stat.progressSub`.
+  - `Review`: goal đang chọn có `endDate === null` → `stat.progressSubOpen` (thẻ Progress) và `review.progressNoteOpen` (ghi chú); `review.outsideYear` giữ nguyên ưu tiên khi năm < năm `startDate`.
+  - `error-messages.ts`: `GOAL_PERIOD_INVALID` + `params.variant === 'openEndedTotal'` → `errors.GOAL_PERIOD_INVALID_openEndedTotal`; `DATE_OUTSIDE_GOAL_PERIOD` + `params.end === null` → `errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded` (params `{ start }`).
+  - `GoalForm`: radio thứ ba luôn có nhãn `goal.form.endsNever`; dòng mô tả dưới nó = `endsNeverHint` nếu đang chọn, `endsNeverTotalNote` nếu `targetType = total` (radio `disabled`), ngược lại không render dòng nào.
 
 #### 7.6.5 Day (S5) — M3
 
@@ -1505,7 +1598,7 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `day.invalid` | M3 | URL ngày sai định dạng | `That date isn't valid.` | `Ngày này không hợp lệ.` |
 | `day.invalidAction` | M3 | link | `Go to Today` | `Về trang Hôm nay` |
 
-#### 7.6.6 Review (S6) — M4
+#### 7.6.6 Review (S6) — M4 (ghi chú goal không thời hạn: M11)
 
 | Key | MS | Ngữ cảnh | `en` | `vi` |
 | :- | :- | :- | :- | :- |
@@ -1515,7 +1608,8 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `review.goalArchived` | M4 | option goal đã archive | `{{name}} (archived)` | `{{name}} (đã lưu trữ)` |
 | `review.yearLabel` | M4 | label Select | `Year` | `Năm` |
 | `review.pickGoal` | M4 | thay thẻ Progress/Pace ở All goals | `Pick a goal to see progress and pace.` | `Chọn một mục tiêu để xem tiến độ và nhịp độ.` |
-| `review.progressNote` | M4 | ghi chú dưới hàng stat (một goal) | `Progress and pace cover the whole goal period.` | `Tiến độ và nhịp độ tính trên toàn bộ thời gian của mục tiêu.` |
+| `review.progressNote` | M4 | ghi chú dưới hàng stat (một goal **có hạn**) | `Progress and pace cover the whole goal period.` | `Tiến độ và nhịp độ tính trên toàn bộ thời gian của mục tiêu.` |
+| `review.progressNoteOpen` | M11 *(mới v4.0)* | như `review.progressNote` nhưng khi goal đang chọn **không thời hạn** (A-51) | `Progress and pace for a goal with no end date are measured up to today.` | `Tiến độ và nhịp độ của mục tiêu không có thời hạn được tính đến hôm nay.` |
 | `review.heatmapTitle` | M4 | h2 | `Activity in {{year}}` | `Hoạt động năm {{year}}` |
 | `review.weeklyTitle` | M4 | h2 | `Last 12 weeks` | `12 tuần gần nhất` |
 | `review.weeklySub` | M4 | phụ đề | `Hours logged per week` | `Số giờ đã ghi mỗi tuần` |
@@ -1865,6 +1959,28 @@ Kiểm bằng `@axe-core/playwright` (0 serious/critical) ở `en` và `vi`, sá
 - Màu không phải kênh duy nhất ở mọi trạng thái đồng bộ (icon khác nhau + chữ khác nhau); hết phiên/lỗi không chỉ dựa vào đỏ/xanh dương.
 - Logo Google chỉ là hình trang trí kèm chữ "Google" trong nhãn nút; không có `alt` riêng.
 
+### 8.2 Goal không thời hạn — radio "No end date" và hiển thị (v4.0, M11)
+
+Kiểm bằng `@axe-core/playwright` (0 serious/critical) ở `en` và `vi`, sáng và tối, cho GoalForm (cả trạng thái Target = Total hours với radio khoá), Goals, Goal detail (O1), Review (chọn O1); bàn phím thủ công theo danh sách dưới.
+
+**Radio "No end date"**
+
+- Là `<input type="radio" name="endsMode">` thật, cùng nhóm với hai radio kia, trong `<fieldset>` + `<legend>` `Ends`; chữ nhãn hiển thị (`goal.form.endsNever`) là tên truy cập. Cả hàng (radio + chữ) là vùng chạm ≥ 44 px.
+- **Khoá = thuộc tính `disabled` thật** (không dùng riêng `aria-disabled`): radio không thể chọn bằng chuột, chạm, mũi tên hay Space, và không có đường nào để một `aria-disabled` "lọt" giá trị `total` + không hạn. `aria-disabled` chỉ được thêm nếu thư viện/CSS cần để đồng bộ kiểu; không thay `disabled`. Hệ quả có chủ đích: radio khoá **không nhận focus Tab/mũi tên** (nhóm radio chỉ đi qua hai radio còn lại); lý do không bị giấu vì nằm trong **chữ hiển thị liền sau radio**, nên người dùng đọc theo thứ tự duyệt (virtual cursor, Rotor, TalkBack lướt) vẫn gặp ghi chú ngay sau nhãn.
+- **Mô tả:** radio khoá có `aria-describedby` = `id` của `goal.form.endsNeverTotalNote` (đoạn `.hint` **luôn hiện**, không chỉ hover/focus, không `title`); tên truy cập mô tả tính được cả khi `disabled` (test: `toHaveAccessibleDescription`). Khi đang chọn (mở khoá) radio nối `goal.form.endsNeverHint` bằng cùng cách. Khi chưa chọn và mở khoá không có `aria-describedby`.
+- **Tương phản:** chữ nhãn khoá dùng `--text-muted` (≈ 6,3:1 sáng / ≈ 7,2:1 tối, 8 mục "Tương phản" ở đầu mục 8); không giảm `opacity`. Ghi chú `.hint` cùng màu `--text-muted` (≥ 4.5:1). Trạng thái khoá không chỉ dựa vào màu: có chữ ghi chú đi kèm. Chữ ghi chú không phải control nên không bị miễn trừ tương phản.
+- **Bàn phím:** nhóm Ends là một tab-stop (radio đang chọn); mũi tên Trái/Phải/Lên/Xuống chuyển giữa các radio **đang bật** (3 radio khi Minutes per day, 2 khi Total hours; vòng quanh); chọn "On a specific date" hiện End date ngay dưới (focus ở lại radio, không tự nhảy vào ô ngày); chọn "No end date" ẩn End date (nếu focus đang ở End date thì không xảy ra vì ô ngày chỉ hiện khi radio kia được chọn).
+- **Thông báo khi Ends bị ép đổi:** vùng `<div class="sr-only" role="status" aria-live="polite" aria-atomic="true">` **luôn có trong DOM** (trong fieldset Ends, rỗng ban đầu) nhận `goal.form.endsNeverSwitched` đúng một lần khi Target chuyển sang Total hours đang lúc chọn "No end date"; xoá nội dung khi đổi Target về Minutes per day hoặc khi người dùng tự chọn một radio Ends. Focus **không** bị dời (ở lại control Target). Không dùng `role="alert"` (người dùng không mắc lỗi, đây là thông tin).
+- **Lỗi dự phòng `openEndedTotal`:** nằm trong `aria-describedby` của fieldset Ends (cùng `id` lỗi), icon `aria-hidden`, chữ `--danger`; focus vào radio đang chọn của nhóm (S3 trạng thái 5); tính vào `goal.form.summary` (`role="alert"` ở đầu form).
+- **Axe:** không dùng `aria-hidden` lên radio khoá; không có `label` rỗng; không `tabindex` dương.
+
+**Hiển thị goal không thời hạn**
+
+- Dòng thông tin `goals.rowDailyOpen` là chữ thường (`<p>`), không icon `∞`, không ký tự đặc biệt: trình đọc màn hình đọc đúng "từ 01/10/2026, không có thời hạn" / "from 2026-10-01, no end date". (Đã **không** chọn dạng `{start} – ∞` vì `∞` đọc là "vô cực"/"infinity" và dấu `–` đọc là "đến" nhưng sau đó không có gì.)
+- Goal detail: khi bỏ Range, không còn control bị thiếu: `chart-head` chỉ có h2; thứ tự focus của trang không đổi (nút Edit/Archive/Delete → vùng chart → `details` bảng).
+- Goal detail upcoming (không thẻ biểu đồ): câu `goal.detail.upcoming` trong thẻ headline là nội dung thay thế đầy đủ cho biểu đồ (SR không bị mất thông tin vì không có biểu đồ để mô tả).
+- Thẻ Progress: `role="progressbar"` của `StatCard` **giữ nguyên hành vi hiện có** (không sửa component dùng chung); `aria-valuetext` là giá trị thật (`61.1%` / `61,1%`; goal không thời hạn vượt chỉ tiêu tích luỹ có thể ra `120.5%`), thanh vẽ chặn ở 100%; phụ đề `stat.progressSubOpen` giải thích mẫu số bằng chữ.
+
 ---
 
 ## 9. Interface spec (cho CLI/API/bot)
@@ -1878,7 +1994,7 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **A-D1.** Màn Review ở chế độ **All goals** không hiển thị `Progress` và `Pace` (PRD FR-24 và AC M4-AC5 chỉ định nghĩa số liệu này theo từng goal; tổng hợp nhiều goal có chỉ tiêu và khoảng khác nhau dễ gây hiểu sai). Thay bằng gợi ý chọn một goal. Cần planner/user xác nhận (xem Open questions).
 - **A-D2.** Giao diện sáng/tối **tự theo hệ điều hành**, không có công tắc trong MVP (không có trong PRD). Token tối đã định nghĩa sẵn.
 - **A-D3.** Không dùng thư viện UI (Tailwind/MUI): CSS thuần với custom properties, vì `ARCHITECTURE.md` không chọn UI framework. Developer có thể dùng CSS Modules hoặc một file global; chỉ cần đúng token.
-- **A-D4.** Biểu đồ đường cong có control **Range** (`Whole period` / `So far`) để khỏi bị đường Ideal "ăn" hết thang đo với goal dài (1.01^365 ≈ ×37.8; 1.01^1827 ≈ ×7,9·10^7). Mặc định `So far` khi khoảng > 120 ngày, ngược lại `Whole period`. Đây là điều khiển phụ, chỉ lọc dữ liệu đã có; thang Y luôn tuyến tính. **(v3.0)** Giữ nguyên quy tắc và mặc định; thay đổi duy nhất: miền Y không còn bắt đầu cứng ở 0 mà theo `curveYDomain` của các điểm đang hiển thị sau khi lọc (kể cả giá trị âm của "Bạn"), nên đổi Range có thể đổi cả hai đầu trục. Với R1 (83 ngày ≤ 120) mặc định vẫn là `Whole period`: "Bạn" chiếm 4 ngày đầu, Ideal leo tới ≈ +128,4 % ở cuối.
+- **A-D4.** Biểu đồ đường cong có control **Range** (`Whole period` / `So far`) để khỏi bị đường Ideal "ăn" hết thang đo với goal dài (1.01^365 ≈ ×37.8; 1.01^1827 ≈ ×7,9·10^7). Mặc định `So far` khi khoảng > 120 ngày, ngược lại `Whole period`. Đây là điều khiển phụ, chỉ lọc dữ liệu đã có; thang Y luôn tuyến tính. **(v3.0)** Giữ nguyên quy tắc và mặc định; thay đổi duy nhất: miền Y không còn bắt đầu cứng ở 0 mà theo `curveYDomain` của các điểm đang hiển thị sau khi lọc (kể cả giá trị âm của "Bạn"), nên đổi Range có thể đổi cả hai đầu trục. Với R1 (83 ngày ≤ 120) mặc định vẫn là `Whole period`: "Bạn" chiếm 4 ngày đầu, Ideal leo tới ≈ +128,4 % ở cuối. **(v4.0)** Với goal **không thời hạn** control Range **bị bỏ** (A-D55): không có ngày tương lai nên `Whole period` ≡ `So far`; quy tắc mặc định 120 ngày chỉ còn áp cho goal có hạn.
 - **A-D5.** Xoá entry có xác nhận inline (`Delete this entry?` → `Delete`/`Keep`) vì vùng chạm Edit/Delete nằm sát nhau trên điện thoại. Xoá goal dùng dialog (D2).
 - **A-D6.** Đóng dialog Stop (Esc hoặc `Keep running`) **không** dừng/huỷ timer: dialog chỉ là bước xác nhận; timer chỉ kết thúc khi `Save entry` hoặc `Discard session` (khớp `TimerService.stop` chỉ tính số phút, `save`/`discard` mới xoá `activeTimer`).
 - **A-D7.** Entry chỉ sửa được `minutes` và `note` (theo `EntryService.update`); muốn chuyển entry sang ngày khác thì xoá và thêm lại ở Day đúng ngày.
@@ -1936,6 +2052,19 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **A-D50 (heatmap).** Giữ nguyên kích thước ô; chỉ sửa câu chữ: vừa khít khi viewport ≥ 1192 px (ngưỡng làm tròn), cuộn trong hộp ở 1024–1191 px. Không đổi ngưỡng breakpoint `lg` (1024) vì sidebar xuất hiện ở đó.
 - **A-D51 (nhãn trực tiếp "Ideal +X%").** Thêm viền sáng quanh chữ nhãn (tuỳ chọn, chỉ CSS) thay vì dời vị trí: giữ nguyên thuật toán vị trí đã được QC kiểm (`curve-label` không đè nhau). Không có AC; không chặn.
 
+**Assumptions của phase 5 (v4.0, M11-T7 — user 2026-10-19 không có Gate duyệt design; designer tự chốt, sửa chữ chỉ là đổi hai chuỗi)**
+
+- **A-D52 (Total hours: khoá, không ẩn).** Radio "No end date" **hiện nhưng khoá** (`disabled`) cùng ghi chú luôn hiện khi Target = Total hours, thay vì ẩn. Lý do: (1) người dùng thấy lựa chọn tồn tại và hiểu vì sao Total hours không có (ghi chú nói thẳng: cần ngày kết thúc để tính chỉ tiêu ngày); (2) nhóm Ends giữ 3 hàng, không nhảy bố cục khi đổi Target; (3) test/AT có một nút để kiểm. Đánh đổi: thêm ≈ 60–80 px chiều cao ở Total hours và radio khoá không focus được (đã bù bằng chữ hiển thị liền sau, 8.2).
+- **A-D53 (đang "No end date" rồi đổi sang Total hours).** Ends **tự chuyển sang "This year — ends {date}"** (luôn hợp lệ, không cần nhập thêm, trùng mặc định của form tạo) kèm thông báo SR `goal.form.endsNeverSwitched`; không chuyển sang "On a specific date" vì sẽ bắt người dùng nhập thêm một ô ngay lúc họ chưa quyết định. Đổi về Minutes per day **không** tự chọn lại "No end date" (không nhớ trạng thái cũ): đơn giản, dễ đoán, người dùng thấy rõ radio đang chọn; nếu họ lỡ tay, chọn lại là một chạm.
+- **A-D54 (vị trí radio và ô End date).** Radio thứ ba nằm **cuối** nhóm (đúng "radio thứ ba" của M11-AC9); ô End date chuyển lên **ngay dưới "On a specific date"** để không bị tách khỏi radio của nó bởi radio thứ ba. Chỉ đổi vị trí DOM của một field có điều kiện; mọi test locate theo label không bị ảnh hưởng.
+- **A-D55 (Range bị bỏ với goal không thời hạn).** Whole period ≡ So far nên bỏ control thay vì khoá một control thừa (không có "lựa chọn vô nghĩa"). Hệ quả: không có cách thu hẹp cửa sổ thời gian cho goal chạy rất lâu (xem OQ-D21); bảng dữ liệu vẫn có mọi ngày.
+- **A-D56 (hàng goal: "từ {start}, không có thời hạn").** Chọn "từ …" thay vì `{start} – ∞`: đọc được bằng SR, dịch được, không phải giải thích ký hiệu. Thêm cụm "no end date / không có thời hạn" (cùng chữ với radio) để người dùng nhận ra goal này khác goal "This year" dù không thấy ngày cuối; ngắn hơn một badge riêng nên không thêm thành phần mới. Cùng một key cho Goals và đầu trang Goal detail. Không có badge/nhóm Ended.
+- **A-D57 (Progress tới hôm nay).** Phụ đề `{cur} of {total} min expected so far` thay cho `of {total} min` vì mẫu số của goal không thời hạn là chỉ tiêu tích luỹ tới hôm nay (A-51), không phải tổng cả goal; giá trị % có thể > 100%. Nhãn thẻ vẫn là `Progress`.
+- **A-D58 (upcoming không hạn: bỏ thẻ biểu đồ).** Không có điểm nào để vẽ (A-52) nên không render khung biểu đồ rỗng; câu `goal.detail.upcoming` có sẵn đã nói đúng điều cần nói, không thêm key.
+- **A-D59 (một điểm).** Goal không hạn ngày đầu tiên: chấm ở giữa vùng vẽ, không thêm điểm giả (xem S4 mục 6).
+- **A-D60 (End date khi sửa goal không hạn).** Ô End date (ẩn) khởi tạo = cuối năm của Start date; nếu entry nằm sau ngày đó thì lỗi `GOAL_PERIOD_EXCLUDES_ENTRIES` đã có hint Start date giải thích. Không tự tính "ngày muộn nhất của entry" để giữ form đơn giản.
+- **A-D61 (`en`).** `No end date` (song song với nhãn `End date`; ngắn, không gợi ý "never ends" như một lời hứa). `vi` `Không có thời hạn` nguyên văn user (A-56).
+
 ---
 
 ## 11. Open questions
@@ -1960,6 +2089,8 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **OQ-D18 (cho developer/orchestrator, nhỏ, v3.1).** `public/privacy.html` (trang tĩnh) vẫn dùng brand cũ: ô xanh chữ "1%" + chữ "Better per Day" (dòng 109), lệch với brand mark ảnh logo của app (A-D41). Ngoài phạm vi DESIGN (file nằm ở `public/`, chỉ developer sửa). Đề nghị đổi cho khớp ở một lần dọn sau; không chặn M10 và không có AC.
 - **OQ-D19 (cho user/QC, nhỏ, v3.1).** Ảnh logo ở 28 px khó đọc chữ "BETTER"; chữ `app.name` bên cạnh đã đủ nghĩa. Nếu muốn mark lớn hơn (ví dụ ô 36 px / ảnh 32 px) thì QC phải nới assertion `tests/qc/m7-r1-brand.spec.ts:102` trước, rồi đổi CSS `.mark`; designer không đổi con số ở v3.1 vì đang bị test khoá và chưa có yêu cầu từ user.
 - **OQ-D20 (cho planner, thông tin, v3.1).** Trục Y của BarChart không ghi đơn vị (giờ) và nhãn giá trị mới (A-D46) cũng không kèm đơn vị; đơn vị hiện ở tóm tắt, tooltip và bảng ẩn. Nếu QC/user thấy "2.7" khó hiểu thì thêm một tiêu đề đơn vị nhỏ cho trục (cần một key mới + bản dịch, ví dụ `chart.bar.unitHours` = `Hours` / `Giờ`) — designer sẽ thêm khi được yêu cầu; không làm trong M10.
+- **OQ-D21 (cho planner/user, nhỏ, KHÔNG chặn M11, v4.0).** Goal không thời hạn chạy lâu (vài trăm ngày trở lên) có đường Ideal `1.01^k` rất lớn (ngày 365 ≈ +367.800%; ngày 1.000 ≈ +2,1 triệu %), nên đường "Bạn" nằm sát vạch 0% — đúng toán học và đã là hệ quả được chấp nhận của ARCH §4.5 cho goal có hạn, nhưng với goal "chạy mãi" nó sẽ thành tình trạng thường trực, và vì Range bị bỏ (A-D55) không có cách thu hẹp cửa sổ. Giá trị vẫn đọc được ở nhãn trực tiếp, tooltip, tóm tắt và bảng. Nếu user thấy khó dùng, đề xuất cho sau (cần FR/plan, không phải designer tự thêm): control Range kiểu `Last 30 days` / `Last 90 days` / `All` chỉ cho goal không thời hạn, hoặc ẩn đường Ideal sau N ngày. Đã ghi vào Later của planner chưa: chưa (designer không sửa `docs/plan/**`).
+- **Không phát hiện luồng PRD thiếu cho FR-56/FR-57.** Lưu ý thông tin (không phải câu hỏi): PRD A-53 nói đổi sang `total` khi đang "không thời hạn" thì form "không cho lưu ở trạng thái đó"; thiết kế thực hiện bằng cách khoá radio + tự chuyển Ends (A-D52, A-D53) nên trạng thái đó không bao giờ tồn tại trong form, `openEndedTotal` chỉ là lớp dự phòng.
 
 ---
 
@@ -1999,3 +2130,15 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
   - **(8) Tuỳ chọn** — S4 quy tắc 5: viền sáng quanh chữ nhãn trực tiếp "Ideal +X%/You +X%" (CSS, không AC; mockup `07-goal-detail.html` đã có). Không đổi vị trí nhãn.
   - **Tổng hợp key cho M10-T6**: **2 key mới** (`errors.IMPORT_INVALID_SCHEMA_outOfRange`, `errors.EXPORT_FAILED`; cả `en` và `vi`); **2 chuỗi `en` đổi** (`auth.signOut.rejectedKeep`, `auth.signOut.rejectedRemove`; `vi` không đổi); **6 key chỉ ghi nhận vào DESIGN, chữ đã ship giữ nguyên** (`settings.account.localRejected_one/_other`, `auth.signOut.rejected_one/_other`, `auth.signOut.removeDescRejected`, `settings.about.privacyLink`); `empty.day.noGoals` không đổi chữ (chỉ sửa chỗ viết sai ở §4 S5); **1 key đã bỏ khỏi code** (`app.brandSuffix`, đánh dấu bỏ trong 7.2). Mọi key khác không đổi.
   - Assumptions A-D41 … A-D51; Open questions OQ-D12 (đã quyết), OQ-D16 (cập nhật), OQ-D18 … OQ-D20 (mới). Không phát hiện luồng PRD thiếu.
+- 2026-10-19 — **v4.0** (mode `revise`, M11-T7; yêu cầu user "thêm option Không có thời hạn" ở section Ends; PRD v4.0 FR-56/FR-57, A-47 … A-56; ARCH v4.0 §4.6; TASKS v4.0 M11; không có Gate duyệt design). Thêm lựa chọn **thứ ba** cho Ends, chỉ với Minutes per day; goal có hạn **hiển thị y như v3.1** (không key cũ nào đổi chữ, không token mới, không component mới).
+  - **(1) §4 S3 + 7.6.3 — radio thứ ba:** `goal.form.endsNever` (`en` `No end date`, `vi` `Không có thời hạn` nguyên văn user, A-D61), đặt **cuối** nhóm Ends; End date chuyển lên ngay dưới "On a specific date" (A-D54). Chọn "No end date": ẩn End date, ẩn hint Target, hiện `goal.form.endsNeverHint` dưới radio. Form sửa goal `endDate = null` mở với radio đang chọn; End date ẩn khởi tạo = cuối năm của Start date (A-D60).
+  - **(2) Quy tắc Total hours:** radio **hiện nhưng khoá** (`disabled`) + ghi chú luôn hiện `goal.form.endsNeverTotalNote` (A-D52). Đang chọn "No end date" rồi đổi Target sang Total hours → Ends **tự chuyển sang "This year"** + thông báo SR `goal.form.endsNeverSwitched`; đổi về Minutes per day không tự chọn lại (A-D53). Câu dự phòng `errors.GOAL_PERIOD_INVALID_openEndedTotal`. Flow mới **F15**.
+  - **(3) §4 S2 + 7.6.2 — hàng goal:** `goals.rowDailyOpen` = `{n} min/day · from {start}, no end date` / `{n} phút/ngày · từ {start}, không có thời hạn` (A-D56); không bao giờ badge/nhóm/dòng Ended.
+  - **(4) §4 S4 + 7.6.4 — Goal detail:** dòng khoảng thời gian dùng cùng key hàng; `goal.detail.subDayOpen` (`Day {k}`); `chartSummaryOpen` / `chartSummaryEmptyOpen` (không tổng); **Range bị bỏ** (A-D55, A-D4 cập nhật); một điểm → chấm giữa (A-D59); upcoming → **không render thẻ biểu đồ**, dùng lại `goal.detail.upcoming` (A-D58).
+  - **(5) §4 S6 + `stat.*`:** `stat.progressSubOpen` (`{cur} of {total} min expected so far`) và `review.progressNoteOpen` (A-D57); Pace giữ nguyên chữ.
+  - **(6) §7.3:** `errors.GOAL_PERIOD_INVALID_openEndedTotal`; `errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded` (khi `params.end === null`, chỉ có ngày bắt đầu) + hai hàng quy tắc chọn key.
+  - **(7) Rà 360 px `vi`:** 7 dòng mới ở bảng 3.4 (radio thứ ba 1 dòng; mô tả/ghi chú 3–4 dòng, thụt lề 30 px; hàng goal 2 dòng; "Ngày 9"; phụ đề Progress 2 dòng; ghi chú Review). Không đổi bố cục ngoài các mục này.
+  - **(8) §8.2 mới (a11y):** radio khoá = `disabled` thật + `aria-describedby` tới ghi chú luôn hiện, tương phản `--text-muted` (không `opacity`), bàn phím bỏ qua radio khoá, vùng `role="status"` cho `endsNeverSwitched`, lỗi dự phòng, hàng goal không ký hiệu `∞`.
+  - **(9) Mockup:** `03-goal-form.html` viết lại có tương tác (radio thứ ba, khoá + ghi chú, tự chuyển Ends, chế độ sửa, lỗi, `English`/`Tiếng Việt`, sáng/tối theo OS); `02-goals.html` thêm hàng "Meditate" (Active) và "Piano" (Upcoming) + đổi `en`/`vi`; `07-goal-detail.html` thêm 3 tình huống goal không thời hạn (O1 ngày 9, ngày đầu tiên, chưa bắt đầu). Figma: chưa cập nhật (orchestrator làm nếu cần).
+  - **Tổng hợp key cho M11-T4/T5:** **12 key mới** (cả `en` và `vi`): `goal.form.endsNever`, `goal.form.endsNeverHint`, `goal.form.endsNeverTotalNote`, `goal.form.endsNeverSwitched`, `goals.rowDailyOpen`, `goal.detail.subDayOpen`, `goal.detail.chartSummaryOpen`, `goal.detail.chartSummaryEmptyOpen`, `stat.progressSubOpen`, `review.progressNoteOpen`, `errors.GOAL_PERIOD_INVALID_openEndedTotal`, `errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded`. **0 key sửa chữ, 0 key bỏ.**
+  - Assumptions A-D52 … A-D61; Open questions OQ-D21 (nhỏ, không chặn: Ideal quá lớn với goal chạy lâu, không còn Range). Không phát hiện luồng PRD thiếu.

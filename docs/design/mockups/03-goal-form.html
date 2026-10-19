@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>New goal — 1% Better (mockup S3)</title>
+<title>Goal form — 1% Better (mockup S3, v4.0)</title>
 <style>
 :root{color-scheme:light dark;
 --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -30,6 +30,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:400 16px/24px var(--fo
 h1,h2,h3,p,ul{margin:0}ul{padding:0;list-style:none}
 a{color:var(--primary)}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+[hidden]{display:none!important}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .skip{position:absolute;left:8px;top:-60px;background:var(--surface);padding:8px 12px;border-radius:var(--r-md);z-index:60}
 .skip:focus{top:8px}
@@ -57,7 +58,7 @@ h1{font-size:24px;line-height:30px;font-weight:700}
 @media (min-width:1024px){h1{font-size:28px;line-height:34px}}
 h2{font-size:18px;line-height:26px;font-weight:600}
 /* controls */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:0 16px;border:1px solid transparent;border-radius:var(--r-md);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;background:none;color:var(--text)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:0 16px;border:1px solid transparent;border-radius:var(--r-md);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;background:none;color:var(--text);white-space:normal;text-align:center}
 .btn.primary{background:var(--primary);color:var(--on-primary)}.btn.primary:hover{background:var(--primary-hover)}
 .btn.secondary{background:var(--surface);border-color:var(--border-input)}.btn.secondary:hover{background:var(--surface-2)}
 .btn.ghost{color:var(--primary)}.btn.ghost:hover{background:var(--primary-soft)}
@@ -80,9 +81,20 @@ textarea.input{min-height:88px;resize:vertical}
 .seg span{display:flex;align-items:center;justify-content:center;min-height:calc(var(--tap) - 2px);padding:0 12px;text-align:center;font-size:15px}
 .seg input:checked+span{background:var(--primary);color:var(--on-primary)}
 .seg input:focus-visible+span{outline:2px solid var(--focus);outline-offset:-4px}
-.radio{display:flex;align-items:center;gap:10px;min-height:var(--tap);font-weight:400!important;margin:0!important}
-.radio input{width:20px;height:20px;accent-color:var(--primary);margin:0}
+/* v4.0: radio rows (label wraps, radio aligned to the first line), nested End date, description under the third radio */
+.radio{display:flex;align-items:flex-start;gap:10px;min-height:var(--tap);font-weight:400!important;margin:0!important;cursor:pointer}
+.radio input{width:20px;height:20px;accent-color:var(--primary);margin:12px 0 0;flex:none}
+.radio span{padding:10px 0;line-height:24px;min-width:0}
+.radio input:disabled{cursor:not-allowed}
+.radio input:disabled+span{color:var(--text-muted);cursor:not-allowed}
+.radio:has(input:disabled){cursor:not-allowed}
+.nested{margin-left:30px}
+.nested .field{margin-top:0;margin-bottom:8px}
+.radio-desc{margin:0 0 4px 30px}
 .mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+.mock-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-bottom:12px;padding:12px;border:1px dashed var(--border-input);border-radius:var(--r-md);font-size:14px;line-height:20px}
+.mock-bar label.f{display:grid;gap:4px;font-weight:600;color:var(--text-muted);min-width:0}
+.mock-bar select{min-height:var(--tap);max-width:100%;padding:0 10px;border:1px solid var(--border-input);border-radius:var(--r-md);background:var(--surface);color:var(--text);font:400 15px/20px var(--font)}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 /* screen-specific */
 form.card{padding:20px 16px 24px}
@@ -103,72 +115,269 @@ form.card{padding:20px 16px 24px}
 <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
 <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></symbol>
 </defs></svg>
-<a class="skip" href="#main">Skip to content</a>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
 
-<nav class="nav" aria-label="Main">
+<nav class="nav" data-i18n-aria="navLabel" aria-label="Main">
   <a class="brand" href="01-today.html" aria-label="1% Better per Day"><span class="mark" aria-hidden="true"><img src="../../../public/brand-mark-96.png" width="28" height="28" alt="" decoding="async"></span><span>1% Better per Day</span></a>
-  <a class="item" href="01-today.html"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span>Today</span></a>
-  <a class="item" href="02-goals.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span>Goals</span></a>
-  <a class="item" href="06-review.html"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span>Review</span></a>
-  <a class="item" href="08-settings.html"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Settings</span></a>
+  <a class="item" href="01-today.html"><svg class="ic" aria-hidden="true"><use href="#i-today"/></svg><span data-i18n="navToday">Today</span></a>
+  <a class="item" href="02-goals.html" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-goals"/></svg><span data-i18n="navGoals">Goals</span></a>
+  <a class="item" href="06-review.html"><svg class="ic" aria-hidden="true"><use href="#i-review"/></svg><span data-i18n="navReview">Review</span></a>
+  <a class="item" href="08-settings.html"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span data-i18n="navSettings">Settings</span></a>
 </nav>
 
 <div class="content">
 <main id="main" tabindex="-1">
+  <div class="mock-bar" role="group" aria-label="Mockup controls (not part of the app)">
+    <label class="f">Scenario
+      <select id="scen">
+        <option value="never">New goal — Minutes per day, "No end date" selected (try switching Target to Total hours)</option>
+        <option value="total">New goal — Total hours (the third option is locked, with a note)</option>
+        <option value="edit">Edit goal — open-ended goal with entries</option>
+        <option value="editerr">Edit goal — open-ended goal switched to a date before its last entry (error)</option>
+        <option value="error">New goal — error state (empty name), Total hours</option>
+      </select>
+    </label>
+    <fieldset style="border:0;margin:0;padding:0;min-width:0">
+      <legend class="small muted" style="font-weight:600;padding:0 0 4px">Language</legend>
+      <div class="seg"><label><input type="radio" name="lang" value="en" checked><span lang="en">English</span></label><label><input type="radio" name="lang" value="vi"><span lang="vi">Tiếng Việt</span></label></div>
+    </fieldset>
+  </div>
+
   <header class="page-head">
     <div class="titles">
-      <a class="btn ghost back" href="02-goals.html"><svg class="ic" aria-hidden="true"><use href="#i-left"/></svg>Goals</a>
-      <h1>New goal</h1>
+      <a class="btn ghost back" href="02-goals.html"><svg class="ic" aria-hidden="true"><use href="#i-left"/></svg><span data-i18n="navGoals">Goals</span></a>
+      <h1 id="h1"></h1>
     </div>
   </header>
 
-  <form class="card" novalidate aria-labelledby="form-title">
-    <p id="form-title" class="sr-only">New goal form</p>
-    <div class="alert" role="alert"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p>Fix 1 field to save.</p></div>
+  <form class="card" id="form" novalidate aria-labelledby="form-title">
+    <p id="form-title" class="sr-only"></p>
+    <div class="alert" role="alert" id="summary" hidden><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p id="summary-text"></p></div>
 
     <div class="field">
-      <div class="label-row"><label for="name">Name <span aria-hidden="true">*</span><span class="sr-only">(required)</span></label><span class="muted small num">0/60</span></div>
-      <input id="name" class="input" autocomplete="off" placeholder="e.g. Read" aria-invalid="true" aria-describedby="name-err" required>
-      <p id="name-err" class="err"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg>Enter a name for your goal.</p>
+      <div class="label-row"><label for="name"><span data-i18n="nameLabel">Name</span> <span aria-hidden="true">*</span><span class="sr-only" data-i18n="required">(required)</span></label><span class="muted small num" id="name-count">0/60</span></div>
+      <input id="name" class="input" autocomplete="off" aria-describedby="name-err" required>
+      <p id="name-err" class="err" hidden><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span data-i18n="eName">Enter a name for your goal.</span></p>
     </div>
 
     <div class="field">
-      <div class="label-row"><label for="why">Why (optional)</label><span class="muted small num">40/280</span></div>
-      <textarea id="why" class="input" placeholder="Why does this matter to you?">Talk with my grandmother in her language</textarea>
+      <div class="label-row"><label for="why" data-i18n="whyLabel">Why (optional)</label><span class="muted small num" id="why-count">0/280</span></div>
+      <textarea id="why" class="input"></textarea>
     </div>
 
     <fieldset>
-      <legend class="legend">Target</legend>
+      <legend class="legend" data-i18n="targetLegend">Target</legend>
       <div class="seg">
-        <label><input type="radio" name="type" value="daily"><span>Minutes per day</span></label>
-        <label><input type="radio" name="type" value="total" checked><span>Total hours</span></label>
+        <label><input type="radio" name="type" value="daily"><span data-i18n="targetDaily">Minutes per day</span></label>
+        <label><input type="radio" name="type" value="total"><span data-i18n="targetTotal">Total hours</span></label>
       </div>
       <div class="field" style="margin-top:12px">
-        <label for="target">Total hours <span aria-hidden="true">*</span><span class="sr-only">(required)</span></label>
-        <div class="with-suffix"><input id="target" class="input num" inputmode="numeric" autocomplete="off" value="100" aria-describedby="target-hint"><span aria-hidden="true">h</span></div>
-        <p id="target-hint" class="hint">That's about 72 min per day over 84 days.</p>
+        <label for="target"><span id="target-label"></span> <span aria-hidden="true">*</span><span class="sr-only" data-i18n="required">(required)</span></label>
+        <div class="with-suffix"><input id="target" class="input num" inputmode="numeric" autocomplete="off" aria-describedby="target-hint"><span aria-hidden="true" id="target-suffix"></span></div>
+        <p id="target-hint" class="hint"></p>
       </div>
     </fieldset>
 
     <div class="field">
-      <label for="start">Start date <span aria-hidden="true">*</span><span class="sr-only">(required)</span></label>
-      <input id="start" class="input num" type="date" value="2026-10-09" style="max-width:220px">
+      <label for="start"><span data-i18n="startLabel">Start date</span> <span aria-hidden="true">*</span><span class="sr-only" data-i18n="required">(required)</span></label>
+      <input id="start" class="input num" type="date" style="max-width:220px" aria-describedby="start-hint">
+      <p id="start-hint" class="hint" hidden></p>
     </div>
 
-    <fieldset>
-      <legend class="legend">Ends</legend>
-      <label class="radio"><input type="radio" name="end" checked>This year — ends 2026-12-31</label>
-      <label class="radio"><input type="radio" name="end">On a specific date</label>
+    <fieldset id="ends" aria-describedby="ends-err">
+      <legend class="legend" data-i18n="endsLegend">Ends</legend>
+      <label class="radio"><input type="radio" name="end" value="year"><span id="lbl-year"></span></label>
+      <label class="radio"><input type="radio" name="end" value="specific"><span data-i18n="endsSpecific">On a specific date</span></label>
+      <div class="nested" id="end-field" hidden>
+        <div class="field">
+          <label for="end"><span data-i18n="endLabel">End date</span> <span aria-hidden="true">*</span><span class="sr-only" data-i18n="required">(required)</span></label>
+          <input id="end" class="input num" type="date" style="max-width:220px" aria-describedby="end-err">
+          <p id="end-err" class="err" hidden><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span data-i18n="eExcludes"></span></p>
+        </div>
+      </div>
+      <label class="radio"><input type="radio" name="end" value="never" id="end-never"><span data-i18n="endsNever">No end date</span></label>
+      <p class="hint radio-desc" id="never-desc" hidden></p>
+      <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" id="ends-status"></div>
+      <p id="ends-err" hidden></p>
     </fieldset>
 
     <div class="form-actions">
-      <button class="btn primary" type="submit">Save goal</button>
-      <a class="btn secondary" href="02-goals.html">Cancel</a>
+      <button class="btn primary" type="submit" id="save"></button>
+      <a class="btn secondary" href="02-goals.html" data-i18n="cancel">Cancel</a>
     </div>
   </form>
 
-  <aside class="mock-note">Mockup S3 Goal form (M1), shown in the error state after pressing "Save goal" with an empty name. Edit mode uses the title "Edit goal", the button "Save changes", and (when entries exist) a hint under Start date: "Your entries run from 2026-10-01 to 2026-10-08, so the period must include those dates." Choosing "On a specific date" reveals an "End date" field. Hint under Target switches to "That's 930 min (15.5 h) over 31 days." for Minutes per day.</aside>
+  <aside class="mock-note">Mockup S3 Goal form, v4.0 (M11). Ends now has a third radio, "No end date" (<span lang="vi">"Không có thời hạn"</span>), placed last; the End date field sits directly under "On a specific date". With Target = Minutes per day the third radio can be chosen: the End date field and the Target hint are hidden, and a description appears under it. With Target = Total hours the radio is disabled and its note is always visible; if "No end date" was selected when you switch to Total hours, Ends switches to "This year" and a screen-reader-only status line announces it (switching back does not re-select it). Edit mode opens an open-ended goal with the third radio selected. All strings are verbatim from DESIGN.md 7.6.3 / 7.3; the Scenario select and the Language switch are mockup-only. Check the Vietnamese text at 360 px width.</aside>
 </main>
 </div>
+
+<script>
+(function () {
+  'use strict';
+  var lang = 'en', scen = 'never';
+  var TODAY = '2026-10-09';
+  var st; // form state
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* Copy: verbatim from DESIGN.md 7.6.3, 7.3, 7.6.1 (nav). */
+  var S = {
+    en: {
+      skip: 'Skip to content', navLabel: 'Main', navToday: 'Today', navGoals: 'Goals', navReview: 'Review', navSettings: 'Settings',
+      titleNew: 'New goal', titleEdit: 'Edit goal', srNew: 'New goal form', srEdit: 'Edit goal form',
+      summary_one: 'Fix 1 field to save.', summary_other: 'Fix {{count}} fields to save.',
+      nameLabel: 'Name', namePlaceholder: 'e.g. Read', whyLabel: 'Why (optional)', whyPlaceholder: 'Why does this matter to you?',
+      targetLegend: 'Target', targetDaily: 'Minutes per day', targetTotal: 'Total hours',
+      hintDaily: "That's {{total}} min ({{hours}} h) over {{days}}.", hintTotal: "That's about {{daily}} min per day over {{days}}.",
+      startLabel: 'Start date', startHint: 'Your entries run from {{first}} to {{last}}, so the period must include those dates.',
+      endsLegend: 'Ends', endsThisYear: 'This year — ends {{date}}', endsSpecific: 'On a specific date', endLabel: 'End date',
+      endsNever: 'No end date',
+      endsNeverHint: 'The goal keeps running every day until you archive or delete it. Progress is measured up to today.',
+      endsNeverTotalNote: 'Only available for Minutes per day. Total hours needs an end date to work out your daily target.',
+      endsNeverSwitched: 'Ends changed to This year, because No end date only works with Minutes per day.',
+      save: 'Save goal', saveChanges: 'Save changes', cancel: 'Cancel', required: '(required)',
+      eName: 'Enter a name for your goal.',
+      eExcludes: 'Some of your entries fall outside these dates. Choose dates that include every logged day, or delete those entries first.',
+      unitMin: 'min', unitHour: 'h', day1: '{{n}} day', dayN: '{{n}} days'
+    },
+    vi: {
+      skip: 'Chuyển đến nội dung chính', navLabel: 'Chính', navToday: 'Hôm nay', navGoals: 'Mục tiêu', navReview: 'Tổng kết', navSettings: 'Cài đặt',
+      titleNew: 'Mục tiêu mới', titleEdit: 'Sửa mục tiêu', srNew: 'Biểu mẫu mục tiêu mới', srEdit: 'Biểu mẫu sửa mục tiêu',
+      summary_one: 'Cần sửa {{count}} ô nhập để lưu.', summary_other: 'Cần sửa {{count}} ô nhập để lưu.',
+      nameLabel: 'Tên', namePlaceholder: 'Ví dụ: Đọc sách', whyLabel: 'Lý do (không bắt buộc)', whyPlaceholder: 'Vì sao điều này quan trọng với bạn?',
+      targetLegend: 'Chỉ tiêu', targetDaily: 'Phút mỗi ngày', targetTotal: 'Tổng số giờ',
+      hintDaily: 'Tổng cộng {{total}} phút ({{hours}} giờ) trong {{days}}.', hintTotal: 'Khoảng {{daily}} phút mỗi ngày trong {{days}}.',
+      startLabel: 'Ngày bắt đầu', startHint: 'Các lần ghi của bạn kéo dài từ {{first}} đến {{last}}, nên khoảng thời gian phải bao gồm các ngày đó.',
+      endsLegend: 'Kết thúc', endsThisYear: 'Trong năm nay — kết thúc {{date}}', endsSpecific: 'Vào một ngày cụ thể', endLabel: 'Ngày kết thúc',
+      endsNever: 'Không có thời hạn',
+      endsNeverHint: 'Mục tiêu chạy mỗi ngày cho đến khi bạn lưu trữ hoặc xóa nó. Tiến độ được tính đến hôm nay.',
+      endsNeverTotalNote: 'Chỉ dùng được với Phút mỗi ngày. Tổng số giờ cần có ngày kết thúc để tính chỉ tiêu mỗi ngày.',
+      endsNeverSwitched: 'Mục Kết thúc đã chuyển sang Trong năm nay, vì Không có thời hạn chỉ dùng được với Phút mỗi ngày.',
+      save: 'Lưu mục tiêu', saveChanges: 'Lưu thay đổi', cancel: 'Hủy', required: '(bắt buộc)',
+      eName: 'Hãy nhập tên cho mục tiêu của bạn.',
+      eExcludes: 'Một số lần ghi của bạn nằm ngoài các ngày này. Hãy chọn khoảng thời gian bao gồm mọi ngày đã ghi, hoặc xóa các lần ghi đó trước.',
+      unitMin: 'phút', unitHour: 'giờ', day1: '{{n}} ngày', dayN: '{{n}} ngày'
+    }
+  };
+  function t(k, v) {
+    var s = S[lang][k], n;
+    if (v) for (n in v) s = s.split('{{' + n + '}}').join(v[n]);
+    return s;
+  }
+
+  /* Scenarios (dataset: S3 mock data + O1 "Meditate") */
+  var SC = {
+    never:  { edit: false, name: 'Meditate', why: '', type: 'daily', value: '10', start: '2026-10-09', ends: 'never', end: '2026-12-31' },
+    total:  { edit: false, name: 'Spanish', why: 'Talk with my grandmother in her language', type: 'total', value: '100', start: '2026-10-09', ends: 'year', end: '2026-12-31' },
+    edit:   { edit: true, name: 'Meditate', why: '', type: 'daily', value: '10', start: '2026-10-01', ends: 'never', end: '2026-12-31', entries: ['2026-10-01', '2026-10-08'] },
+    editerr:{ edit: true, name: 'Meditate', why: '', type: 'daily', value: '10', start: '2026-10-01', ends: 'specific', end: '2026-10-05', entries: ['2026-10-01', '2026-10-08'], errEnd: true },
+    error:  { edit: false, name: '', why: 'Talk with my grandmother in her language', type: 'total', value: '100', start: '2026-10-09', ends: 'year', end: '2026-12-31', errName: true }
+  };
+
+  /* Formatting */
+  function nf(min, max) { return new Intl.NumberFormat(lang === 'vi' ? 'vi-VN' : 'en-US', { minimumFractionDigits: min, maximumFractionDigits: max }); }
+  function days(n) { return t(n === 1 ? 'day1' : 'dayN', { n: nf(0, 0).format(n) }); }
+  function dShort(iso) { return lang === 'vi' ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : iso; }
+  function ms(iso) { return Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)); }
+  function validISO(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s); }
+  function yearEnd(iso) { return (validISO(iso) ? iso.slice(0, 4) : TODAY.slice(0, 4)) + '-12-31'; }
+  function daysIncl(a, b) { return Math.round((ms(b) - ms(a)) / 864e5) + 1; }
+
+  function say(msg) { $('ends-status').textContent = msg || ''; }
+
+  function render() {
+    var s = st, ed = SC[scen].edit;
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(function (n) { n.textContent = t(n.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function (n) { n.setAttribute('aria-label', t(n.getAttribute('data-i18n-aria'))); });
+    $('h1').textContent = t(ed ? 'titleEdit' : 'titleNew');
+    $('form-title').textContent = t(ed ? 'srEdit' : 'srNew');
+    $('name').placeholder = t('namePlaceholder');
+    $('why').placeholder = t('whyPlaceholder');
+    $('save').textContent = t(ed ? 'saveChanges' : 'save');
+    document.title = t(ed ? 'titleEdit' : 'titleNew') + ' — 1% Better (mockup S3, v4.0)';
+
+    /* values */
+    if ($('name').value !== s.name) $('name').value = s.name;
+    if ($('why').value !== s.why) $('why').value = s.why;
+    if ($('target').value !== s.value) $('target').value = s.value;
+    if ($('start').value !== s.start) $('start').value = s.start;
+    if ($('end').value !== s.end) $('end').value = s.end;
+    $('name-count').textContent = s.name.length + '/60';
+    $('why-count').textContent = s.why.length + '/280';
+    document.querySelector('input[name=type][value=' + s.type + ']').checked = true;
+    document.querySelector('input[name=end][value=' + s.ends + ']').checked = true;
+
+    /* Target field */
+    $('target-label').textContent = t(s.type === 'daily' ? 'targetDaily' : 'targetTotal');
+    $('target-suffix').textContent = t(s.type === 'daily' ? 'unitMin' : 'unitHour');
+
+    /* Ends */
+    $('lbl-year').textContent = t('endsThisYear', { date: dShort(yearEnd(s.start)) });
+    $('end-field').hidden = s.ends !== 'specific';
+    var never = $('end-never'), desc = $('never-desc'), locked = s.type === 'total';
+    never.disabled = locked;
+    if (locked) { desc.textContent = t('endsNeverTotalNote'); desc.hidden = false; never.setAttribute('aria-describedby', 'never-desc'); }
+    else if (s.ends === 'never') { desc.textContent = t('endsNeverHint'); desc.hidden = false; never.setAttribute('aria-describedby', 'never-desc'); }
+    else { desc.hidden = true; desc.textContent = ''; never.removeAttribute('aria-describedby'); }
+    /* the status text was set in the previous language: re-translate it while it is still relevant */
+    if ($('ends-status').getAttribute('data-on')) $('ends-status').textContent = t('endsNeverSwitched');
+
+    /* Target hint: hidden when "No end date" (it would say "over N days") */
+    var v = parseInt(s.value, 10), hint = $('target-hint'), eff = s.ends === 'year' ? yearEnd(s.start) : s.end, text = '';
+    if (s.ends !== 'never' && v > 0 && validISO(s.start) && validISO(eff) && eff >= s.start) {
+      var d = daysIncl(s.start, eff);
+      if (s.type === 'daily') text = t('hintDaily', { total: nf(0, 0).format(v * d), hours: nf(1, 1).format(v * d / 60), days: days(d) });
+      else text = t('hintTotal', { daily: nf(0, 0).format(Math.ceil(v * 60 / d)), days: days(d) });
+    }
+    hint.textContent = text; hint.hidden = !text;
+    if (text) $('target').setAttribute('aria-describedby', 'target-hint'); else $('target').removeAttribute('aria-describedby');
+
+    /* Start hint (edit with entries) */
+    var sh = $('start-hint');
+    if (ed && SC[scen].entries) { sh.textContent = t('startHint', { first: dShort(SC[scen].entries[0]), last: dShort(SC[scen].entries[1]) }); sh.hidden = false; }
+    else { sh.hidden = true; sh.textContent = ''; }
+
+    /* Errors (static per scenario) */
+    var n = 0, c = SC[scen];
+    $('name-err').hidden = !c.errName; $('name').setAttribute('aria-invalid', c.errName ? 'true' : 'false'); if (c.errName) n++;
+    var showEnd = c.errEnd && s.ends === 'specific';
+    $('end-err').hidden = !showEnd; $('end').setAttribute('aria-invalid', showEnd ? 'true' : 'false'); if (showEnd) n++;
+    $('summary').hidden = n === 0;
+    if (n) $('summary-text').textContent = t(n === 1 ? 'summary_one' : 'summary_other', { count: n });
+  }
+
+  function load() {
+    var c = SC[scen];
+    st = { name: c.name, why: c.why, type: c.type, value: c.value, start: c.start, ends: c.ends, end: c.end };
+    say(''); $('ends-status').removeAttribute('data-on');
+    render();
+  }
+
+  /* Interactions (what GoalForm must do, DESIGN S3 "Tương tác") */
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=type]'), function (r) {
+    r.addEventListener('change', function () {
+      st.type = r.value;
+      if (st.type === 'total' && st.ends === 'never') {
+        st.ends = 'year';
+        $('ends-status').setAttribute('data-on', '1');
+        say(t('endsNeverSwitched'));            /* announced once; focus stays on the Target control */
+      } else if (st.type === 'daily') { say(''); $('ends-status').removeAttribute('data-on'); }
+      render();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=end]'), function (r) {
+    r.addEventListener('change', function () { st.ends = r.value; say(''); $('ends-status').removeAttribute('data-on'); render(); });
+  });
+  [['name', 'name'], ['why', 'why'], ['target', 'value'], ['start', 'start'], ['end', 'end']].forEach(function (p) {
+    $(p[0]).addEventListener('input', function () { st[p[1]] = $(p[0]).value; render(); });
+  });
+  $('form').addEventListener('submit', function (e) { e.preventDefault(); });
+  $('scen').addEventListener('change', function (e) { scen = e.target.value; load(); });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=lang]'), function (r) {
+    r.addEventListener('change', function () { lang = r.value; render(); });
+  });
+  load();
+})();
+</script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 # Build status — 1% better per day
 
 **Yêu cầu gốc:** App tracking hoạt động. User đặt mục tiêu, sau đó ghi nhận lại thời gian thực hiện mỗi ngày để xem được quá trình phấn đấu nỗ lực của bản thân nhằm đạt mục tiêu, hoặc nhìn lại trong năm.
-**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-18 (M10 đã deploy lên Pages, workflow run 39053245191 success)
-**Next step:** không có việc đang mở. Khi cần: tính năng mới qua `/build-app <mô tả>` (planner revise) hoặc dọn backlog còn lại: M10-D6 (bộ đếm n/60 và maxLength đếm UTF-16), planner ghi ADR-29 follow-up (applyRemote bỏ tombstone cũ), test sleep-cố-định (sync-service:248, auth-service:249, soft-delete:63)
+**Bắt đầu:** 2026-10-09   **Cập nhật:** 2026-10-19 (M11 QC round 1 PASS; chờ user làm U12 rồi push/deploy)
+**Next step:** user làm **U12** (chạy `supabase/migrations/20261019000000_goal_open_ended.sql` trên Supabase SQL Editor, xem TASKS.md mục User setup) → báo orchestrator → push `main` → deploy Pages → user làm U13 (kiểm 2 thiết bị). Quyết định sản phẩm còn mở: M11-D1 (giới hạn startDate goal không hạn), OQ-D21 (Ideal lấn át "Bạn" khi goal chạy lâu)
 
 ## Quyết định của user
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
@@ -26,6 +26,8 @@
 - 2026-10-17 — Làm backlog trước tính năng mới? → "làm backlog đi": M10 gồm F2-R1 (tách chunk schemas), các Minor mở (M9-D1, M8-D1, M8-P1, M7-P1 phần mở, M6-P1, M5-P1, M4-P1, M3-P1, M1-P3), designer/planner ghi nhận deviation. Không cần Gate duyệt lại
 - 2026-10-18 — Push/deploy M10? → "push đi": đã push 7182457, Pages success, entry bundle deploy không còn zod, có chuỗi M10
 - 2026-10-09 — Phạm vi MVP? → (1) Goals + nhập phút mỗi ngày + heatmap năm + streak, (2) Timer đếm giờ trong app, (3) Biểu đồ đường cong 1% so với thực tế, (4) Nhắc nhở hằng ngày (notification)
+
+- 2026-10-19 — Phase 5: user yêu cầu thêm option "Không có thời hạn" ở section Kết thúc (Ends) của form goal (ảnh chụp: radio "Trong năm nay — kết thúc 31/12/2026" / "Vào một ngày cụ thể"). Intake: (1) áp dụng cho loại nào? → **chỉ goal `daily` (Phút/ngày)**; chọn `total` thì option ẩn/khoá kèm ghi chú, công thức dailyTarget không đổi. (2) Supabase `end_date NOT NULL` → **migration SQL mới cho phép NULL** (user tự dán vào SQL Editor như U6 trước khi deploy; dữ liệu cũ giữ nguyên). (3) Gate? → **Làm thẳng** (planner revise → designer revise → developer → qc, không chờ duyệt plan/design; báo khi xong hoặc khi có câu hỏi)
 
 ## Tham chiếu
 - App (GitHub Pages, HTTPS): https://minh-lgm.github.io/one-percent-better/
@@ -56,6 +58,9 @@
 | M9 | PASS (round 1; QC chạy full regression = Final QC phase 3) — deployed 2026-10-17 | docs/qc/report-M9-r1.md |
 | Plan v3.1 (M10 backlog) | DONE | docs/plan/ (ADR-27..30, A-44..46) | 7 task dev + 1 task designer, 14 AC; Later: xem TASKS Phase 4 |
 | M10 | PASS (round 2) — deployed 2026-10-18 | docs/qc/report-M10-r2.md | tải lạnh 248,3 → 222,6 kB; tsconfig tạm exclude tests/qc/m3-r1-domain.test.ts | dev tự kiểm AC1–AC8 PASS; bundle tải lạnh Today 248,3/250 kB; 24 unit + 17 e2e fail đều là test QC cũ 1,01^n (handoff §5/§8), QC re-target; tsconfig tạm exclude tests/qc/m5-r1-domain.test.ts |
+| Plan v4.0 (phase 5, M11 goal không thời hạn) | DONE (2026-10-19; Gate 1 bỏ qua theo quyết định user "làm thẳng") | docs/plan/ (FR-56, FR-57, A-47…A-56, ARCH §4.6, ADR-31…33, TASKS M11: 6 task dev + M11-T7 designer, 14 AC, U12/U13) | planner bị ngắt giữa chừng (lỗi mạng), resume xong; file migration `20261019000000_goal_open_ended.sql` |
+| Design v4.0 (M11-T7) | DONE (2026-10-19; Gate 2 bỏ qua theo quyết định user) | docs/design/DESIGN.md v4.0, mockups/03-goal-form.html (viết lại, 5 tình huống), 02-goals.html, 07-goal-detail.html | 12 key mới en/vi (goal.form.endsNever = "No end date"/"Không có thời hạn", endsNeverHint, endsNeverTotalNote, endsNeverSwitched, goals.rowDailyOpen, goal.detail.subDayOpen, chartSummaryOpen, chartSummaryEmptyOpen, stat.progressSubOpen, review.progressNoteOpen, errors.GOAL_PERIOD_INVALID_openEndedTotal, errors.DATE_OUTSIDE_GOAL_PERIOD_openEnded). Chốt: radio thứ ba đứng cuối; với Total hours radio disabled + ghi chú; đang chọn "No end date" mà đổi sang Total hours → về "This year" + role=status; Goal detail bỏ Range; không bao giờ Ended. OQ-D21 (không chặn): goal không hạn chạy lâu → Ideal 1.01^k lấn át "Bạn", không còn Range để thu hẹp → user xem sau deploy. Figma chưa cập nhật (orchestrator làm sau khi PASS) |
+| M11 | PASS (round 1; QC chạy full regression cả 2 project Playwright = Final QC phase 5) — chưa push, chờ U12 | docs/qc/report-M11-r1.md (commit 14eda4d) | QC: lint 0, typecheck 0, `npm run check` exit 0, Vitest 123 file / 1.812 pass, Playwright 711/711 (chromium + cloud), bench 13/13, domain coverage 100 % dòng, tải lạnh #/today 224,2 / 224,9 kB ≤ 230; 14 AC PASS; NV-9 (Postgres thật), NV-10 (2 thiết bị), NV-11 (điện thoại) NOT VERIFIED → U12/U13; QC re-target 3 test QC + sửa race m7-r1-converge (fail giống ở 2a632ca, không thuộc M11); 1 Minor M11-D1 → backlog. Dev | dev tự kiểm: lint 0, typecheck 0, Vitest 1.651 pass / 1 fail (tests/qc/m10-r2-dates.test.ts ca endDate=null → QC re-target), Playwright 693 pass / 4 fail không thuộc M11 (m7-r1-converge chập chờn tái hiện ở 2a632ca; m7-sync, final2-journey race theo tải, chạy riêng pass), 6 spec M11 pass; tải lạnh #/today 224,2 / 224,9 kB ≤ 230; test:db skipped (không Docker); tsconfig tạm exclude m4-r1-domain, m5-r1-domain (lỗi kiểu). NV-9…11 chờ U12/U13 |
 | M8 | PASS (round 1) | docs/qc/report-M8-r1.md | M7-D5, M7-P1 FIXED |
 | Design v2 | DONE (duyệt 2026-10-12) | docs/design/DESIGN.md v2.0, mockups/09-account.html, 08-settings.html, 01-today*.html | 97 key mới en/vi; Figma đã cập nhật 2026-10-12 (GoogleSignInButton, SyncIndicator, màn 09 Account A1/A3/A4/A5/A10, D4, Today phase 2) |
 | M6 | PASS (round 1) | docs/qc/report-M6-r1.md | NV-1 đăng nhập Google thật: user xác nhận OK 2026-10-12 (localhost:5173). NV-2 RLS thật, NV-4 iOS, NV-6 phiên 1 giờ: NOT VERIFIED |
@@ -64,6 +69,8 @@
 
 ## Backlog (defect Minor, đề xuất chưa làm)
 | ID | Mô tả | Nguồn |
+| M11-D1 (Minor) | Goal không thời hạn không có cận dưới cho `startDate` (A-49): gõ nhầm năm (vd `0026`) làm Goal detail đứng ~20 s (~740k điểm biểu đồ), năm < ~1830 hiện "Ideal +∞%"; workaround Goals → Edit sửa ngày, không mất dữ liệu. Cần quyết định sản phẩm: chặn startDate (vd ≥ 1900 hoặc ≤ N năm trước) hoặc cap số điểm biểu đồ | docs/qc/report-M11-r1.md |
+| OQ-D21 (đề xuất) | Goal không hạn chạy lâu: đường Ideal 1.01^k lấn át đường "Bạn", Goal detail không còn Range để thu hẹp; nếu muốn "Last 90 days" cần planner sửa plan | DESIGN v4.0 |
 | :- | :- | :- |
 | M1-P1 | (FIXED trong M5; plan v1.3: gộp vào M5-T4/AC13) Today sort tie-break theo id | QC r1 §9 |
 | M1-P2 | (→ plan v1.3: M3-T7/AC14) getById cho EntryRepository | dev handoff M1, QC r1 §9 |

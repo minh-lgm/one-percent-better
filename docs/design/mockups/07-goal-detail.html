@@ -63,6 +63,8 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-1)}
 .badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:var(--r-full);font-size:13px;line-height:20px;font-weight:600;background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
 .badge.ok{background:var(--primary-soft);color:var(--on-primary-soft);border-color:transparent}
+.badge.info{background:var(--info-soft);color:var(--info);border-color:transparent}
+[hidden]{display:none!important}
 .progress{height:8px;background:var(--surface-2);border-radius:var(--r-full);overflow:hidden;border:1px solid var(--border);margin-top:8px}
 .progress>span{display:block;height:100%;background:var(--primary);border-radius:var(--r-full)}
 .seg{display:flex;border:1px solid var(--border-input);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
@@ -158,6 +160,9 @@ th{color:var(--text-muted);font-weight:600}
         <option value="r4">R4 — extreme (1 → 1,440 min)</option>
         <option value="one">One logged day only</option>
         <option value="empty">No entries yet</option>
+        <option value="o1">v4.0 · No end date (O1 "Meditate"), today 2026-10-09 (10, 15, 10, 20 min) — no Range, "Day 9"</option>
+        <option value="o1day1">v4.0 · No end date, first day (start date = today) — a single point</option>
+        <option value="o1up">v4.0 · No end date, not started yet (starts 2026-11-01) — no chart</option>
       </select>
     </label>
     <fieldset style="border:0;margin:0;padding:0;min-width:0">
@@ -170,7 +175,7 @@ th{color:var(--text-muted);font-weight:600}
 
   <header class="gd-head">
     <div>
-      <div class="top"><h1>Đọc sách</h1><span class="badge ok" data-i18n="active">Active</span></div>
+      <div class="top"><h1 id="gname">Đọc sách</h1><span class="badge ok" id="badge">Active</span></div>
       <p class="muted small num" style="margin-top:4px" id="meta"></p>
     </div>
     <div class="gd-actions">
@@ -187,10 +192,10 @@ th{color:var(--text-muted);font-weight:600}
     <p class="muted" id="sub2"></p>
   </section>
 
-  <section class="card section" aria-labelledby="ch-h">
+  <section class="card section" id="chart-card" aria-labelledby="ch-h">
     <div class="chart-head">
       <h2 id="ch-h" data-i18n="chartTitle">Ideal vs. you</h2>
-      <fieldset style="border:0;margin:0;padding:0;min-width:0">
+      <fieldset id="range-box" style="border:0;margin:0;padding:0;min-width:0">
         <legend class="sr-only" data-i18n="rangeLegend">Range</legend>
         <div class="seg"><label><input type="radio" name="range" value="whole" checked><span data-i18n="rangeWhole">Whole period</span></label><label><input type="radio" name="range" value="sofar"><span data-i18n="rangeSoFar">So far</span></label></div>
       </fieldset>
@@ -228,7 +233,7 @@ th{color:var(--text-muted);font-weight:600}
     </table>
   </section>
 
-  <aside class="mock-note">Mockup S4 Goal detail, v3.0 (M9). Goal "Đọc sách": daily target 30 min, 2026-10-10 to 2026-12-31 (83 days) with the user's real entries 5, 10, 14, 27 min. The "You" line is the minutes of the latest logged day divided by the minutes of the first logged day (each logged day compared with the previous logged day, multiplied together); days with no time stay flat; it can go below the 0% line. The Ideal line is still +1% a day from the start date. The Y axis is linear and fits both lines (it grows to include negatives), with a solid 0% reference line; labels at 10,000% and above are compact. Use the Scenario select to see the states and the Language switch to check Vietnamese copy at 360 px. Both controls are mockup-only. Hover the chart or focus it and use the arrow keys to read a day. The real chart is a Recharts line chart with the same look. Spec: DESIGN.md S4, 7.1 and 7.6.4.</aside>
+  <aside class="mock-note">Mockup S4 Goal detail, v3.0 (M9). Goal "Đọc sách": daily target 30 min, 2026-10-10 to 2026-12-31 (83 days) with the user's real entries 5, 10, 14, 27 min. The "You" line is the minutes of the latest logged day divided by the minutes of the first logged day (each logged day compared with the previous logged day, multiplied together); days with no time stay flat; it can go below the 0% line. The Ideal line is still +1% a day from the start date. The Y axis is linear and fits both lines (it grows to include negatives), with a solid 0% reference line; labels at 10,000% and above are compact. Use the Scenario select to see the states and the Language switch to check Vietnamese copy at 360 px. Both controls are mockup-only. Hover the chart or focus it and use the arrow keys to read a day. The real chart is a Recharts line chart with the same look. Spec: DESIGN.md S4, 7.1 and 7.6.4. <strong>v4.0 (M11):</strong> the three "v4.0" scenarios show a goal with no end date ("Meditate", 10 min/day from 2026-10-01): the info line is "10 min/day · from 2026-10-01, no end date", the first subtitle line is "Day 9" (no "of N"), there is no Range control (Whole period and So far would be the same data), the chart ends today, Progress is measured up to today (61.1% = 55 of 90 min expected so far), and a goal that has not started has no chart card at all.</aside>
 </main>
 </div>
 
@@ -237,7 +242,7 @@ th{color:var(--text-muted);font-weight:600}
   'use strict';
   var lang = 'en', scen = 'r1', cursor = null;
   var LOC = { en: 'en-US', vi: 'vi-VN' };
-  var START = Date.UTC(2026, 9, 10), TOTAL = 83, DAILY = 30, MINUS = '−', TIMES = '×';
+  var START = Date.UTC(2026, 9, 10), TOTAL = 83, DAILY = 30, OPEN = false, MINUS = '−', TIMES = '×';
 
   /* Copy: verbatim from DESIGN.md 7.6.4 (+ shell strings from 7.2 / 7.6.x) */
   var S = {
@@ -246,7 +251,9 @@ th{color:var(--text-muted);font-weight:600}
       active: 'Active', edit: 'Edit', archive: 'Archive', delete: 'Delete',
       eyebrow: 'Your 1% curve',
       headline: '{{value}}% better', headlineDown: '{{value}}% vs your first day',
-      subDay: 'Day {{k}} of {{total}}',
+      subDay: 'Day {{k}} of {{total}}', subDayOpen: 'Day {{k}}',
+      upcomingBadge: 'Upcoming', upcoming: 'Starts {{date}}. Your line will appear once the goal begins.',
+      perDayOpen: '{{n}} min/day · from {{start}}, no end date',
       subToday: 'Today: {{minutes}}, {{change}}% vs {{prevDate}} ({{prevMinutes}}). ' + TIMES + '{{factor}} since {{firstDate}} ({{firstMinutes}}).',
       subEarlier: 'Last logged {{date}}: {{minutes}}, {{change}}% vs {{prevDate}} ({{prevMinutes}}). ' + TIMES + '{{factor}} since {{firstDate}} ({{firstMinutes}}).',
       subStart: 'Starting point: {{minutes}} on {{date}}. Your line moves once you log on another day.',
@@ -256,6 +263,8 @@ th{color:var(--text-muted);font-weight:600}
       legendIdeal: 'Ideal (+1% every day)', legendYou: 'You (vs. previous logged day, compounded)', legendZero: '0% = your first logged day',
       chartSummary: 'Day {{k}} of {{total}}: your line is {{x}}% compared with your first logged day. The ideal line is {{y}}%.',
       chartSummaryEmpty: 'Day {{k}} of {{total}}: nothing logged yet. The ideal line is {{y}}%.',
+      chartSummaryOpen: 'Day {{k}}: your line is {{x}}% compared with your first logged day. The ideal line is {{y}}%.',
+      chartSummaryEmptyOpen: 'Day {{k}}: nothing logged yet. The ideal line is {{y}}%.',
       chartNote: 'Each day you log is compared with your previous logged day, and the changes multiply from your first day. Days without time keep the line flat. Logging less than before moves it down.',
       tooltipChange: '{{date}} · {{minutes}}, {{change}}% vs previous logged day · You {{you}}% since your first day · Ideal {{ideal}}%',
       tooltipBase: '{{date}} · {{minutes}}, your first logged day · You {{you}}% · Ideal {{ideal}}%',
@@ -263,7 +272,7 @@ th{color:var(--text-muted);font-weight:600}
       tooltipIdeal: '{{date}} · Ideal {{ideal}}%',
       labelIdeal: 'Ideal {{value}}%', labelYou: 'You {{value}}%',
       showTable: 'Show data as table', tableDate: 'Date', tableIdeal: 'Ideal', tableYou: 'You', tableMinutes: 'Minutes', tableChange: 'vs previous logged day',
-      progress: 'Progress', progressSub: '{{current}} of {{total}} min', pace: 'Pace', paceAhead: '{{value}} ahead', paceBehind: '{{value}} behind', paceOn: 'On pace', paceExpected: 'Expected {{n}} min by today',
+      progress: 'Progress', progressSub: '{{current}} of {{total}} min', progressSubOpen: '{{current}} of {{total}} min expected so far', pace: 'Pace', paceAhead: '{{value}} ahead', paceBehind: '{{value}} behind', paceOn: 'On pace', paceExpected: 'Expected {{n}} min by today',
       curStreak: 'Current streak', longStreak: 'Longest streak', day1: '{{n}} day', dayN: '{{n}} days',
       historyTitle: 'History', colDate: 'Date', colMinutes: 'Minutes', colNote: 'Note', colSource: 'Source', manual: 'Manual',
       minutes: '{{n}} min', duration: '{{h}} h {{m}} min', durationH: '{{h}} h', perDay: '{{n}} min/day'
@@ -273,7 +282,9 @@ th{color:var(--text-muted);font-weight:600}
       active: 'Đang chạy', edit: 'Sửa', archive: 'Lưu trữ', delete: 'Xóa',
       eyebrow: 'Đường cong 1% của bạn',
       headline: 'Tốt hơn {{value}}%', headlineDown: '{{value}}% so với ngày đầu',
-      subDay: 'Ngày {{k}}/{{total}}',
+      subDay: 'Ngày {{k}}/{{total}}', subDayOpen: 'Ngày {{k}}',
+      upcomingBadge: 'Sắp tới', upcoming: 'Bắt đầu {{date}}. Đường của bạn sẽ xuất hiện khi mục tiêu bắt đầu.',
+      perDayOpen: '{{n}} phút/ngày · từ {{start}}, không có thời hạn',
       subToday: 'Hôm nay: {{minutes}}, {{change}}% so với {{prevDate}} ({{prevMinutes}}). ' + TIMES + '{{factor}} kể từ {{firstDate}} ({{firstMinutes}}).',
       subEarlier: 'Lần ghi gần nhất {{date}}: {{minutes}}, {{change}}% so với {{prevDate}} ({{prevMinutes}}). ' + TIMES + '{{factor}} kể từ {{firstDate}} ({{firstMinutes}}).',
       subStart: 'Điểm xuất phát: {{minutes}} vào {{date}}. Đường của bạn sẽ di chuyển khi bạn ghi thêm vào một ngày khác.',
@@ -283,6 +294,8 @@ th{color:var(--text-muted);font-weight:600}
       legendIdeal: 'Lý tưởng (+1% mỗi ngày)', legendYou: 'Bạn (so với ngày có ghi trước, nhân dồn)', legendZero: '0% = ngày có ghi đầu tiên',
       chartSummary: 'Ngày {{k}}/{{total}}: đường của bạn ở mức {{x}}% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức {{y}}%.',
       chartSummaryEmpty: 'Ngày {{k}}/{{total}}: chưa ghi gì. Đường lý tưởng ở mức {{y}}%.',
+      chartSummaryOpen: 'Ngày {{k}}: đường của bạn ở mức {{x}}% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức {{y}}%.',
+      chartSummaryEmptyOpen: 'Ngày {{k}}: chưa ghi gì. Đường lý tưởng ở mức {{y}}%.',
       chartNote: 'Mỗi ngày bạn ghi được so với ngày có ghi trước đó, và các thay đổi được nhân dồn từ ngày đầu tiên. Ngày không ghi thời gian thì đường đi ngang. Ghi ít hơn trước thì đường đi xuống.',
       tooltipChange: '{{date}} · {{minutes}}, {{change}}% so với ngày có ghi trước · Bạn {{you}}% so với ngày đầu · Lý tưởng {{ideal}}%',
       tooltipBase: '{{date}} · {{minutes}}, ngày có ghi đầu tiên · Bạn {{you}}% · Lý tưởng {{ideal}}%',
@@ -290,7 +303,7 @@ th{color:var(--text-muted);font-weight:600}
       tooltipIdeal: '{{date}} · Lý tưởng {{ideal}}%',
       labelIdeal: 'Lý tưởng {{value}}%', labelYou: 'Bạn {{value}}%',
       showTable: 'Xem dữ liệu dạng bảng', tableDate: 'Ngày', tableIdeal: 'Lý tưởng', tableYou: 'Bạn', tableMinutes: 'Số phút', tableChange: 'So với ngày có ghi trước',
-      progress: 'Tiến độ', progressSub: '{{current}}/{{total}} phút', pace: 'Nhịp độ', paceAhead: 'Nhanh {{value}}', paceBehind: 'Chậm {{value}}', paceOn: 'Đúng nhịp', paceExpected: 'Dự kiến {{n}} phút tính đến hôm nay',
+      progress: 'Tiến độ', progressSub: '{{current}}/{{total}} phút', progressSubOpen: '{{current}}/{{total}} phút dự kiến đến nay', pace: 'Nhịp độ', paceAhead: 'Nhanh {{value}}', paceBehind: 'Chậm {{value}}', paceOn: 'Đúng nhịp', paceExpected: 'Dự kiến {{n}} phút tính đến hôm nay',
       curStreak: 'Chuỗi hiện tại', longStreak: 'Chuỗi dài nhất', day1: '{{n}} ngày', dayN: '{{n}} ngày',
       historyTitle: 'Lịch sử', colDate: 'Ngày', colMinutes: 'Số phút', colNote: 'Ghi chú', colSource: 'Nguồn', manual: 'Thủ công',
       minutes: '{{n}} phút', duration: '{{h}} giờ {{m}} phút', durationH: '{{h}} giờ', perDay: '{{n}} phút/ngày'
@@ -311,7 +324,11 @@ th{color:var(--text-muted);font-weight:600}
     r3: { today: 1, e: { 0: 5, 1: 3 } },
     r4: { today: 1, e: { 0: 1, 1: 1440 } },
     one: { today: 3, e: { 0: 5 } },
-    empty: { today: 3, e: {} }
+    empty: { today: 3, e: {} },
+    /* v4.0 goals with no end date (open = true): ideal has only the elapsed days; today is the last point */
+    o1: { open: true, name: 'Meditate', daily: 10, start: Date.UTC(2026, 9, 1), today: 8, e: { 0: 10, 1: 15, 4: 10, 7: 20 } },
+    o1day1: { open: true, name: 'Meditate', daily: 10, start: Date.UTC(2026, 9, 9), today: 0, e: { 0: 10 } },
+    o1up: { open: true, up: true, name: 'Piano', daily: 15, start: Date.UTC(2026, 10, 1), today: -1, e: {} }
   };
 
   /* Formatters (what src/i18n/format.ts must produce) */
@@ -392,7 +409,8 @@ th{color:var(--text-muted);font-weight:600}
 
   function draw() {
     var view = document.querySelector('input[name=range]:checked').value;
-    var last = view === 'sofar' ? Math.max(C.T, 1) : TOTAL - 1, T = C.T, i, v;
+    /* v4.0: with no end date there is no Range; the chart always ends today (last = T). One point (T = 0): dots are centred. */
+    var last = OPEN ? C.T : view === 'sofar' ? Math.max(C.T, 1) : TOTAL - 1, T = C.T, i, v;
     var hasYou = C.f >= 0, vis = Math.min(T, last);
     var idealVis = C.ideal.slice(0, last + 1), youVis = [];
     if (hasYou) for (i = 0; i <= vis; i++) youVis.push(C.act[i].percent);
@@ -402,7 +420,7 @@ th{color:var(--text-muted);font-weight:600}
     ticks.forEach(function (tv) { longest = Math.max(longest, axis(tv).length); });
     var W = Math.max(el.clientWidth, 260), H = W < 520 ? 240 : 320, ml = Math.max(44, Math.round(longest * 6.6 + 14)), mr = 18, mt = 22, mb = 30;
     var pw = W - ml - mr, ph = H - mt - mb;
-    var x = function (k) { return ml + pw * k / last; }, y = function (val) { return mt + ph * (1 - (val - dom.lo) / (dom.hi - dom.lo)); };
+    var x = function (k) { return last === 0 ? ml + pw / 2 : ml + pw * k / last; }, y = function (val) { return mt + ph * (1 - (val - dom.lo) / (dom.hi - dom.lo)); };
     var o = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true" focusable="false" class="cv">';
     ticks.forEach(function (tv) {
       if (tv === 0) return;
@@ -422,7 +440,7 @@ th{color:var(--text-muted);font-weight:600}
       o += '<path class="line-you" d="' + d + '"/>';
       if (vis + 1 <= 45) for (i = 0; i <= vis; i++) if (C.act[i].logged && i !== vis) o += '<circle class="dotL" cx="' + x(i) + '" cy="' + y(C.act[i].percent) + '" r="3"/>';
     }
-    if (T <= last) o += '<line class="tm" x1="' + x(T) + '" x2="' + x(T) + '" y1="' + mt + '" y2="' + (mt + ph) + '"/>';
+    if (T <= last && !OPEN) o += '<line class="tm" x1="' + x(T) + '" x2="' + x(T) + '" y1="' + mt + '" y2="' + (mt + ph) + '"/>';
     var e = Math.min(T, last), yI = y(C.ideal[e]), yY = hasYou ? y(C.act[e].percent) : null;
     o += '<circle class="dotI" cx="' + x(e) + '" cy="' + yI + '" r="4.5"/>';
     if (hasYou) o += '<circle class="dotA" cx="' + x(e) + '" cy="' + yY + '" r="5.5"/>';
@@ -485,16 +503,22 @@ th{color:var(--text-muted);font-weight:600}
 
   function render() {
     var sc = SC[scen], i, g = document.getElementById.bind(document);
-    C = curve(sc);
+    START = sc.start || Date.UTC(2026, 9, 10); DAILY = sc.daily || 30; OPEN = !!sc.open;
+    TOTAL = OPEN ? Math.max(sc.today + 1, 0) : 83;
+    if (!sc.up) C = curve(sc);
     document.documentElement.lang = lang;
     document.querySelectorAll('[data-i18n]').forEach(function (n) { n.textContent = t(n.getAttribute('data-i18n')); });
     document.querySelectorAll('[data-i18n-aria]').forEach(function (n) { n.setAttribute('aria-label', t(n.getAttribute('data-i18n-aria'))); });
-    g('meta').textContent = dLong(0) + ' – ' + dLong(TOTAL - 1) + ' · ' + t('perDay', { n: DAILY });
+    g('gname').textContent = sc.name || 'Đọc sách';
+    g('meta').textContent = OPEN ? t('perDayOpen', { n: nf(0, 0).format(DAILY), start: dLong(0) }) : dLong(0) + ' – ' + dLong(TOTAL - 1) + ' · ' + t('perDay', { n: DAILY });
+    g('badge').className = 'badge ' + (sc.up ? 'info' : 'ok'); g('badge').textContent = t(sc.up ? 'upcomingBadge' : 'active');
+    g('chart-card').hidden = !!sc.up; g('range-box').hidden = OPEN; g('sub1').hidden = !!sc.up;
+    if (sc.up) { renderUpcoming(sc); return; }
     /* headline + subtitle */
     var hl = g('hl'), neg = C.headline < 0;
     hl.textContent = t(neg ? 'headlineDown' : 'headline', { value: signed1(C.headline) });
     hl.className = 'hl' + (neg ? ' neg' : '');
-    g('sub1').textContent = t('subDay', { k: nf(0, 0).format(C.T + 1), total: nf(0, 0).format(TOTAL) });
+    g('sub1').textContent = OPEN ? t('subDayOpen', { k: nf(0, 0).format(C.T + 1) }) : t('subDay', { k: nf(0, 0).format(C.T + 1), total: nf(0, 0).format(TOTAL) });
     var s2;
     if (C.f < 0) s2 = t('emptyCurve');
     else if (C.previous < 0) s2 = t('subStart', { minutes: mins(C.m[C.latest]), date: dShort(C.latest) });
@@ -506,14 +530,16 @@ th{color:var(--text-muted);font-weight:600}
     g('sub2').textContent = s2;
     /* summary */
     var sv = { k: nf(0, 0).format(C.T + 1), total: nf(0, 0).format(TOTAL), x: signed1(C.headline), y: signed1(C.ideal[C.T]) };
-    g('curve-sum').textContent = t(C.f < 0 ? 'chartSummaryEmpty' : 'chartSummary', sv);
+    g('curve-sum').textContent = t((C.f < 0 ? 'chartSummaryEmpty' : 'chartSummary') + (OPEN ? 'Open' : ''), sv);
     /* stats */
     var logged = 0, exp, diff, cur = 0, longest = 0, run = 0, met = function (j) { return (sc.e[j] || 0) >= DAILY; };
     for (i = 0; i <= C.T; i++) logged += sc.e[i] || 0;
-    var pr = Math.min(100, logged / (DAILY * TOTAL) * 100);
+    /* v4.0: no end date -> the denominator is the target accumulated up to today (A-51) and the % may exceed 100 */
+    var den = OPEN ? DAILY * (C.T + 1) : DAILY * TOTAL;
+    var pr = OPEN ? logged / den * 100 : Math.min(100, logged / den * 100);
     g('st-prog').textContent = nf(1, 1).format(pr) + '%';
-    g('st-prog-sub').textContent = t('progressSub', { current: nf(0, 0).format(logged), total: nf(0, 0).format(DAILY * TOTAL) });
-    g('st-bar').setAttribute('aria-valuenow', pr.toFixed(1)); g('st-bar').firstChild.style.width = pr + '%';
+    g('st-prog-sub').textContent = t(OPEN ? 'progressSubOpen' : 'progressSub', { current: nf(0, 0).format(logged), total: nf(0, 0).format(den) });
+    g('st-bar').setAttribute('aria-valuenow', Math.min(100, pr).toFixed(1)); g('st-bar').setAttribute('aria-valuetext', nf(1, 1).format(pr) + '%'); g('st-bar').firstChild.style.width = Math.min(100, pr) + '%';
     exp = DAILY * (C.T + 1); diff = logged - exp;
     g('st-pace').textContent = diff === 0 ? t('paceOn') : t(diff > 0 ? 'paceAhead' : 'paceBehind', { value: duration(Math.abs(diff)) });
     g('st-pace-sub').textContent = t('paceExpected', { n: nf(0, 0).format(exp) });
@@ -524,14 +550,30 @@ th{color:var(--text-muted);font-weight:600}
     var h = '';
     for (i = C.T; i >= 0; i--) if (sc.e[i]) h += '<tr><td><a href="05-day.html">' + dLong(i) + '</a></td><td>' + mins(sc.e[i]) + '</td><td class="note">—</td><td class="src">' + t('manual') + '</td></tr>';
     g('hist-body').innerHTML = h;
-    document.title = 'Đọc sách — ' + (lang === 'vi' ? 'Chi tiết mục tiêu' : 'Goal detail') + ' — 1% Better (mockup S4, v3)';
+    document.title = (sc.name || 'Đọc sách') + ' — ' + (lang === 'vi' ? 'Chi tiết mục tiêu' : 'Goal detail') + ' — 1% Better (mockup S4, v4.0)';
     draw();
+  }
+
+  /* v4.0: a goal with no end date that has not started: nothing to draw, so the whole chart card is omitted (DESIGN S4, item 7) */
+  function renderUpcoming(sc) {
+    var g = document.getElementById.bind(document);
+    var hl = g('hl');
+    hl.textContent = t('headline', { value: signed1(0) }); hl.className = 'hl';
+    g('sub2').textContent = t('upcoming', { date: dLong(0) });
+    g('st-prog').textContent = nf(1, 1).format(0) + '%';
+    g('st-prog-sub').textContent = t('progressSubOpen', { current: '0', total: '0' });
+    g('st-bar').setAttribute('aria-valuenow', '0'); g('st-bar').setAttribute('aria-valuetext', nf(1, 1).format(0) + '%'); g('st-bar').firstChild.style.width = '0%';
+    g('st-pace').textContent = t('paceOn');
+    g('st-pace-sub').textContent = t('paceExpected', { n: '0' });
+    g('st-cur').textContent = days(0); g('st-long').textContent = days(0);
+    g('hist-body').innerHTML = '';
+    document.title = sc.name + ' — ' + (lang === 'vi' ? 'Chi tiết mục tiêu' : 'Goal detail') + ' — 1% Better (mockup S4, v4.0)';
   }
 
   document.getElementById('scen').addEventListener('change', function (ev) { scen = ev.target.value; render(); });
   Array.prototype.forEach.call(document.querySelectorAll('input[name=lang]'), function (r) { r.addEventListener('change', function () { lang = r.value; render(); }); });
   Array.prototype.forEach.call(document.querySelectorAll('input[name=range]'), function (r) { r.addEventListener('change', draw); });
-  var rz; window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(draw, 120); });
+  var rz; window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(function () { if (!SC[scen].up) draw(); }, 120); });
   render();
 })();
 </script>

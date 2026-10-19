@@ -170,6 +170,19 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `integration/auth-callback.ts` (mở rộng) | integration | `clearPkceVerifier(storage)`: xoá `localStorage['opb-auth-code-verifier']` sau khi callback xử lý xong (thành công, huỷ, lỗi) | — | M10 |
 | `integration/supabase/loader.ts` (sửa) | integration | Bản build **không** cấu hình cloud không phát ra chunk `supabase-client-*` (nhánh `import()` bị loại lúc build, ví dụ qua hằng `define` hoặc alias tới stub); bản cloud bật giữ nguyên lazy-load (ADR-18) | — | M10 |
 
+**Component mới/sửa ở v4.0 (M11 — goal không thời hạn, §4.6):**
+
+| Component | Lớp | Trách nhiệm | Phụ thuộc | Milestone |
+| :- | :- | :- | :- | :- |
+| `domain/types.ts`, `goal.ts`, `entry.ts`, `stats.ts`, `heatmap.ts`, `curve.ts` (sửa) | logic (domain) | `Goal.endDate: ISODate \| null`; `isOpenEnded`, `isWithinGoal`; bảng hàm §4.6 (b), (c); biến thể lỗi `openEndedTotal` | dates | M11 |
+| `config/constants.ts` (sửa) | config | `PULL_RESET_VERSION = 1`, `OPEN_END_QUERY_MAX = '9999-12-31'` (chỉ biên truy vấn) | — | M11 |
+| `services/goal-service.ts`, `stats-service.ts` (sửa) | logic (application) | so `endDate` có `null`; `goalsDateRange` với goal không thời hạn (§4.6 d) | domain | M11 |
+| `services/sync-service.ts` (sửa) | logic (application) | đặt lại `cursor.goals` một lần theo `pullResetVersion` (ADR-33) | `KvRepository` | M11 |
+| `domain/backup.ts` (sửa) | logic | `endDate` nullable + quy tắc §4.6 (e); `schemaVersion` giữ 1 | zod | M11 |
+| `integration/supabase/mapper.ts`, `src/test/fake-remote-store.ts`, `e2e/mock-supabase/server.mjs`, `services/remote-store.contract.ts` (sửa) | integration / test | `end_date` nullable chỉ cho `daily` (§4.6 f) | zod | M11 |
+| `supabase/migrations/20261019000000_goal_open_ended.sql` (mới) | data (hạ tầng cloud) | Bỏ NOT NULL, ràng buộc `goals_period_check`, `goals_open_ended_daily_check` (§4.6 f) | — | M11 |
+| `ui/screens/GoalForm.tsx`, `Goals.tsx`, `GoalDetail.tsx`, `Day.tsx`, `Review.tsx` (hoặc component Stat), `ui/components/CurveChart.tsx`, `ui/error-messages.ts` (sửa) | UI | Radio thứ ba "Không có thời hạn", hành vi với Total hours, hiển thị "từ {start}", "Day {k}", Range, Stat Progress — theo DESIGN v4.0 | services, i18n | M11 |
+
 **Quy tắc phụ thuộc (bắt buộc, cưỡng chế bằng ESLint `no-restricted-imports`):**
 
 - `src/domain/**` không import `react`, `react-dom`, `dexie`, `recharts`, `i18next`, `react-i18next`, hay bất kỳ file nào trong `src/data`, `src/services`, `src/integration`, `src/ui`, `src/app`, `src/i18n` (domain không biết ngôn ngữ).
@@ -207,7 +220,9 @@ interface Goal {
   targetType: 'daily' | 'total';
   targetMinutes: number;          // daily: 1–1440 (phút/ngày); total: 60–600000 (nhập theo giờ 1–10000)
   startDate: ISODate;
-  endDate: ISODate;               // >= startDate, khoảng ≤ 1827 ngày
+  endDate: ISODate | null;        // >= startDate, khoảng ≤ 1827 ngày.
+                                  // v4.0 (M11, ADR-31): null = không thời hạn, CHỈ khi targetType = 'daily';
+                                  // field luôn có mặt (không optional), không có ngày giả (§4.6)
   archived: boolean;              // M5 dùng; M1 luôn false
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
@@ -216,7 +231,7 @@ interface Goal {
 interface LogEntry {
   id: string;
   goalId: string;
-  date: ISODate;                  // startDate ≤ date ≤ min(endDate, today)
+  date: ISODate;                  // startDate ≤ date ≤ min(endDate, today); v4.0: endDate null → startDate ≤ date ≤ today
   minutes: number;                // số nguyên 1–1440; tổng theo (goalId, date) ≤ 1440
   note: string;                   // 0–280 ký tự
   source: 'manual' | 'timer';
@@ -262,6 +277,7 @@ Thay đổi schema sau này: tăng `db.version(n)` kèm `upgrade()`; tăng `sche
 - Timer: số phút điền sẵn khi Stop = `clamp(round(elapsedMs / 60000), 1, 1440)` (làm tròn tới phút gần nhất, 30 s làm tròn lên; tối thiểu 1, tối đa 1440).
 - Mức heatmap một goal: 0 = 0 phút; 1 = >0 và <50% `dailyTarget`; 2 = 50–<100%; 3 = 100–<200%; 4 = ≥200%. "All goals" theo tổng phút: 0 = 0; 1 = 1–29; 2 = 30–59; 3 = 60–119; 4 = ≥120. Ngày ngoài khoảng goal: trạng thái `outside`.
 - Đường cong: với mỗi ngày d trong khoảng goal, `k` = thứ tự ngày (startDate là 1), `ideal = 1.01^k`. ~~Với d ≤ today, `n(d)` = số ngày đạt từ startDate tới d, `actual = 1.01^n(d)`. Headline: `(1.01^n(today) − 1) × 100`, 1 chữ số thập phân.~~ **v3.0 (M9):** `actual(d)` = phút ngày có ghi gần nhất ≤ d / phút ngày đầu tiên có ghi; công thức đầy đủ, làm tròn, ví dụ, contract và thang Y ở **§4.5**.
+- **v4.0 (M11) — goal không thời hạn (`endDate = null`):** mọi giá trị trên được tính với "ngày cuối" = **hôm nay**; quy tắc đầy đủ, hàm domain mới và bảng oracle ở **§4.6**. Với goal có `endDate`, mọi công thức trên giữ nguyên từng chữ.
 
 ### 4.1 Kiểu domain ở phase 2 (v2.0)
 
@@ -282,6 +298,7 @@ interface SyncMeta {                                       // kv key 'sync'
   cursor: { goals: PullCursor | null; entries: PullCursor | null };
   lastSyncedAt: ISODateTime | null;
   lastError: { code: SyncErrorCode; at: ISODateTime } | null;
+  pullResetVersion?: number;        // v4.0 (M11, ADR-33): thiếu = 0; < PULL_RESET_VERSION → đặt lại cursor.goals một lần
 }
 interface PullCursor { serverUpdatedAt: ISODateTime; id: string }
 
@@ -324,6 +341,7 @@ type KvKey = 'settings' | 'activeTimer' | 'locale' | 'sync' | 'loginPrompt' | 'p
 - `clearUserData` (đăng xuất "xoá dữ liệu", v2.1): xoá thêm kv `prefsSync` (giữ kv `locale` để giao diện không đổi ngôn ngữ, nhưng máy trở về "chưa từng chọn" với tài khoản, A-37).
 - **Hàng bị cloud từ chối (v3.1 ghi nhận, ADR-28):** `dirty = 2` — vẫn sống trong app và trong Export, không đếm vào "đang chờ", không đẩy lại tới khi được sửa (sửa → `dirty = 1`); `markAllDirty` thử lại một lần.
 - **Dọn tombstone cục bộ (v3.1, M10, ADR-29):** `LocalSyncStore.purgeTombstones(now)` xoá **cứng** hàng `goals`/`entries` có `deletedAt != null` và `deletedAt ≤ now − 30 ngày` (`TOMBSTONE_RETENTION_DAYS = 30` trong `config/constants.ts`) **và** (`dirty ∈ {0, 2}` **hoặc** thiết bị chưa từng đồng bộ: kv `sync` không có hoặc `userId == null && lastUserId == null`). Hàng còn sống, hàng `dirty = 1` của thiết bị đã từng đồng bộ, và tombstone chưa đủ 30 ngày không bị đụng. Một transaction; lỗi → rollback. Không đổi cloud. Chạy một lần mỗi lần khởi động (`app/maintenance.ts`).
+- **Goal không thời hạn (v4.0, M11):** **không** bump version Dexie, không `upgrade()`: `endDate` không nằm trong index nào (`goals: 'id, dirty'`), IndexedDB lưu được `null`, hàng cũ (chuỗi ngày) vẫn hợp lệ. Việc "đặt lại con trỏ kéo goals một lần" của ADR-33 nằm ở kv `sync` (không phải migration Dexie), nên không có `versionchange` giữa tab cũ/mới và test kiểm `verno`/`version = 20` không đổi.
 - **`nextUpdatedAt(now, previous)`** (`domain/sync.ts`): `now ≥ previous` → `now`; ngược lại `previous + 1 ms`. `GoalService.update`/`setArchived`, `EntryService.update` dùng hàm này thay cho `now.toISOString()` (với đồng hồ cố định trong test hiện có, kết quả không đổi).
 
 ### 4.3 Schema cloud (Supabase Postgres, M6) — `supabase/migrations/20261012000000_cloud_sync.sql`
@@ -473,6 +491,8 @@ revoke all on public.settings from anon, authenticated;
 grant select, insert, update on public.settings to authenticated;
 ```
 
+**v4.0 (M11):** `end_date` được nới thành nullable (chỉ `daily`) bằng migration **thứ hai** `20261019000000_goal_open_ended.sql` — nội dung và ràng buộc mới ở §4.6 (f); file trên giữ nguyên (lịch sử), user chạy file mới ở U12.
+
 Bảng `settings` (v2.1) nằm trong **cùng** file migration (user chỉ chạy SQL một lần ở U6). Client đẩy bằng upsert `onConflict: 'user_id'`, gửi `null` cho nhóm không `dirty` (trigger giữ giá trị cũ của nhóm đó). Không có `lastReminderDate`, `plusOneShown`, `lastBackupAt`, timer trong bảng.
 
 Ghi chú: developer được chỉnh cú pháp cho chạy đúng trên Supabase local/hosted nhưng **không** được nới quyền (thêm grant cho `anon`, thêm DELETE, tắt RLS) hay đổi quy tắc LWW mà không cập nhật plan. Client gửi `user_id` = id phiên trong upsert (để `onConflict: 'user_id,id'` khớp khoá); trigger và RLS bảo đảm không ghi được hàng của người khác.
@@ -596,6 +616,90 @@ Bỏ khỏi contract: `ActualPoint.n`, `ActualPoint.met`, `CurveData.daysOnTarge
 - Đường You: một điểm mỗi ngày, đi ngang qua ngày 0 phút, đổi giá trị tại ngày có ghi (có thể đi xuống); kiểu nét (linear/step) do designer chốt.
 
 **Thang Y (giữ control Range của A-D4).** Tuyến tính, đơn vị % như M5. Miền tự co giãn theo **cả hai series đang hiển thị** (sau khi lọc Range): `curveYDomain` trả `[yMin, yMax]` với `yMin = min(0, min You%)`, `yMax = max(1, max Ideal%, max You%)`, mỗi đầu nới thêm 5% của `yMax − yMin` rồi làm tròn ra ngoài tới bội số "đẹp" (1, 2, 5 × 10^n); chart dùng làm `domain` (thay `[0, 'auto']` của M5) và có đường tham chiếu tại 0% (mức ngày đầu). Nhãn trục: % số nguyên có dấu; |v| ≥ 10.000 dùng `Intl.NumberFormat` `notation: 'compact'` để không tràn trục ở 360 px. Hệ quả chấp nhận: khi You vượt xa Ideal (R1: +440% so với +4,1%) đường Ideal nằm sát 0% (đúng thực tế); goal dài vẫn mặc định "So far" để Ideal không nuốt thang. Thang log: Later.
+
+**v4.0 (M11):** với `endDate = null`, mọi chỗ "khoảng của goal" ở mục này đọc là `startDate → lastElapsedDay`; chi tiết ở §4.6 (c). Công thức `actual`, `pct`, `curveYDomain` không đổi.
+
+### 4.6 Goal không thời hạn (phase 5, M11; FR-56, FR-57, A-47 … A-56, ADR-31 … ADR-33)
+
+**(a) Mô hình.** `Goal.endDate: ISODate | null`. Bất biến: `endDate === null ⇒ targetType === 'daily'`; `endDate !== null ⇒ endDate ≥ startDate ∧ periodDays ≤ 1827` (như cũ). Không có giới hạn số ngày cho goal không thời hạn (A-49). Không sentinel ở bất kỳ lớp nào; chỉ riêng **biên truy vấn** đọc entry theo khoảng của nhiều goal (`goalsDateRange`, xem (d)) được dùng hằng `OPEN_END_QUERY_MAX = '9999-12-31'` trong bộ nhớ — không bao giờ ghi xuống storage, file hay cloud.
+
+**(b) Hàm domain (`src/domain/goal.ts`, `entry.ts`, `stats.ts`, `heatmap.ts`, `curve.ts`).** Chữ ký cũ giữ nguyên hoặc chỉ thêm tham số tuỳ chọn ở cuối, để test hiện có (kể cả `tests/qc/**`) vẫn biên dịch; giá trị cho goal có hạn không đổi.
+
+| Hàm | Goal có hạn (không đổi) | Goal `endDate = null` |
+| :- | :- | :- |
+| `isOpenEnded(goal)` (mới) | `false` | `true` |
+| `isWithinGoal(date, goal)` (mới; thay mọi `isWithin(d, g.startDate, g.endDate)` trong `entry.ts`, `stats.isDayMet`, `heatmap.ts`, `backup.ts` integrity, `Day.tsx`, `goal-service`) | `start ≤ date ≤ end` | `date ≥ start` |
+| `periodDays(goal)` | số ngày `start → end` | **`null`** (kiểu trả `number \| null`; nơi gọi xử lý) |
+| `dailyTarget(goal)` | như cũ | `targetMinutes` (chỉ `daily`) |
+| `elapsedDays(goal, today)` | `start → min(today, end)`, 0 khi chưa bắt đầu | `start → today`, 0 khi chưa bắt đầu |
+| `totalTarget(goal, today?)` | như cũ, bỏ qua `today` | `dailyTarget × elapsedDays(goal, today)`; thiếu `today` → ném `RangeError` (lỗi lập trình) |
+| `goalStatus(goal, today)` | như cũ | `archived` / `upcoming` (today < start) / `active`; **không bao giờ** `ended` |
+| `goalStats(...)` | như cũ | `totalTarget` như trên; `progressPercent = totalTarget === 0 ? 0 : round1(minutesTotal / totalTarget × 100)`; `pace` công thức cũ; `outsideYear = yearOf(startDate) > year` |
+| `lastElapsedDay(goal, today)` (`curve.ts`) | `min(today, end)`, `null` khi chưa bắt đầu | `today`, `null` khi chưa bắt đầu |
+| `entriesOutsidePeriod(dates, start, end)` | như cũ | `end: ISODate \| null`; `null` → chỉ ngày < `start` |
+| `validateEntryDate(date, goal, today)` | như cũ | `DATE_IN_FUTURE` nếu > today; `DATE_OUTSIDE_GOAL_PERIOD` nếu < start, `params.end = null` (UI chọn câu không có ngày cuối — key do designer chốt) |
+| `groupGoals` | như cũ | rơi vào Active/Upcoming/Archived theo `goalStatus`; sort Active theo `createdAt` (không đổi) |
+
+`GoalInput.endDate: string | null` (`null` = người dùng chọn "Không có thời hạn"). `validateGoalInput`: `null` + `daily` → hợp lệ, bỏ qua kiểm 1827 ngày; `null` + `total` → `GOAL_PERIOD_INVALID`, `field: 'endDate'`, `params.variant = 'openEndedTotal'`; chuỗi rỗng/sai định dạng vẫn là `GOAL_PERIOD_INVALID` như cũ (khác với `null`). `GoalFields.endDate: ISODate | null`. `GoalService.update`: điều kiện "đổi khoảng" so cả `null` (`!==`); `entriesOutsidePeriod` với `end = null`.
+
+**(c) Đường cong (§4.5).** `periodDays` trong `CurveData` = `elapsedDays` khi không thời hạn. `ideal` = các ngày `startDate → lastElapsedDay` (k = 1 … elapsedDays), **không** có ngày tương lai; chưa bắt đầu (`lastElapsedDay = null`) → `ideal = []`, `actual = []`, `headlinePercent = 0`, `actualFactor = idealFactor = 1`, `idealPercent = 0`. Mọi field khác như §4.5. UI: Range "Whole period" = "So far" cho goal này (designer chốt ẩn/khoá); "Day {k}" không có tổng.
+
+**Oracle — dataset O1** (builder `datasetO1()` trong `src/test/builders.ts`; E2E `e2e/fixtures/o1-open-ended-backup.json`, schemaVersion 1): goal `o1` "Meditate", why rỗng, `daily` **10** phút, `startDate 2026-10-01`, `endDate null`, `createdAt = updatedAt = 2026-09-30T06:00:00.000Z`; entry manual 10-01 **10**, 10-02 **15**, 10-05 **10**, 10-08 **20** phút. Today = 2026-10-09 (clock §0 TASKS):
+
+| Đại lượng | Giá trị |
+| :- | :- |
+| `goalStatus` | 2026-09-30 `upcoming`; 2026-10-01, 2026-10-09, 2031-10-02 `active` |
+| `periodDays(o1)` | `null` |
+| `dailyTarget`, `elapsedDays`, `totalTarget(o1, today)` | 10, 9, 90 |
+| `goalStats(o1, entries, 2026, today)` | `minutesTotal 55`, `progressPercent 61.1`, `expectedMinutes 90`, `pace −35`, `daysOnTarget 4`, `daysLogged 4`, `currentStreak 1`, `longestStreak 2`, `outsideYear false` (2025 → `true`) |
+| `curve(o1, entries, today)` | `ideal` 9 điểm, `actual` 9 điểm, `periodDays 9`, `elapsedDays 9`; `percent` `[0, 50, 50, 50, 0, 0, 0, 100, 100]`; `changePercent` `[null, 50, null, null, −33.3, null, null, 100, null]`; `headlinePercent 100`, `actualFactor 2`, `baseline {10-01, 10}`, `latest {10-08, 20}`, `previous {10-05, 10}`, `latestChangePercent 100`, `loggedDays 4`, `idealPercent 9.4` |
+| `curve(o1, entries, '2026-10-20')` | `ideal` 20 điểm, `actual` 20 điểm, headline 100 |
+| `curve(o1, entries, '2031-10-02')` | `elapsedDays 1828` (> 1827), `ideal` 1828 điểm |
+| O1 với `startDate 2026-11-01` (upcoming), không entry | `ideal []`, `actual []`, headline 0 |
+| `validateEntryDate` (today 2026-10-09) | 10-09 ok; 10-10 `DATE_IN_FUTURE`; 09-30 `DATE_OUTSIDE_GOAL_PERIOD`; today 2031-10-02, ngày 2031-10-02 ok |
+| Heatmap goal O1 năm 2026 | 2026-09-30 `outside`; 2026-10-09 không `outside` |
+
+**(d) Đọc theo khoảng.** `goalsDateRange(goals)`: có goal không thời hạn → đầu trên = `OPEN_END_QUERY_MAX` (chỉ dùng trong truy vấn `getByDateRange`/`watchByDateRange`; entry không bao giờ > hôm nay khi ghi mới, A-25 vẫn áp cho dữ liệu gộp). Không đổi chữ ký.
+
+**(e) Backup (§5.5, ADR-32).** `goalSchema.endDate = isoDate.nullable()` (field **bắt buộc có**, giá trị `null` được phép; thiếu field → `IMPORT_INVALID_SCHEMA` không biến thể như mọi field thiếu). `superRefine`: `endDate === null && targetType === 'total'` → issue ở `endDate` thuộc nhóm `outOfRange`; `endDate === null` → bỏ kiểm 1827 ngày. Integrity: `endDate !== null && endDate < startDate` → `IMPORT_INTEGRITY` (như cũ); entry ngoài khoảng dùng `isWithinGoal`; entry sau `today` → `IMPORT_INTEGRITY` (như cũ). `schemaVersion` giữ `1`; `buildBackup` ghi `"endDate": null` (JSON.stringify giữ `null`).
+
+**(f) Cloud (§4.3, §5.10, ADR-33).** Migration mới, user chạy một lần ở SQL Editor (TASKS U12), file `supabase/migrations/20261019000000_goal_open_ended.sql` (14 chữ số như file M6; file M6 **không** được sửa):
+
+```sql
+-- v4.0 (M11): open-ended goals (daily only). Run once, after 20261012000000_cloud_sync.sql.
+-- Idempotent: running it twice is harmless. Existing rows keep their end_date.
+alter table public.goals alter column end_date drop not null;
+
+-- Drop the unnamed M6 check "end_date >= start_date", whatever name Postgres generated.
+do $$
+declare c record;
+begin
+  for c in
+    select conname from pg_constraint
+    where conrelid = 'public.goals'::regclass and contype = 'c'
+      and pg_get_constraintdef(oid) ilike '%end_date >= start_date%'
+      and conname not in ('goals_period_check', 'goals_open_ended_daily_check')
+  loop
+    execute format('alter table public.goals drop constraint %I', c.conname);
+  end loop;
+end $$;
+
+alter table public.goals drop constraint if exists goals_period_check;
+alter table public.goals add constraint goals_period_check
+  check (end_date is null or end_date >= start_date);
+
+alter table public.goals drop constraint if exists goals_open_ended_daily_check;
+alter table public.goals add constraint goals_open_ended_daily_check
+  check (end_date is not null or target_type = 'daily');
+-- RLS, policies, grants and the sync_before_write trigger are unchanged.
+```
+
+Developer được chỉnh cú pháp cho chạy đúng trên Supabase hosted/local nhưng không được đổi RLS/grant/trigger hay ghi đè dữ liệu. Rollback (chỉ ghi trong README, không phải file migration): `set not null` chỉ chạy được khi không còn hàng NULL.
+
+- **Mapper** (`integration/supabase/mapper.ts`): `end_date: isoDate.nullable()`; refine `end_date === null || end_date >= start_date`; refine `end_date !== null || target_type === 'daily'`; hàng cũ (có `end_date`) hợp lệ như trước. `goalToRow` gửi `end_date: null`. Pre-validate trước khi `push` (ADR-28) dùng cùng schema nên hàng không thời hạn hợp lệ được đẩy.
+- **FakeRemoteStore và mock** (`e2e/mock-supabase/server.mjs`): cùng ràng buộc như SQL mới (NULL chỉ cho `daily`, không so sánh ngày khi NULL; `total` + NULL → 400 SQLSTATE `23514`). Bộ test hợp đồng `remote-store.contract.ts` thêm ca này để Fake, mock và Supabase local (khi có Docker) không lệch.
+- **Thiết bị bản cũ (trước M11):** mapper cũ coi hàng NULL là sai schema → bỏ qua, đếm `skippedInvalid` (Account card hiện dòng "remote invalid" như hiện tại), con trỏ vẫn đi qua hàng đó. **Đặt lại con trỏ một lần (ADR-33):** hằng `PULL_RESET_VERSION = 1` (`config/constants.ts`); ở đầu mỗi `syncNow` (trong lock `opb-sync`, trước bước push) `SyncService` gọi `kv.update('sync', s => s && (s.pullResetVersion ?? 0) < PULL_RESET_VERSION ? { ...s, cursor: { ...s.cursor, goals: null }, pullResetVersion: PULL_RESET_VERSION } : undefined)` — nguyên tử, chạy đúng một lần mỗi thiết bị; chu kỳ đó kéo lại toàn bộ bảng `goals` (vài chục hàng), LWW idempotent nên vô hại. Entry của goal bị bỏ qua đã nằm trong IndexedDB (chỉ bị ẩn vì goal không có) và hiện lại ngay khi goal được áp. `cursor.entries` không đổi. Không có kv `sync` (chưa từng đăng nhập) → không ghi gì. `SyncService.reset()`/`clearUserData` không cần giữ cờ (cursor mới vốn là `null`).
+- **M11 đẩy trước khi chạy migration:** server trả `23502` (not null) → lô tách tới từng hàng → `dirty = 2` theo ADR-28 (không chặn chu kỳ); khôi phục theo A-55 (chạy migration rồi lưu lại goal đó). README và U12 nói rõ thứ tự.
 
 ## 5. Interface contract
 
@@ -771,20 +875,20 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 | `GOAL_NAME_REQUIRED` / `GOAL_NAME_TOO_LONG` | Tên rỗng sau trim / > 60 ký tự |
 | `GOAL_WHY_TOO_LONG` | `why` > 280 ký tự |
 | `GOAL_TARGET_INVALID` | Phút/ngày ngoài 1–1440, giờ tổng ngoài 1–10000, hoặc `dailyTarget` suy ra > 1440 |
-| `GOAL_PERIOD_INVALID` | Ngày không hợp lệ, `endDate < startDate`, hoặc khoảng > 1827 ngày |
+| `GOAL_PERIOD_INVALID` | Ngày không hợp lệ, `endDate < startDate`, hoặc khoảng > 1827 ngày. **v4.0 (M11):** thêm biến thể `params.variant = 'openEndedTotal'` (`field: 'endDate'`) khi `endDate = null` với `targetType = 'total'` → key `errors.GOAL_PERIOD_INVALID_openEndedTotal` (copy DESIGN v4.0). `endDate = null` với `daily` **không** phải lỗi và không bị kiểm 1827 ngày |
 | `GOAL_PERIOD_EXCLUDES_ENTRIES` | Sửa khoảng thời gian làm entry đã có rơi ra ngoài |
 | `GOAL_NOT_FOUND` / `ENTRY_NOT_FOUND` | Id không tồn tại |
 | `ENTRY_MINUTES_INVALID` | Không phải số nguyên 1–1440 |
 | `ENTRY_NOTE_TOO_LONG` | Ghi chú > 280 ký tự |
 | `ENTRY_DAY_LIMIT_EXCEEDED` | Tổng phút của goal trong ngày > 1440 |
 | `DATE_IN_FUTURE` | Ngày ghi > hôm nay |
-| `DATE_OUTSIDE_GOAL_PERIOD` | Ngày ghi ngoài `startDate..endDate` |
+| `DATE_OUTSIDE_GOAL_PERIOD` | Ngày ghi ngoài `startDate..endDate`. **v4.0:** goal không thời hạn → chỉ khi ngày < `startDate`; `params.end = null`, UI dùng biến thể key không có ngày cuối (DESIGN v4.0) |
 | `GOAL_NOT_ACTIVE` | Start timer cho goal không `active` |
 | `TIMER_ALREADY_RUNNING` / `TIMER_NOT_RUNNING` | Start khi đang chạy / Stop khi không chạy |
 | `GOAL_TIMER_RUNNING` | Archive goal đang có timer chạy (phải Stop/Discard trước) — M5 |
 | `IMPORT_FILE_TOO_LARGE` | File > 5 MB |
 | `IMPORT_INVALID_JSON` | Không parse được JSON |
-| `IMPORT_INVALID_SCHEMA` | Sai cấu trúc/kiểu, thiếu field, `app` sai, id dài hơn 64 ký tự. **v3.1 (M5-P1):** khi file đúng cấu trúc/kiểu nhưng một giá trị nằm ngoài giới hạn nghiệp vụ (tên/why/note quá dài hoặc tên rỗng, `targetMinutes` ngoài khoảng theo loại, `dailyTarget` suy ra > 1440, khoảng goal > 1827 ngày hoặc `endDate < startDate`, phút entry không phải số nguyên 1–1440) → vẫn mã này, thêm `params.variant = 'outOfRange'`; UI dùng key `errors.IMPORT_INVALID_SCHEMA_outOfRange` (copy DESIGN v3.1). Mã lỗi không đổi để test bám mã vẫn đúng |
+| `IMPORT_INVALID_SCHEMA` | Sai cấu trúc/kiểu, thiếu field, `app` sai, id dài hơn 64 ký tự. **v3.1 (M5-P1):** khi file đúng cấu trúc/kiểu nhưng một giá trị nằm ngoài giới hạn nghiệp vụ (tên/why/note quá dài hoặc tên rỗng, `targetMinutes` ngoài khoảng theo loại, `dailyTarget` suy ra > 1440, khoảng goal > 1827 ngày hoặc `endDate < startDate`, phút entry không phải số nguyên 1–1440) → vẫn mã này, thêm `params.variant = 'outOfRange'`; UI dùng key `errors.IMPORT_INVALID_SCHEMA_outOfRange` (copy DESIGN v3.1). Mã lỗi không đổi để test bám mã vẫn đúng. **v4.0:** goal `total` có `endDate: null` thuộc nhóm `outOfRange`; goal thiếu field `endDate` thuộc nhóm không biến thể |
 | `IMPORT_UNSUPPORTED_VERSION` | `schemaVersion` khác 1 |
 | `IMPORT_INTEGRITY` | Entry trỏ tới goal không tồn tại, id trùng, tổng phút/ngày > 1440, entry ngoài khoảng goal |
 | `STORAGE_UNAVAILABLE` | Không mở được IndexedDB |
@@ -824,6 +928,8 @@ Tên file: `1percent-better-backup-YYYY-MM-DD.json` (ngày export, giờ cục b
 Import: thay thế toàn bộ `goals`, `entries`, `settings`; xoá `activeTimer`; đặt `lastReminderDate = null`; giữ nguyên kv `locale` (ngôn ngữ là thiết lập của thiết bị, không có trong file backup). Field `plusOneShown` (thêm ở M5) là optional khi import, mặc định `{}`.
 
 **v2.0 (M7):** định dạng file **không đổi** (`schemaVersion: 1`). Export chỉ gồm bản ghi còn sống, không có `deletedAt`, `dirty`, `user_id` hay kv `sync`/`loginPrompt`. Import giữ kv `locale`, `sync`, `loginPrompt`; bản ghi hiện có không nằm trong file bị **xoá mềm** (để việc thay thế lan truyền lên cloud). Khi đã đăng nhập, `BackupService.import` đặt `updatedAt` của mọi bản ghi trong file = thời điểm import (A-29) để thắng LWW; chưa đăng nhập thì giữ nguyên như file.
+
+**v4.0 (M11, ADR-32):** định dạng giữ `schemaVersion: 1`. Goal không thời hạn: `"endDate": null` (field luôn có, không bỏ). Ví dụ: `{ "id": "o1", "name": "Meditate", "why": "", "targetType": "daily", "targetMinutes": 10, "startDate": "2026-10-01", "endDate": null, "archived": false, … }`. Quy tắc nhận/từ chối ở §4.6 (e). File cũ không đổi cách đọc.
 
 ### 5.6 Notification và Service Worker
 
@@ -929,7 +1035,7 @@ interface RemoteStore {
 
 **Gộp khi đăng nhập (FR-47):** `prepareFirstSignIn(userId)`: `sync.lastUserId` null hoặc bằng `userId` → `merge-silently`/`same-user` (bản ghi tạo khi chưa đăng nhập đã có `dirty = 1` nên chu kỳ đầu tự đẩy lên = gộp; nhóm tuỳ chọn đã chọn trên máy cũng `dirty = 1` và đi theo bảng quy tắc §4.4); khác `userId` và `countLive() > 0` → `confirm-merge` (UI hiện hộp thoại; "Add to account" → `confirmMerge()` = `markAllDirty()` + `prefs.markAllDirty()` + reset cursor; "Cancel" → `AuthService.signOut({ keepData: true })`).
 
-**Ánh xạ hàng (`integration/supabase/mapper.ts`):** `snake_case` ↔ `camelCase`; `timestamptz` → `new Date(v).toISOString()` (luôn dạng `YYYY-MM-DDTHH:mm:ss.sssZ`); `date` giữ `YYYY-MM-DD`; zod kiểm từng hàng theo giới hạn domain (độ dài, khoảng phút, enum), hàng sai → bỏ qua và đếm `skippedInvalid` (NFR-05).
+**Ánh xạ hàng (`integration/supabase/mapper.ts`):** `snake_case` ↔ `camelCase`; `timestamptz` → `new Date(v).toISOString()` (luôn dạng `YYYY-MM-DDTHH:mm:ss.sssZ`); `date` giữ `YYYY-MM-DD`; zod kiểm từng hàng theo giới hạn domain (độ dài, khoảng phút, enum), hàng sai → bỏ qua và đếm `skippedInvalid` (NFR-05). **v4.0:** `end_date` nullable (chỉ `daily`), bước "đặt lại con trỏ goals một lần" ở đầu chu kỳ — §4.6 (f), ADR-33.
 
 ### 5.11 Mock Supabase cho E2E (v2.0) — `e2e/mock-supabase/server.mjs`
 
@@ -942,7 +1048,7 @@ Server Node `http`, cổng `54321`, dữ liệu trong bộ nhớ, CORS cho mọi
 | `POST /auth/v1/token?grant_type=refresh_token` | Đổi refresh token; có công tắc test để trả `400 invalid_grant` (mô phỏng phiên bị thu hồi) |
 | `GET /auth/v1/user`, `POST /auth/v1/logout` | Theo session |
 | `GET/POST /rest/v1/settings` (v2.1) | Một hàng/user, upsert theo `user_id`, **cùng quy tắc với trigger `settings_before_write`** (LWW theo từng nhóm, nhóm null giữ cũ, tie → server) |
-| `GET/POST /rest/v1/goals`, `/rest/v1/entries` | Tập con PostgREST mà `SupabaseRemoteStore` dùng (upsert `Prefer: resolution=merge-duplicates`, `select`, `in`, `gt`/`gte`/`eq`, `or`, `order`, `limit`); **cùng quy tắc với trigger SQL** (LWW, tie → server, `server_updated_at` tăng dần) và lọc theo `sub` của JWT (mô phỏng RLS) |
+| `GET/POST /rest/v1/goals`, `/rest/v1/entries` | Tập con PostgREST mà `SupabaseRemoteStore` dùng (upsert `Prefer: resolution=merge-duplicates`, `select`, `in`, `gt`/`gte`/`eq`, `or`, `order`, `limit`); **cùng quy tắc với trigger SQL** (LWW, tie → server, `server_updated_at` tăng dần) và lọc theo `sub` của JWT (mô phỏng RLS). **v4.0:** `end_date` NULL hợp lệ chỉ khi `target_type = 'daily'` (không so ngày khi NULL); `total` + NULL → 400 `23514`, như ràng buộc SQL §4.6 (f) |
 | `/__test/reset`, `/__test/rows?user=`, `/__test/seed`, `/__test/fail?status=500&times=n`, `/__test/log` | Chỉ cho test: reset dữ liệu, đọc/ghi hàng, ép lỗi, xem log request (kích thước lô, số lần exchange) |
 
 Người dùng giả: u1 `00000000-0000-4000-8000-000000000001` / `minh.test@example.com` / `Minh Test`; u2 `00000000-0000-4000-8000-000000000002` / `other.user@example.com` / `Other User`. Quy tắc LWW của mock và của `FakeRemoteStore` (Vitest) phải cùng chạy qua **một bộ test hợp đồng** (`src/services/remote-store.contract.ts`) để không lệch nhau; bộ này cũng chạy với Supabase local khi có Docker (`npm run test:db`).
@@ -1024,6 +1130,8 @@ Unit/integration test đặt cạnh file nguồn (`*.test.ts(x)`).
 
 **Bổ sung v3.1 (M10):** `src/domain/backup-file.ts`; `src/app/maintenance.ts`; `e2e/m10-*.spec.ts` (project `chromium`) và `e2e/cloud/m10-*.spec.ts` (project `cloud`), gồm spec đo ngân sách tải lạnh.
 
+**Bổ sung v4.0 (M11):** `supabase/migrations/20261019000000_goal_open_ended.sql`; `e2e/fixtures/o1-open-ended-backup.json`; `e2e/m11-*.spec.ts`, `e2e/cloud/m11-*.spec.ts`; builder `datasetO1()` trong `src/test/builders.ts`.
+
 ## 7. Config và biến môi trường
 
 Không có secret. Không biến nào bắt buộc; app chạy với giá trị mặc định khi không có `.env`.
@@ -1082,6 +1190,17 @@ Quy ước test: mỗi test e2e dùng browser context mới (IndexedDB sạch); 
 | Ngân sách tải lạnh (ADR-27) | Playwright, cùng phương pháp `tests/qc/final-nfr.spec.ts`: context mới, `freezeClock`, mở `#/today`, chờ `h1` + `networkidle`, cộng `gzipSync(body, { level: 9 })` của mọi response có content-type JS/CSS/HTML, bỏ URL `sw*`/`workbox*` | Project `chromium` (build `--mode e2e`, cloud tắt) và project `cloud` (cloud bật, chưa đăng nhập): tổng ≤ **230.000 byte**; không request chunk Recharts, SDK Supabase, hay chunk chứa zod; in danh sách request + số đo ra log | `npm run test:e2e` |
 | Giới hạn chung form ↔ file | Vitest | Cùng một bảng giá trị biên (tên 60/61, why 280/281, daily 1440/1441, giờ tổng 10000/10001, phút entry 1440/1441, note 280/281, khoảng 1827/1828 ngày): validator form (`domain/goal.ts`, `entry.ts`, TS thuần) và `parseBackup` (zod) chấp nhận/từ chối giống nhau | `npm test` |
 | Dọn tombstone (ADR-29) | Vitest + fake-indexeddb + `two-devices.ts` | Bảng quy tắc §4.2; rollback; hội tụ hai thiết bị sau khi dọn; thêm thao tác "tua 31 ngày + dọn" vào test ngẫu nhiên 20 seed | `npm test` |
+
+**Bổ sung v4.0 (M11):**
+
+| Loại | Công cụ | Phạm vi | Lệnh |
+| :- | :- | :- | :- |
+| Unit domain | Vitest | Bảng hàm §4.6 (b), oracle O1 §4.6 (c), goal có hạn S1/R1 không đổi (test cũ không sửa assertion) | `npm test` |
+| Giới hạn chung form ↔ file ↔ cloud | Vitest (`limits-parity.test.ts` mở rộng) | `daily` + `null` (start 2000-01-01) cùng chấp nhận ở validator form, `parseBackup`, `goalRowSchema`; `total` + `null` cùng từ chối | `npm test` |
+| Sync | Vitest + `two-devices.ts` + hợp đồng `RemoteStore` | Round-trip `endDate: null`; LWW đổi qua lại có hạn/không hạn; test ngẫu nhiên 20 seed thêm thao tác tạo goal không thời hạn và bật/tắt hạn; mô phỏng thiết bị bản cũ bỏ qua hàng NULL rồi đặt lại con trỏ (ADR-33) | `npm test` |
+| SQL tĩnh | Vitest đọc file migration | File mới có `drop not null`, `goals_period_check` (`end_date is null or end_date >= start_date`), `goals_open_ended_daily_check`; không `grant … anon`, không `for delete`, không `disable row level security`; file M6 không đổi | `npm test` |
+| SQL thật | `tests/db/**` + Supabase local | Áp hai migration theo thứ tự; insert `daily` NULL được; `total` NULL → `23514`; chạy file mới hai lần không lỗi | `npm run test:db` (máy hiện tại: skipped → NOT VERIFIED, kiểm ở U12) |
+| E2E | Playwright `chromium` + `cloud` | Form (en/vi), Goals/Detail/Review/Day, Export/Import O1, hai thiết bị qua mock, tải lạnh ≤ 230 KB | `npm run test:e2e` |
 
 `page.clock` trong spec cloud: chỉ dùng `install`/`fastForward` cho debounce/backoff; request tới mock vẫn là thật. Spec cloud không dùng Google thật; luồng Google thật, project thật, iOS/Android là kiểm thủ công (TASKS "User setup" U10, "NOT VERIFIED" của M6–M8).
 
@@ -1149,6 +1268,11 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | (v3.1) Lần Import đầu tiên khi offline mà chunk schema chưa có trong cache | Thấp | Thấp | Chunk nằm trong precache của SW (`globPatterns` `**/*.js`) nên có sau lần cài đầu; nạp lỗi → thông báo lỗi đọc file, dữ liệu không đổi; E2E import offline |
 | (v3.1) Dọn tombstone làm bản ghi đã xoá "sống lại" | Thấp | Thấp | Chỉ dọn hàng đã được cloud xác nhận (`dirty = 0`, cloud giữ tombstone và LWW chặn bản cũ hơn), bị từ chối (`dirty = 2`), hoặc trên máy chưa từng đồng bộ; ngưỡng 30 ngày; test hội tụ + ngẫu nhiên; ca biên còn lại ghi ở A-34 |
 | (v3.1) Hai cách validate (TS thuần cho form, zod cho file/cloud) lệch giới hạn (bài học M7-D1) | Trung bình | Trung bình | Mọi giới hạn lấy từ `config/constants.ts`; test "giới hạn chung form ↔ file" (§8) |
+| (v4.0) Deploy M11 trước khi user chạy migration → server từ chối goal không thời hạn (`23502`), hàng thành `dirty = 2` | Trung bình | Thấp (không mất dữ liệu, chỉ chưa lên cloud) | U12 là bước bắt buộc trước khi orchestrator push; README ghi thứ tự; khôi phục: chạy migration rồi lưu lại goal (A-55) |
+| (v4.0) Thiết bị còn bản cũ (SW chưa cập nhật) bỏ qua hàng NULL, con trỏ đi qua, sau khi cập nhật không thấy goal | Trung bình | Trung bình | Đặt lại `cursor.goals` một lần theo `pullResetVersion` (ADR-33); test mô phỏng; kiểm tay U13 (NV-10) |
+| (v4.0) File backup mới mở bằng app cũ → `IMPORT_INVALID_SCHEMA` | Thấp | Thấp | Chấp nhận (A-54, ADR-32); dữ liệu không đổi; app tự cập nhật qua SW |
+| (v4.0) Bỏ sót một chỗ đọc `endDate` (so chuỗi với `null`, `daysInclusive(start, null)`) → NaN, goal bị coi "ended", ô heatmap sai | Trung bình | Trung bình | `endDate: ISODate \| null` để TypeScript bắt mọi chỗ; helper `isWithinGoal`/`lastElapsedDay`/`elapsedDays` dùng chung; oracle O1 cho domain + E2E mọi màn hình |
+| (v4.0) Goal không thời hạn với `startDate` rất xa trong quá khứ (gõ nhầm năm) → đường cong hàng chục nghìn điểm | Thấp | Thấp | Range mặc định "So far"/không có Whole; bench 3.650 ngày < 200 ms; chấp nhận, không giới hạn `startDate` (A-49) |
 
 ## 11. Quyết định kiến trúc
 
@@ -1254,6 +1378,15 @@ Bối cảnh: một số hành vi đã ship khác chữ của plan/design và đ
 - (i) **Mock** `/__test/token` nhận `email`/`name` để test tạo phiên hợp lệ với danh tính tuỳ ý (M7).
 Hệ quả: QC/dev đối chiếu các hành vi trên với ADR này, không coi là defect; thay đổi chúng cần revise plan.
 
+**ADR-31 — Goal không thời hạn = `endDate: null`, chỉ `daily`, giá trị suy ra "tới hôm nay" (v4.0, M11).**
+Bối cảnh: user muốn option "Không có thời hạn" ở section Ends (2026-10-19), chỉ cho Phút/ngày; công thức `total` cần số ngày nên phải có hạn; user chốt không dùng sentinel. Lựa chọn: `Goal.endDate: ISODate | null` (field bắt buộc, giá trị null) ở mọi lớp; bất biến `null ⇒ daily`; mọi phép tính khoảng đi qua helper domain (`isWithinGoal`, `elapsedDays`, `lastElapsedDay`, `totalTarget(goal, today)`) với ngày cuối = hôm nay; không giới hạn 1827 ngày; không bao giờ `ended`. Phương án đã loại: (1) ngày giả `9999-12-31` — user loại, làm sai `periodDays`/đường lý tưởng/`dailyTarget` âm thầm, lộ ra file backup và cloud; (2) bỏ field (`endDate?: ISODate`) — hai cách biểu diễn "không có" (`undefined` và thiếu key), zod/JSON/SQL khó nhất quán; (3) field riêng `openEnded: boolean` cạnh `endDate` — hai nguồn sự thật, phải đổi schema cloud nhiều hơn; (4) cho cả `total` — không định nghĩa được `dailyTarget`. Hệ quả: TypeScript buộc xử lý `null` ở mọi chỗ (giảm sót); Progress của goal không thời hạn là "so với kỳ vọng tới hôm nay" (A-51); đường lý tưởng dài dần theo thời gian.
+
+**ADR-32 — File backup giữ `schemaVersion: 1` cho goal không thời hạn (v4.0, M11).**
+Bối cảnh: file mới có thể chứa `"endDate": null`. Bump lên 2 thì bản app cũ báo "phiên bản không hỗ trợ" (rõ hơn) nhưng importer mới phải nhận cả 1 và 2, và file không có goal không thời hạn nào cũng bị app cũ từ chối vô ích. Lựa chọn: giữ 1; thay đổi chỉ nới lỏng một field (thêm giá trị `null`); importer mới đọc mọi file cũ không đổi; app cũ gặp `null` → `IMPORT_INVALID_SCHEMA`, không đổi dữ liệu. Phương án đã loại: bump 2 luôn; bump 2 chỉ khi file có goal không thời hạn (hai định dạng ghi, logic thừa). Hệ quả: không có migration file; thông báo lỗi ở app cũ kém cụ thể hơn (chấp nhận, A-54); thay đổi phá vỡ thật sự về sau vẫn phải bump.
+
+**ADR-33 — Cloud: migration nới `end_date`, và thiết bị bản cũ nhận lại hàng NULL bằng cách đặt lại con trỏ `goals` một lần (v4.0, M11).**
+Bối cảnh: bảng `goals` có `end_date date not null check (end_date >= start_date)`; project thật đã chạy migration M6 (U6); chỉ user chạy được SQL. Thiết bị chưa cập nhật service worker (vd. PWA trên điện thoại) kéo về hàng NULL sẽ bỏ qua nó (mapper cũ) nhưng con trỏ vẫn đi qua, nên sau khi cập nhật sẽ không bao giờ kéo lại. Lựa chọn: (1) file migration mới, idempotent, không sửa file M6 (§4.6 f), user chạy trước deploy (U12); (2) ràng buộc SQL đặt tên `goals_period_check`, `goals_open_ended_daily_check` để mock/Fake/mapper lặp lại đúng quy tắc; (3) kv `sync.pullResetVersion` + hằng `PULL_RESET_VERSION`: lần `syncNow` đầu tiên của bản M11 đặt `cursor.goals = null` trong một `kv.update` nguyên tử rồi kéo lại toàn bảng `goals`; cơ chế dùng lại được cho lần nới schema sau (tăng hằng). **Không** bump Dexie (không đổi index; tránh `versionchange` giữa tab bản cũ và bản mới). Phương án đã loại: Dexie v3 + `upgrade()` đặt lại con trỏ (đúng nhưng thêm rủi ro chặn mở DB khi tab cũ còn mở, và sửa test kiểm version); đặt lại cả `cursor.entries` (không cần: entry đã được lưu, chỉ bị ẩn); bắt buộc mọi thiết bị cập nhật trước khi tạo goal không thời hạn (không kiểm soát được). Hệ quả: chu kỳ đầu sau cập nhật kéo lại vài chục hàng goal (rẻ); client cũ chỉ thấy dòng "remote invalid" tạm thời; nếu M11 đẩy trước migration thì hàng thành `dirty = 2` và khôi phục theo A-55.
+
 ## Changelog
 
 - 2026-10-09 — v1, tạo mới (mode `new`).
@@ -1264,3 +1397,4 @@ Hệ quả: QC/dev đối chiếu các hành vi trên với ADR này, không coi
 - 2026-10-12 — v2.1 (mode `revise`, trả lời OQ-06 … OQ-09 sau Gate 1 phase 2). OQ-07 → đồng bộ nhắc nhở + ngôn ngữ: §3 thêm `data/dexie/prefs-repo.ts`; §4.1 thêm `PrefGroup`, `PrefsSyncState`, `RemotePrefs`, kv `prefsSync`; §4.2 migration đặt mốc tuỳ chọn (A-36), `replaceAll` đánh dấu nhóm reminder (A-37), `clearUserData` xoá `prefsSync`; §4.3 thêm bảng `settings` + trigger `settings_before_write` (LWW theo nhóm) + RLS + grant vào cùng file migration; §4.4 bảng đồng bộ viết lại + bảng quy tắc `resolvePrefGroup` + cách áp locale/reminder; §5.2 `SyncedPrefsRepository`; §5.3 `SettingsService`/`LocaleService` nhận `prefs` tuỳ chọn, `SyncService` nhận `prefs`; §5.10 `pushPrefs`/`pullPrefs` + bước 3b, gộp tài khoản đánh dấu tuỳ chọn; §5.11 mock `/rest/v1/settings`; §8 test tuỳ chọn + ghi chú không có Docker (OQ-08); §10 thêm 2 rủi ro; §11 ghi chú ADR-12, ADR-22, thêm ADR-25. OQ-06 (không giới hạn đăng nhập), OQ-09 (không nút xoá cloud): không đổi kiến trúc.
 - 2026-10-13 — v3.0 (mode `revise`, phase 3: định nghĩa mới đường cong "Bạn", FR-27 v3.0). §3 sửa mô tả `domain/curve.ts` (bỏ phụ thuộc `stats`); §4 gạch quy tắc 1.01^n, trỏ sang **§4.5** mới (ký hiệu, công thức, làm tròn `pct` nửa xa 0, phạm vi giá trị, contract `ActualPoint`/`CurveData`/`curveYDomain`, oracle dataset R1 dữ liệu thật của user + S1, yêu cầu hiển thị, formatter `f.factor`, thang Y tự co giãn theo cả hai series); §11 thêm ADR-26. Không đổi schema, sync, backup, route, mã lỗi.
 - 2026-10-17 — v3.1 (mode `revise`, phase 4: M10 backlog + ngân sách bundle). §2 hàng Validate: zod chỉ ở biên lazy. §3: `env.ts`, `goal.ts`, `entry.ts` bỏ zod; thêm `domain/backup-file.ts`; bảng component v3.1 (`isPurgeableTombstone`, `purgeTombstones`, `app/maintenance.ts`, `clearPkceVerifier`, loader không phát chunk SDK khi cloud tắt); quy tắc lint mới (cấm `zod` ngoài hai biên, cấm `import()` `@supabase/*`/`supabase-client` ngoài `integration/supabase`). §4.1 `SyncFlag` thêm `2`. §4.2 ghi nhận `dirty = 2`, thêm quy tắc dọn tombstone. §5.2 `LocalSyncStore.purgeTombstones`. §5.3 `BackupService.parse` async, `LoginPromptService.dismiss` không đếm khi đang ẩn + mốc tương lai > 24 h. §5.4 `IMPORT_INVALID_SCHEMA` biến thể `outOfRange`. §5.9 dọn code verifier. §6, §8 (spec ngân sách 230 KB, test giới hạn chung form ↔ file, test dọn tombstone), §9 (`check` dùng `build:e2e`), §10 thêm 4 rủi ro. §11 thêm **ADR-27** (chiến lược chunk), **ADR-28** (`dirty = 2`), **ADR-29** (dọn tombstone), **ADR-30** (ghi nhận deviation D7, OQ-D12, sync D1–D3, toast D9, M8, M9, brand, mock). Không đổi schema Dexie/cloud, route, định dạng backup, mã lỗi.
+- 2026-10-19 — v4.0 (mode `revise`, phase 5: goal không thời hạn, quyết định user 2026-10-19). §3 bảng component v4.0; §4 `Goal.endDate: ISODate | null`, `LogEntry.date` cho goal không thời hạn, trỏ sang §4.6; §4.1 `SyncMeta.pullResetVersion`; §4.2 không bump Dexie; §4.3 trỏ tới migration thứ hai; §4.5 ghi chú; thêm **§4.6** (mô hình, bảng hàm domain, đường cong, oracle dataset **O1**, biên truy vấn `OPEN_END_QUERY_MAX`, backup, SQL migration `20261019000000_goal_open_ended.sql`, mapper/mock/Fake, thiết bị bản cũ, đẩy trước migration); §5.4 biến thể `GOAL_PERIOD_INVALID_openEndedTotal`, `DATE_OUTSIDE_GOAL_PERIOD` không ngày cuối, `IMPORT_INVALID_SCHEMA` `outOfRange` cho `total` + null; §5.5 `"endDate": null`, `schemaVersion` 1; §5.10, §5.11 nullable; §6, §8, §10 (5 rủi ro); §11 thêm **ADR-31**, **ADR-32**, **ADR-33**. Ghi chú: tên file migration dùng 14 chữ số `20261019000000_…` như file M6 (brief ghi `2026101900000_…`, thiếu một chữ số). Không đổi route, RLS, grant, trigger, mã lỗi (chỉ thêm biến thể).
