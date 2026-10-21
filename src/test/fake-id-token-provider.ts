@@ -8,6 +8,8 @@ export class FakeIdTokenProvider implements IdTokenProvider {
   /** Per-provider script: a result, an Error (→ reject) or a function. Default: a token for the provider. */
   results: Partial<Record<AuthProvider, IdTokenResult | Error | (() => IdTokenResult | Error)>> = {};
   calls: Array<{ method: 'getIdToken' | 'logout'; provider: AuthProvider }> = [];
+  /** Per-provider gate awaited before `getIdToken` resolves (keeps "the sheet open" until the test releases it). */
+  gate: Partial<Record<AuthProvider, Promise<void>>> = {};
   private seq = 0;
 
   constructor(providers: AuthProvider[] = ['google', 'apple']) {
@@ -20,6 +22,7 @@ export class FakeIdTokenProvider implements IdTokenProvider {
 
   async getIdToken(provider: AuthProvider): Promise<IdTokenResult> {
     this.calls.push({ method: 'getIdToken', provider });
+    if (this.gate[provider]) await this.gate[provider];
     const scripted = this.results[provider];
     const r = typeof scripted === 'function' ? scripted() : scripted;
     if (r instanceof Error) throw r;

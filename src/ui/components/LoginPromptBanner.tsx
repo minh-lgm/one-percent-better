@@ -1,12 +1,14 @@
+import type { AuthProvider } from '../../services/auth-port';
 import { useT } from '../hooks/useT';
 import { Button } from './Button';
-import { GoogleSignInButton } from './GoogleSignInButton';
 import { Icon } from './Icon';
+import { SignInButtons } from './SignInButtons';
 
 export interface LoginPromptBannerProps {
-  onSignIn: () => void;
+  /** M14: the provider of the button that was tapped (Apple above Google on iOS; Google only on the web). */
+  onSignIn: (provider: AuthProvider) => void;
   onNotNow: () => void;
-  /** The Google button is busy while the sign-in redirect is being prepared (A3). */
+  /** The sign-in button is busy while the sign-in is being prepared / the native sheet is open (A3). */
   busy?: boolean;
 }
 
@@ -24,7 +26,7 @@ export function LoginPromptBanner({ onSignIn, onNotNow, busy = false }: LoginPro
         <p className="title">{t('loginPrompt.title')}</p>
         <p>{t('loginPrompt.body')}</p>
         <div className="btn-row">
-          <GoogleSignInButton onClick={onSignIn} busy={busy} full={false} />
+          <SignInButtons onSignIn={onSignIn} busy={busy} full={false} />
           <Button variant="ghost" onClick={onNotNow} disabled={busy} data-testid="login-prompt-not-now">
             {t('loginPrompt.notNow')}
           </Button>

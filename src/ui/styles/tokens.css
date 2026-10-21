@@ -41,6 +41,9 @@
   --google-bg: #ffffff;
   --google-border: #747775;
   --google-text: #1f1f1f;
+  /* v5.0 (DESIGN 6.1, M14): Sign in with Apple — black on light, white on dark (HIG) */
+  --apple-bg: #000000;
+  --apple-text: #ffffff;
 
   --text-xs: 12px;
   --text-sm: 14px;
@@ -112,5 +115,7 @@
     --google-bg: #131314;
     --google-border: #8e918f;
     --google-text: #e3e3e3;
+    --apple-bg: #ffffff;
+    --apple-text: #000000;
   }
 }

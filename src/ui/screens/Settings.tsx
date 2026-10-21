@@ -6,9 +6,10 @@ import { buildReminderIcs, ICS_FILE_NAME, ICS_MIME_TYPE } from '../../domain/ics
 import type { NotificationPermissionState } from '../../domain/reminder';
 import type { SyncStatus } from '../../domain/sync';
 import { randomUuid } from '../../domain/uuid';
-import type { DomainError } from '../../domain/types';
+import type { AccountDeleteErrorCode, DomainError } from '../../domain/types';
 import type { MessageKey } from '../../i18n/types';
 import type { PersistState } from '../../integration/storage';
+import type { AuthProvider } from '../../services/auth-port';
 import type { BackupCounts, BackupPreview } from '../../services/backup-service';
 import { AccountCard } from '../components/AccountCard';
 import { Alert } from '../components/Alert';
@@ -16,6 +17,7 @@ import { BackupBanner } from '../components/BackupBanner';
 import { Badge, type BadgeTone } from '../components/Badge';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { DeleteAccountDialog } from '../components/DeleteAccountDialog';
 import { ExportSignInHint } from '../components/ExportSignInHint';
 import { Icon } from '../components/Icon';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -79,7 +81,13 @@ export function Settings() {
   const accountHeading = useRef<HTMLHeadingElement>(null);
   const signInButton = useRef<HTMLButtonElement>(null);
   const signOutButton = useRef<HTMLButtonElement>(null);
+  const deleteButton = useRef<HTMLButtonElement>(null);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  // M14 (FR-61): D6 state; the Apple panel (A-62) lives in memory until dismissed or the app reloads (A-D65).
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<AccountDeleteErrorCode | null>(null);
+  const [revokePanel, setRevokePanel] = useState(false);
   // Focus the Account h2 once D4 has really closed: the dialog's own close() effect (child, runs
   // first) returns focus to the Sign out button, which is gone after signing out (DESIGN 8.1).
   const [focusAccountAfterClose, setFocusAccountAfterClose] = useState(false);
@@ -251,9 +259,46 @@ export function Settings() {
   const importBody = importBodyParams ? t(signedIn ? 'import.bodySignedIn' : 'import.body', importBodyParams) : '';
   const importExtra = importing && signedIn && !online ? t('import.offlineNote') : undefined;
 
-  // ---- Account (M6, FR-39 … FR-41; M7 sync) ----
-  function signIn() {
-    void authService.signIn('#/settings');
+  // ---- Account (M6, FR-39 … FR-41; M7 sync; M14 native providers + delete account) ----
+  function signIn(provider: AuthProvider = 'google') {
+    void authService.signIn('#/settings', provider);
+  }
+
+  function openDelete() {
+    setDeleteError(null);
+    setDeleteOpen(true);
+  }
+
+  function cancelDelete() {
+    setDeleteOpen(false);
+    requestAnimationFrame(() => deleteButton.current?.focus());
+  }
+
+  async function confirmDelete({ keepData }: { keepData: boolean }) {
+    if (deleteBusy) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      const r = await authService.deleteAccount({ keepData });
+      if (!r.ok) {
+        const code = r.errors[0]?.code;
+        setDeleteError(code === 'ACCOUNT_DELETE_OFFLINE' || code === 'ACCOUNT_DELETE_CANCELLED' || code === 'ACCOUNT_DELETE_SESSION_EXPIRED' ? code : 'ACCOUNT_DELETE_FAILED');
+        return;
+      }
+      setDeleteOpen(false);
+      toast.show(keepData ? 'toast.accountDeletedKept' : 'toast.accountDeletedRemoved');
+      if (r.value.appleRevoked === 'manual-required' && r.value.hadApple) setRevokePanel(true);
+      requestAnimationFrame(() => accountHeading.current?.focus());
+    } catch {
+      setDeleteError('ACCOUNT_DELETE_FAILED');
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  function dismissRevoke() {
+    setRevokePanel(false);
+    requestAnimationFrame(() => accountHeading.current?.focus());
   }
 
   function dismissAuthError() {
@@ -380,9 +425,13 @@ export function Settings() {
             onSignOut={openSignOut}
             onDismissError={dismissAuthError}
             onSyncNow={() => void syncNow()}
+            onDeleteAccount={openDelete}
+            revokePanel={revokePanel}
+            onDismissRevoke={dismissRevoke}
             headingRef={accountHeading}
             signInRef={signInButton}
             signOutRef={signOutButton}
+            deleteRef={deleteButton}
           />
         ) : null}
 
@@ -560,6 +609,17 @@ export function Settings() {
           online={online}
           onConfirm={(c) => void confirmSignOut(c)}
           onCancel={cancelSignOut}
+        />
+      ) : null}
+      {cloudOn ? (
+        <DeleteAccountDialog
+          open={deleteOpen}
+          email={authState.kind === 'signed-in' || authState.kind === 'expired' ? authState.email : ''}
+          appleNote={capabilities.appleSignIn && authState.kind === 'signed-in' && (authState.providers?.includes('apple') ?? false)}
+          busy={deleteBusy}
+          error={deleteError}
+          onConfirm={(c) => void confirmDelete(c)}
+          onCancel={cancelDelete}
         />
       ) : null}
     </>

@@ -1772,6 +1772,97 @@ details.curve-table summary:focus-visible {
     width: 100%;
   }
 }
+
+/* ---- M14: Sign in with Apple (DESIGN 5 "Nút Sign in with Apple", HIG), the button group, Delete account, D6, Apple panel ---- */
+.abtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 6px 16px 6px 12px;
+  border: 1px solid var(--apple-bg);
+  border-radius: var(--r-md);
+  background: var(--apple-bg);
+  color: var(--apple-text);
+  font: 500 15px / 20px var(--font);
+  cursor: pointer;
+  text-align: center;
+  max-width: 100%;
+}
+.abtn:hover {
+  box-shadow: inset 0 0 0 100px color-mix(in srgb, var(--apple-text) 8%, transparent);
+}
+.abtn:active {
+  box-shadow: inset 0 0 0 100px color-mix(in srgb, var(--apple-text) 12%, transparent);
+}
+.abtn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.abtn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.abtn .alogo {
+  width: 17px;
+  height: 20px;
+  flex: none;
+}
+@media (max-width: 639px) {
+  .abtn.full {
+    width: 100%;
+  }
+}
+/* Apple above Google, same width, 12 px apart (DESIGN 3.6 row "Cặp nút"); the group fills its button row. */
+.signin-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+.signin-buttons .abtn,
+.signin-buttons .gbtn {
+  width: 100%;
+}
+.btn-row.stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.btn-row.stack > .btn {
+  width: 100%;
+}
+.account-delete {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.account-delete .hint {
+  margin: 0 0 8px;
+}
+.account-delete .btn-row {
+  margin-top: 0;
+}
+.btn.danger-ghost {
+  border-color: var(--danger);
+}
+.revoke-panel {
+  margin: 8px 0 12px;
+}
+.revoke-panel .alert-actions .btn.ghost {
+  min-height: var(--tap);
+  text-decoration: underline;
+}
+.btn.danger .ic.spin,
+.btn.busy .ic {
+  animation: spin 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn.busy .ic {
+    animation: none;
+  }
+}
 .account .who {
   display: flex;
   gap: 12px;
@@ -1858,7 +1949,7 @@ details.curve-table summary:focus-visible {
   text-decoration: underline;
 }
 
-/* D4 Sign out: body scrolls, button row sticks to the bottom (DESIGN 3.5) */
+/* D4 Sign out, D6 Delete account (.signout.delete): body scrolls, button row sticks to the bottom (DESIGN 3.5) */
 dialog.dialog.signout,
 dialog.dialog.merge {
   max-height: calc(100dvh - 16px - var(--safe-top));

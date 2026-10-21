@@ -10,6 +10,7 @@ import { newlyMetGoals } from '../../domain/plusone';
 import { reminderData, shouldShowBanner, type GoalProgress } from '../../domain/reminder';
 import type { TimerPreview } from '../../domain/timer';
 import type { ActiveTimer, DomainError, ErrorCode, LogEntry } from '../../domain/types';
+import type { AuthProvider } from '../../services/auth-port';
 import { StatsService } from '../../services/stats-service';
 import { Alert } from '../components/Alert';
 import { BackupBanner } from '../components/BackupBanner';
@@ -157,14 +158,14 @@ export function Today() {
   // banner, busy, until the redirect happens instead of letting it vanish under the pointer (DESIGN S1).
   const signingInFromBanner = authKind === 'signing-in' && bannerSignIn;
   const keepDataBanner = showLoginPrompt || signingInFromBanner ? (
-    <LoginPromptBanner onSignIn={() => void signInFromBanner()} onNotNow={() => void notNow()} busy={signingInFromBanner} />
+    <LoginPromptBanner onSignIn={(provider) => void signInFromBanner(provider)} onNotNow={() => void notNow()} busy={signingInFromBanner} />
   ) : backup ? (
     <BackupBanner reminder={backup} withAction />
   ) : null;
 
-  async function signInFromBanner() {
+  async function signInFromBanner(provider: AuthProvider) {
     setBannerSignIn(true);
-    const r = await authService.signIn('#/today');
+    const r = await authService.signIn('#/today', provider);
     if (!r.ok) setBannerSignIn(false);
   }
 
