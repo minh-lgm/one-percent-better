@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Fallback (TASKS U17b): manual signing with an Apple Distribution certificate (.p12) and an App Store
+	     provisioning profile imported by the workflow. `teamID` and the profile name are replaced at run time
+	     (APPLE_TEAM_ID secret, IOS_PROVISIONING_PROFILE_NAME variable). The upload still uses the API key. -->
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>upload</string>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>signingCertificate</key>
+	<string>Apple Distribution</string>
+	<key>teamID</key>
+	<string>TEAM_ID_PLACEHOLDER</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>io.github.minhlgm.onepercentbetter</key>
+		<string>PROFILE_NAME_PLACEHOLDER</string>
+	</dict>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+</dict>
+</plist>

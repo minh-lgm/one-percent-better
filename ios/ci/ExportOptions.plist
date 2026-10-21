@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- xcodebuild -exportArchive options for the `testflight` lane (ARCHITECTURE §5.14, ADR-38). Automatic (cloud)
+	     signing through the App Store Connect API key; the archive is uploaded straight to App Store Connect.
+	     `teamID` is replaced at run time from the APPLE_TEAM_ID secret (plutil). -->
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>upload</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>teamID</key>
+	<string>TEAM_ID_PLACEHOLDER</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+	<key>testFlightInternalTestingOnly</key>
+	<false/>
+</dict>
+</plist>
