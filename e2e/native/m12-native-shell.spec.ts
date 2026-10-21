@@ -2,6 +2,8 @@
 // `Capacitor.getPlatform()` is 'web' here, so the adapters fall back to the web ones, but every compile-time
 // branch of the native build applies: no service worker, no manifest, no update toast, no "Add to Home Screen".
 import { expect, test, type Page } from '@playwright/test';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { NATIVE_BASE_URL } from '../../playwright.config';
 import { createGoal, EN, expectAmount, expectAxeClean, expectNoHorizontalScroll, expectNoViLeaks, freezeClock, goalCard, gotoHash, logTime, VI } from '../helpers/app';
 
@@ -44,8 +46,17 @@ test.describe('M12 native shell in Chromium', () => {
     const html = await (await page.request.get('/')).text();
     expect(html).not.toContain('rel="manifest"');
     expect(html).toMatch(/<script type="module" crossorigin src="\/assets\/index-[^"]+\.js">/);
-    expect((await page.request.get('/sw.js')).status()).not.toBe(200);
-    expect((await page.request.get('/manifest.webmanifest')).status()).not.toBe(200);
+    // `vite preview` answers unknown paths with the SPA fallback (index.html, 200), so look at what comes back
+    // and at the build output: neither file exists in dist-native-e2e.
+    for (const path of ['/sw.js', '/manifest.webmanifest']) {
+      const res = await page.request.get(path);
+      expect(res.headers()['content-type'] ?? '', path).not.toMatch(/javascript|manifest|json/);
+      expect(await res.text(), path).not.toMatch(/precacheAndRoute|"short_name"/);
+    }
+    const out = join(process.cwd(), 'dist-native-e2e');
+    expect(existsSync(join(out, 'sw.js'))).toBe(false);
+    expect(existsSync(join(out, 'manifest.webmanifest'))).toBe(false);
+    expect(existsSync(join(out, 'index.html'))).toBe(true);
 
     await gotoHash(page, '/settings');
     await expect(page.getByRole('heading', { level: 1, name: EN.settings.title })).toBeVisible();

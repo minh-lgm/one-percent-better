@@ -2,7 +2,7 @@
 
 A local-first PWA for tracking the time you put into your goals every day. Set a goal with a daily (or total) time target, log minutes each day, and watch the "+1%" days add up. Everything is stored in your browser (IndexedDB) first; signing in with Google is optional (phase 2) and there is no tracking.
 
-Current milestone: **M9 — the 1% curve v3** (your line compares each logged day with the previous logged day and compounds the changes from the first logged day; see "Goal detail and the 1% curve") on top of **M8 — gentle sign-in prompts and the end of phase 2** (a non-blocking banner on Today once there is data worth protecting, a one-line hint after Export, and copy that always says where your data lives) on top of M7 (offline-first sync: goals, entries, reminder settings and language follow the Google account across devices; the device stays the source of truth), M6 (optional Google sign-in) and the phase-1 MVP: M1 (goals, manual time entries for today, offline PWA, English/Vietnamese UI), M2 (timer and daily reminders), M3 (past days, history, JSON backup), M4 (Review: heatmap, streaks, charts) and M5 (the 1% curve, full goal detail, archive, empty/error states).
+Current milestone: **M12 — iOS app walking skeleton (Capacitor)**: the same code base builds a native iOS app (`npm run build:native`, committed Xcode project in `ios/`, GitHub Actions workflow **iOS** that builds it for the Simulator on a macOS runner — see "iOS app (Capacitor)"); the web app is byte-for-byte unaffected (no Capacitor code in `dist/`). Before that: **M11 — goals with no end date**, **M10 — backlog + bundle budget**, **M9 — the 1% curve v3** (your line compares each logged day with the previous logged day and compounds the changes from the first logged day; see "Goal detail and the 1% curve") on top of **M8 — gentle sign-in prompts and the end of phase 2** (a non-blocking banner on Today once there is data worth protecting, a one-line hint after Export, and copy that always says where your data lives) on top of M7 (offline-first sync: goals, entries, reminder settings and language follow the Google account across devices; the device stays the source of truth), M6 (optional Google sign-in) and the phase-1 MVP: M1 (goals, manual time entries for today, offline PWA, English/Vietnamese UI), M2 (timer and daily reminders), M3 (past days, history, JSON backup), M4 (Review: heatmap, streaks, charts) and M5 (the 1% curve, full goal detail, archive, empty/error states).
 
 **Upgrading from a phase-1 build (M1–M6):** the first start of the M7 build upgrades the local database in place (schema v2: soft delete + sync markers) and keeps every goal, entry and setting. As a precaution, **export a backup first** (Settings → Backup → Export backup) and keep the file — this is step U0 of `docs/plan/TASKS.md`.
 
@@ -67,12 +67,12 @@ npm run lint          # ESLint (--max-warnings 0), including layer, i18n and Sup
 npm run typecheck     # tsc -b --noEmit
 npm test              # Vitest: unit, integration (fake-indexeddb, in-process mock Supabase) and component tests
 npm run test:coverage # same, with coverage for src/domain
-npm run test:e2e      # Playwright (Chromium): project `chromium` (cloud off, port 4173) + project `cloud` (mock Supabase, port 4174)
+npm run test:e2e      # Playwright (Chromium): projects `chromium` (cloud off, port 4173), `cloud` (mock Supabase, port 4174) and `native-web` (the native build in a browser, port 4175)
 npm run test:db       # SQL/RLS tests on Supabase local (Docker); prints "skipped" and exits 0 without Docker
 npm run check         # lint + typecheck + test + build:e2e (cloud off, identical on every machine)
 ```
 
-`npm run test:e2e` starts three servers itself: `npm run build:e2e && npm run preview` (phase-1 build, `--mode e2e` so the cloud is off even on a machine with a real `.env.local`), `npm run build:cloud-e2e && npm run preview:cloud-e2e` (cloud on, served under `/one-percent-better/` like GitHub Pages, port 4174) and `npm run mock:supabase` (port 54321). Cloud specs live in `e2e/cloud/` and import `test` from `e2e/cloud/fixtures.ts`: every Playwright worker gets its own browser User-Agent and the mock keeps separate state per worker, so parallel files never disturb each other (`mock.reset()` in `beforeEach`, `mock.log()`, `mock.fail()`, `mock.session()` are the test controls).
+`npm run test:e2e` starts four servers itself: `npm run build:e2e && npm run preview` (phase-1 build, `--mode e2e` so the cloud is off even on a machine with a real `.env.local`), `npm run build:cloud-e2e && npm run preview:cloud-e2e` (cloud on, served under `/one-percent-better/` like GitHub Pages, port 4174), `npm run build:native-e2e && npm run preview:native-e2e` (the Capacitor build, `--mode native-e2e`, base `/`, no service worker, port 4175; specs in `e2e/native/`) and `npm run mock:supabase` (port 54321). Cloud specs live in `e2e/cloud/` and import `test` from `e2e/cloud/fixtures.ts`: every Playwright worker gets its own browser User-Agent and the mock keeps separate state per worker, so parallel files never disturb each other (`mock.reset()` in `beforeEach`, `mock.log()`, `mock.fail()`, `mock.session()` are the test controls).
 
 E2E tests run with a fixed clock (`2026-10-09 10:00 Asia/Ho_Chi_Minh`) and a fresh browser context per test. QC tests live in `tests/qc/` and are picked up by both Vitest (`*.test.ts(x)`) and Playwright (`*.spec.ts`). Sample data for E2E lives in `e2e/fixtures/` (`sample-backup.json` is dataset S1: 5 goals, 23 entries; `o1-open-ended-backup.json` is dataset O1: one goal with no end date and 4 entries, M11; `large-backup.json` is the NFR-03 performance dataset: 5 goals × 3 years, 5,449 entries, regenerate with `npm run fixtures:large`; the `invalid-*.json`, `unsupported-version.json` and `xss-note.json` files exercise the import validation) and is loaded through the real Import flow (`importBackup(page)` in `e2e/helpers/app.ts`). The statistics benchmark (`src/services/stats-service.test.ts`) prints its timings as `[bench] …` lines; the Review perf E2E prints `[perf] …`.
 
@@ -223,22 +223,47 @@ The app has no server, so the daily reminder is **best effort and only works whi
 - When the app is closed nothing can fire. For a reliable reminder use **Add reminder to calendar (.ics)** on the Reminders card: it downloads `1percent-better-reminder.ics`, a daily repeating 15-minute event (starting tomorrow at the reminder time, in your local time) with a display alarm. Open the file with Google Calendar (Settings → Import & export), Outlook, Apple Calendar or any calendar app; re-import it if you change the reminder time.
 - iPhone/iPad: web notifications only work after adding the app to the Home Screen (iOS 16.4+).
 
+## iOS app (Capacitor)
+
+Since M12 the same code base also builds a native iOS app with [Capacitor 8](https://capacitorjs.com) (ADR-34/35 in `docs/plan/ARCHITECTURE.md`): the Vite bundle is packaged into a WKWebView, and the few things that differ between the web and the app live in **adapters** behind the existing ports.
+
+**How it is wired**
+
+- `npm run build:native` = `tsc -b && vite build --mode native` → `dist-native/`: base `/` (Capacitor serves from `capacitor://localhost`), **no service worker and no web manifest** (`vite-plugin-pwa` is disabled), and the build-time constant `__OPB_NATIVE__ = true`. `npm run build:native-e2e` is the same with the cloud forced off (`.env.native-e2e`) for Playwright. Like `npm run build`, `build:native` reads `.env.local`, but in M12 the app ignores the cloud configuration on native (no account until native sign-in exists, M14).
+- `src/integration/platform.ts` holds the **only** `import()` into `src/integration/native/**`, guarded by `__OPB_NATIVE__`; on the web build the bundler drops it, so `dist/` contains no Capacitor code (`grep -rl Filesystem dist` → nothing, while the same grep finds the plugin in `dist-native/`). ESLint refuses `@capacitor/*` / `@capgo/*` imports anywhere else, refuses `import()` of `integration/native` outside `platform.ts`, and refuses value imports from `src/integration/**` in `src/ui/**` (the UI reads `capabilities` and the ports from the container).
+- `src/integration/native/`: `index.ts` (`createNativePlatform()` — `null` when `Capacitor.getPlatform()` is `'web'`), `file-export.ts` (`FileExportPort`: write the file to the app cache with `@capacitor/filesystem`, then the iOS **share sheet** with `@capacitor/share`; dismissing the sheet is a silent cancel and does not count as a backup), `lifecycle.ts` (`resume` from `@capacitor/app` triggers the same reminder check / sync as `visibilitychange`).
+- `src/app/capabilities.ts` (`AppCapabilities`: `platform`, `serviceWorker`, `pwaHints`, `nativeShare`, `nativeAuth`, `appleSignIn`, `scheduledNotifications`, `publicSiteUrl`) is computed once in `src/app/container.ts`; the UI picks the native copy from it (Settings: Language note, Reminders "Not supported", Backup share hint, Storage "In this app", About "this iPhone", absolute privacy link that opens in Safari; no "New version" toast; no "Add to Home Screen" hints; native S9 copy). `src/app/start.ts` skips the service worker and its message channel on the native build.
+- `capacitor.config.ts`: `appId` `io.github.minhlgm.onepercentbetter`, `appName` `1% Better`, `webDir` `dist-native`. `ios/` is the committed Xcode project (Swift Package Manager, `ios/App/CapApp-SPM/Package.swift` regenerated by `cap sync`): bundle id as above, display name `1% Better`, iOS 16.4+, iPhone only, portrait only, `ITSAppUsesNonExemptEncryption = false`, version `1.0.0` build `1`. Generated files (`ios/App/App/public/`, `capacitor.config.json`, `config.xml`) are git-ignored, as are `dist-native*/` and every signing artefact (`*.p8`, `*.p12`, `*.mobileprovision`, …).
+
+**Commands**
+
+```bash
+npm run build:native          # web assets for the app → dist-native/
+npm run cap:sync              # build:native + `cap sync ios` (copies dist-native into ios/App/App/public, regenerates Package.swift) — works on Windows
+npm run build:native-e2e && npm run preview:native-e2e   # the native build in a browser at http://localhost:4175/ (what the `native-web` Playwright project tests)
+```
+
+**What a Windows machine cannot do.** Xcode, the iOS Simulator and signing exist only on macOS, so nothing here opens Xcode (`npx cap open ios` is not used) and nothing is installed globally. `npx cap add ios` / `npx cap sync ios` *do* run on Windows (they copy files and write `Package.swift`), which is how `ios/` was created. The actual Xcode build runs on GitHub: **Actions → iOS → Run workflow**, lane `simulator` (`.github/workflows/ios.yml`, runner `macos-26`, checks `xcodebuild -version` is Xcode 26, then `npm run build:native`, `npx cap sync ios` and an unsigned `xcodebuild … -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build`; the job summary shows the result). The `testflight` lane (signing with an App Store Connect API key and upload) comes with M13. Static tests keep the project honest without Xcode: `src/test/ios-project.test.ts` (pbxproj / Info.plist / capacitor.config), `src/test/ci-workflows.test.ts` (the workflow), `src/test/lint-boundaries.test.ts` (the ESLint boundaries); the native adapters are unit-tested with mocked plugins (`vi.mock('@capacitor/…')`).
+
 ## Project layout
 
 ```
 src/
-  app/          composition root (container), bootstrap (incl. OAuth callback), router, App, ErrorBoundary
+  app/          composition root (container), capabilities (what this build/platform can do), bootstrap (incl. OAuth callback), start (post-render wiring), router, App, ErrorBoundary
   config/       env (zod-validated, incl. cloud config), business constants
   domain/       pure logic: dates, goal, entry, timer, reminder, ics, backup, settings, stats, heatmap, curve, plusone (no React, no Dexie, no i18n)
   data/         repository interfaces + Dexie (IndexedDB) implementation (goal, entry, kv, timer, backup, local-data)
   services/     use cases: GoalService, EntryService, LocaleService, SettingsService, TimerService, ReminderService, BackupService, StatsService, AuthService (+ AuthPort contract)
-  integration/  browser APIs: storage persistence, service-worker registration, notifications, file download, connectivity, auth-callback;
-                supabase/ = the ONLY place that imports @supabase/supabase-js (loader.ts = lazy import, supabase-client.ts = SupabaseAuthPort)
+  integration/  browser APIs: storage persistence, service-worker registration, notifications, file download (web FileExportPort), connectivity, auth-callback;
+                supabase/ = the ONLY place that imports @supabase/supabase-js (loader.ts = lazy import, supabase-client.ts = SupabaseAuthPort);
+                platform.ts = the ONLY import() into native/; native/ = the ONLY place that imports @capacitor/* (file-export, lifecycle)
   i18n/         i18next instance, locale detection, Intl formatters, resources
   ui/           screens (Review and Goal detail are lazy-loaded), components (Heatmap, StatCard, BarChart + CurveChart = Recharts in a shared lazy chunk, AccountCard, SignOutDialog, GoogleSignInButton), hooks, styles
   sw.ts         service worker (Workbox precache, notification click → Today)
 supabase/       config.toml (Supabase local) + migrations/ (SQL run once on the project)
-e2e/            Playwright specs, helpers and fixtures; cloud/ = specs for the `cloud` project; mock-supabase/server.mjs = mock Supabase (Node http, no deps)
+capacitor.config.ts, ios/   Capacitor configuration and the committed Xcode project (see "iOS app (Capacitor)")
+.github/workflows/  pages.yml (deploy the web app), ios.yml (build the iOS app on macOS runners)
+e2e/            Playwright specs, helpers and fixtures; cloud/ = specs for the `cloud` project; native/ = specs for the `native-web` project; mock-supabase/server.mjs = mock Supabase (Node http, no deps)
 scripts/        icon generation, large fixture generation, test-db runner
 tests/qc/       QC-owned tests; tests/db/ = RLS/trigger tests for Supabase local (npm run test:db)
 ```

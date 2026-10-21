@@ -33,7 +33,7 @@ export default defineConfig({
       // Phase-1 app: build `--mode e2e` (cloud OFF even when the machine has a `.env.local`).
       name: 'chromium',
       testMatch: ['e2e/**/*.spec.ts', 'tests/qc/**/*.spec.ts'],
-      testIgnore: ['e2e/cloud/**', 'tests/qc/cloud/**'],
+      testIgnore: ['e2e/cloud/**', 'tests/qc/cloud/**', 'e2e/native/**', 'tests/qc/native/**'],
       use: { ...devices['Desktop Chrome'], baseURL: BASE_URL },
     },
     {
