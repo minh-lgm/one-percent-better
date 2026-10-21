@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import type { NativePlatform } from '../platform';
 import { createNativeFileExport } from './file-export';
 import { createLifecycle } from './lifecycle';
+import { createSystemUi } from './system-ui';
 
 export interface NativeDeps {
   getPlatform: () => string;
@@ -23,5 +24,6 @@ export function createNativePlatform(deps: NativeDeps = defaultDeps()): NativePl
     platform,
     fileExport: createNativeFileExport(),
     lifecycle: createLifecycle(),
+    systemUi: createSystemUi(),
   };
 }

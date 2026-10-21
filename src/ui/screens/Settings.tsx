@@ -5,6 +5,7 @@ import { toISODate } from '../../domain/dates';
 import { buildReminderIcs, ICS_FILE_NAME, ICS_MIME_TYPE } from '../../domain/ics';
 import type { NotificationPermissionState } from '../../domain/reminder';
 import type { SyncStatus } from '../../domain/sync';
+import { randomUuid } from '../../domain/uuid';
 import type { DomainError } from '../../domain/types';
 import type { MessageKey } from '../../i18n/types';
 import type { PersistState } from '../../integration/storage';
@@ -340,7 +341,7 @@ export function Settings() {
       today: toISODate(now),
       summary: t('ics.summary'),
       alarmDescription: t('ics.alarm'),
-      uid: `${crypto.randomUUID()}@one-percent-better`,
+      uid: `${randomUuid()}@one-percent-better`,
       now,
     });
     setIcsBusy(true);

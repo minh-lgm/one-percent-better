@@ -2,10 +2,11 @@ import type { EntryRepository, GoalRepository, KvRepository } from '../data/repo
 import { entriesOutsidePeriod, validateGoalInput, type GoalInput } from '../domain/goal';
 import { nextUpdatedAt } from '../domain/sync';
 import { fail, ok, type ActiveTimer, type Goal, type Result } from '../domain/types';
+import { randomUuid } from '../domain/uuid';
 
 export type IdGenerator = () => string;
 
-export const defaultIdGenerator: IdGenerator = () => crypto.randomUUID();
+export const defaultIdGenerator: IdGenerator = () => randomUuid();
 
 export class GoalService {
   constructor(

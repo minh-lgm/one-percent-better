@@ -1,6 +1,16 @@
 /* Global styles, adapted from the DESIGN.md mockups (A-D3: plain CSS + tokens). */
 @import './tokens.css';
 
+/* Safe area (DESIGN v5.0 "Native shell" 4, A-D68): declared once, used through var(--safe-*). On the web and in
+   the browser the insets are 0, so nothing moves; inside the iOS app (viewport-fit=cover, contentInset never)
+   they keep the header, tab bar, toasts and bottom sheets clear of the notch / Dynamic Island and Home indicator. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
 *,
 *::before,
 *::after {
@@ -8,6 +18,12 @@
 }
 html {
   -webkit-text-size-adjust: 100%;
+  /* The page background fills the status-bar / Home-indicator areas too, and the page never rubber-bands over a
+     white body (DESIGN "Native shell" 4). */
+  background: var(--bg);
+  overscroll-behavior: none;
+  /* Focused elements are scrolled clear of the status bar and the tab bar (DESIGN 8.3, WCAG 2.4.11). */
+  scroll-padding-top: calc(var(--safe-top) + 8px);
 }
 body {
   margin: 0;
@@ -15,6 +31,12 @@ body {
   color: var(--text);
   font: 400 var(--text-base) / 24px var(--font);
   min-width: 320px;
+  overscroll-behavior: none;
+}
+@media (max-width: 1023px) {
+  html {
+    scroll-padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
+  }
 }
 h1,
 h2,
@@ -63,7 +85,7 @@ select {
   z-index: 60;
 }
 .skip:focus {
-  top: 8px;
+  top: calc(8px + var(--safe-top));
 }
 .ic {
   width: 20px;
@@ -99,7 +121,15 @@ select {
   display: flex;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom);
+  /* 56 px of items + the Home-indicator inset below them (DESIGN "Native shell" 4). */
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+/* DESIGN "Native shell" 5 (OQ-D25): the tab bar yields to the form while the keyboard is open (class set by
+   src/integration/native/system-ui.ts). */
+body.keyboard-open .nav {
+  display: none;
 }
 .nav .brand {
   display: none;
@@ -154,7 +184,7 @@ select {
 main {
   max-width: 720px;
   margin: 0 auto;
-  padding: 16px 16px calc(var(--tabbar-h) + 80px);
+  padding: calc(16px + var(--safe-top)) max(16px, var(--safe-right)) calc(var(--tabbar-h) + var(--safe-bottom) + 80px) max(16px, var(--safe-left));
 }
 main:focus {
   outline: none;
@@ -643,12 +673,12 @@ form.card {
   z-index: var(--z-toast);
   left: 0;
   right: 0;
-  bottom: calc(var(--tabbar-h) + 12px);
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 12px);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 0 16px;
+  padding: 0 max(16px, var(--safe-right)) 0 max(16px, var(--safe-left));
   pointer-events: none;
 }
 .toast {
@@ -706,12 +736,16 @@ dialog.dialog::backdrop {
   margin-top: 24px;
 }
 @media (max-width: 639px) {
+  /* Bottom sheet (DESIGN 3.5; "Native shell" 4): never under the status bar, button row above the Home indicator. */
   dialog.dialog {
     position: fixed;
     inset: auto 0 0 0;
     max-width: none;
+    max-height: calc(100dvh - 16px - var(--safe-top));
     border-radius: var(--r-lg) var(--r-lg) 0 0;
     margin: 0;
+    padding-bottom: calc(24px + var(--safe-bottom));
+    overflow: auto;
   }
 }
 @media (min-width: 640px) {
@@ -747,7 +781,8 @@ dialog.dialog::backdrop {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  /* Full-page screens (S8, S9, ErrorBoundary) respect the insets themselves (DESIGN "Native shell" 4). */
+  padding: calc(24px + var(--safe-top)) max(16px, var(--safe-right)) calc(24px + var(--safe-bottom)) max(16px, var(--safe-left));
 }
 .error-page .box {
   max-width: 520px;
@@ -1826,7 +1861,7 @@ details.curve-table summary:focus-visible {
 /* D4 Sign out: body scrolls, button row sticks to the bottom (DESIGN 3.5) */
 dialog.dialog.signout,
 dialog.dialog.merge {
-  max-height: calc(100dvh - 16px);
+  max-height: calc(100dvh - 16px - var(--safe-top));
   padding: 0;
 }
 dialog.dialog.signout[open],
@@ -1845,7 +1880,7 @@ dialog.dialog.merge[open] {
   position: sticky;
   bottom: 0;
   margin: 20px 0 0;
-  padding: 16px 24px 24px;
+  padding: 16px 24px calc(24px + var(--safe-bottom));
   background: var(--surface);
   border-top: 1px solid var(--border);
 }

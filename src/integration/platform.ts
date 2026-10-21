@@ -3,12 +3,29 @@
 // and emits no Capacitor chunk; `true` only for `--mode native` / `--mode native-e2e`.
 import type { FileExportPort } from '../services/file-export-port';
 
+export type EffectiveTheme = 'light' | 'dark';
+
+/** The effective theme (OS `prefers-color-scheme`): current value + change subscription. */
+export interface ThemeSource {
+  current(): EffectiveTheme;
+  subscribe(cb: (theme: EffectiveTheme) => void): () => void;
+}
+
+/** M13 (DESIGN "Native shell" 2, 3, 5): status bar follows the theme, splash hidden by the app, keyboard class. */
+export interface NativeSystemUi {
+  /** Starts the status-bar / keyboard listeners; returns the stop function. */
+  start(theme?: ThemeSource): () => void;
+  hideSplash(): Promise<void>;
+}
+
 export interface NativePlatform {
   platform: 'ios' | 'android';
   /** M12 (§5.15): backup / .ics through the share sheet. */
   fileExport: FileExportPort;
   /** M12: `resume` → same triggers as `visibilitychange`. `onBackButton` arrives with Android (M16). */
   lifecycle: { onResume(cb: () => void): () => void; onBackButton?(cb: () => void): () => void };
+  /** M13: present on the real runtime; fakes may omit it. */
+  systemUi?: NativeSystemUi;
 }
 
 export interface NativeModule {

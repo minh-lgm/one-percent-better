@@ -1,7 +1,9 @@
 // Post-render wiring (ARCHITECTURE §5.12 "Thứ tự khởi động"), extracted from main.tsx so the native branch
 // is testable: maintenance, reminder scheduler, service-worker messages, sync scheduler and the service
 // worker itself. On the native build (`__OPB_NATIVE__`) there is no service worker and no SW message
-// channel; the Capacitor `resume` event feeds the same triggers as `visibilitychange`.
+// channel; the Capacitor `resume` event feeds the same triggers as `visibilitychange`. M13: the native system UI
+// (status bar, keyboard class) starts after the render and the launch image is hidden exactly once — after the
+// first render, or after `splashTimeoutMs` if the render has not finished by then (DESIGN "Native shell" 2).
 import type { ServiceWorkerHandle } from '../integration/sw-register';
 import type { AppContainer } from './container';
 import { startMaintenance } from './maintenance';
@@ -25,12 +27,42 @@ export interface StartOptions {
   /** `import.meta.env.BASE_URL`. */
   baseUrl: string;
   deps: StartDeps;
+  /** Resolves after React's first commit (main.tsx); the native launch image is hidden when it settles. */
+  firstRender?: Promise<void>;
+  /** Fallback: hide the launch image after this many ms even if the first render has not completed (default 3000). */
+  splashTimeoutMs?: number;
+}
+
+export const SPLASH_TIMEOUT_MS = 3000;
+
+/**
+ * Hide the launch image exactly once: when `firstRender` settles or when `timeoutMs` elapses, whichever comes
+ * first. Returns a cancel function (tests / teardown).
+ */
+export function hideSplashOnce(hide: () => Promise<void>, firstRender: Promise<void>, timeoutMs = SPLASH_TIMEOUT_MS): () => void {
+  let done = false;
+  const once = () => {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    void hide().catch(() => undefined);
+  };
+  const timer = setTimeout(once, timeoutMs);
+  void firstRender.then(once, once);
+  return () => clearTimeout(timer);
 }
 
 /** Starts the background work; returns a function that stops it (tests). */
-export function startApp({ container, reminderCheckIntervalMs, syncIntervalMs, prod, baseUrl, deps }: StartOptions): () => void {
+export function startApp({ container, reminderCheckIntervalMs, syncIntervalMs, prod, baseUrl, deps, firstRender, splashTimeoutMs = SPLASH_TIMEOUT_MS }: StartOptions): () => void {
   const stops: Array<() => void> = [];
   const resume = container.native ? (cb: () => void) => container.native!.lifecycle.onResume(cb) : undefined;
+
+  // M13: native system UI (status-bar style, keyboard class) and the launch image (ARCH §5.12 "Thứ tự khởi động").
+  const systemUi = container.native?.systemUi;
+  if (systemUi) {
+    stops.push(systemUi.start());
+    stops.push(hideSplashOnce(() => systemUi.hideSplash(), firstRender ?? Promise.resolve(), splashTimeoutMs));
+  }
 
   // Old tombstones are purged once, after the first paint (ADR-29); cloud on or off.
   void deps.startMaintenance({ purge: (now) => container.purgeTombstones(now) });

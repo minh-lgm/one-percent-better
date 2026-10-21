@@ -73,6 +73,29 @@ describe('capacitor.config.ts', () => {
     expect(cfg).toContain("contentInset: 'never'");
     expect(cfg).toContain("backgroundColor: '#F7F6F2'");
   });
+  it('M13: SplashScreen.launchAutoHide false (app hides it), Keyboard.resize native (ARCH §5.12), no spinner', () => {
+    expect(cfg).toMatch(/SplashScreen: \{[^}]*launchAutoHide: false/);
+    expect(cfg).toMatch(/SplashScreen: \{[^}]*showSpinner: false/);
+    expect(cfg).toMatch(/SplashScreen: \{[^}]*backgroundColor: '#F7F6F2'/);
+    expect(cfg).toMatch(/Keyboard: \{[^}]*resize: 'native'/);
+    expect(cfg).toMatch(/Keyboard: \{[^}]*resizeOnFullScreen: true/);
+    // The plugin module must not be loaded when the CLI reads the config: type-only import.
+    expect(cfg).toMatch(/import type \{ KeyboardResize \} from '@capacitor\/keyboard'/);
+    expect(cfg).not.toMatch(/^import \{[^}]*\} from '@capacitor\/keyboard'/m);
+  });
+});
+
+describe('package.json: M13 plugins pinned exact (ARCH §2 v5.0)', () => {
+  const pkg = JSON.parse(read('package.json')) as { dependencies: Record<string, string>; scripts: Record<string, string> };
+  it('@capacitor/status-bar 8.0.4, splash-screen 8.0.2, keyboard 8.0.6 in dependencies, no ^/~', () => {
+    expect(pkg.dependencies['@capacitor/status-bar']).toBe('8.0.4');
+    expect(pkg.dependencies['@capacitor/splash-screen']).toBe('8.0.2');
+    expect(pkg.dependencies['@capacitor/keyboard']).toBe('8.0.6');
+  });
+  it('has the ios:assets script (ADR-43) and the cap:sync script', () => {
+    expect(pkg.scripts['ios:assets']).toContain('scripts/gen-ios-assets.mjs');
+    expect(pkg.scripts['cap:sync']).toContain('cap sync ios');
+  });
 });
 
 describe('generated files stay out of git (.gitignore)', () => {

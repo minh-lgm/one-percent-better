@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuthState } from '../services/auth-service';
 import { createTestContainer, fakeNativePlatform, type TestContainer } from '../test/container';
 import { startReminderScheduler } from './reminder-scheduler';
-import { startApp, type StartDeps } from './start';
+import { hideSplashOnce, startApp, type StartDeps } from './start';
 import { startSyncScheduler } from './sync-scheduler';
 
 let tc: TestContainer | undefined;
@@ -122,5 +122,81 @@ describe('resume trigger on the schedulers (ARCH §5.12)', () => {
     expect(reasons).toEqual(['visible']);
     stop();
     expect(native.resumeListeners()).toBe(0);
+  });
+});
+
+describe('M13: native system UI and launch image (DESIGN "Native shell" 2, 3)', () => {
+  function systemUi() {
+    const stop = vi.fn();
+    return { start: vi.fn(() => stop), hideSplash: vi.fn(async () => undefined), stop };
+  }
+
+  it('native: systemUi.start() runs once after the render and SplashScreen.hide once after the first render', async () => {
+    const native = { ...fakeNativePlatform('ios'), systemUi: systemUi() };
+    tc = await createTestContainer({ native });
+    vi.useFakeTimers();
+    try {
+      let rendered!: () => void;
+      const firstRender = new Promise<void>((r) => (rendered = r));
+      const stop = startApp({ ...base, container: tc.container, deps: deps(), firstRender });
+      expect(native.systemUi.start).toHaveBeenCalledTimes(1);
+      expect(native.systemUi.hideSplash).toHaveBeenCalledTimes(0);
+      await vi.advanceTimersByTimeAsync(500);
+      expect(native.systemUi.hideSplash).toHaveBeenCalledTimes(0);
+      rendered();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(native.systemUi.hideSplash).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(native.systemUi.hideSplash).toHaveBeenCalledTimes(1);
+      stop();
+      expect(native.systemUi.stop).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('native: render not finished within 3000 ms → hide exactly once at 3000 ms, not again when the render completes', async () => {
+    const native = { ...fakeNativePlatform('ios'), systemUi: systemUi() };
+    tc = await createTestContainer({ native });
+    vi.useFakeTimers();
+    try {
+      let rendered!: () => void;
+      const firstRender = new Promise<void>((r) => (rendered = r));
+      startApp({ ...base, container: tc.container, deps: deps(), firstRender });
+      await vi.advanceTimersByTimeAsync(2999);
+      expect(native.systemUi.hideSplash).toHaveBeenCalledTimes(0);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(native.systemUi.hideSplash).toHaveBeenCalledTimes(1);
+      rendered();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(native.systemUi.hideSplash).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('web: no system UI, hide is never called', async () => {
+    tc = await createTestContainer();
+    const hide = vi.fn();
+    startApp({ ...base, container: tc.container, deps: deps(), firstRender: Promise.resolve() });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(hide).toHaveBeenCalledTimes(0);
+    expect(tc.container.native).toBeNull();
+  });
+
+  it('hideSplashOnce: a rejected first render still hides (once); a rejecting hide does not throw', async () => {
+    vi.useFakeTimers();
+    try {
+      const hide = vi.fn(async () => {
+        throw new Error('nope');
+      });
+      hideSplashOnce(hide, Promise.reject(new Error('render failed')), 3000);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(hide).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(hide).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

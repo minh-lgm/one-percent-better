@@ -45,11 +45,14 @@ async function start(): Promise<void> {
   }
 
   const { container } = result;
-  root.render(
-    <StrictMode>
-      <App container={container} router={createAppRouter()} />
-    </StrictMode>,
-  );
+  // M13: the native launch image is hidden after this first commit (3 s fallback in startApp).
+  const firstRender = new Promise<void>((resolve) => {
+    root.render(
+      <StrictMode>
+        <App container={container} router={createAppRouter()} onFirstRender={resolve} />
+      </StrictMode>,
+    );
+  });
 
   // Background work (maintenance, reminders, sync, service worker on the web build only — ARCH §5.12).
   startApp({
@@ -59,6 +62,7 @@ async function start(): Promise<void> {
     prod: import.meta.env.PROD,
     baseUrl: import.meta.env.BASE_URL,
     deps: { registerServiceWorker, listenForNavigation, startMaintenance, startReminderScheduler, startSyncScheduler },
+    firstRender,
   });
 }
 
