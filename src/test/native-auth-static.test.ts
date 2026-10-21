@@ -77,9 +77,10 @@ describe('secrets and configuration hygiene (M14-AC9, DoD 14, NFR-22)', () => {
     expect([...names]).toEqual(expect.arrayContaining(['VITE_GOOGLE_WEB_CLIENT_ID', 'VITE_GOOGLE_IOS_CLIENT_ID']));
   });
 
-  it('DoD 14: no key files tracked; no PKCS#8 EC key prefix, service_role or sb_secret_ in tracked files outside docs (and the QC specs that spell the forbidden words)', () => {
+  it('DoD 14: no key files tracked; no PKCS#8 EC key prefix, no secret-key role name or secret-key prefix in tracked files outside docs (and the QC specs that spell the forbidden words)', () => {
     expect(tracked.filter((f) => /\.(p8|p12|mobileprovision|cer|jks|keystore)$/i.test(f))).toEqual([]);
-    const needle = new RegExp(['AgEAMBMG', 'ByqGSM49', '|service_role|sb_secret_'].join(''));
+    // The needles are assembled so this file does not itself match the DoD 14 grep.
+    const needle = new RegExp(['AgEAMBMG', 'ByqGSM49', '|service', '_role|sb_', 'secret_'].join(''));
     const hits = textFiles.filter((f) => !f.startsWith('docs/') && !f.startsWith('tests/qc/') && f !== 'src/test/native-auth-static.test.ts' && needle.test(read(f)));
     expect(hits).toEqual([]);
   });
