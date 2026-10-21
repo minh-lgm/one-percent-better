@@ -113,12 +113,12 @@
       <a class="brand" href="./"><span class="mark" aria-hidden="true"><img src="./brand-mark-96.png" width="28" height="28" alt="" decoding="async" /></span><span>1% Better per Day</span></a>
       <section class="card" aria-labelledby="en-title">
         <h1 id="en-title">Privacy policy</h1>
-        <p class="muted">Last updated: 2026-10-12</p>
+        <p class="muted">Last updated: 2026-10-22</p>
         <h2>What the app stores</h2>
         <p>1% Better per Day keeps your goals, time entries, settings and running timer <strong>on your device</strong>, in the browser's IndexedDB. Without an account nothing ever leaves your device: no analytics, no server, no third-party scripts.</p>
-        <h2>If you sign in with Google (optional)</h2>
+        <h2>If you sign in with Google or Apple (optional)</h2>
         <ul>
-          <li>From Google the app receives only your <strong>name and email address</strong> (scopes <code>openid email profile</code>). No profile photo, no contacts, no other Google data.</li>
+          <li>From Google the app receives only your <strong>name and email address</strong> (scopes <code>openid email profile</code>). No profile photo, no contacts, no other Google data. In the iPhone app you can use <strong>Sign in with Apple</strong> instead: Apple gives the app your name (once) and your email address, or a private relay address if you choose "Hide My Email" — that then is a separate account, not linked to a Google account.</li>
           <li>Your goals, entries, reminder settings and language are then synced to the app's database (Supabase, project <code>grmcmidzyqwryaangpug</code>) under your account, so you can use them on all your devices. Row Level Security ensures that only you can read or change your rows; other people who use the app cannot see them.</li>
           <li>The session token is stored in your browser's local storage so you stay signed in. Signing out removes it from the device.</li>
         </ul>
@@ -127,7 +127,8 @@
         <h2>Deleting your data</h2>
         <ul>
           <li>On a device: <strong>Settings → Account → Sign out → "Remove data from this device"</strong> deletes goals, entries and reminder settings on that device (the language setting stays). Without an account you can also clear the site data in your browser.</li>
-          <li>In the cloud: write to <a href="mailto:minh.lgm@gmail.com">minh.lgm@gmail.com</a> from the Google address you signed in with and your account and all its rows will be deleted.</li>
+          <li>Your account and everything stored in it: <strong>Settings → Account → Delete account</strong>, in the web app or the iPhone app. This permanently deletes your account and all of its goals, entries and settings in the same transaction; it cannot be undone, and other devices signed in to that account are signed out. You choose whether the copy on the device you are using is removed too. If you signed in with Apple, the app also asks Apple to disconnect it (or shows how to do it in your iPhone settings).</li>
+          <li>If you cannot use the app any more, write to <a href="mailto:minh.lgm@gmail.com">minh.lgm@gmail.com</a> from the address you signed in with and the account and all its rows will be deleted for you.</li>
         </ul>
         <h2>Contact</h2>
         <p>Questions: <a href="mailto:minh.lgm@gmail.com">minh.lgm@gmail.com</a>. The app is open source: <a href="https://github.com/minh-lgm/one-percent-better">github.com/minh-lgm/one-percent-better</a>.</p>
@@ -137,12 +138,12 @@
 
       <section class="card" lang="vi" aria-labelledby="vi-title">
         <h1 id="vi-title">Chính sách quyền riêng tư</h1>
-        <p class="muted">Cập nhật: 12/10/2026</p>
+        <p class="muted">Cập nhật: 22/10/2026</p>
         <h2>App lưu những gì</h2>
         <p>1% Better per Day lưu mục tiêu, lần ghi, cài đặt và bộ đếm giờ đang chạy <strong>trên thiết bị của bạn</strong>, trong IndexedDB của trình duyệt. Khi chưa đăng nhập, không có gì rời khỏi thiết bị: không analytics, không máy chủ, không script bên thứ ba.</p>
-        <h2>Nếu bạn đăng nhập bằng Google (tùy chọn)</h2>
+        <h2>Nếu bạn đăng nhập bằng Google hoặc Apple (tùy chọn)</h2>
         <ul>
-          <li>Từ Google, app chỉ nhận <strong>tên và địa chỉ email</strong> của bạn (scope <code>openid email profile</code>). Không ảnh đại diện, không danh bạ, không dữ liệu Google nào khác.</li>
+          <li>Từ Google, app chỉ nhận <strong>tên và địa chỉ email</strong> của bạn (scope <code>openid email profile</code>). Không ảnh đại diện, không danh bạ, không dữ liệu Google nào khác. Trên app iPhone, bạn có thể dùng <strong>Đăng nhập bằng Apple</strong> thay thế: Apple cấp cho app tên của bạn (một lần) và địa chỉ email, hoặc một địa chỉ chuyển tiếp riêng tư nếu bạn chọn "Ẩn email của tôi" — khi đó đây là một tài khoản riêng, không liên kết với tài khoản Google.</li>
           <li>Mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ của bạn sau đó được đồng bộ vào cơ sở dữ liệu của app (Supabase, project <code>grmcmidzyqwryaangpug</code>) dưới tài khoản của bạn để dùng trên mọi thiết bị. Row Level Security bảo đảm chỉ bạn đọc hoặc sửa được dữ liệu của mình; những người khác dùng app không xem được chúng.</li>
           <li>Token phiên đăng nhập được lưu trong local storage của trình duyệt để bạn không phải đăng nhập lại. Đăng xuất sẽ xóa nó khỏi thiết bị.</li>
         </ul>
@@ -151,7 +152,8 @@
         <h2>Xóa dữ liệu của bạn</h2>
         <ul>
           <li>Trên một thiết bị: <strong>Cài đặt → Tài khoản → Đăng xuất → "Xóa dữ liệu khỏi thiết bị này"</strong> sẽ xóa mục tiêu, lần ghi và cài đặt nhắc nhở trên thiết bị đó (ngôn ngữ được giữ). Khi chưa đăng nhập, bạn cũng có thể xóa dữ liệu trang web trong trình duyệt.</li>
-          <li>Trên cloud: gửi email tới <a href="mailto:minh.lgm@gmail.com">minh.lgm@gmail.com</a> từ địa chỉ Google bạn đã dùng để đăng nhập; tài khoản và toàn bộ dữ liệu của bạn sẽ được xóa.</li>
+          <li>Tài khoản và mọi thứ được lưu trong đó: <strong>Cài đặt → Tài khoản → Xóa tài khoản</strong>, trên bản web hoặc app iPhone. Thao tác này xóa vĩnh viễn tài khoản cùng toàn bộ mục tiêu, lần ghi và cài đặt trong cùng một giao dịch; không thể hoàn tác, và các thiết bị khác đang đăng nhập tài khoản đó sẽ bị đăng xuất. Bạn tự chọn có xóa luôn bản sao trên thiết bị đang dùng hay không. Nếu bạn đăng nhập bằng Apple, app cũng yêu cầu Apple ngắt kết nối (hoặc hướng dẫn bạn tự làm trong cài đặt iPhone).</li>
+          <li>Nếu không còn dùng được app, hãy gửi email tới <a href="mailto:minh.lgm@gmail.com">minh.lgm@gmail.com</a> từ địa chỉ bạn đã dùng để đăng nhập; tài khoản và toàn bộ dữ liệu của bạn sẽ được xóa giúp.</li>
         </ul>
         <h2>Liên hệ</h2>
         <p>Thắc mắc: <a href="mailto:minh.lgm@gmail.com">minh.lgm@gmail.com</a>. Mã nguồn mở: <a href="https://github.com/minh-lgm/one-percent-better">github.com/minh-lgm/one-percent-better</a>.</p>
