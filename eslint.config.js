@@ -109,6 +109,8 @@ export default tseslint.config(
       'playwright-report/**',
       'test-results/**',
       'docs/**',
+      // v5.0 (M14): the Deno entry of the Edge Function (Deno globals, `npm:` specifier); handler.ts / apple.ts are linted.
+      'supabase/functions/**/index.ts',
     ],
   },
   js.configs.recommended,

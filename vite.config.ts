@@ -93,7 +93,8 @@ export default defineConfig(({ mode }) => {
           test: {
             name: 'node',
             environment: 'node',
-            include: ['src/**/*.test.ts', 'tests/qc/**/*.test.ts', 'scripts/**/*.test.mjs'],
+            // v5.0 (M14): the Edge Function's pure modules (handler.ts, apple.ts) are tested here on Node 22.
+            include: ['src/**/*.test.ts', 'tests/qc/**/*.test.ts', 'scripts/**/*.test.mjs', 'supabase/functions/**/*.test.ts'],
           },
         },
         {
