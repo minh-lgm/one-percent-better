@@ -60,6 +60,37 @@ User ──► UI (Settings › Account, SyncIndicator, LoginPromptBanner)
 - Không có cấu hình Supabase (`VITE_SUPABASE_URL`/key) → `cloud = null` trong container: không tạo `AuthService`/`SyncService` thật, UI ẩn mọi phần tài khoản, không tải SDK (FR-38).
 - SDK Supabase chỉ được nạp bằng `import()` động khi: người dùng bấm đăng nhập, URL là callback OAuth (`?auth=callback`), hoặc `localStorage` có key phiên `opb-auth` (ADR-18).
 
+**Phase 6 — một codebase, hai nền tảng (v5.0, M12 … M16):**
+
+```text
+                         src/ (React UI · services · domain · data/Dexie · i18n)  ← KHÔNG đổi theo nền tảng
+                                         │ AppCapabilities (đọc ở UI) + port (services)
+                     ┌───────────────────┴───────────────────────────┐
+     vite build (web: mode production/e2e/cloud-e2e)       vite build --mode native (base '/', __OPB_NATIVE__ = true)
+     __OPB_NATIVE__ = false → nhánh native bị loại         VitePWA disable → không sw.js, không manifest
+                     │                                                 │
+   dist/ → GitHub Pages /one-percent-better/            dist-native/ → npx cap sync ios → ios/App/App/public
+   Adapter web (src/integration/*):                     Adapter native (src/integration/native/*, nạp qua import()):
+   ├ NotificationPort: SW showNotification (khi mở)     ├ NotificationPort: @capacitor/local-notifications (lịch 14 ngày)
+   ├ FileExportPort: Blob + <a download>                ├ FileExportPort: @capacitor/filesystem + @capacitor/share
+   ├ Auth: OAuth PKCE redirect (Google)                 ├ IdTokenProvider: @capgo/capacitor-social-login (Google, Apple)
+   ├ Service worker + "New version" toast               ├ Lifecycle: @capacitor/app (resume), SplashScreen, StatusBar, Keyboard
+   └ storage.persist()                                  └ (không SW, không update toast, không hint PWA)
+                     │                                                 │
+                     └──────────────┬──────────────────────────────────┘
+                                    ▼  HTTPS (cùng project, cùng RLS)
+              Supabase: Auth (Google PKCE · signInWithIdToken Google/Apple) · PostgREST goals/entries/settings
+                        Edge Function delete-account (service-role, chỉ server) ──► appleid.apple.com /auth/token, /auth/revoke
+
+ Phát hành iOS (không Mac): GitHub Actions ios.yml trên macos-26 (Xcode 26)
+   npm ci → lint/typecheck/test → build:native → cap sync ios → xcodebuild archive (ký bằng App Store Connect API key)
+   → xcodebuild -exportArchive (destination upload) → App Store Connect → TestFlight → App Review → App Store
+```
+
+- Mọi khác biệt nền tảng nằm ở **lớp integration** (adapter) và **composition** (`container.ts` chọn adapter, tính `AppCapabilities`); service/domain/data không biết Capacitor tồn tại (ADR-34, ADR-35).
+- Bản web không chứa byte nào của Capacitor: hằng `__OPB_NATIVE__` (giống `__OPB_CLOUD__` của M10) loại nhánh `import('./native/…')` lúc build (NFR-18).
+- Trên native, AuthService dùng `IdTokenProvider` (bảng đăng nhập của hệ điều hành) rồi `signInWithIdToken`; trên web giữ PKCE redirect (§5.9 v5.0). Xoá tài khoản dùng chung Edge Function cho cả hai (§4.7).
+
 ## 2. Stack và lý do
 
 Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exact** version (không `^`), commit `package-lock.json`.
@@ -88,6 +119,18 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | SDK cloud (v2.0) | `@supabase/supabase-js` (lazy chunk) | 2.117.3 (kiểm npm 2026-10-12; `engines: node >=22`) | SDK chính thức: `signInWithOAuth` + `exchangeCodeForSession` (PKCE), PostgREST query builder (upsert, keyset filter); pin exact | Gọi REST tay bằng `fetch` (phải tự lo PKCE, refresh token, lưu phiên); chỉ `@supabase/auth-js` + `@supabase/postgrest-js` (nhỏ hơn nhưng ít phổ biến, cân nhắc nếu chunk > 60 KB gzip — ghi trong handoff) |
 | Supabase CLI (v2.0, chỉ test DB cục bộ) | `supabase` qua `npx --yes supabase@2.120.0` (không nằm trong `devDependencies`) | 2.120.0 (có binary `@supabase/cli-windows-x64`) | Chạy Supabase local trên Docker để áp migration và test RLS/trigger thật; không làm nặng `npm ci`; cache của npx không phải cài global | Thêm vào devDependencies (tải binary cho mọi máy, kể cả CI không cần); pgTAP (`supabase test db`, viết SQL test khó đọc hơn với đội) |
 | Mock Supabase cho E2E (v2.0) | Server Node `http` thuần trong `e2e/mock-supabase/` | — (không thêm dependency) | Chạy OAuth PKCE + REST cần thiết không cần Docker/tài khoản thật (NFR-17); kiểm được cả luồng redirect trên sub-path | `page.route` chặn request (không mô phỏng được điều hướng toàn trang tới trang authorize); MSW (thêm dependency, chạy trong page) |
+
+**Bổ sung v5.0 (phase 6).** Version kiểm trên npm registry ngày 2026-10-21 (`registry.npmjs.org/<pkg>/latest`); pin exact. Mọi plugin có `peerDependencies: { "@capacitor/core": ">=8.0.0" }`.
+
+| Lớp | Lựa chọn | Version | Lý do | Phương án đã loại |
+| :- | :- | :- | :- | :- |
+| Native runtime (v5.0) | Capacitor: `@capacitor/core`, `@capacitor/ios` (dependencies), `@capacitor/cli` (devDependency) | 8.5.3 | Bọc nguyên bản build Vite trong WKWebView, cùng codebase (ADR-34); Capacitor 8 yêu cầu Node ≥ 22 (máy có 22.14), Xcode 26, iOS deployment ≥ 15 (app đặt 16.4, A-59); project iOS mới dùng Swift Package Manager (không cần CocoaPods/Ruby) | React Native/Flutter/SwiftUI (viết lại UI — non-goal); PWABuilder/WebView tự viết (không có plugin, tự lo bridge); Cordova (cũ, ít plugin hiện đại); Expo (React Native) |
+| Plugin lõi (v5.0) | `@capacitor/app`, `@capacitor/filesystem`, `@capacitor/share` (M12); `@capacitor/status-bar`, `@capacitor/splash-screen`, `@capacitor/keyboard` (M13); `@capacitor/local-notifications` (M15); `@capacitor/android` (M16) | 8.1.2, 8.1.5, 8.0.3; 8.0.4, 8.0.2, 8.0.6; 8.3.1; 8.5.3 | Plugin chính thức của đội Capacitor, cùng nhịp phát hành, hỗ trợ SPM | Plugin cộng đồng tương đương (rủi ro bảo trì) |
+| Đăng nhập native (v5.0) | `@capgo/capacitor-social-login` | 8.7.4 (peer `@capacitor/core >=8.0.0`) | Một plugin cho Google (Google Sign-In SDK) và Apple (AuthenticationServices), trả `idToken` + nhận `nonce`, Apple có `authorizationCode` (`useProperTokenExchange`) để thu hồi token khi xoá (A-62); tắt Facebook/Twitter lúc build (`providers`) để không kéo SDK thừa; có hướng dẫn chính thức với Supabase `signInWithIdToken` (ADR-36) | `@capacitor-firebase/authentication` (kéo Firebase SDK + project Firebase chỉ để lấy token); `@codetrix-studio/capacitor-google-auth` (không còn bảo trì cho Capacitor mới); `@capacitor-community/apple-sign-in` + một plugin Google riêng (hai plugin, hai cách xử lý lỗi); OAuth qua `ASWebAuthenticationSession` + deep link (cần custom scheme, redirect URL mới, vẫn phải có Apple, UX kém hơn bảng native) |
+| Server function (v5.0) | Supabase Edge Function (Deno 2) `delete-account`; SDK trong function: `npm:@supabase/supabase-js@2.117.3` | — | Xoá user Auth cần quyền service-role, không được ở client (ADR-39); Supabase đã là backend, không thêm nhà cung cấp; deploy được không cần Docker (`supabase functions deploy --use-api` hoặc Dashboard editor) | Server/Cloud Function riêng (thêm hạ tầng); RPC Postgres `security definer` xoá `auth.users` (không thu hồi được Apple, đụng schema `auth` trực tiếp) |
+| CI iOS (v5.0) | GitHub Actions runner `macos-26` (GA 2026-02-26, arm64; Xcode 26.x mặc định) + `xcodebuild` + App Store Connect API key | Xcode 26.x (bắt buộc cho mọi bản tải lên từ 2026-04-28) | Máy user không có Mac; repo public nên runner GitHub chuẩn miễn phí; `xcodebuild -allowProvisioningUpdates` + khoá API ký tự động và `-exportArchive` với `destination = upload` tải thẳng lên App Store Connect (ADR-38) | fastlane + match (thêm Ruby/Bundler và một repo private chứa chứng chỉ); Xcode Cloud (cần Mac để thiết lập lần đầu); Codemagic/Bitrise (dịch vụ ngoài, giới hạn phút); mua/thuê Mac |
+| Ảnh store/icon (v5.0) | Playwright Chromium (đã có) + bộ đọc/ghi PNG tự viết bằng `node:zlib` | — | Sinh icon 1024 không alpha, splash, screenshot 1320×2868 từ chính app, không thêm dependency ảnh (ADR-43) | `@capacitor/assets` 3.0.5 (bản cuối 2024, phụ thuộc `@capacitor/cli` 5 và `sharp` 0.32 — rủi ro cài trên Node 22/Windows); `sharp` trực tiếp (binary native, thêm biến số) |
+| Android (v5.0, tuỳ chọn M16) | Capacitor Android 8.5.3; Gradle wrapper 8.14.3, AGP 8.13.0 (theo template Capacitor 8); JDK 21 (Temurin) trên `ubuntu-latest` | minSdk 24, compile/target 36 | Cùng codebase; target 36 là yêu cầu Google Play cho app mới/cập nhật từ 2026-08-31 | — |
 
 ## 3. Component
 
@@ -183,6 +226,32 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `supabase/migrations/20261019000000_goal_open_ended.sql` (mới) | data (hạ tầng cloud) | Bỏ NOT NULL, ràng buộc `goals_period_check`, `goals_open_ended_daily_check` (§4.6 f) | — | M11 |
 | `ui/screens/GoalForm.tsx`, `Goals.tsx`, `GoalDetail.tsx`, `Day.tsx`, `Review.tsx` (hoặc component Stat), `ui/components/CurveChart.tsx`, `ui/error-messages.ts` (sửa) | UI | Radio thứ ba "Không có thời hạn", hành vi với Total hours, hiển thị "từ {start}", "Day {k}", Range, Stat Progress — theo DESIGN v4.0 | services, i18n | M11 |
 
+**Component mới/sửa ở v5.0 (phase 6 — app iOS):**
+
+| Component | Lớp | Trách nhiệm | Phụ thuộc | Milestone |
+| :- | :- | :- | :- | :- |
+| `capacitor.config.ts` | config | appId, appName, `webDir: 'dist-native'`, cấu hình plugin (§5.12) | `@capacitor/cli` (kiểu) | M12 (+M13–M15) |
+| `vite.config.ts` (sửa) | config | Mode `native`/`native-e2e`: `__OPB_NATIVE__ = true`, `base: '/'`, outDir riêng, `VitePWA({ disable: true })` (ADR-35) | — | M12 |
+| `integration/platform.ts` | integration | `loadNativePlatform(): Promise<NativePlatform \| null>` — điểm **duy nhất** `import()` vào `integration/native/**`, chỉ khi `__OPB_NATIVE__`; trả `null` trên web và khi `Capacitor.getPlatform() === 'web'` | — | M12 |
+| `integration/native/index.ts` | integration | `createNativePlatform()` → `NativePlatform` (§5.12): `platform`, `fileExport`, `lifecycle`, (M13) `systemUi`, (M14) `idTokens`, (M15) `notifications` | `@capacitor/core` + adapter cùng thư mục | M12 … M15 |
+| `integration/native/lifecycle.ts` | integration | `onResume(cb)`, `onPause(cb)` qua `@capacitor/app` (`appStateChange`, `resume`); (M16) `onBackButton` | `@capacitor/app` | M12 (M16) |
+| `services/file-export-port.ts` + `integration/file-io.ts` (adapter web) + `integration/native/file-export.ts` | logic (port) / integration | `FileExportPort.saveText` (§5.15): web tải file, native ghi cache + share sheet | File API; `@capacitor/filesystem`, `@capacitor/share` | M12 |
+| `integration/native/system-ui.ts` | integration | Status bar theo theme, ẩn splash một lần (dự phòng 3 s), cấu hình bàn phím | `@capacitor/status-bar`, `@capacitor/splash-screen`, `@capacitor/keyboard` | M13 |
+| `services/id-token-port.ts` + `integration/native/social-login.ts` | logic (port) / integration | `IdTokenProvider` (§5.9 v5.0): bảng đăng nhập Google/Apple native, nonce (raw + SHA-256), `authorizationCode` Apple, `logout` | `@capgo/capacitor-social-login`, Web Crypto | M14 |
+| `services/auth-port.ts`, `auth-service.ts` (sửa) | logic (application) | `AuthProvider`, `AuthSession.providers`, `signInWithIdToken`, `signIn(returnTo, provider)`, `deleteAccount({ keepData })` (§5.9 v5.0, §4.7 b) | ports | M14 |
+| `services/account-deletion-port.ts` + `integration/supabase/supabase-client.ts` (`SupabaseAccountDeletionPort`) | logic (port) / integration | Gọi Edge Function `delete-account` qua `client.functions.invoke`, timeout 20 s, ánh xạ lỗi (§5.16) | `@supabase/supabase-js` (lazy chunk) | M14 |
+| `services/sync-service.ts` (sửa) | logic (application) | `pauseForAccountDeletion()` (chu kỳ sau trả `skipped`), `reset({ forgetLastUser })` (A-61) | — | M14 |
+| `supabase/functions/delete-account/index.ts`, `handler.ts`, `apple.ts` | integration (server, Deno) | Xác minh JWT, xoá dữ liệu + user, thu hồi Apple (§4.7) | Supabase (service-role, chỉ trong function), `appleid.apple.com` | M14 |
+| `domain/reminder-plan.ts` | logic (domain) | `planReminderDates(input) → ISODate[]` thuần (§5.6 v5.0) | dates, goal, stats | M15 |
+| `services/notification-port.ts`, `reminder-service.ts`, `app/reminder-scheduler.ts` (sửa) | logic / composition | `canSchedule`, `schedule`, `cancelAll`; `ReminderService.replan(now)`; trigger native | domain/reminder-plan | M15 |
+| `integration/native/local-notifications.ts` | integration | `NotificationPort` native: quyền, lịch 14 ngày (id 1000–1013), chạm → `#/today` | `@capacitor/local-notifications` | M15 |
+| `app/container.ts`, `AppContext.tsx`, `main.tsx` (sửa) | config (composition) | Chọn adapter theo `NativePlatform`; tính `AppCapabilities`; native: không SW/`listenForNavigation`, `AuthService.unavailable()` tới khi `nativeAuth` (M14) | integration/platform | M12 … M15 |
+| `ui/components/AppleSignInButton.tsx`, `DeleteAccountDialog.tsx` (D6), sửa `AccountCard`, `LoginPromptBanner`, `ExportSignInHint`, `Settings` | UI | Theo DESIGN v5.0; chỉ đọc `capabilities`, gọi service | services, i18n | M12 … M15 |
+| `ios/` (project Xcode, SPM), `ios/ci/*` | native project, CI | Cấu hình §5.13; ExportOptions; version | — | M12, M13 |
+| `.github/workflows/ios.yml` (`android.yml` M16) | CI | Lane `simulator`, `testflight` (§5.14) | GitHub Actions `macos-26` | M12, M13 |
+| `scripts/gen-ios-assets.mjs`, `scripts/lib/png-rgb.mjs`, `scripts/ios-version.mjs` | tooling | Icon/splash không alpha, phiên bản + số build | Playwright, `node:zlib` | M13 |
+| `store/**`, `playwright.store.config.ts`, `public/support.html`, `public/privacy.html` (sửa) | store assets, static | Metadata `en-US`/`vi`, screenshot 1320×2868, trang hỗ trợ/quyền riêng tư | Playwright | M15 |
+
 **Quy tắc phụ thuộc (bắt buộc, cưỡng chế bằng ESLint `no-restricted-imports`):**
 
 - `src/domain/**` không import `react`, `react-dom`, `dexie`, `recharts`, `i18next`, `react-i18next`, hay bất kỳ file nào trong `src/data`, `src/services`, `src/integration`, `src/ui`, `src/app`, `src/i18n` (domain không biết ngôn ngữ).
@@ -193,6 +262,7 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 - **(v2.0)** `@supabase/*` chỉ được import (tĩnh) trong `src/integration/supabase/**`; mọi file khác import `@supabase/*` → lỗi lint. File ngoài `src/integration/supabase/**` không được import **tĩnh** `integration/supabase/supabase-client` (chỉ `loader.ts` dùng `import()` động; `no-restricted-imports` không xét `import()` nên quy tắc này giữ cho SDK nằm ngoài entry chunk). `src/services/**` thêm cấm `@supabase/*` và `src/integration/**` (integration được truyền qua constructor/factory). `src/domain/**` không đổi (thuần).
 - **(v3.1, ADR-27)** `zod` chỉ được import trong `src/domain/backup.ts` và `src/integration/supabase/**` (cùng file test); mọi file khác import `zod` → lỗi `no-restricted-imports`. `src/ui/**`, `src/app/**`, `src/services/**`, `src/domain/**`, `src/data/**` không được import giá trị từ `src/domain/backup.ts` **tĩnh** (dùng `domain/backup-file.ts`; `import type` được phép, rule đặt `allowTypeImports: true`); chỉ `BackupService` nạp nó bằng `import()`.
 - **(v3.1, M6-P1)** `import()` động tới `@supabase/*` hoặc tới `integration/supabase/supabase-client` ngoài `src/integration/supabase/**` → lỗi (ESLint `no-restricted-syntax`, selector `ImportExpression[source.value=/^@supabase\//]` và `ImportExpression[source.value=/supabase-client/]`; với `src/ui/**`, `src/app/**` phải gộp vào **cùng** khai báo `no-restricted-syntax` đang có, vì flat config ghi đè cả mảng selector).
+- **(v5.0, ADR-35)** `@capacitor/*` và `@capgo/*` chỉ được import trong `src/integration/native/**` (và test cùng thư mục); mọi file khác → lỗi `no-restricted-imports` (kể cả `src/integration/*.ts` ngoài thư mục `native/`). `import()` tới `integration/native` chỉ được viết trong `src/integration/platform.ts` (`no-restricted-syntax` với selector `ImportExpression[source.value=/integration\/native|\.\/native\//]` cho mọi file khác; gộp vào khai báo `no-restricted-syntax` sẵn có của `src/ui/**`, `src/app/**`). `src/ui/**` không import **giá trị** từ `src/integration/**` (`import type` vẫn được, `allowTypeImports: true`): Settings đi qua `FileExportPort` thay cho `downloadTextFile`; `readTextFile` và hằng MIME đi qua container hoặc chuyển sang module ngoài `integration` (developer chọn, ghi handoff). `supabase/functions/**/index.ts` (Deno) nằm ngoài ESLint/`tsc` của app; `handler.ts`, `apple.ts` (TypeScript thuần, không import Deno/npm) vẫn được lint + typecheck + test.
 - Rule tách lớp của `src/domain/**`, `src/services/**`, `src/ui/**` bỏ qua file `*.test.ts`/`*.test.tsx` (để test đọc `en.json`/`vi.json` và dựng repository Dexie thật trên fake-indexeddb). Code không phải test vẫn bị chặn (probe M1-AC13, M1-AC17 vẫn exit ≠ 0).
 
 **Quy tắc chuỗi hiển thị (bắt buộc, cưỡng chế bằng ESLint + test, NFR-11):**
@@ -701,6 +771,116 @@ Developer được chỉnh cú pháp cho chạy đúng trên Supabase hosted/loc
 - **Thiết bị bản cũ (trước M11):** mapper cũ coi hàng NULL là sai schema → bỏ qua, đếm `skippedInvalid` (Account card hiện dòng "remote invalid" như hiện tại), con trỏ vẫn đi qua hàng đó. **Đặt lại con trỏ một lần (ADR-33):** hằng `PULL_RESET_VERSION = 1` (`config/constants.ts`); ở đầu mỗi `syncNow` (trong lock `opb-sync`, trước bước push) `SyncService` gọi `kv.update('sync', s => s && (s.pullResetVersion ?? 0) < PULL_RESET_VERSION ? { ...s, cursor: { ...s.cursor, goals: null }, pullResetVersion: PULL_RESET_VERSION } : undefined)` — nguyên tử, chạy đúng một lần mỗi thiết bị; chu kỳ đó kéo lại toàn bộ bảng `goals` (vài chục hàng), LWW idempotent nên vô hại. Entry của goal bị bỏ qua đã nằm trong IndexedDB (chỉ bị ẩn vì goal không có) và hiện lại ngay khi goal được áp. `cursor.entries` không đổi. Không có kv `sync` (chưa từng đăng nhập) → không ghi gì. `SyncService.reset()`/`clearUserData` không cần giữ cờ (cursor mới vốn là `null`).
 - **M11 đẩy trước khi chạy migration:** server trả `23502` (not null) → lô tách tới từng hàng → `dirty = 2` theo ADR-28 (không chặn chu kỳ); khôi phục theo A-55 (chạy migration rồi lưu lại goal đó). README và U12 nói rõ thứ tự.
 
+### 4.7 Xoá tài khoản: Edge Function `delete-account` (phase 6, M14; FR-61, NFR-23, A-61, A-62, ADR-39)
+
+**(a) Không đổi schema.** Ba bảng đã có `user_id … references auth.users (id) on delete cascade` (migration M6, dòng định nghĩa `goals`, `entries`, `settings`). Xoá một hàng `auth.users` (GoTrue `auth.admin.deleteUser`, hard delete) xoá luôn mọi hàng của user trong **cùng transaction**, kể cả tombstone, không cần quyền DELETE của bất kỳ role nào trên bảng (hành động FK chạy với quyền chủ bảng, không áp RLS). Vì vậy function **không** tự xoá từng bảng trước: cách đó cần thêm grant cho `service_role` (migration M6 chỉ grant cho `authenticated`; Supabase không còn tự expose bảng mới cho Data API) và có thể để lại trạng thái "tài khoản còn, dữ liệu cloud mất" nếu bước xoá user lỗi. Phase 6 không có migration SQL (A-66).
+
+**(b) Luồng phía client (`AuthService.deleteAccount({ keepData })`):**
+
+1. Điều kiện: `signed-in` (khác → `ACCOUNT_DELETE_SESSION_EXPIRED` nếu `expired`, `AUTH_FAILED` nếu `unavailable`/`signed-out`), online (khác → `ACCOUNT_DELETE_OFFLINE`).
+2. Nếu `session.providers` chứa `'apple'` **và** `idTokens?.available('apple')` (iOS): `idTokens.getIdToken('apple')` để người dùng xác nhận lại → lấy `authorizationCode` (hạn 5 phút). Huỷ → `ACCOUNT_DELETE_CANCELLED`, dừng. Không có code (plugin không trả) → tiếp tục không có code.
+3. `syncService.pauseForAccountDeletion()` (mọi `syncNow` sau đó trả `skipped`; chu kỳ đang chạy được chờ xong tối đa 10 s).
+4. `accountDeletion.deleteAccount({ appleAuthorizationCode })` (§5.16). Lỗi → bỏ pause, map lỗi (`failed` → `ACCOUNT_DELETE_FAILED`, `session-expired` → `ACCOUNT_DELETE_SESSION_EXPIRED`, `offline` → `ACCOUNT_DELETE_OFFLINE`), trạng thái vẫn `signed-in`, dữ liệu cục bộ không đổi.
+5. Thành công: `port.signOut()` (local; phiên đã vô hiệu ở server) → `idTokens?.logout(provider đã dùng)` → `syncService.reset({ forgetLastUser: true })` (xoá cursor, `userId`, **và** `lastUserId`, A-61) → nếu `!keepData`: `LocalDataRepository.clearUserData()` (như FR-41 Remove, giữ `locale`) → state `signed-out` → `emitOutcome({ kind: 'account-deleted', appleRevoked })` (UI hiện toast; `manual-required` + có Apple → panel hướng dẫn).
+
+**(c) Contract HTTP** (`POST <SUPABASE_URL>/functions/v1/delete-account`):
+
+| | Giá trị |
+| :- | :- |
+| Header | `Authorization: Bearer <access token của phiên>` (bắt buộc), `apikey: <publishable key>` (SDK tự gửi), `Content-Type: application/json` |
+| Body | `{ "appleAuthorizationCode"?: string }` (≤ 4 KB; field lạ bị bỏ qua; **không** nhận `user_id` — user luôn lấy từ JWT) |
+| 200 | `{ "deleted": true, "appleRevoked": "not-applicable" \| "revoked" \| "manual-required" }` |
+| 401 | `{ "error": "unauthorized" }` — thiếu/sai JWT, user không còn |
+| 405 | `{ "error": "method_not_allowed" }` |
+| 500 | `{ "error": "delete_failed" }` — `deleteUser` lỗi; không gì bị xoá (transaction) |
+| CORS | `OPTIONS` → 204; `Access-Control-Allow-Origin` = origin của request nếu thuộc `ALLOWED_ORIGINS` (mặc định `https://minh-lgm.github.io,http://localhost:5173,http://localhost:4173,http://localhost:4174,capacitor://localhost,https://localhost`), ngược lại không đặt header; `Allow-Methods: POST, OPTIONS`; `Allow-Headers: authorization, apikey, content-type, x-client-info` |
+
+`verify_jwt = false` ở gateway (`supabase/config.toml` `[functions.delete-account]`, deploy với `--no-verify-jwt`): function **tự** xác minh bằng `admin.auth.getUser(jwt)` (đúng cả với khoá ký JWT bất đối xứng mới của Supabase), nên request không JWT không bao giờ tới bước xoá.
+
+**(d) Skeleton** (`supabase/functions/delete-account/`; `handler.ts`, `apple.ts` là TypeScript thuần, test bằng Vitest trên Node 22; `index.ts` là phần Deno mỏng):
+
+```ts
+// handler.ts — không import gì ngoài type nội bộ
+export type AppleRevokeResult = 'not-applicable' | 'revoked' | 'manual-required';
+export interface AppleConfig { teamId: string; keyId: string; clientId: string; privateKeyPem: string }
+export interface DeleteAccountDeps {
+  allowedOrigins: string[];
+  getUser(jwt: string): Promise<{ id: string; providers: string[] } | null>;   // null = JWT sai/user không còn
+  deleteUser(userId: string): Promise<void>;                                    // hard delete → FK cascade
+  apple: AppleConfig | null;                                                    // null khi thiếu 1 trong 4 secret
+  exchangeAppleCode(code: string, cfg: AppleConfig): Promise<{ refreshToken: string | null; accessToken: string | null }>;
+  revokeAppleToken(token: string, hint: 'refresh_token' | 'access_token', cfg: AppleConfig): Promise<void>;
+  log(event: string): void;                                                     // không bao giờ nhận token/code/email
+}
+
+export async function handleDeleteAccount(req: Request, deps: DeleteAccountDeps): Promise<Response> {
+  const cors = corsHeaders(req.headers.get('origin'), deps.allowedOrigins);
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+  if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' }, cors);
+  const jwt = bearerToken(req.headers.get('authorization'));
+  const user = jwt ? await deps.getUser(jwt).catch(() => null) : null;
+  if (!user) return json(401, { error: 'unauthorized' }, cors);
+  const { appleAuthorizationCode } = await readBody(req);          // JSON lỗi/quá 4 KB → {}
+  try {
+    await deps.deleteUser(user.id);                                 // goals, entries, settings đi theo cascade
+  } catch {
+    deps.log('delete_failed');
+    return json(500, { error: 'delete_failed' }, cors);
+  }
+  let appleRevoked: AppleRevokeResult = 'not-applicable';
+  if (user.providers.includes('apple')) {
+    appleRevoked = 'manual-required';                               // A-62, Apple TN3194
+    if (deps.apple && appleAuthorizationCode) {
+      try {
+        const t = await deps.exchangeAppleCode(appleAuthorizationCode, deps.apple);
+        const token = t.refreshToken ?? t.accessToken;
+        if (token) {
+          await deps.revokeAppleToken(token, t.refreshToken ? 'refresh_token' : 'access_token', deps.apple);
+          appleRevoked = 'revoked';
+        }
+      } catch { deps.log('apple_revoke_failed'); }
+    }
+  }
+  deps.log('deleted');
+  return json(200, { deleted: true, appleRevoked }, cors);
+}
+```
+
+```ts
+// apple.ts — Web Crypto (có sẵn ở Deno và Node 22)
+// createClientSecret: JWT ES256, header { alg: 'ES256', kid: keyId }, payload { iss: teamId, iat, exp: iat + 300,
+//   aud: 'https://appleid.apple.com', sub: clientId }; ký bằng khoá PKCS#8 PEM (.p8) import qua
+//   crypto.subtle.importKey('pkcs8', …, { name: 'ECDSA', namedCurve: 'P-256' }); chữ ký ECDSA của Web Crypto
+//   đã ở dạng r||s (IEEE P1363) đúng chuẩn JWS.
+// exchangeCode: POST https://appleid.apple.com/auth/token (x-www-form-urlencoded):
+//   client_id, client_secret, code, grant_type=authorization_code → { refresh_token?, access_token? }
+// revokeToken: POST https://appleid.apple.com/auth/revoke: client_id, client_secret, token, token_type_hint
+// client_id = bundle ID (app native), timeout 10 s mỗi request.
+export function appleConfigFromEnv(get: (k: string) => string | undefined): AppleConfig | null;
+```
+
+```ts
+// index.ts (Deno; ngoài tsc/ESLint của app)
+import { createClient } from 'npm:@supabase/supabase-js@2.117.3';
+import { handleDeleteAccount } from './handler.ts';
+import { appleConfigFromEnv, exchangeCode, revokeToken } from './apple.ts';
+const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  { auth: { persistSession: false, autoRefreshToken: false } });
+Deno.serve((req) => handleDeleteAccount(req, {
+  allowedOrigins: (Deno.env.get('ALLOWED_ORIGINS') ?? DEFAULT_ALLOWED_ORIGINS).split(','),
+  getUser: async (jwt) => { const { data, error } = await admin.auth.getUser(jwt);
+    return error || !data.user ? null : { id: data.user.id, providers: (data.user.app_metadata?.providers as string[]) ?? [] }; },
+  deleteUser: async (id) => { const { error } = await admin.auth.admin.deleteUser(id); if (error) throw error; },
+  apple: appleConfigFromEnv((k) => Deno.env.get(k)),
+  exchangeAppleCode: exchangeCode, revokeAppleToken: revokeToken,
+  log: (event) => console.log(JSON.stringify({ fn: 'delete-account', event })),
+}));
+```
+
+**(e) Thiết bị khác của tài khoản đã xoá:** refresh token không còn dùng được → SDK phát `SIGNED_OUT` ngoài ý muốn → `session-expired` → `expired` (FR-40); REST trả 401 → `SYNC_UNAUTHORIZED`. Dữ liệu cục bộ giữ nguyên; người dùng đăng nhập lại (cùng Gmail) sẽ là user **mới**, thiết bị đó có `lastUserId` cũ ≠ user mới → hộp thoại D5 (FR-47) hỏi trước khi đẩy dữ liệu cũ lên — đúng ý "đã xoá thì không tự sống lại".
+
+**(f) Idempotent và thử lại:** gọi lại sau khi đã xoá → `getUser` thất bại → 401 → client hiện `ACCOUNT_DELETE_SESSION_EXPIRED`; trường hợp hiếm (lần đầu thành công nhưng client timeout) người dùng thấy lỗi phiên dù tài khoản đã xoá — chấp nhận, đăng nhập lại sẽ tạo tài khoản mới trống (ghi README).
+
 ## 5. Interface contract
 
 App không có HTTP API. Contract gồm: route, repository interface, service, mã lỗi, định dạng file backup, notification.
@@ -901,6 +1081,11 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 | `SYNC_UNREACHABLE` (M7) | Timeout 20 s, DNS/TLS lỗi, project bị tạm dừng (free tier), 5xx, 429 |
 | `SYNC_UNAUTHORIZED` (M7) | 401/403 từ REST → chuyển `AuthService` sang `expired` |
 | `SYNC_REMOTE_INVALID` (M7) | Hàng kéo về không qua zod (bị bỏ qua, đếm trong `ApplyResult.skippedInvalid`; chỉ ghi log + trạng thái, không chặn chu kỳ) |
+| `AUTH_CANCELLED` / `AUTH_FAILED` (mở rộng v5.0, M14) | Native: người dùng đóng bảng Google/Apple → `AUTH_CANCELLED`; plugin lỗi, thiếu `idToken`, `signInWithIdToken` lỗi (nonce/audience sai, mạng) → `AUTH_FAILED`; `signIn(…, 'apple')` trên nền tảng không có Apple → `AUTH_FAILED` |
+| `ACCOUNT_DELETE_OFFLINE` (v5.0, M14) | Bấm xoá khi offline (UI vốn vô hiệu nút) hoặc request function lỗi mạng |
+| `ACCOUNT_DELETE_CANCELLED` (M14) | Người dùng huỷ bước xác nhận lại bằng Sign in with Apple |
+| `ACCOUNT_DELETE_FAILED` (M14) | Function trả 5xx/timeout 20 s/lỗi không xác định; tài khoản và dữ liệu còn nguyên (transaction) |
+| `ACCOUNT_DELETE_SESSION_EXPIRED` (M14) | Trạng thái `expired`, hoặc function trả 401 |
 
 Mã `AUTH_*`, `SYNC_*` thêm vào `ErrorCode` (domain/types) và có key `errors.<CODE>` ở cả `en.json`/`vi.json` (copy do designer chốt).
 
@@ -938,6 +1123,28 @@ Import: thay thế toàn bộ `goals`, `entries`, `settings`; xoá `activeTimer`
 - `sw.ts` xử lý `notificationclick`: đóng notification, focus client đang mở cùng scope và điều hướng tới `#/today`, nếu không có thì `clients.openWindow(scope + '#/today')`.
 - Lịch kiểm tra nhắc (khi app đang mở): ngay khi app khởi động, mỗi `VITE_REMINDER_CHECK_INTERVAL_MS` (mặc định 60000 ms), và khi `visibilitychange` (trigger đến lúc đang kiểm được chạy bù một lần, §5.3). Thứ tự (ADR-15): `shouldNotify` → claim `lastReminderDate = today` nguyên tử qua `SettingsService.claimReminderDay` → `showNotification` → nếu không hiển thị được thì hoàn claim về giá trị cũ. Nhiều tab mở cùng lúc: tối đa một tab thắng claim mỗi ngày.
 - `shouldNotify(now, settings, permission, activeGoalsProgress)` = `reminderEnabled && permission === 'granted' && hh:mm(now) ≥ reminderTime && lastReminderDate !== today && có ≥ 1 goal active chưa đạt`. `shouldShowBanner` = như trên nhưng không cần quyền và không xét `lastReminderDate`.
+
+**v5.0 — nhắc trên native (M15, FR-62, A-63, A-64, ADR-40).** Mọi điều trên chỉ áp cho bản web. Trên native:
+
+```ts
+// src/services/notification-port.ts (mở rộng; adapter web: canSchedule = false, schedule → false, cancelAll → no-op)
+interface ScheduledReminder { id: number; at: Date; title: string; body: string; url: '#/today' }
+interface NotificationPort {
+  permission(): NotificationPermissionState; requestPermission(): Promise<NotificationPermissionState>;
+  show(n: ReminderNotification): Promise<boolean>;        // không dùng trên native
+  readonly canSchedule: boolean;                            // true = hệ điều hành giao notification khi app đóng
+  schedule(items: ScheduledReminder[]): Promise<boolean>;   // thay toàn bộ lịch nhắc đang chờ của app
+  cancelAll(): Promise<void>;
+}
+// src/domain/reminder-plan.ts
+function planReminderDates(input: { now: Date; reminderEnabled: boolean; reminderTime: 'HH:MM';
+  goals: Goal[]; todayProgress: GoalProgress[]; days: number /* REMINDER_PLAN_DAYS = 14 */ }): ISODate[];
+```
+
+- `planReminderDates`: với d = hôm nay … hôm nay + 13: bỏ nếu `!reminderEnabled`; bỏ nếu không có goal nào `goalStatus(goal, d) === 'active'` và `!archived`; với d = hôm nay: bỏ nếu `hh:mm(now) > reminderTime` (bằng thì giữ) hoặc mọi goal active chưa archive đã đạt `dailyTarget` hôm nay. Hàm thuần, test bảng (TASKS M15-AC1).
+- `ReminderService.replan(now)` (qua `Mutex`, trigger gộp như reminder scheduler): `!canSchedule` → `'unsupported'`; nhắc tắt → `cancelAll()` → `'cancelled'`; quyền ≠ `granted` → `'no-permission'` (không xin quyền); ngược lại `schedule(dates.map((d, i) => ({ id: 1000 + i, at: <d lúc reminderTime giờ cục bộ>, title: t('notification.scheduled.title'), body: t('notification.scheduled.body'), url: '#/today' })))` (key thật theo DESIGN v5.0) → `'scheduled'`.
+- Trigger (`app/reminder-scheduler.ts`, nhánh native): khởi động; `lifecycle.onResume`; watch kv `settings` (nhắc) và `locale`; thay đổi goal/entry (debounce 2000 ms). Nhánh `check()` theo interval **không** chạy trên native (tránh trùng với notification của hệ điều hành).
+- Adapter (`integration/native/local-notifications.ts`): `checkPermissions`/`requestPermissions` (`prompt`, `prompt-with-rationale` → `default`); `schedule`: `getPending()` → `cancel` các id 1000–1013 đang chờ → `schedule({ notifications: [{ id, title, body, schedule: { at, allowWhileIdle: true }, extra: { url } }] })`; listener `localNotificationActionPerformed` → điều hướng `extra.url`. Khi app đang mở đúng giờ nhắc: theo hành vi mặc định của plugin (kiểm ở NV-17; banner trong app FR-15 vẫn có).
 
 ### 5.7 File `.ics` (FR-16)
 
@@ -1001,6 +1208,41 @@ interface ReturnToStore { save(hash: string): void; take(): string | null }  // 
 
 **Hết hạn:** SDK phát `SIGNED_OUT` mà app không yêu cầu, hoặc REST trả 401 → `session-expired` → `expired` (giữ dữ liệu, `dirty` giữ nguyên, sync `paused`).
 
+**v5.0 — đăng nhập native và xoá tài khoản (M14; FR-59 … FR-61, ADR-36, ADR-37, ADR-39).** Chỉ **thêm** (chữ ký cũ giữ nguyên để test M6–M8 và `tests/qc/**` biên dịch):
+
+```ts
+// src/services/auth-port.ts (thêm)
+type AuthProvider = 'google' | 'apple';
+interface AuthSession { userId: string; email: string; name: string; providers?: AuthProvider[] }   // providers: app_metadata.providers
+interface AuthPort {
+  // … như cũ (signInWithGoogle cho web)
+  signInWithIdToken(input: { provider: AuthProvider; token: string; nonce: string }): Promise<AuthSession>;  // ném → AUTH_FAILED
+  setDisplayName?(name: string): Promise<void>;   // auth.updateUser({ data: { full_name } }) — chỉ khi metadata chưa có tên (A-60)
+}
+// src/services/id-token-port.ts (mới; chỉ có trên native)
+type IdTokenResult =
+  | { kind: 'ok'; idToken: string; rawNonce: string; authorizationCode?: string; givenName?: string; familyName?: string }
+  | { kind: 'cancelled' };
+interface IdTokenProvider {
+  available(provider: AuthProvider): boolean;      // google: có 2 client ID trong env; apple: platform === 'ios'
+  getIdToken(provider: AuthProvider): Promise<IdTokenResult>;   // ném = lỗi khác huỷ
+  logout(provider: AuthProvider): Promise<void>;   // không ném
+}
+// src/services/account-deletion-port.ts (mới)
+type AccountDeletionResult =
+  | { kind: 'deleted'; appleRevoked: 'not-applicable' | 'revoked' | 'manual-required' }
+  | { kind: 'failed' } | { kind: 'session-expired' } | { kind: 'offline' };
+interface AccountDeletionPort { deleteAccount(input: { appleAuthorizationCode?: string }): Promise<AccountDeletionResult> }
+```
+
+- `AuthServiceDeps` thêm `idTokens?: IdTokenProvider` (native, từ `NativePlatform`) và `loadAccountDeletion?: () => Promise<AccountDeletionPort>` (lazy cùng chunk Supabase, ADR-18).
+- `AuthService.signIn(returnTo, provider = 'google')`:
+  - `idTokens?.available(provider)` → **luồng native**: offline → `AUTH_OFFLINE`; state `signing-in`; `getIdToken(provider)` (`cancelled` → `AUTH_CANCELLED`); nạp port → `signInWithIdToken({ provider, token: idToken, nonce: rawNonce })`; Apple có tên và session chưa có tên → `setDisplayName`; rồi gọi **chung** hàm "áp phiên đã đăng nhập" mà `completeCallback` dùng (ghi `sync.account`/`userId`, `prepareFirstSignIn`, `syncNow('sign-in')`, outcome toast). Không ghi `returnTo` (không rời trang). Lưu provider vừa dùng ở kv `sync.account.provider` để `signOut` gọi `idTokens.logout(provider)`.
+  - Ngược lại `provider === 'google'` → luồng redirect PKCE như M6; `provider === 'apple'` → `AUTH_FAILED` (UI không bao giờ hiện nút Apple khi `!capabilities.appleSignIn`).
+- **Nonce** (ở adapter, Web Crypto): `rawNonce` = 32 byte ngẫu nhiên dạng hex (64 ký tự); `digest` = SHA-256(rawNonce) dạng hex; plugin nhận `digest` (Google Sign-In/Apple nhúng vào claim `nonce` của ID token), Supabase nhận `rawNonce` và tự băm để so. Supabase Google provider: **Client IDs** = `<web client ID>,<iOS client ID>`, **Skip nonce check tắt** (plugin hỗ trợ nonce trên iOS; chỉ bật nếu NV-14 lỗi nonce — ghi rủi ro §10). Apple provider: Client IDs = bundle ID, không cần Services ID/khoá (native-only).
+- `AuthService.deleteAccount({ keepData })` → §4.7 (b). UI chỉ hiện lối vào khi `state.kind === 'signed-in'` (và gợi ý đăng nhập lại khi `expired`).
+- `capabilities.nativeAuth` = `!!idTokens` (M14 trở đi); `false` trên native ở M12–M13 → container dùng `AuthService.unavailable()` (FR-58).
+
 ### 5.10 Sync protocol (v2.0, M7)
 
 ```ts
@@ -1050,8 +1292,133 @@ Server Node `http`, cổng `54321`, dữ liệu trong bộ nhớ, CORS cho mọi
 | `GET/POST /rest/v1/settings` (v2.1) | Một hàng/user, upsert theo `user_id`, **cùng quy tắc với trigger `settings_before_write`** (LWW theo từng nhóm, nhóm null giữ cũ, tie → server) |
 | `GET/POST /rest/v1/goals`, `/rest/v1/entries` | Tập con PostgREST mà `SupabaseRemoteStore` dùng (upsert `Prefer: resolution=merge-duplicates`, `select`, `in`, `gt`/`gte`/`eq`, `or`, `order`, `limit`); **cùng quy tắc với trigger SQL** (LWW, tie → server, `server_updated_at` tăng dần) và lọc theo `sub` của JWT (mô phỏng RLS). **v4.0:** `end_date` NULL hợp lệ chỉ khi `target_type = 'daily'` (không so ngày khi NULL); `total` + NULL → 400 `23514`, như ràng buộc SQL §4.6 (f) |
 | `/__test/reset`, `/__test/rows?user=`, `/__test/seed`, `/__test/fail?status=500&times=n`, `/__test/log` | Chỉ cho test: reset dữ liệu, đọc/ghi hàng, ép lỗi, xem log request (kích thước lô, số lần exchange) |
+| `POST /auth/v1/token?grant_type=id_token` (v5.0, M14) | Nhận `{ provider: 'google' \| 'apple', id_token, nonce }`; `id_token` là JWT giả do test ký bằng secret của mock (claim `sub`, `email`, `email_verified: true`, `nonce`); kiểm `sha256(nonce) == claim nonce` (sai → 400 `invalid_grant`); tìm user theo email đã xác minh (liên kết, A-60) hoặc tạo mới; ghi `app_metadata.providers`; trả session như `grant_type=pkce` |
+| `PUT /auth/v1/user` (v5.0) | Cập nhật `user_metadata` (dùng cho `full_name` của Apple) |
+| `OPTIONS`, `POST /functions/v1/delete-account` (v5.0, M14) | Cùng contract §4.7 (c): Bearer bắt buộc (401), xoá user khỏi bộ nhớ và mọi hàng `goals`/`entries`/`settings` của user (mô phỏng cascade), refresh token của user thành `invalid_grant`, ghi log có `appleAuthorizationCode` nếu gửi; trả `appleRevoked` = `'manual-required'` nếu user có provider `apple` và không có code, `'revoked'` nếu có code, ngược lại `'not-applicable'`; áp `/__test/fail` |
 
 Người dùng giả: u1 `00000000-0000-4000-8000-000000000001` / `minh.test@example.com` / `Minh Test`; u2 `00000000-0000-4000-8000-000000000002` / `other.user@example.com` / `Other User`. Quy tắc LWW của mock và của `FakeRemoteStore` (Vitest) phải cùng chạy qua **một bộ test hợp đồng** (`src/services/remote-store.contract.ts`) để không lệch nhau; bộ này cũng chạy với Supabase local khi có Docker (`npm run test:db`).
+
+### 5.12 Nền tảng, capabilities và cấu hình Capacitor (v5.0, M12 …)
+
+```ts
+// src/integration/platform.ts — nơi duy nhất import() vào integration/native (ADR-35)
+// Lõi test được (không chứa import()): test truyền cờ + hàm nạp giả
+export async function resolveNativePlatform(native: boolean, load: () => Promise<NativeModule>): Promise<NativePlatform | null> {
+  return native ? (await load()).createNativePlatform() : null;   // getPlatform() === 'web' (Chromium) → null
+}
+export function loadNativePlatform(): Promise<NativePlatform | null> {
+  // Điều kiện PHẢI là hằng compile-time thuần (như loader.ts của M10 với __OPB_CLOUD__) để bản web loại nhánh và không phát chunk native
+  if (__OPB_NATIVE__) return resolveNativePlatform(true, () => import('./native/index'));
+  return Promise.resolve(null);
+}
+interface NativePlatform {
+  platform: 'ios' | 'android';
+  fileExport: FileExportPort;                                        // M12 (§5.15)
+  lifecycle: { onResume(cb: () => void): () => void; onBackButton?(cb: () => void): () => void };   // M12 (back: M16)
+  systemUi?: { start(theme: Subscribable<'light' | 'dark'>): () => void; hideSplash(): Promise<void> }; // M13
+  idTokens?: IdTokenProvider;                                        // M14 (§5.9 v5.0)
+  notifications?: NotificationPort;                                  // M15 (§5.6 v5.0)
+}
+// src/app/capabilities.ts — UI đọc qua AppContext, không import integration
+interface AppCapabilities {
+  platform: 'web' | 'ios' | 'android';
+  serviceWorker: boolean;          // web: true (bản build); native: false
+  pwaHints: boolean;               // copy "Add to Home Screen"/"Install the app": web true, native false
+  nativeShare: boolean;            // export qua share sheet
+  nativeAuth: boolean;             // có IdTokenProvider (M14+)
+  appleSignIn: boolean;            // nativeAuth && platform === 'ios'
+  scheduledNotifications: boolean; // NotificationPort.canSchedule
+  publicSiteUrl: string;           // web: BASE_URL tương đối; native: 'https://minh-lgm.github.io/one-percent-better/'
+}
+```
+
+- Link tới `privacy.html`/`support.html`/Apple support trên native dùng URL tuyệt đối (`publicSiteUrl`) với `target="_blank" rel="noopener"`; Capacitor iOS mở URL ngoài app bằng Safari (không điều hướng WebView của app ra khỏi SPA). Kiểm ở NV-15; nếu không mở được, thêm `@capacitor/browser` (ghi handoff, không đổi contract).
+- Thứ tự khởi động native (`main.tsx`): `loadNativePlatform()` → `createContainer({ …, native })` → bootstrap như cũ → render → `systemUi.start(theme)` + `systemUi.hideSplash()` (dự phòng 3 s) → scheduler (sync; nhắc: `replan` thay `check`) → **không** `registerServiceWorker`, **không** `listenForNavigation`; `lifecycle.onResume` gọi cùng hàm mà `visibilitychange → visible` gọi.
+
+`capacitor.config.ts` (giá trị cố định; màu lấy theo DESIGN v5.0):
+
+```ts
+const config: CapacitorConfig = {
+  appId: 'io.github.minhlgm.onepercentbetter',
+  appName: '1% Better',
+  webDir: 'dist-native',
+  ios: { contentInset: 'never', backgroundColor: '<token nền DESIGN>' },
+  plugins: {
+    SplashScreen: { launchAutoHide: false, backgroundColor: '<token nền>', showSpinner: false },    // M13
+    Keyboard: { resize: 'native', resizeOnFullScreen: true },                                       // M13; đổi 'body' nếu NV-13 thấy tab bar nhảy (ghi handoff)
+    SocialLogin: { providers: { google: true, apple: true, facebook: false, twitter: false } },      // M14
+  },
+};
+```
+
+### 5.13 Project iOS (`ios/`, M12 … M15)
+
+| Mục | Giá trị | Milestone |
+| :- | :- | :- |
+| Package manager | Swift Package Manager (template Capacitor 8); `ios/App/CapApp-SPM/Package.swift` do `cap sync` sinh | M12 |
+| Build settings (`project.pbxproj`, Debug + Release) | `PRODUCT_BUNDLE_IDENTIFIER = io.github.minhlgm.onepercentbetter`, `IPHONEOS_DEPLOYMENT_TARGET = 16.4`, `TARGETED_DEVICE_FAMILY = 1`, `MARKETING_VERSION = 1.0.0`, `CURRENT_PROJECT_VERSION = 1` (CI ghi đè), `CODE_SIGN_STYLE = Automatic`, `DEVELOPMENT_TEAM` để trống (CI truyền), `CODE_SIGN_ENTITLEMENTS = App/App.entitlements` (M14), `GOOGLE_IOS_URL_SCHEME` (user-defined, mặc định giá trị giả `com.googleusercontent.apps.placeholder`, CI ghi đè) | M12, M14 |
+| `Info.plist` | `CFBundleDisplayName` = `1% Better`; `UISupportedInterfaceOrientations` = [`UIInterfaceOrientationPortrait`]; `ITSAppUsesNonExemptEncryption` = false (A-71); `UIStatusBarStyle` theo plugin; `CFBundleURLTypes` → `CFBundleURLSchemes` = [`$(GOOGLE_IOS_URL_SCHEME)`] (M14); **không** có `NSUserTrackingUsageDescription`, `UIBackgroundModes`, khoá camera/ảnh/vị trí | M12, M14 |
+| `App.entitlements` | `com.apple.developer.applesignin` = [`Default`] | M14 |
+| Assets | `AppIcon.appiconset/AppIcon-512@2x.png` 1024×1024 RGB (không alpha); `Splash.imageset` sáng/tối 2732×2732 RGB; `LaunchScreen.storyboard` nền theo DESIGN | M13 |
+| `PrivacyInfo.xcprivacy` | `NSPrivacyTracking` false; `NSPrivacyTrackingDomains` []; `NSPrivacyCollectedDataTypes`: EmailAddress, Name, UserID, OtherUserContent — mỗi mục `Linked` true, `Tracking` false, mục đích `AppFunctionality`; `NSPrivacyAccessedAPITypes`: `NSPrivacyAccessedAPICategoryUserDefaults` (`CA92.1`) + mọi category mà manifest của `@capacitor/*`/plugin đã pin khai (developer đọc trong `node_modules`, liệt kê ở handoff M15) | M15 |
+| Không làm | Push Notifications capability, Background Modes, App Groups, Associated Domains, iPad/Mac | — |
+
+### 5.14 Workflow `ios.yml` (M12 lane `simulator`, M13 lane `testflight`; ADR-38)
+
+```yaml
+name: iOS
+on:
+  workflow_dispatch:
+    inputs:
+      lane: { type: choice, options: [simulator, testflight], default: simulator }
+      marketing_version: { type: string, required: false }
+  push:
+    tags: ['ios-v*']
+permissions: { contents: read }
+jobs:
+  simulator:
+    if: github.event_name == 'workflow_dispatch' && inputs.lane == 'simulator'
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps: [checkout, setup-node(.nvmrc, cache npm), npm ci, "kiểm Xcode 26 (xcodebuild -version | grep '^Xcode 26\.'; nếu không: sudo xcode-select -s Xcode_26.* mới nhất)",
+            npm run build:native, npx cap sync ios,
+            "xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build"]
+  testflight:
+    if: github.repository == 'minh-lgm/one-percent-better' && ((github.event_name == 'workflow_dispatch' && inputs.lane == 'testflight') || startsWith(github.ref, 'refs/tags/ios-v'))
+    runs-on: macos-26
+    timeout-minutes: 60
+    concurrency: { group: ios-release, cancel-in-progress: false }
+    env: { VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY (secrets), VITE_GOOGLE_WEB_CLIENT_ID, VITE_GOOGLE_IOS_CLIENT_ID (vars) }
+    steps: [checkout, setup-node, npm ci, npm run lint, npm run typecheck, npm test, kiểm Xcode 26,
+            npm run build:native, npx cap sync ios,
+            "node scripts/ios-version.mjs → MARKETING_VERSION, BUILD_NUMBER vào $GITHUB_ENV",
+            "base64 -d secret APP_STORE_CONNECT_API_KEY_P8_BASE64 > $RUNNER_TEMP/AuthKey.p8 (umask 077)",
+            "(nhánh dự phòng, khi IOS_DIST_CERT_P12_BASE64 != ''): security create-keychain tạm + import .p12 + cài profile vào ~/Library/MobileDevice/Provisioning Profiles",
+            "xcodebuild archive -project … -scheme App -configuration Release -destination 'generic/platform=iOS' -archivePath $RUNNER_TEMP/App.xcarchive -allowProvisioningUpdates -authenticationKeyPath … -authenticationKeyID … -authenticationKeyIssuerID … DEVELOPMENT_TEAM=$APPLE_TEAM_ID MARKETING_VERSION=… CURRENT_PROJECT_VERSION=… GOOGLE_IOS_URL_SCHEME=${{ vars.GOOGLE_IOS_URL_SCHEME }}",
+            "xcodebuild -exportArchive -archivePath … -exportOptionsPlist ios/ci/ExportOptions.plist (teamID thay lúc chạy bằng plutil) -exportPath $RUNNER_TEMP/export -allowProvisioningUpdates + 3 cờ xác thực",
+            "cleanup (if: always()): rm AuthKey.p8, xoá keychain tạm, xoá profile"]
+```
+
+- `ios/ci/ExportOptions.plist`: `method = app-store-connect`, `destination = upload`, `signingStyle = automatic`, `teamID` (thay lúc chạy), `uploadSymbols = true`, `manageAppVersionAndBuildNumber = false`. Bản `ExportOptions-manual.plist`: `signingStyle = manual`, `signingCertificate = Apple Distribution`, `provisioningProfiles = { io.github.minhlgm.onepercentbetter: <tên profile> }`.
+- Lỗi thường gặp ghi README: Xcode không phải 26 (Apple từ chối upload); build number trùng (tăng `IOS_BUILD_OFFSET`); "Cloud signing permission error" → U17b; thiếu thoả thuận trong App Store Connect → U16.
+- `pages.yml` không đổi; `ios.yml` không deploy Pages. `android.yml` (M16) cùng nguyên tắc trên `ubuntu-latest` + Temurin 21.
+
+### 5.15 `FileExportPort` (v5.0, M12; FR-63, A-65)
+
+```ts
+// src/services/file-export-port.ts
+type FileExportOutcome = 'saved' | 'shared' | 'cancelled';
+interface FileExportPort {
+  /** Web: tải file (Blob + <a download>) → 'saved'. Native: ghi Directory.Cache rồi share sheet → 'shared' | 'cancelled'. Lỗi khác → ném. */
+  saveText(fileName: string, content: string, mimeType: string): Promise<FileExportOutcome>;
+}
+```
+
+Caller (Settings › Backup, `.ics`): `'saved'`/`'shared'` → ghi `lastBackupAt` (chỉ backup), toast thành công, gợi ý FR-53 theo A-44; `'cancelled'` → không làm gì; ném → toast lỗi hiện có. Import không đổi (`<input type="file" accept=".json,application/json">` → trình chọn tài liệu của iOS).
+
+### 5.16 `AccountDeletionPort` qua Supabase (v5.0, M14)
+
+`SupabaseAccountDeletionPort` (cùng file/chunk với `SupabaseAuthPort`, nạp qua `loader.ts`): `client.functions.invoke('delete-account', { body: { appleAuthorizationCode } })` (SDK tự gắn `Authorization` của phiên), `AbortSignal` 20 s. Ánh xạ: 200 + `deleted: true` → `{ kind: 'deleted', appleRevoked }`; HTTP 401 → `session-expired`; `FunctionsFetchError`/lỗi mạng → `offline`; 5xx, timeout, body lạ → `failed`. Không retry tự động (người dùng bấm lại). Trên web, URL function cùng origin Supabase nên NFR-01 (b) không đổi.
 
 ## 6. Cấu trúc thư mục
 
@@ -1132,6 +1499,52 @@ Unit/integration test đặt cạnh file nguồn (`*.test.ts(x)`).
 
 **Bổ sung v4.0 (M11):** `supabase/migrations/20261019000000_goal_open_ended.sql`; `e2e/fixtures/o1-open-ended-backup.json`; `e2e/m11-*.spec.ts`, `e2e/cloud/m11-*.spec.ts`; builder `datasetO1()` trong `src/test/builders.ts`.
 
+**Bổ sung v5.0 (phase 6):**
+
+```text
+/
+├── capacitor.config.ts                 # §5.12
+├── .env.native-e2e                     # commit: cloud rỗng cho project Playwright native-web
+├── playwright.store.config.ts          # M15: chụp screenshot store (không nằm trong npm run test:e2e)
+├── .github/workflows/
+│   ├── pages.yml                       # không đổi
+│   ├── ios.yml                         # M12 simulator, M13 testflight (§5.14)
+│   └── android.yml                     # M16 (tuỳ chọn)
+├── ios/                                # project Xcode (SPM), commit; ignore App/App/public, App/App/capacitor.config.json
+│   ├── App/App.xcodeproj/project.pbxproj
+│   ├── App/App/{Info.plist, App.entitlements, PrivacyInfo.xcprivacy, Base.lproj/LaunchScreen.storyboard, Assets.xcassets/}
+│   ├── App/CapApp-SPM/Package.swift    # do cap sync sinh
+│   └── ci/{ExportOptions.plist, ExportOptions-manual.plist, version.json}
+├── android/                            # M16 (tuỳ chọn)
+├── scripts/
+│   ├── gen-ios-assets.mjs              # M13 (M16: gen-native-assets.mjs)
+│   ├── ios-version.mjs                 # M13
+│   └── lib/png-rgb.mjs                 # M13: đọc/ghi PNG bằng node:zlib, bỏ alpha
+├── store/
+│   ├── fixtures/demo-en.json, demo-vi.json
+│   ├── screenshots.spec.ts
+│   ├── ios/metadata/{en-US,vi}/*.txt
+│   ├── ios/screenshots/{en-US,vi}/0N-*.jpg
+│   └── android/…                       # M16
+├── supabase/
+│   ├── config.toml                     # + [functions.delete-account] verify_jwt = false
+│   └── functions/delete-account/{index.ts, handler.ts, apple.ts, handler.test.ts, apple.test.ts}
+├── public/support.html                 # M15 (privacy.html sửa ở M14, M15)
+├── src/
+│   ├── app/                            # + capabilities.ts
+│   ├── domain/                         # + reminder-plan.ts (M15)
+│   ├── services/                       # + file-export-port.ts, id-token-port.ts, account-deletion-port.ts
+│   ├── integration/
+│   │   ├── platform.ts                 # điểm import() duy nhất vào native/
+│   │   └── native/                     # NƠI DUY NHẤT import @capacitor/*, @capgo/*
+│   │       └── index.ts, lifecycle.ts, file-export.ts, system-ui.ts, social-login.ts, local-notifications.ts (+ test)
+│   ├── ui/components/                  # + AppleSignInButton, DeleteAccountDialog
+│   └── test/                           # + ci-workflows.test.ts, ios-project.test.ts, store-metadata.test.ts, fake-id-token-provider.ts, fake-account-deletion-port.ts
+└── e2e/native/                         # spec project native-web (cổng 4175)
+```
+
+`dist-native/`, `dist-native-e2e/` là output build, nằm trong `.gitignore`. Không có thư mục `fastlane/` (ADR-38).
+
 ## 7. Config và biến môi trường
 
 Không có secret. Không biến nào bắt buộc; app chạy với giá trị mặc định khi không có `.env`.
@@ -1152,6 +1565,26 @@ Không có secret trong bundle: publishable/anon key là public (RLS bảo vệ 
 GitHub Actions (`pages.yml`, bước `npm run build`): `env: VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}`, `VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}` cạnh `BASE_PATH`. Secret chưa đặt → biến rỗng → bản deploy không có cloud (an toàn khi push code trước khi user setup xong).
 
 Biến dùng trong script npm (đặt sẵn bằng `cross-env`, không cần `.env`): `PLAYWRIGHT_BROWSERS_PATH=0`.
+
+**Bổ sung v5.0 (phase 6).** Ba nơi chứa cấu hình, không bao giờ trộn: (1) biến build `VITE_*` — **công khai**, nhúng vào JS; (2) GitHub Actions secrets/variables — chỉ dùng trong `ios.yml`/`android.yml`; (3) Supabase Edge Function secrets — chỉ server. Không biến `VITE_*` nào được chứa khoá Apple, khoá API App Store Connect hay `service_role`.
+
+| Biến | Nơi đặt | Mục đích | Bắt buộc | Ví dụ |
+| :- | :- | :- | :- | :- |
+| `VITE_GOOGLE_WEB_CLIENT_ID` | `.env.local` (dev), GitHub **variable** (CI native) | Web client ID của Google (U3), dùng làm `webClientId`/server client của Google Sign-In native | Không (thiếu → Google native ẩn trên app; web không dùng) | `1234-abc.apps.googleusercontent.com` |
+| `VITE_GOOGLE_IOS_CLIENT_ID` | như trên | iOS client ID (U21) | Không (như trên) | `1234-ios.apps.googleusercontent.com` |
+| `GOOGLE_IOS_URL_SCHEME` | GitHub **variable**; build setting Xcode | URL scheme đảo của iOS client ID (Google Sign-In SDK yêu cầu) | Cho lane `testflight` từ M14 | `com.googleusercontent.apps.1234-ios` |
+| `BASE_PATH` | — | Bị **bỏ qua** ở mode `native`/`native-e2e` (luôn `/`) | — | — |
+| `APPLE_TEAM_ID` | GitHub secret | `DEVELOPMENT_TEAM`, `teamID` của ExportOptions | Lane `testflight` | `ABCDE12345` |
+| `APP_STORE_CONNECT_API_KEY_ID`, `APP_STORE_CONNECT_API_ISSUER_ID` | GitHub secret | Xác thực `xcodebuild` với App Store Connect (ký tự động + upload) | Lane `testflight` | `2X9R4HXF34`, UUID |
+| `APP_STORE_CONNECT_API_KEY_P8_BASE64` | GitHub secret | Nội dung `AuthKey_<id>.p8` dạng base64, ghi ra `$RUNNER_TEMP` lúc chạy, xoá cuối job | Lane `testflight` | — |
+| `IOS_DIST_CERT_P12_BASE64`, `IOS_DIST_CERT_PASSWORD`, `IOS_PROVISIONING_PROFILE_BASE64` (+ variable `IOS_PROVISIONING_PROFILE_NAME`) | GitHub secret | **Chỉ** phương án ký dự phòng (U17b) | Không | — |
+| `IOS_BUILD_OFFSET` | GitHub variable | Cộng vào `run_number` khi cần nhảy số build | Không (mặc định 0) | `100` |
+| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_CLIENT_ID`, `APPLE_PRIVATE_KEY` | **Supabase Edge Function secrets** | Ký client secret JWT để đổi code/thu hồi token Sign in with Apple (§4.7); `APPLE_CLIENT_ID` = bundle ID; `APPLE_PRIVATE_KEY` = nội dung `.p8` (U22) | Không (thiếu → `appleRevoked: 'manual-required'`) | — |
+| `ALLOWED_ORIGINS` | Supabase Edge Function secret | Ghi đè danh sách origin CORS mặc định (§4.7 c) | Không | `https://minh-lgm.github.io,capacitor://localhost` |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Supabase tự cấp cho mọi Edge Function | Client admin trong function | (tự có) | — |
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | GitHub secret | Ký AAB (M16) | Chỉ M16 | — |
+
+`.env.example` thêm hai dòng `VITE_GOOGLE_*` (để trống) và chú thích "không bao giờ đặt khoá Apple/App Store Connect ở đây". Hai client ID Google là định danh công khai (nằm trong app đã phát hành), đặt ở **Variables** chứ không cần Secrets.
 
 ## 8. Chiến lược test
 
@@ -1202,6 +1635,21 @@ Quy ước test: mỗi test e2e dùng browser context mới (IndexedDB sạch); 
 | SQL thật | `tests/db/**` + Supabase local | Áp hai migration theo thứ tự; insert `daily` NULL được; `total` NULL → `23514`; chạy file mới hai lần không lỗi | `npm run test:db` (máy hiện tại: skipped → NOT VERIFIED, kiểm ở U12) |
 | E2E | Playwright `chromium` + `cloud` | Form (en/vi), Goals/Detail/Review/Day, Export/Import O1, hai thiết bị qua mock, tải lạnh ≤ 230 KB | `npm run test:e2e` |
 
+**Bổ sung v5.0 (phase 6, NFR-24):**
+
+| Loại | Công cụ | Phạm vi | Lệnh |
+| :- | :- | :- | :- |
+| Unit adapter native | Vitest + `vi.mock('@capacitor/…')`, `vi.mock('@capgo/capacitor-social-login')` | `platform.ts` (cờ native injectable), `lifecycle`, `file-export`, `system-ui`, `social-login` (nonce raw/digest, initialize một lần, huỷ), `local-notifications` (quyền, dải id, `extra.url`) | `npm test` |
+| Service | Vitest + `FakeIdTokenProvider`, `FakeAccountDeletionPort`, `FakeAuthPort` mở rộng, `NotificationPort` giả `canSchedule` | `AuthService.signIn(…, provider)`, `deleteAccount`, `SyncService.pauseForAccountDeletion/reset`, `ReminderService.replan` | `npm test` |
+| Domain | Vitest | `planReminderDates` bảng S1/O1/G4/G5 (TASKS M15-AC1) | `npm test` |
+| Edge Function | Vitest (Node 22 có `Request`, `Response`, Web Crypto) | `handler.ts` (CORS, 401/405/500, user từ JWT, cascade, Apple), `apple.ts` (JWT ES256 verify được, form body đúng); include `supabase/functions/**/*.test.ts` | `npm test` |
+| Tĩnh (CI/native/store) | Vitest đọc file | `ios.yml` (lane, bước, cờ xác thực, cleanup, không lộ secret), `project.pbxproj`, `Info.plist`, `App.entitlements`, `PrivacyInfo.xcprivacy`, `capacitor.config.ts`, ExportOptions, PNG icon (IHDR color type 2), metadata store (độ dài) | `npm test` |
+| E2E web | Playwright `chromium`, `cloud` | Không đổi + M14 xoá tài khoản (mock `functions/v1/delete-account`), đăng nhập ID token qua mock chỉ ở unit/integration (Chromium không có plugin native) | `npm run test:e2e` |
+| E2E bản native trong Chromium | Playwright project **`native-web`** (`build:native-e2e`, cổng 4175) | Không SW, không manifest, không update toast, không hint PWA, luồng chính chạy ở base `/`, 0 request ngoài origin | `npm run test:e2e` |
+| Store | Playwright config riêng `playwright.store.config.ts` | Screenshot 1320×2868 JPEG `en-US`/`vi` (quét vi trước khi chụp) | `npm run store:screenshots` |
+| Build native thật | GitHub Actions `ios.yml` (`macos-26`) | `cap sync` + `xcodebuild` simulator (M12), archive/ký/upload (M13) | Run workflow (NV-12) |
+| Thiết bị thật | TestFlight trên iPhone của user | NV-13 … NV-18 (TASKS phase 6) | U19, U24, U25 |
+
 `page.clock` trong spec cloud: chỉ dùng `install`/`fastForward` cho debounce/backoff; request tới mock vẫn là thật. Spec cloud không dùng Google thật; luồng Google thật, project thật, iOS/Android là kiểm thủ công (TASKS "User setup" U10, "NOT VERIFIED" của M6–M8).
 
 Quy ước test song ngữ: component test mặc định render ở `en` (helper `renderWithLocale(ui, 'en' | 'vi')`). Test khẳng định chữ nên lấy chuỗi mong đợi từ resource (`t('toast.entrySaved')`) hoặc ghi literal `en` khi AC ghi literal; giá trị định dạng `vi` so với kết quả `Intl` tính trong test hoặc literal sau khi chuẩn hoá khoảng trắng (U+00A0, U+202F → space), vì chi tiết ICU có thể khác nhẹ giữa Node và Chromium.
@@ -1228,6 +1676,14 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | Mock Supabase (v2.0) | `npm run mock:supabase` → `node e2e/mock-supabase/server.mjs` (cổng 54321); demo tay: chạy lệnh này + `npm run build:cloud-e2e && npm run preview:cloud-e2e` |
 | Supabase local (v2.0, cần Docker) | `npm run db:start` → `npx --yes supabase@2.120.0 start`; `npm run db:stop`; `npm run db:reset` (áp lại migration) |
 | Test SQL/RLS (v2.0) | `npm run test:db` → `vitest run --config vitest.db.config.ts` (tự bỏ qua có thông báo nếu không có Supabase local) |
+| Build native (v5.0) | `npm run build:native` → `tsc -b && vite build --mode native` (base `/`, outDir `dist-native`, không SW; dùng `.env.local` nếu có, như `npm run build`) |
+| Build + preview native cho E2E (v5.0) | `npm run build:native-e2e` → `vite build --mode native-e2e` (cloud tắt, outDir `dist-native-e2e`); `npm run preview:native-e2e` → `vite preview --mode native-e2e --outDir dist-native-e2e --port 4175 --strictPort` |
+| Đồng bộ project iOS (v5.0) | `npm run cap:sync` → `npm run build:native && cap sync ios` (chạy được trên Windows; không mở Xcode) |
+| Asset iOS (v5.0, M13) | `npm run ios:assets` → `node scripts/gen-ios-assets.mjs` (cần `logo/` cục bộ và Chromium của Playwright) |
+| Screenshot store (v5.0, M15) | `npm run store:screenshots` → `cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright test -c playwright.store.config.ts` |
+| Build/ký/tải lên iOS (v5.0) | Không có lệnh cục bộ: GitHub → Actions → **iOS** → Run workflow (`lane` = `simulator` \| `testflight`), hoặc đẩy tag `ios-v1.0.0` (user/orchestrator) |
+| Deploy Edge Function (v5.0, owner) | `npx --yes supabase@2.120.0 login` rồi `npx --yes supabase@2.120.0 functions deploy delete-account --project-ref <ref> --use-api --no-verify-jwt` (không cần Docker); secret qua Dashboard (TASKS U23) |
+| Android (v5.0, M16) | `npm run build:native && npx cap sync android`; build AAB chỉ trên GitHub Actions `android.yml` |
 
 ## 10. Bảo mật và rủi ro
 
@@ -1273,6 +1729,21 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | (v4.0) File backup mới mở bằng app cũ → `IMPORT_INVALID_SCHEMA` | Thấp | Thấp | Chấp nhận (A-54, ADR-32); dữ liệu không đổi; app tự cập nhật qua SW |
 | (v4.0) Bỏ sót một chỗ đọc `endDate` (so chuỗi với `null`, `daysInclusive(start, null)`) → NaN, goal bị coi "ended", ô heatmap sai | Trung bình | Trung bình | `endDate: ISODate \| null` để TypeScript bắt mọi chỗ; helper `isWithinGoal`/`lastElapsedDay`/`elapsedDays` dùng chung; oracle O1 cho domain + E2E mọi màn hình |
 | (v4.0) Goal không thời hạn với `startDate` rất xa trong quá khứ (gõ nhầm năm) → đường cong hàng chục nghìn điểm | Thấp | Thấp | Range mặc định "So far"/không có Whole; bench 3.650 ngày < 200 ms; chấp nhận, không giới hạn `startDate` (A-49) |
+| (v5.0) App Review từ chối: 4.2 "minimum functionality / chỉ là website bọc lại", 4.8 (thiếu Apple), 5.1.1(v) (xoá tài khoản khó tìm/chỉ vô hiệu hoá), 2.1 (thiếu thông tin review), 5.1.1 (privacy policy thiếu) | Trung bình | Cao (trễ phát hành) | App chạy offline từ file đóng gói, có tính năng native thật (notification hệ điều hành, share sheet, Sign in with Apple, đăng nhập native), không có giao diện "trình duyệt"; Apple ngang hàng Google (FR-60); "Delete account" ngay trong card Account, xoá thật (FR-61); review notes nêu rõ (A-68); privacy/support URL có nội dung đúng (FR-65). Bị từ chối → lý do vào STATUS, planner sửa theo guideline |
+| (v5.0) Không có Mac: `npx cap add ios` không chạy trên Windows, hoặc lỗi chỉ thấy khi xcodebuild trên CI | Trung bình | Trung bình | Project SPM (không CocoaPods); job `scaffold` dự phòng sinh `ios/` trên `macos-26` (M12-T4); lane `simulator` chạy sớm từ M12 để bắt lỗi build trước khi có chứng chỉ; mọi cấu hình iOS kiểm tĩnh trong `npm test` |
+| (v5.0) Ký trên CI: khoá API Admin không đủ quyền cloud signing, chứng chỉ/profile hết hạn (chứng chỉ 1 năm), membership Apple hết hạn (99 USD/năm) | Trung bình | Cao (không phát hành được) | Nhánh ký thủ công dự phòng (U17b); README ghi ngày hết hạn và cách gia hạn; build cũ trên App Store không bị ảnh hưởng khi chứng chỉ hết hạn; nhắc gia hạn membership trong STATUS |
+| (v5.0) Runner `macos-26` đổi Xcode mặc định/nâng lên Xcode 27, hoặc Apple yêu cầu SDK mới hơn (thường mỗi tháng 4) | Trung bình | Trung bình | Bước kiểm `xcodebuild -version` cảnh báo rõ; chọn Xcode qua `xcode-select`; theo dõi trang "Upcoming requirements" của Apple khi phát hành bản mới |
+| (v5.0) iOS dọn dữ liệu WKWebView (IndexedDB, `localStorage` phiên) khi thiếu bộ nhớ hoặc khi gỡ app | Thấp | Cao (mất dữ liệu chưa đồng bộ) | Dữ liệu app nằm trong container của app (không chịu giới hạn 7 ngày của Safari); khuyến khích đăng nhập để đồng bộ (FR-52) và export (FR-21 vẫn chạy trên native); SQLite native là Later (ADR-41); phiên mất → "Sign in again", dữ liệu cục bộ vẫn còn nếu IndexedDB còn (NV-20) |
+| (v5.0) Nonce/audience sai giữa Google Sign-In iOS và Supabase (token cache không có nonce → "Bad ID token"/nonce mismatch) | Trung bình | Trung bình | Plugin buộc đăng nhập lại khi có nonce trên iOS; raw nonce cho Supabase, SHA-256 cho plugin (test M14-AC2, AC3); Client IDs đủ web + iOS (U21); phương án cuối: bật "Skip nonce check" của Google provider (ghi lại) |
+| (v5.0) Apple "Hide My Email" tạo tài khoản khác → người dùng tưởng mất dữ liệu | Trung bình | Thấp | A-60; copy cạnh nút Apple/DESIGN nhắc; dữ liệu cục bộ vẫn gộp vào tài khoản đang đăng nhập (FR-47); có thể đăng xuất rồi đăng nhập Google |
+| (v5.0) Thu hồi token Apple thất bại (code hết hạn 5 phút, thiếu secret, Apple lỗi) | Thấp | Thấp | Tài khoản vẫn bị xoá; kết quả `manual-required` → hướng dẫn tự thu hồi (TN3194); NV-16 kiểm đường thành công |
+| (v5.0) Edge Function bị gọi trái phép hoặc xoá nhầm user | Thấp | Cao | User chỉ lấy từ JWT đã xác minh (`getUser`), bỏ qua mọi id trong body; CORS giới hạn origin; service-role chỉ trong môi trường function; test handler (M14-AC4); không log token |
+| (v5.0) Deploy web M14 trước khi deploy function → nút xoá luôn lỗi | Trung bình | Thấp | Điều kiện deploy M14 sau U23 (TASKS); lỗi hiển thị `ACCOUNT_DELETE_FAILED`, không mất dữ liệu |
+| (v5.0) Mã/plugin native lọt vào bundle web, phình tải lạnh | Thấp | Trung bình | `__OPB_NATIVE__` + `import()` duy nhất ở `platform.ts`; lint chặn import `@capacitor/*` ngoài `integration/native`; DoD 13 grep `dist`; spec ngân sách 230 KB |
+| (v5.0) Local notification lên lịch trước nên nội dung không phản ánh tiến độ; người dùng không mở app 14 ngày thì hết nhắc | Cao | Thấp | Copy tổng quát (DESIGN); bỏ hôm nay khi đã đạt hết; cửa sổ 14 ngày là chủ ý (A-63); nội dung tiến độ thật là Later |
+| (v5.0) Bản web và bản iOS lệch version (iOS chờ review vài ngày) | Cao | Thấp | Phase 6 không đổi schema/cloud/backup (A-70); quy tắc tương thích ADR-32/33 giữ nguyên |
+| (v5.0) Lộ khoá phát hành qua log/artifact CI | Thấp | Cao | Không `echo` secret; khoá ghi `$RUNNER_TEMP` quyền 600 và xoá `if: always()`; không upload IPA/khoá; GitHub tự che secret trong log; test tĩnh workflow (M13-AC1) |
+| (v5.0) Google Play (M16): closed testing 12 người × 14 ngày, Data safety, SHA-1 của app signing key khác upload key làm Google Sign-In lỗi | Trung bình | Trung bình | Chỉ làm khi user chọn; U28 nêu rõ hai SHA-1; kiểm lại quy định Play lúc làm |
 
 ## 11. Quyết định kiến trúc
 
@@ -1387,6 +1858,44 @@ Bối cảnh: file mới có thể chứa `"endDate": null`. Bump lên 2 thì b�
 **ADR-33 — Cloud: migration nới `end_date`, và thiết bị bản cũ nhận lại hàng NULL bằng cách đặt lại con trỏ `goals` một lần (v4.0, M11).**
 Bối cảnh: bảng `goals` có `end_date date not null check (end_date >= start_date)`; project thật đã chạy migration M6 (U6); chỉ user chạy được SQL. Thiết bị chưa cập nhật service worker (vd. PWA trên điện thoại) kéo về hàng NULL sẽ bỏ qua nó (mapper cũ) nhưng con trỏ vẫn đi qua, nên sau khi cập nhật sẽ không bao giờ kéo lại. Lựa chọn: (1) file migration mới, idempotent, không sửa file M6 (§4.6 f), user chạy trước deploy (U12); (2) ràng buộc SQL đặt tên `goals_period_check`, `goals_open_ended_daily_check` để mock/Fake/mapper lặp lại đúng quy tắc; (3) kv `sync.pullResetVersion` + hằng `PULL_RESET_VERSION`: lần `syncNow` đầu tiên của bản M11 đặt `cursor.goals = null` trong một `kv.update` nguyên tử rồi kéo lại toàn bảng `goals`; cơ chế dùng lại được cho lần nới schema sau (tăng hằng). **Không** bump Dexie (không đổi index; tránh `versionchange` giữa tab bản cũ và bản mới). Phương án đã loại: Dexie v3 + `upgrade()` đặt lại con trỏ (đúng nhưng thêm rủi ro chặn mở DB khi tab cũ còn mở, và sửa test kiểm version); đặt lại cả `cursor.entries` (không cần: entry đã được lưu, chỉ bị ẩn); bắt buộc mọi thiết bị cập nhật trước khi tạo goal không thời hạn (không kiểm soát được). Hệ quả: chu kỳ đầu sau cập nhật kéo lại vài chục hàng goal (rẻ); client cũ chỉ thấy dòng "remote invalid" tạm thời; nếu M11 đẩy trước migration thì hàng thành `dirty = 2` và khôi phục theo A-55.
 
+**Ghi chú v5.0 cho ADR cũ.** ADR-03 (nhắc phía client, không server): vẫn đúng cho web; trên native, hệ điều hành giao notification đã lên lịch (ADR-40) — vẫn không có server push. ADR-06 (SW `injectManifest`): chỉ cho bản web; bản native tắt plugin PWA (ADR-35). ADR-17 (Supabase, không server riêng): thêm **một** Edge Function (ADR-39), không có server nào khác. ADR-18 (SDK lazy): giữ nguyên trên cả hai nền tảng; port xoá tài khoản nằm cùng chunk SDK. ADR-19 (PKCE redirect): chỉ bản web; native dùng ID token (ADR-36).
+
+**ADR-34 — App iOS bằng Capacitor 8 bọc bản build Vite hiện có (v5.0, phase 6).**
+Bối cảnh: user muốn app trên App Store; codebase là React 19 + Vite + Dexie + Supabase đã qua 11 milestone; máy dev Windows, không Mac; non-goal viết lại UI. Lựa chọn: Capacitor 8.5.3 (`@capacitor/core`, `ios`, `cli`), project `ios/` được commit, SPM thay CocoaPods, `webDir: 'dist-native'`; mọi khác biệt nền tảng ở adapter trong `src/integration/native/**` sau các port sẵn có (`NotificationPort`, `AuthPort`) và port mới (`FileExportPort`, `IdTokenProvider`, `AccountDeletionPort`); lớp domain/service/data/UI dùng chung. Phương án đã loại: React Native/Expo, Flutter, SwiftUI (viết lại toàn bộ UI và test — trái non-goal, mất 11 milestone kiểm chứng); WKWebView tự viết hoặc PWABuilder (tự lo bridge native, không có plugin notification/share/đăng nhập); Cordova (hệ sinh thái cũ); chỉ giữ PWA (không lên App Store được; notification iOS chỉ khi app mở). Hệ quả: một codebase, một bộ test; hiệu năng và giao diện như bản web hiện tại (đủ cho app nhỏ, offline-first); App Review có thể soi "app chỉ là website" — giảm bằng tính năng native thật (rủi ro §10); dữ liệu IndexedDB trong WKWebView (ADR-41). Nguồn: capacitorjs.com/docs/updating/8-0 (Xcode 26+, iOS 15+, Node 22+, SPM mặc định); npm registry 2026-10-21.
+
+**ADR-35 — Bản build native riêng (`--mode native`, `__OPB_NATIVE__`), mã native chỉ nạp qua một `import()` (v5.0).**
+Bối cảnh: ngân sách tải lạnh web 230 KB (ADR-27) và yêu cầu bản Pages không đổi (NFR-18); native cần base `/` (Capacitor phục vụ từ gốc `capacitor://localhost`) và không được đăng ký SW (WKWebView phục vụ file đóng gói; SW chỉ gây cache cũ và prompt "New version" vô nghĩa). Lựa chọn: hằng compile-time `__OPB_NATIVE__` (cùng cơ chế `__OPB_CLOUD__` của M10) đặt `true` ở mode `native`/`native-e2e`; `vite.config.ts` ở các mode đó ép `base: '/'`, outDir riêng, `VitePWA({ disable: true })`; `src/integration/platform.ts` là điểm `import()` duy nhất vào `src/integration/native/**`, được rút gọn thành `return null` trong bản web; ESLint chặn `@capacitor/*`/`@capgo/*` ngoài `integration/native` và chặn `import()` vào đó ngoài `platform.ts`; `AppCapabilities` tính ở composition, UI chỉ đọc cờ. Phương án đã loại: một bản build cho cả hai rồi phát hiện lúc chạy bằng `Capacitor.isNativePlatform()` (kéo `@capacitor/core` + plugin vào bundle web hoặc phải lazy từng chỗ, SW vẫn bị build/đăng ký trên native); biến môi trường `VITE_PLATFORM` đọc lúc chạy (không loại được mã chết). Hệ quả: web dist không có byte Capacitor nào (kiểm bằng grep); native có thêm project Playwright `native-web` để kiểm nhánh compile-time trong Chromium; native vẫn có cấu hình cloud riêng qua env lúc build.
+
+**ADR-36 — Đăng nhập native bằng ID token: `@capgo/capacitor-social-login` + Supabase `signInWithIdToken` + nonce (v5.0, M14).**
+Bối cảnh: Google chặn OAuth trong WebView nhúng (`disallowed_useragent`), luồng redirect toàn trang hiện tại không quay về app được; Supabase hỗ trợ tạo phiên từ ID token của Google/Apple (`signInWithIdToken`, nonce raw — SHA-256 của nó phải nằm trong claim `nonce`). Lựa chọn: plugin `@capgo/capacitor-social-login` 8.7.4 (Google Sign-In SDK + AuthenticationServices; `mode: 'online'` trả `idToken`; `providers` tắt Facebook/Twitter lúc build; Apple `useProperTokenExchange` cho `authorizationCode`); port `IdTokenProvider` ở services, adapter sinh nonce bằng Web Crypto (raw → Supabase, digest → plugin); `AuthService.signIn(returnTo, provider)` chọn luồng native khi có `idTokens`, dùng chung bước "áp phiên" với callback web (gộp FR-47, sync). Supabase: Google provider Client IDs = web + iOS, giữ kiểm nonce; Apple provider Client IDs = bundle ID. Phương án đã loại: `@capacitor-firebase/authentication` (cần project Firebase + SDK Firebase chỉ để lấy token); `@codetrix-studio/capacitor-google-auth` (không theo kịp Capacitor mới); OAuth qua `ASWebAuthenticationSession` (`@capacitor/browser`) + custom URL scheme + PKCE (Google cho phép, nhưng thêm redirect URL/deep link, UX kém, vẫn phải có Apple); tắt kiểm nonce ngay từ đầu (giảm an toàn chống replay). Hệ quả: không có redirect URL mới trong Supabase; bản web không đổi; phụ thuộc một plugin cộng đồng (Capgo, cập nhật đều — peer `@capacitor/core >=8`); phải kiểm tên field/mã lỗi huỷ theo `definitions.ts` của bản đã pin. Nguồn: capgo.app/docs/plugins/social-login/supabase/google/general (nonce raw/digest, cache token iOS); supabase.com/docs/guides/auth/social-login/auth-google (Client IDs, Skip nonce check).
+
+**ADR-37 — Sign in with Apple chỉ trên app iOS, native-only; tài khoản liên kết theo email đã xác minh (v5.0, M14).**
+Bối cảnh: App Store Review Guideline 4.8 yêu cầu một lựa chọn đăng nhập bảo vệ quyền riêng tư tương đương khi app dùng đăng nhập bên thứ ba (Google); Sign in with Apple đáp ứng. Bản web dùng Apple cần Services ID, domain verification và xoay khoá bí mật 6 tháng. Supabase: luồng native chỉ cần thêm bundle ID vào Client IDs của Apple provider, không cần Services ID/khoá; Supabase tự liên kết identity cùng email đã xác minh; Apple chỉ trả tên ở lần cấp quyền đầu. Lựa chọn: nút Apple chỉ khi `capabilities.appleSignIn` (iOS); lưu tên Apple vào `user_metadata.full_name` ngay lần đầu; không UI liên kết thủ công; OQ-15 để ngỏ cho web/Android. Phương án đã loại: Apple trên mọi nền tảng (thêm cấu hình và bảo trì khoá 6 tháng không cần cho review); bỏ Google trên iOS (mất đồng bộ với tài khoản web hiện có). Hệ quả: người dùng "Hide My Email" có tài khoản riêng và không đăng nhập được trên web (A-60, chấp nhận); xoá tài khoản phải thu hồi token Apple (ADR-39). Nguồn: supabase.com/docs/guides/auth/social-login/auth-apple; supabase.com/docs/guides/auth/auth-identity-linking.
+
+**ADR-38 — Build, ký và tải lên bằng `xcodebuild` + App Store Connect API key trên GitHub Actions `macos-26`, không fastlane (v5.0, M13).**
+Bối cảnh: user không có Mac; repo public nên runner GitHub chuẩn (gồm macOS) miễn phí; `macos-26` GA từ 2026-02-26 với Xcode 26.x; Apple chỉ nhận bản tải lên build bằng Xcode 26 / iOS 26 SDK từ 2026-04-28. Tạo chứng chỉ `.p12` thường cần Keychain của Mac. Lựa chọn: lane `simulator` (không ký) từ M12 để bắt lỗi build sớm; lane `testflight`: `xcodebuild archive` + `-exportArchive` (`method = app-store-connect`, `destination = upload`) với `-allowProvisioningUpdates` và khoá API (Admin) — Xcode tự tạo/tải chứng chỉ phân phối và profile (cloud-managed) rồi tải thẳng lên App Store Connect; số build = `run_number`; khoá ghi tạm và xoá `if: always()`; **dự phòng**: nếu ký cloud bị từ chối, user tạo chứng chỉ Apple Distribution bằng OpenSSL trong Git Bash + profile (U17b), workflow tự chuyển sang ký thủ công khi có secret. Phương án đã loại: fastlane + match (thêm Ruby/Bundler, một repo private cho chứng chỉ, nhiều secret hơn — lợi ích chính là quản lý chứng chỉ cho nhóm, không cần cho một người); fastlane `cert`/`sigh` không match (mỗi run tạo chứng chỉ mới, chạm giới hạn số chứng chỉ); Xcode Cloud (cần Mac để thiết lập); dịch vụ CI ngoài (Codemagic/Bitrise — thêm tài khoản, giới hạn phút). Hệ quả: không có thư mục `fastlane/`; metadata/screenshot App Store do user dán tay (một lần, tự động hoá là Later); phụ thuộc quyền cloud signing của khoá API (rủi ro §10, có dự phòng). Nguồn: github.blog/changelog/2026-02-26 (macOS 26 GA); developer.apple.com/news/upcoming-requirements (Xcode 26 từ 2026-04-28); diễn đàn Apple về cloud signing qua API key (thread 688626).
+
+**ADR-39 — Xoá tài khoản bằng Supabase Edge Function `delete-account`; dữ liệu đi theo FK cascade; thu hồi Apple bằng authorization code lấy lúc xác nhận lại (v5.0, M14).**
+Bối cảnh: Guideline 5.1.1(v) bắt buộc app có tạo tài khoản phải cho người dùng khởi động việc xoá tài khoản ngay trong app (xoá thật, không chỉ vô hiệu hoá), và app có Sign in with Apple phải thu hồi token qua REST API khi xoá (Apple TN3194: `/auth/revoke` cần refresh/access token; không có thì vẫn phải xoá và hướng dẫn người dùng tự thu hồi). Client không có quyền xoá user Auth; `service_role` không được ra client. Ba bảng đã `on delete cascade` tới `auth.users`. Lựa chọn: một Edge Function (Deno) tự xác minh JWT (`verify_jwt = false` ở gateway, `getUser` trong function), xoá user (hard delete) để cascade xoá `goals`/`entries`/`settings` trong cùng transaction, rồi — nếu tài khoản có identity Apple và client gửi `authorizationCode` (lấy bằng cách yêu cầu người dùng xác nhận lại với Apple ngay trước khi xoá) — đổi code ở `/auth/token` lấy refresh token và gọi `/auth/revoke` với client secret JWT ES256 ký bằng khoá Sign in with Apple của user (secret của function); thiếu gì thì trả `manual-required`. Logic thuần ở `handler.ts`/`apple.ts` để test bằng Vitest (NFR-24); deploy không cần Docker (`--use-api` hoặc Dashboard). Phương án đã loại: xoá từng bảng trước rồi xoá user (cần grant DELETE cho service-role → migration mới; có thể để lại "tài khoản còn, dữ liệu mất"); RPC Postgres `security definer` xoá `auth.users` (đụng schema `auth`, không thu hồi được Apple); lưu refresh token Apple phía server lúc đăng nhập (cần thêm function/bảng lúc đăng nhập — Later); chỉ hướng dẫn gửi email (trái 5.1.1(v)). Hệ quả: một đoạn server-side duy nhất cần user deploy và đặt secret (U22, U23); xoá trên web với tài khoản Apple không thu hồi được (hướng dẫn thủ công); thao tác idempotent theo §4.7 (f). Nguồn: developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion; developer.apple.com/documentation/technotes/tn3194; developer.apple.com/documentation/signinwithapplerestapi/revoke-tokens; supabase.com/changelog (deploy Edge Functions không cần Docker); supabase.com/docs/reference/javascript/auth-admin-deleteuser.
+
+**ADR-40 — Nhắc nhở native: lên lịch từng ngày cho cửa sổ 14 ngày, lập lại khi app hoạt động (v5.0, M15).**
+Bối cảnh: `@capacitor/local-notifications` cho phép hệ điều hành giao notification khi app đóng (gỡ giới hạn NFR-07 trên native); nội dung phải chốt lúc lên lịch; muốn không nhắc khi hôm nay đã đạt hết và khi không còn goal active; iOS giới hạn 64 notification chờ. Lựa chọn: hàm thuần `planReminderDates` (cửa sổ 14 ngày) + `ReminderService.replan` thay toàn bộ lịch (id 1000–1013) ở mọi trigger (khởi động, resume, đổi cài đặt/ngôn ngữ, dữ liệu đổi — debounce 2 s); copy tổng quát. Phương án đã loại: một notification lặp hằng ngày (`on: { hour, minute }`, `repeats`) — không bỏ được riêng hôm nay hay ngày không có goal, huỷ là mất cả chuỗi; push từ server (non-goal); background fetch để sinh nội dung tiến độ (không bảo đảm giờ chạy trên iOS). Hệ quả: người dùng bỏ app 14 ngày thì hết nhắc (A-63, chấp nhận); đổi múi giờ đúng sau lần replan kế tiếp; scheduler web giữ nguyên.
+
+**ADR-41 — Giữ Dexie/IndexedDB trong WKWebView cho app native; SQLite native là Later (v5.0).**
+Bối cảnh: dữ liệu cục bộ đang ở IndexedDB qua Dexie, với repository, transaction, sync, migration đã kiểm kỹ (ADR-01, ADR-14, ADR-16, ADR-20). Trong app Capacitor, IndexedDB nằm trong container dữ liệu của app (không chịu cơ chế xoá 7 ngày của Safari) nhưng về lý thuyết vẫn có thể bị hệ điều hành dọn khi thiếu bộ nhớ. Lựa chọn: giữ nguyên Dexie; giảm thiểu bằng đồng bộ cloud (đã có), backup qua share sheet (FR-63), nhắc đăng nhập/backup (FR-21, FR-52). Phương án đã loại: chuyển sang SQLite native (`@capacitor-community/sqlite`) ngay — phải viết lại toàn bộ data layer, transaction, live query và test cho hai backend; lưu song song hai nơi (phức tạp, dễ lệch). Hệ quả: một data layer cho mọi nền tảng; rủi ro dọn dữ liệu ghi ở §10 và NV-20; nếu thực tế có sự cố thì làm adapter SQLite sau interface repository sẵn có (Later).
+
+**ADR-42 — Export qua `FileExportPort`: web tải file, native ghi cache + share sheet (v5.0, M12).**
+Bối cảnh: `<a download>` + Blob URL không lưu được file trong WKWebView; người dùng iOS quen share sheet (Lưu vào Tệp, AirDrop, Mail). Lựa chọn: port trả `'saved' | 'shared' | 'cancelled'`; native dùng `@capacitor/filesystem` (`Directory.Cache`) + `@capacitor/share`; chỉ ghi `lastBackupAt` khi hoàn tất (A-65); import giữ `<input type="file">` (WKWebView mở trình chọn tài liệu). Phương án đã loại: `@capacitor/filesystem` ghi thẳng vào Documents (người dùng không thấy nếu không bật "Supports Document Browser"; thêm cấu hình Info.plist); plugin chọn file riêng cho import (không cần tới khi NV-18 báo lỗi). Hệ quả: Settings không còn import `integration/file-io` trực tiếp (đúng quy tắc tách lớp); `.ics` cũng đi qua share sheet.
+
+**ADR-43 — Icon, splash, screenshot store sinh từ repo bằng Playwright + bộ PNG tự viết (v5.0, M13, M15).**
+Bối cảnh: App Store yêu cầu icon 1024×1024 không alpha và screenshot iPhone 6,9" (1320×2868) không alpha; logo gốc ở `logo/` (git-ignore, có trên máy dev); Playwright Chromium đã là devDependency. Lựa chọn: `gen-ios-assets.mjs` dựng trang cục bộ, chụp, rồi bỏ alpha bằng module `png-rgb.mjs` (đọc/ghi PNG với `node:zlib`); screenshot chụp JPEG (không có alpha) ở viewport 440×956 × DPR 3 từ bản `native-e2e` với dataset demo và clock cố định; ảnh sinh ra được commit để user tải lên. Phương án đã loại: `@capacitor/assets` 3.0.5 (bản cuối 3/2024, phụ thuộc `@capacitor/cli` 5 và `sharp` 0.32); `sharp`/ImageMagick (binary native, cài global); chụp trên iOS Simulator (cần Mac; CI làm được nhưng phức tạp, chậm). Hệ quả: không thêm dependency; screenshot không có status bar iOS/khung máy (Apple chấp nhận ảnh chụp nội dung app); phải chạy lại khi UI đổi.
+
+**ADR-44 — Phạm vi thiết bị: iPhone, dọc, iOS ≥ 16.4; không OTA (v5.0).**
+Bối cảnh: UI đã thiết kế cho 360–1440 px; app một người dùng; bản build nhắm `es2022` (Safari 16.4 trở lên chạy đủ); Capacitor 8 cho phép từ iOS 15. Lựa chọn: `TARGETED_DEVICE_FAMILY = 1`, chỉ portrait, deployment target 16.4; không bật Mac/Vision Pro trong App Store Connect; cập nhật chỉ qua App Store (không Capgo/Appflow live update). Phương án đã loại: universal iPhone + iPad (phải có screenshot iPad 13" và kiểm layout split view); iOS 15 (phải hạ target JS/polyfill); OTA (thêm dịch vụ, rủi ro Guideline 2.5.2 khi đổi hành vi). Hệ quả: iPad chạy chế độ tương thích iPhone; mỗi bản sửa lỗi đi qua App Review (thường 1–2 ngày).
+
+**ADR-45 — Android (M16, tuỳ chọn) cùng kiến trúc, AAB build trên CI, tải lên Play thủ công (v5.0).**
+Bối cảnh: Google Play là lựa chọn (OQ-13); máy Windows build được Android nhưng ưu tiên CI cho lặp lại được; Play yêu cầu target API 36 cho app mới từ 2026-08-31, lần tải lên đầu phải làm tay, tài khoản cá nhân mới phải closed testing. Lựa chọn: `@capacitor/android` 8.5.3 (minSdk 24, target/compile 36), cùng adapter native (không Apple), nút Back qua `lifecycle.onBackButton`; `android.yml` trên `ubuntu-latest` + Temurin 21 ký AAB bằng upload key (secret) và xuất artifact; Play App Signing do Google giữ khoá ký app. Phương án đã loại: tự động upload qua Play Developer API ngay từ đầu (lần đầu không được; thêm service account); TWA (Trusted Web Activity — không dùng được plugin native như notification/đăng nhập native một cách thống nhất với iOS). Hệ quả: Google Sign-In Android cần Android OAuth client với SHA-1 của cả upload key và app signing key (U28); URL yêu cầu xoá tài khoản trên web bắt buộc cho Play (privacy.html#delete-account).
+
 ## Changelog
 
 - 2026-10-09 — v1, tạo mới (mode `new`).
@@ -1398,3 +1907,4 @@ Bối cảnh: bảng `goals` có `end_date date not null check (end_date >= star
 - 2026-10-13 — v3.0 (mode `revise`, phase 3: định nghĩa mới đường cong "Bạn", FR-27 v3.0). §3 sửa mô tả `domain/curve.ts` (bỏ phụ thuộc `stats`); §4 gạch quy tắc 1.01^n, trỏ sang **§4.5** mới (ký hiệu, công thức, làm tròn `pct` nửa xa 0, phạm vi giá trị, contract `ActualPoint`/`CurveData`/`curveYDomain`, oracle dataset R1 dữ liệu thật của user + S1, yêu cầu hiển thị, formatter `f.factor`, thang Y tự co giãn theo cả hai series); §11 thêm ADR-26. Không đổi schema, sync, backup, route, mã lỗi.
 - 2026-10-17 — v3.1 (mode `revise`, phase 4: M10 backlog + ngân sách bundle). §2 hàng Validate: zod chỉ ở biên lazy. §3: `env.ts`, `goal.ts`, `entry.ts` bỏ zod; thêm `domain/backup-file.ts`; bảng component v3.1 (`isPurgeableTombstone`, `purgeTombstones`, `app/maintenance.ts`, `clearPkceVerifier`, loader không phát chunk SDK khi cloud tắt); quy tắc lint mới (cấm `zod` ngoài hai biên, cấm `import()` `@supabase/*`/`supabase-client` ngoài `integration/supabase`). §4.1 `SyncFlag` thêm `2`. §4.2 ghi nhận `dirty = 2`, thêm quy tắc dọn tombstone. §5.2 `LocalSyncStore.purgeTombstones`. §5.3 `BackupService.parse` async, `LoginPromptService.dismiss` không đếm khi đang ẩn + mốc tương lai > 24 h. §5.4 `IMPORT_INVALID_SCHEMA` biến thể `outOfRange`. §5.9 dọn code verifier. §6, §8 (spec ngân sách 230 KB, test giới hạn chung form ↔ file, test dọn tombstone), §9 (`check` dùng `build:e2e`), §10 thêm 4 rủi ro. §11 thêm **ADR-27** (chiến lược chunk), **ADR-28** (`dirty = 2`), **ADR-29** (dọn tombstone), **ADR-30** (ghi nhận deviation D7, OQ-D12, sync D1–D3, toast D9, M8, M9, brand, mock). Không đổi schema Dexie/cloud, route, định dạng backup, mã lỗi.
 - 2026-10-19 — v4.0 (mode `revise`, phase 5: goal không thời hạn, quyết định user 2026-10-19). §3 bảng component v4.0; §4 `Goal.endDate: ISODate | null`, `LogEntry.date` cho goal không thời hạn, trỏ sang §4.6; §4.1 `SyncMeta.pullResetVersion`; §4.2 không bump Dexie; §4.3 trỏ tới migration thứ hai; §4.5 ghi chú; thêm **§4.6** (mô hình, bảng hàm domain, đường cong, oracle dataset **O1**, biên truy vấn `OPEN_END_QUERY_MAX`, backup, SQL migration `20261019000000_goal_open_ended.sql`, mapper/mock/Fake, thiết bị bản cũ, đẩy trước migration); §5.4 biến thể `GOAL_PERIOD_INVALID_openEndedTotal`, `DATE_OUTSIDE_GOAL_PERIOD` không ngày cuối, `IMPORT_INVALID_SCHEMA` `outOfRange` cho `total` + null; §5.5 `"endDate": null`, `schemaVersion` 1; §5.10, §5.11 nullable; §6, §8, §10 (5 rủi ro); §11 thêm **ADR-31**, **ADR-32**, **ADR-33**. Ghi chú: tên file migration dùng 14 chữ số `20261019000000_…` như file M6 (brief ghi `2026101900000_…`, thiếu một chữ số). Không đổi route, RLS, grant, trigger, mã lỗi (chỉ thêm biến thể).
+- 2026-10-21 — v5.0 (mode `revise`, phase 6: app iOS trên App Store bằng Capacitor, Google Play tuỳ chọn). §1 thêm sơ đồ "một codebase, hai nền tảng" + đường phát hành CI. §2 thêm bảng stack v5.0 (Capacitor 8.5.3 + plugin chính thức pin exact, `@capgo/capacitor-social-login` 8.7.4, Edge Function, `macos-26` + Xcode 26, Playwright cho asset, Android 8.5.3/API 36). §3 thêm bảng component v5.0 và quy tắc lint (`@capacitor/*`/`@capgo/*` chỉ ở `integration/native`, `import()` duy nhất ở `platform.ts`, UI không import giá trị từ integration). Thêm **§4.7** (Edge Function `delete-account`: không đổi schema, cascade, luồng client, contract HTTP, skeleton `handler.ts`/`apple.ts`/`index.ts`, thiết bị khác, idempotent). §5.4 thêm `ACCOUNT_DELETE_*`, mở rộng `AUTH_CANCELLED/FAILED` cho native; §5.6 thêm nhắc native (`canSchedule`, `schedule`, `cancelAll`, `planReminderDates`, `replan`, trigger, adapter); §5.9 thêm `AuthProvider`, `signInWithIdToken`, `IdTokenProvider`, `AccountDeletionPort`, `signIn(returnTo, provider)`, nonce, cấu hình provider Supabase; §5.11 mock thêm `grant_type=id_token`, `PUT /user`, `functions/v1/delete-account`; thêm **§5.12** (NativePlatform, AppCapabilities, link ngoài, thứ tự khởi động, `capacitor.config.ts`), **§5.13** (project iOS: build settings, Info.plist, entitlements, assets, privacy manifest), **§5.14** (`ios.yml` hai lane, ExportOptions, lỗi thường gặp), **§5.15** (`FileExportPort`), **§5.16** (`AccountDeletionPort` qua `functions.invoke`). §6, §7 (ba nơi cấu hình: `VITE_*` công khai, GitHub secrets/variables, Supabase function secrets), §8 (test v5.0, project `native-web`), §9 (lệnh native, store, deploy function), §10 (15 rủi ro mới). §11 ghi chú ADR-03/06/17/18/19, thêm **ADR-34 … ADR-45** (ADR-39, ADR-41 đã được PRD trỏ tới). Không đổi schema Dexie/cloud, RLS, định dạng backup, route.
