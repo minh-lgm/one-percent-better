@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { RouterProvider, type createHashRouter } from 'react-router';
 import { ToastProvider } from '../ui/components/Toast';
 import { ServicesProvider } from './AppContext';
 import type { AppContainer } from './container';
 import { ErrorBoundary } from './ErrorBoundary';
+import { FirstRenderSignal } from './FirstRenderSignal';
 
 export interface AppProps {
   container: AppContainer;
@@ -14,13 +14,9 @@ export interface AppProps {
 }
 
 export function App({ container, router, onFirstRender }: AppProps) {
-  useEffect(() => {
-    onFirstRender?.();
-    // Only the first commit matters; a changed callback must not re-fire it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   return (
     <I18nextProvider i18n={container.i18n}>
+      {onFirstRender && <FirstRenderSignal onFirstRender={onFirstRender} />}
       <ErrorBoundary>
         <ServicesProvider container={container}>
           <ToastProvider>

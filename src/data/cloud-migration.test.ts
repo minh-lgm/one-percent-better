@@ -98,7 +98,7 @@ describe('supabase/migrations/20261012000000_cloud_sync.sql', () => {
 
 // ---- v4.0 (M11-AC8, ARCH §4.6 f, ADR-33): the second migration, and the first one left untouched ----
 const SQL2_PATH = fileURLToPath(new URL('../../supabase/migrations/20261019000000_goal_open_ended.sql', import.meta.url));
-const sql2 = readFileSync(SQL2_PATH, 'utf8');
+const sql2 = readFileSync(SQL2_PATH, 'utf8').replace(/\r\n/g, '\n'); // M13-D2: CRLF-normalised like `sql`
 const code2 = stripComments(sql2);
 
 describe('supabase/migrations/20261019000000_goal_open_ended.sql (M11-AC8)', () => {

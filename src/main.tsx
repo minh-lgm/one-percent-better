@@ -4,10 +4,11 @@ import { I18nextProvider } from 'react-i18next';
 import { App } from './app/App';
 import { bootstrap } from './app/bootstrap';
 import { createContainer } from './app/container';
+import { FirstRenderSignal } from './app/FirstRenderSignal';
 import { startMaintenance } from './app/maintenance';
 import { startReminderScheduler } from './app/reminder-scheduler';
 import { createAppRouter } from './app/router';
-import { startApp } from './app/start';
+import { startApp, startNativeShell } from './app/start';
 import { startSyncScheduler } from './app/sync-scheduler';
 import { env } from './config/env';
 import { cleanCallbackUrl, clearPkceVerifier, readAuthCallback, sessionReturnTo } from './integration/auth-callback';
@@ -19,9 +20,21 @@ import './ui/styles/app.css';
 
 const root = createRoot(document.getElementById('root') as HTMLElement);
 
+// M13 (M13-D1): the native launch image is hidden after the FIRST commit of whatever renders first — the app or the
+// S8 storage-error screen — or after 3 s. Armed once, before bootstrap, so no failure path can leave it on screen.
+let markRendered: () => void = () => {};
+const firstRender = new Promise<void>((resolve) => {
+  markRendered = resolve;
+});
+let shellArmed = false;
+
 async function start(): Promise<void> {
   // v5.0 (ADR-35): the Capacitor runtime, or `null` on the web build (the call is a constant `null` there).
   const native = await loadNativePlatform();
+  if (!shellArmed) {
+    shellArmed = true;
+    startNativeShell(native, firstRender);
+  }
   // OAuth callback (`<BASE_URL>?auth=callback&code=…`, ADR-19) is read once, before the hash router exists.
   const authCallback = readAuthCallback(window.location);
   const result = await bootstrap({
@@ -37,6 +50,7 @@ async function start(): Promise<void> {
     root.render(
       <StrictMode>
         <I18nextProvider i18n={result.i18n}>
+          <FirstRenderSignal onFirstRender={markRendered} />
           <StorageError onRetry={start} platform={native?.platform ?? 'web'} />
         </I18nextProvider>
       </StrictMode>,
@@ -45,14 +59,11 @@ async function start(): Promise<void> {
   }
 
   const { container } = result;
-  // M13: the native launch image is hidden after this first commit (3 s fallback in startApp).
-  const firstRender = new Promise<void>((resolve) => {
-    root.render(
-      <StrictMode>
-        <App container={container} router={createAppRouter()} onFirstRender={resolve} />
-      </StrictMode>,
-    );
-  });
+  root.render(
+    <StrictMode>
+      <App container={container} router={createAppRouter()} onFirstRender={markRendered} />
+    </StrictMode>,
+  );
 
   // Background work (maintenance, reminders, sync, service worker on the web build only — ARCH §5.12).
   startApp({
@@ -62,7 +73,6 @@ async function start(): Promise<void> {
     prod: import.meta.env.PROD,
     baseUrl: import.meta.env.BASE_URL,
     deps: { registerServiceWorker, listenForNavigation, startMaintenance, startReminderScheduler, startSyncScheduler },
-    firstRender,
   });
 }
 

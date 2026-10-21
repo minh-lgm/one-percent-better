@@ -79,7 +79,16 @@ describe('.github/workflows/ios.yml', () => {
     });
   });
 
-  it('pages.yml is untouched by this milestone (still deploys from dist with the same steps)', () => {
+  it('actions/checkout and actions/setup-node are @v5 in both workflows (Node 20 runtime deprecation seen on run 39624708770)', () => {
+    for (const rel of ['.github/workflows/ios.yml', '.github/workflows/pages.yml']) {
+      const text = readLf(rel);
+      const uses = [...text.matchAll(/uses: (actions\/(?:checkout|setup-node))@(v\d+)/g)].map((m) => `${m[1]}@${m[2]}`);
+      expect(uses.length, rel).toBeGreaterThan(0);
+      for (const u of uses) expect(u, rel).toMatch(/@v5$/);
+    }
+  });
+
+  it('pages.yml still deploys from dist with the same steps (only the action majors changed in M13)', () => {
     const pages = readLf('.github/workflows/pages.yml');
     expect(pages).toContain('path: dist\n');
     expect(pages).not.toContain('native');

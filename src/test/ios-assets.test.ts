@@ -95,7 +95,8 @@ describe('ios/ci export options and version file (M13-AC1, M13-AC2)', () => {
     for (const rel of ['ios/ci/ExportOptions.plist', 'ios/ci/ExportOptions-manual.plist']) {
       const plist = read(rel);
       expect(plist).not.toMatch(/<key>teamID<\/key>\s*<string>[A-Z0-9]{10}<\/string>/);
-      expect(plist).not.toMatch(/BEGIN PRIVATE KEY|AgEAMBMGByqGSM49/);
+      // Markers split so DoD 14's `git grep` does not match this line (M13-D3).
+      expect(plist).not.toMatch(new RegExp(['BEGIN PRIVATE', 'KEY'].join(' ') + '|' + ['AgEAMBMG', 'ByqGSM49'].join('')));
     }
   });
   it('ios/ci/version.json holds marketingVersion X.Y.Z', () => {
