@@ -160,8 +160,7 @@ test.describe('M13 QC: launch image is hidden once, after the first render (M13-
     expect(await page.evaluate(() => (window as unknown as { __qc13?: unknown }).__qc13)).toBeUndefined();
   });
 
-  test('M13-D1: storage unavailable (S8) on the native app — the launch image must not stay over the error page', async ({ page }) => {
-    test.fail(true, 'M13-D1: main.tsx returns on the bootstrap failure before startApp, so neither SplashScreen.hide() nor the 3 s fallback is ever armed');
+  test('M13-D1 (regression): storage unavailable (S8) on the native app — the launch image must not stay over the error page', async ({ page }) => {
     await emulateIos(page);
     await page.addInitScript(() => Object.defineProperty(window, 'indexedDB', { configurable: true, get: () => undefined }));
     await page.goto('/');
@@ -334,5 +333,140 @@ test.describe('M13 QC: crypto.randomUUID missing (non-secure context fallback)',
     expect(new Set(ids).size).toBe(2);
     for (const id of ids) expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(errors).toEqual([]);
+  });
+});
+
+// ---- QC M13 round 2: M13-D1 regression. Every startup path must hide the launch image, once. ----
+type Broken = 'none' | 'throw' | 'hang' | 'errorEvent';
+declare global {
+  interface Window {
+    __qcBroken: Broken;
+  }
+}
+
+/** Makes indexedDB.open misbehave while window.__qcBroken !== 'none' (switchable at run time for the Retry cases). */
+async function breakIndexedDb(page: Page, initial: Broken): Promise<void> {
+  await page.addInitScript((mode) => {
+    window.__qcBroken = mode as Broken;
+    const orig = IDBFactory.prototype.open;
+    IDBFactory.prototype.open = function (this: IDBFactory, ...args: Parameters<IDBFactory['open']>) {
+      const b = window.__qcBroken;
+      if (b === 'throw') throw new DOMException('denied by QC', 'SecurityError');
+      if (b === 'hang') return new EventTarget() as unknown as IDBOpenDBRequest; // never fires success or error
+      if (b === 'errorEvent') {
+        const req = new EventTarget() as unknown as IDBOpenDBRequest & { onerror: ((e: Event) => void) | null };
+        Object.defineProperty(req, 'error', { value: new DOMException('denied by QC', 'SecurityError') });
+        setTimeout(() => {
+          const ev = new Event('error', { cancelable: true });
+          (req as unknown as EventTarget).dispatchEvent(ev);
+          req.onerror?.(ev);
+        }, 0);
+        return req;
+      }
+      return orig.apply(this, args);
+    } as typeof IDBFactory.prototype.open;
+  }, initial);
+}
+
+const hideCalls = (page: Page) => calls(page, 'SplashScreen', 'hide');
+
+test.describe('M13 QC r2: M13-D1 — the launch image is hidden on every startup path, exactly once', () => {
+  test('normal start: exactly one hide, after React committed, no fallback second call after 3.5 s', async ({ page }) => {
+    const errors = watchErrors(page);
+    await emulateIos(page);
+    await page.goto('/');
+    await expect(page.locator('main h1')).toBeVisible();
+    await expect.poll(async () => (await hideCalls(page)).length).toBe(1);
+    const h = (await hideCalls(page))[0];
+    expect(h.rootChildren).toBeGreaterThan(0);
+    expect(h.at).toBeLessThan(2900);
+    await page.waitForTimeout(3600);
+    expect(await hideCalls(page)).toHaveLength(1);
+    expect(await calls(page, 'StatusBar', 'setStyle')).toHaveLength(1);
+    expect(errors).toEqual([]);
+  });
+
+  test('bootstrap hangs (IndexedDB never answers): nothing renders, the 3 s fallback hides the launch image once', async ({ page }) => {
+    await emulateIos(page);
+    await breakIndexedDb(page, 'hang');
+    await page.goto('/');
+    // Shell is armed before bootstrap: status bar and keyboard listeners are already live.
+    await expect.poll(async () => (await calls(page, 'StatusBar', 'setStyle')).length).toBe(1);
+    expect(await hideCalls(page)).toHaveLength(0); // not before the fallback
+    await expect.poll(async () => (await hideCalls(page)).length, { timeout: 5000 }).toBe(1);
+    const h = (await hideCalls(page))[0];
+    expect(h.at).toBeGreaterThanOrEqual(2800); // the timer, not an early call
+    expect(h.at).toBeLessThan(4500);
+    expect(h.rootChildren).toBe(0); // nothing had rendered: this really is the fallback path
+    await page.waitForTimeout(1500);
+    expect(await hideCalls(page)).toHaveLength(1);
+  });
+
+  for (const mode of ['throw', 'errorEvent'] as const) {
+    test(`bootstrap fails (indexedDB.open ${mode}): S8 renders, the launch image is hidden once, after the S8 commit`, async ({ page }) => {
+      await emulateIos(page);
+      await breakIndexedDb(page, mode);
+      await page.goto('/');
+      await expect(page.getByRole('heading', { level: 1, name: EN.storageError.title })).toBeVisible();
+      await expect.poll(async () => (await hideCalls(page)).length, { timeout: 4500 }).toBe(1);
+      const h = (await hideCalls(page))[0];
+      expect(h.rootChildren).toBeGreaterThan(0); // hidden after S8 committed, not at the timer
+      expect(h.at).toBeLessThan(2900);
+      // Native body copy (not the browser private-window text).
+      await expect(page.locator('body')).toContainText(EN.storageError.bodyNative);
+      await page.waitForTimeout(3600);
+      expect(await hideCalls(page)).toHaveLength(1);
+      expect(await calls(page, 'StatusBar', 'setStyle')).toHaveLength(1);
+    });
+  }
+
+  test('Retry on S8 does not arm the shell again; a successful Retry renders the app, still one hide / one status-bar call / two keyboard listeners', async ({ page }) => {
+    const errors = watchErrors(page);
+    await emulateIos(page);
+    await breakIndexedDb(page, 'throw');
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1, name: EN.storageError.title })).toBeVisible();
+    await expect.poll(async () => (await hideCalls(page)).length).toBe(1);
+    const kbListeners = () => page.evaluate(() => window.__qc13.listeners.filter((l) => l.plugin === 'Keyboard').length);
+    const appListeners = () => page.evaluate(() => window.__qc13.listeners.filter((l) => l.plugin === 'App').length);
+    const kb0 = await kbListeners();
+    const app0 = await appListeners();
+    expect(kb0).toBe(2);
+
+    // Retry while still broken, twice: still S8, nothing re-armed.
+    for (let i = 0; i < 2; i++) {
+      await page.getByRole('button', { name: EN.common.tryAgain }).click();
+      await expect(page.getByRole('heading', { level: 1, name: EN.storageError.title })).toBeVisible();
+    }
+    await page.waitForTimeout(400);
+    expect(await hideCalls(page)).toHaveLength(1);
+    expect(await calls(page, 'StatusBar', 'setStyle')).toHaveLength(1);
+    expect(await kbListeners()).toBe(kb0);
+
+    // Storage comes back: Retry renders the app.
+    await page.evaluate(() => {
+      window.__qcBroken = 'none';
+    });
+    await page.getByRole('button', { name: EN.common.tryAgain }).click();
+    await expect(page.locator('main h1')).toBeVisible();
+    await page.waitForTimeout(3600); // past the fallback of the (already consumed) timer
+    expect(await hideCalls(page)).toHaveLength(1);
+    expect(await calls(page, 'StatusBar', 'setStyle')).toHaveLength(1);
+    expect(await kbListeners()).toBe(kb0);
+    // The App.resume listener belongs to startApp once the app really started: at most the initial count + 1.
+    expect(await appListeners()).toBeLessThanOrEqual(app0 + 1);
+    // The keyboard class still works after the Retry path.
+    await page.evaluate(() => window.__qc13.fire('keyboardWillShow'));
+    await expect(page.locator('body')).toHaveClass(/keyboard-open/);
+    await page.evaluate(() => window.__qc13.fire('keyboardWillHide'));
+    expect(errors.filter((e) => !/denied by QC|SecurityError|Failed to load resource/.test(e))).toEqual([]);
+  });
+
+  test('web build without the Capacitor runtime: S8 renders with the browser copy and there is no bridge to call', async ({ page }) => {
+    await breakIndexedDb(page, 'throw');
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1, name: EN.storageError.title })).toBeVisible();
+    await expect(page.locator('body')).toContainText('private or incognito');
+    expect(await page.evaluate(() => (window as unknown as { __qc13?: unknown }).__qc13)).toBeUndefined();
   });
 });
