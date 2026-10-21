@@ -33,14 +33,18 @@
     "cap:sync": "npm run build:native && cap sync ios",
     "icons": "node scripts/gen-icons.mjs",
     "fixtures:large": "node scripts/gen-large-backup.mjs",
-    "bench": "cross-env BENCH_ASSERT=1 vitest run src/services/stats-service.test.ts --reporter=verbose"
+    "bench": "cross-env BENCH_ASSERT=1 vitest run src/services/stats-service.test.ts --reporter=verbose",
+    "ios:assets": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 node scripts/gen-ios-assets.mjs"
   },
   "dependencies": {
     "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.5.3",
     "@capacitor/filesystem": "8.1.5",
     "@capacitor/ios": "8.5.3",
+    "@capacitor/keyboard": "8.0.6",
     "@capacitor/share": "8.0.3",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4",
     "@supabase/supabase-js": "2.117.3",
     "date-fns": "4.4.0",
     "dexie": "4.4.6",

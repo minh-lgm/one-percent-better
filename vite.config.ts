@@ -93,7 +93,7 @@ export default defineConfig(({ mode }) => {
           test: {
             name: 'node',
             environment: 'node',
-            include: ['src/**/*.test.ts', 'tests/qc/**/*.test.ts'],
+            include: ['src/**/*.test.ts', 'tests/qc/**/*.test.ts', 'scripts/**/*.test.mjs'],
           },
         },
         {
