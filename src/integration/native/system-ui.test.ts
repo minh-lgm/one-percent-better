@@ -107,6 +107,26 @@ describe('createSystemUi().start', () => {
     expect(f.body.classes.has(KEYBOARD_OPEN_CLASS)).toBe(false);
   });
 
+  it('a runtime without the Keyboard plugin (addListener rejects "not implemented") produces no unhandled rejection; stop still works', async () => {
+    const f = fakeDeps();
+    f.deps.addKeyboardListener = vi.fn(async () => {
+      throw new Error('"Keyboard" plugin is not implemented on ios');
+    });
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const stop = createSystemUi(f.deps).start();
+      await new Promise((r) => setTimeout(r, 0));
+      stop();
+      await new Promise((r) => setTimeout(r, 0));
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+    expect(unhandled).toEqual([]);
+    expect(f.deps.setStatusBarStyle).toHaveBeenCalledTimes(1);
+  });
+
   it('a rejected plugin call does not throw out of start or the theme listener', async () => {
     const f = fakeDeps(fakeTheme('light'));
     f.deps.setStatusBarStyle = vi.fn(async () => {

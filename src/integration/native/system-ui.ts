@@ -64,21 +64,24 @@ export function createSystemUi(deps: SystemUiDeps = defaultDeps()): NativeSystem
       const unsubscribe = theme.subscribe(apply);
 
       let active = true;
-      const handles: Array<Promise<PluginListenerHandle>> = [];
       const toggle = (open: boolean) => () => {
         if (!active || !deps.body) return;
         if (open) deps.body.classList.add(KEYBOARD_OPEN_CLASS);
         else deps.body.classList.remove(KEYBOARD_OPEN_CLASS);
       };
-      handles.push(deps.addKeyboardListener('keyboardWillShow', toggle(true)));
-      handles.push(deps.addKeyboardListener('keyboardWillHide', toggle(false)));
+      // A runtime without the Keyboard plugin rejects here ("not implemented"); that is not an error for the app
+      // (the tab bar simply stays), so the rejection is absorbed right away — never an unhandled rejection.
+      const handles: Array<Promise<PluginListenerHandle | null>> = [
+        deps.addKeyboardListener('keyboardWillShow', toggle(true)).catch(() => null),
+        deps.addKeyboardListener('keyboardWillHide', toggle(false)).catch(() => null),
+      ];
 
       return () => {
         active = false;
         unsubscribe();
         deps.body?.classList.remove(KEYBOARD_OPEN_CLASS);
         // The plugin registers asynchronously; a stop that comes first removes each handle once it lands.
-        for (const handle of handles) void handle.then((h) => h.remove()).catch(() => undefined);
+        for (const handle of handles) void handle.then((h) => h?.remove()).catch(() => undefined);
       };
     },
     hideSplash: () => deps.hideSplash(),
