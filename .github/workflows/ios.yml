@@ -1,0 +1,86 @@
+# iOS build on GitHub's macOS runner (ARCHITECTURE §5.14, ADR-38). The development machine is Windows, so
+# everything that needs Xcode runs here only. M12: lane `simulator` (unsigned build for the iOS Simulator,
+# proves the Xcode project and the Capacitor sync are sound). M13 adds lane `testflight` (archive, sign with an
+# App Store Connect API key, upload). Nothing here deploys GitHub Pages (pages.yml is untouched).
+name: iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: 'What to build'
+        type: choice
+        options: [simulator, testflight]
+        default: simulator
+      marketing_version:
+        description: 'Override MARKETING_VERSION (testflight lane only, M13)'
+        type: string
+        required: false
+  push:
+    tags: ['ios-v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.event_name }}-${{ github.ref }}-${{ inputs.lane || 'tag' }}
+  cancel-in-progress: false
+
+jobs:
+  simulator:
+    if: github.event_name == 'workflow_dispatch' && inputs.lane == 'simulator'
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Select Xcode 26
+        # Apple accepts uploads built with Xcode 26 only (from 2026-04-28); the simulator lane uses the same toolchain
+        # so a build that passes here is representative. If the default is older, switch to the newest Xcode 26 on the image.
+        run: |
+          echo "Default: $(xcodebuild -version | head -1)"
+          if ! xcodebuild -version | grep -q '^Xcode 26\.'; then
+            candidate=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+            if [ -z "$candidate" ]; then
+              echo "::error::No Xcode 26.x on this runner image"; exit 1
+            fi
+            sudo xcode-select -s "$candidate"
+          fi
+          xcodebuild -version
+          xcodebuild -version | grep -q '^Xcode 26\.'
+
+      - name: Build the web assets for the app
+        # No cloud configuration on this lane: the simulator build runs with the account feature off (FR-38).
+        run: npm run build:native
+
+      - name: Capacitor sync
+        run: npx cap sync ios
+
+      - name: Build for the iOS Simulator (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tee "$RUNNER_TEMP/xcodebuild.log" | grep -E '^(\*\*|error:|warning:|Build settings|=== BUILD)' || true
+          grep -q '\*\* BUILD SUCCEEDED \*\*' "$RUNNER_TEMP/xcodebuild.log"
+
+      - name: Summary
+        run: |
+          {
+            echo "## iOS simulator build"
+            echo
+            echo "- $(xcodebuild -version | tr '\n' ' ')"
+            echo "- Capacitor $(npx cap --version)"
+            echo "- Web assets: $(du -sh dist-native | cut -f1)"
+            echo "- Result: $(grep -o '\*\* BUILD [A-Z]* \*\*' "$RUNNER_TEMP/xcodebuild.log" | tail -1)"
+          } >> "$GITHUB_STEP_SUMMARY"
