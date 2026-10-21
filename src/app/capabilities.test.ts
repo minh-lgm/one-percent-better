@@ -90,3 +90,36 @@ describe('createContainer with a native platform', () => {
     expect(tc.container.authService.state().kind).toBe('unavailable');
   });
 });
+
+// ---- M14: a runtime with native sign-in (ARCH §5.12 `idTokens`, §5.9 v5.0) ----
+describe('createContainer with native sign-in (M14)', () => {
+  it('iOS + idTokens + cloud: nativeAuth and appleSignIn true, the account service is available and uses the sheets, sync service present', async () => {
+    tc = await createTestContainer({ cloud: true, native: 'ios', idTokens: true });
+    expect(tc.container.capabilities).toMatchObject({ platform: 'ios', nativeAuth: true, appleSignIn: true, nativeShare: true, serviceWorker: false });
+    expect(tc.container.authService.isAvailable()).toBe(true);
+    expect(tc.container.syncService).not.toBeNull();
+    await tc.container.authService.init();
+    expect((await tc.container.authService.signIn('#/settings', 'apple')).ok).toBe(true);
+    expect(tc.auth!.idTokens!.count('getIdToken', 'apple')).toBe(1);
+    expect(tc.auth!.port.calls.signIn).toBe(0);
+    expect(tc.container.authService.state()).toMatchObject({ kind: 'signed-in', providers: ['apple'] });
+  });
+
+  it('android + idTokens: nativeAuth true but appleSignIn false (ADR-37)', async () => {
+    tc = await createTestContainer({ cloud: true, native: 'android', idTokens: true });
+    expect(tc.container.capabilities).toMatchObject({ platform: 'android', nativeAuth: true, appleSignIn: false });
+    expect(tc.auth!.idTokens!.available('apple')).toBe(false);
+  });
+
+  it('iOS + idTokens without cloud configuration: account still unavailable (FR-38)', async () => {
+    tc = await createTestContainer({ native: 'ios', idTokens: true });
+    expect(tc.container.capabilities).toMatchObject({ nativeAuth: true, appleSignIn: true });
+    expect(tc.container.authService.state().kind).toBe('unavailable');
+  });
+
+  it('computeCapabilities: idTokens on the platform object is what nativeAuth means', () => {
+    const sheets = { available: () => true, getIdToken: async () => ({ kind: 'cancelled' as const }), logout: async () => undefined };
+    expect(computeCapabilities({ native: { ...ios, idTokens: sheets }, nativeBuild: true, baseUrl: '/' })).toMatchObject({ nativeAuth: true, appleSignIn: true });
+    expect(computeCapabilities({ native: { ...ios, platform: 'android', idTokens: sheets }, nativeBuild: true, baseUrl: '/' })).toMatchObject({ nativeAuth: true, appleSignIn: false });
+  });
+});

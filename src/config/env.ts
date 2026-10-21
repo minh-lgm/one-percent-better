@@ -26,11 +26,18 @@ export interface CloudConfig {
   key: string;
 }
 
+/** v5.0 (M14): public Google client IDs for the native sign-in sheet (ARCHITECTURE §7 v5.0). `null` = not configured. */
+export interface GoogleNativeConfig {
+  webClientId: string | null;
+  iosClientId: string | null;
+}
+
 export interface AppEnv {
   dbName: string;
   reminderCheckIntervalMs: number;
   syncIntervalMs: number;
   cloud: CloudConfig | null;
+  google: GoogleNativeConfig;
 }
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
@@ -73,6 +80,18 @@ export function parseCloud(raw: Record<string, unknown>): CloudConfig | null {
   return { url, key };
 }
 
+/** A Google OAuth client ID: `<digits>-<slug>.apps.googleusercontent.com` (public identifier). Anything else → `null`. */
+export function parseGoogleClientId(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const text = raw.trim();
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,200}\.apps\.googleusercontent\.com$/.test(text) ? text : null;
+}
+
+/** `VITE_GOOGLE_WEB_CLIENT_ID` + `VITE_GOOGLE_IOS_CLIENT_ID` (v5.0): both are needed for Google on the native app. */
+export function parseGoogle(raw: Record<string, unknown>): GoogleNativeConfig {
+  return { webClientId: parseGoogleClientId(raw.VITE_GOOGLE_WEB_CLIENT_ID), iosClientId: parseGoogleClientId(raw.VITE_GOOGLE_IOS_CLIENT_ID) };
+}
+
 /**
  * Parse raw environment values. Invalid or missing values fall back to defaults
  * so the app always starts (ARCHITECTURE §7: no variable is required).
@@ -83,6 +102,7 @@ export function parseEnv(raw: Record<string, unknown> = {}): AppEnv {
     reminderCheckIntervalMs: parseIntInRange(raw.VITE_REMINDER_CHECK_INTERVAL_MS, 1000, 3_600_000, DEFAULT_REMINDER_INTERVAL_MS),
     syncIntervalMs: parseIntInRange(raw.VITE_SYNC_INTERVAL_MS, 60_000, 3_600_000, DEFAULT_SYNC_INTERVAL_MS),
     cloud: parseCloud(raw),
+    google: parseGoogle(raw),
   };
 }
 

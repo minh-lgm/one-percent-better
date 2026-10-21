@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseCloud, parseCloudUrl, parseEnv } from './env';
+import { parseCloud, parseCloudUrl, parseEnv, parseGoogle, parseGoogleClientId } from './env';
+
+const NO_GOOGLE = { webClientId: null, iosClientId: null };
 
 describe('parseEnv', () => {
   it('uses defaults when nothing is set', () => {
-    expect(parseEnv({})).toEqual({ dbName: 'one-percent-better', reminderCheckIntervalMs: 60_000, syncIntervalMs: 300_000, cloud: null });
+    expect(parseEnv({})).toEqual({ dbName: 'one-percent-better', reminderCheckIntervalMs: 60_000, syncIntervalMs: 300_000, cloud: null, google: NO_GOOGLE });
   });
 
   it('reads valid values', () => {
@@ -12,6 +14,7 @@ describe('parseEnv', () => {
       reminderCheckIntervalMs: 5000,
       syncIntervalMs: 300_000,
       cloud: null,
+      google: NO_GOOGLE,
     });
   });
 
@@ -75,5 +78,26 @@ describe('parseEnv — cloud (M6-AC2, FR-38)', () => {
     expect(parseEnv({ VITE_SYNC_INTERVAL_MS: 'abc' }).syncIntervalMs).toBe(300_000);
     expect(parseEnv({ VITE_SYNC_INTERVAL_MS: '60000' }).syncIntervalMs).toBe(60_000);
     expect(parseEnv({ VITE_SYNC_INTERVAL_MS: '3600001' }).syncIntervalMs).toBe(300_000);
+  });
+});
+
+describe('parseEnv — Google native client IDs (M14-AC2, ARCH §7 v5.0)', () => {
+  const WEB = '1234-web.apps.googleusercontent.com';
+  const IOS = '1234-ios.apps.googleusercontent.com';
+
+  it('both missing → both null (Google native unavailable, Apple unaffected)', () => {
+    expect(parseEnv({}).google).toEqual(NO_GOOGLE);
+    expect(parseGoogle({ VITE_GOOGLE_WEB_CLIENT_ID: '', VITE_GOOGLE_IOS_CLIENT_ID: '   ' })).toEqual(NO_GOOGLE);
+  });
+
+  it('valid IDs are read (trimmed); one missing leaves the other', () => {
+    expect(parseEnv({ VITE_GOOGLE_WEB_CLIENT_ID: ` ${WEB} `, VITE_GOOGLE_IOS_CLIENT_ID: IOS }).google).toEqual({ webClientId: WEB, iosClientId: IOS });
+    expect(parseGoogle({ VITE_GOOGLE_WEB_CLIENT_ID: WEB })).toEqual({ webClientId: WEB, iosClientId: null });
+  });
+
+  it('rejects values that are not Google client IDs (secrets, URLs, junk)', () => {
+    for (const bad of ['not-an-id', 'GOCSPX-secret', 'https://x.apps.googleusercontent.com', 'a b.apps.googleusercontent.com', 42, null]) {
+      expect(parseGoogleClientId(bad), String(bad)).toBeNull();
+    }
   });
 });

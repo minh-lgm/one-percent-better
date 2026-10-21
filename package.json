@@ -45,6 +45,7 @@
     "@capacitor/share": "8.0.3",
     "@capacitor/splash-screen": "8.0.2",
     "@capacitor/status-bar": "8.0.4",
+    "@capgo/capacitor-social-login": "8.7.4",
     "@supabase/supabase-js": "2.117.3",
     "date-fns": "4.4.0",
     "dexie": "4.4.6",

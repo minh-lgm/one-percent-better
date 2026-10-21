@@ -36,8 +36,8 @@ export function computeCapabilities({ native, nativeBuild, baseUrl }: Capabiliti
     serviceWorker: !nativeBuild,
     pwaHints: !nativeBuild,
     nativeShare: native !== null,
-    nativeAuth: false,
-    appleSignIn: false,
+    nativeAuth: native?.idTokens !== undefined,
+    appleSignIn: native?.idTokens !== undefined && native.platform === 'ios',
     scheduledNotifications: false,
     publicSiteUrl: nativeBuild ? PUBLIC_SITE_URL : baseUrl,
   };

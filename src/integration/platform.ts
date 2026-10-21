@@ -2,6 +2,7 @@
 // build-time constant: `false` on the web build (and in Vitest), so the bundler drops the dynamic import
 // and emits no Capacitor chunk; `true` only for `--mode native` / `--mode native-e2e`.
 import type { FileExportPort } from '../services/file-export-port';
+import type { IdTokenProvider } from '../services/id-token-port';
 
 export type EffectiveTheme = 'light' | 'dark';
 
@@ -26,6 +27,8 @@ export interface NativePlatform {
   lifecycle: { onResume(cb: () => void): () => void; onBackButton?(cb: () => void): () => void };
   /** M13: present on the real runtime; fakes may omit it. */
   systemUi?: NativeSystemUi;
+  /** M14 (§5.9 v5.0): native sign-in sheets; its presence is what `capabilities.nativeAuth` means. */
+  idTokens?: IdTokenProvider;
 }
 
 export interface NativeModule {

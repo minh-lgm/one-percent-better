@@ -22,6 +22,8 @@ const config: CapacitorConfig = {
     // M13 (DESIGN "Native shell" 5): the web view shrinks when the keyboard opens so the focused input stays
     // visible; switch to 'body' if NV-13 shows the tab bar jumping (ARCH §5.12).
     Keyboard: { resize: 'native' as KeyboardResize, resizeOnFullScreen: true },
+    // M14 (ADR-36): Google Sign-In + Sign in with Apple only; Facebook / Twitter SDKs are not bundled (`false`).
+    SocialLogin: { providers: { google: true, apple: true, facebook: false, twitter: false } },
   },
 };
 

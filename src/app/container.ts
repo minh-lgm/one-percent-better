@@ -20,8 +20,9 @@ import { createWebFileExport, readTextFile } from '../integration/file-io';
 import { createBrowserNotifications, unsupportedNotifications } from '../integration/notifications';
 import type { NativePlatform } from '../integration/platform';
 import { isIndexedDbAvailable, requestPersistentStorage, type PersistState } from '../integration/storage';
-import { clearPkceVerifiers, clearStoredSession, createRemoteLoader, createSupabaseLoader, hasStoredSession } from '../integration/supabase/loader';
+import { clearPkceVerifiers, clearStoredSession, createAccountDeletionLoader, createRemoteLoader, createSupabaseLoader, hasStoredSession } from '../integration/supabase/loader';
 import { createWebLocks } from '../integration/web-locks';
+import type { AccountDeletionPort } from '../services/account-deletion-port';
 import type { AuthPort, ReturnToStore } from '../services/auth-port';
 import { AuthService } from '../services/auth-service';
 import { BackupService } from '../services/backup-service';
@@ -102,6 +103,8 @@ export interface ContainerOptions {
   loadAuth?: () => Promise<AuthPort>;
   /** Override the RemoteStore loader (tests inject a FakeRemoteStore). */
   loadRemote?: () => Promise<RemoteStore>;
+  /** v5.0 (M14): override the account-deletion loader (tests inject a FakeAccountDeletionPort). */
+  loadAccountDeletion?: () => Promise<AccountDeletionPort>;
   locks?: LockPort;
   connectivity?: Connectivity;
   returnTo?: ReturnToStore;
@@ -129,6 +132,7 @@ export async function createContainer({
   authStorage = typeof localStorage === 'undefined' ? null : localStorage,
   loadAuth,
   loadRemote,
+  loadAccountDeletion,
   locks,
   connectivity = typeof window === 'undefined' ? alwaysOnline : createConnectivity(),
   returnTo = sessionReturnTo(typeof sessionStorage === 'undefined' ? null : sessionStorage),
@@ -141,9 +145,9 @@ export async function createContainer({
 }: ContainerOptions): Promise<AppContainer> {
   if (!indexedDbAvailable) throw new StorageError('IndexedDB is not available in this browser');
 
-  // v5.0 (ADR-34/35): platform differences are decided here, once. Native M12 and M13: no notification API in
-  // WKWebView yet (M15), export through the share sheet, and no account until native sign-in exists (M14), so
-  // the cloud configuration is ignored and the SDK is never loaded.
+  // v5.0 (ADR-34/35): platform differences are decided here, once. Native: no notification API in WKWebView yet
+  // (M15), export through the share sheet; the account exists only when the runtime offers native sign-in
+  // (`idTokens`, M14) — a runtime without it ignores the cloud configuration and never loads the SDK.
   const capabilities = computeCapabilities({ native, nativeBuild, baseUrl });
   const notificationPort = notifications ?? (native ? unsupportedNotifications() : createBrowserNotifications());
   const exportPort = fileExport ?? native?.fileExport ?? createWebFileExport();
@@ -167,6 +171,8 @@ export async function createContainer({
 
   // Cloud off → stub; nothing here references the SDK (ADR-18). Cloud on → lazy loader, SDK untouched until needed.
   const authLoader = cloud ? (loadAuth ?? createSupabaseLoader(cloud, authStorage ?? undefined)) : null;
+  // v5.0 (M14): the sync service is built after the auth service; `deleteAccount` reaches it through this thunk.
+  let syncForDeletion: SyncService | null = null;
   const authService = cloud
     ? new AuthService({
         loadAuth: authLoader!,
@@ -178,6 +184,10 @@ export async function createContainer({
         connectivity,
         returnTo,
         redirectUrl,
+        // M14 (ADR-36): the native sheets, when the runtime has them (web: undefined → PKCE redirect as before).
+        ...(native?.idTokens ? { idTokens: native.idTokens } : {}),
+        loadAccountDeletion: loadAccountDeletion ?? createAccountDeletionLoader(authLoader!),
+        sync: () => syncForDeletion,
       })
     : AuthService.unavailable();
 
@@ -198,6 +208,8 @@ export async function createContainer({
         connectivity,
       })
     : null;
+
+  syncForDeletion = syncService;
 
   // Language applied from the account (FR-55): kv `locale` changes outside the switcher → apply now, no reload.
   const stopLocaleWatch = localeService.watch().subscribe((saved) => {
