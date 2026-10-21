@@ -37,10 +37,19 @@ describe('M12 QC: Xcode project consistency (M12-AC7)', () => {
     expect(new Set(targets)).toEqual(new Set(['16.4']));
     expect(spm).toContain('platforms: [.iOS(.v16)]');
   });
-  it('the package list in Package.swift is exactly the three runtime plugins, pinned to the Capacitor core version', () => {
+  // QC M13 round 1 (dispute accepted): TASKS M13-T4 / ARCH §2 v5.0 pin @capacitor/status-bar, splash-screen and keyboard,
+  // so after M13 the runtime plugin set is six. Re-targeted from "exactly three" to "exactly the @capacitor/* plugins that
+  // package.json declares (minus core/ios/cli)", plus the explicit M13 list.
+  it('the package list in Package.swift is exactly the runtime plugins of package.json (six after M13), pinned to the Capacitor core version', () => {
     expect(spm).toContain('exact: "8.5.3"');
     const plugins = [...spm.matchAll(/\.package\(name: "(\w+)"/g)].map((m) => m[1]).sort();
-    expect(plugins).toEqual(['CapacitorApp', 'CapacitorFilesystem', 'CapacitorShare']);
+    expect(plugins).toEqual(['CapacitorApp', 'CapacitorFilesystem', 'CapacitorKeyboard', 'CapacitorShare', 'CapacitorSplashScreen', 'CapacitorStatusBar']);
+    const deps = (JSON.parse(read('package.json')) as { dependencies: Record<string, string> }).dependencies;
+    const declared = Object.keys(deps)
+      .filter((n) => n.startsWith('@capacitor/') && !['@capacitor/core', '@capacitor/ios'].includes(n))
+      .map((n) => 'Capacitor' + n.slice('@capacitor/'.length).replace(/(^|-)(\w)/g, (_m, _d, c: string) => c.toUpperCase()))
+      .sort();
+    expect(plugins).toEqual(declared);
   });
   it('no team, no provisioning, no signing identity pinned in the project (signing is the CI lane, M13)', () => {
     expect(pbx).not.toMatch(/DEVELOPMENT_TEAM/);
@@ -60,8 +69,19 @@ describe('M12 QC: ios.yml (M12-AC8)', () => {
     expect(yml).not.toMatch(/^\s*pull_request_target/m);
     expect(yml).not.toMatch(/^\s+branches:/m);
   });
+  // QC M13 round 1 (dispute accepted): the `testflight` job (TASKS M13-T1, ARCH §5.14) needs secrets by design, so the
+  // "no secrets" invariant of M12-AC8 is scoped to the simulator job, which is what the test title always said.
+  // The file-wide invariants (no deployment/pages permission) stay file-wide; the secrets usage of the testflight job
+  // is covered by tests/qc/m13-r1-static.test.ts.
+  const jobText = (name: string): string => {
+    const jobs = yml.slice(yml.indexOf('\njobs:\n'));
+    const part = jobs.split(/^ {2}(?=[a-z][\w-]*:$)/m).find((p) => p.startsWith(`${name}:\n`));
+    expect(part, `job ${name}`).toBeDefined();
+    return part as string;
+  };
   it('uses no secrets and no deployment/pages permission in the simulator lane', () => {
-    expect(yml).not.toMatch(/secrets\./);
+    expect(jobText('simulator')).not.toMatch(/secrets\./);
+    expect(jobText('simulator')).not.toMatch(/\bvars\./);
     expect(yml).not.toMatch(/id-token|pages:|contents: write/);
   });
   it('every `uses:` is a first-party action pinned to a major version', () => {

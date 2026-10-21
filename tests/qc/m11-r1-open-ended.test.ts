@@ -249,7 +249,7 @@ describe('M11 QC: entry dates and goal edits through the real services', () => {
 
 // ---------- migration file audit ----------
 describe('M11 QC: migration 20261019000000_goal_open_ended.sql', () => {
-  const sql = readFileSync(new URL('../../supabase/migrations/20261019000000_goal_open_ended.sql', import.meta.url), 'utf8');
+  const sql = readFileSync(new URL('../../supabase/migrations/20261019000000_goal_open_ended.sql', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const code = sql.split('\n').map((l) => l.replace(/--.*$/, '')).join('\n').toLowerCase();
   it('does only what the plan allows: no grant/revoke/anon/policy/trigger/rls/delete/truncate/drop table/drop column/update/insert', () => {
     for (const bad of [/\bgrant\b/, /\brevoke\b/, /\banon\b/, /\bpolicy\b/, /\btrigger\b/, /row level security/, /\bdelete\b/, /\btruncate\b/, /drop table/, /drop column/, /\bupdate\b/, /\binsert\b/, /security definer/, /\bcreate (or replace )?function\b/, /service_role/]) {
