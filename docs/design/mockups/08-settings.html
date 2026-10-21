@@ -15,6 +15,7 @@
 --info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;
 --heat-0:#E7E5DC;--heat-1:#BFE3CC;--heat-2:#82C69C;--heat-3:#3FA06A;--heat-4:#1F7A4D;
 --google-bg:#FFFFFF;--google-border:#747775;--google-text:#1F1F1F;
+--apple-bg:#000000;--apple-text:#FFFFFF;
 --scrim:rgba(20,28,24,.5);--shadow-1:0 1px 2px rgba(20,30,25,.06);--shadow-2:0 12px 40px rgba(20,30,25,.22);
 --r-sm:6px;--r-md:10px;--r-lg:16px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:56px;--content-max:960px;--chip-h:32px}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){
@@ -26,6 +27,7 @@
 --info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;
 --heat-0:#2A302C;--heat-1:#24503A;--heat-2:#2F7A55;--heat-3:#43A773;--heat-4:#7FDDA8;
 --google-bg:#131314;--google-border:#8E918F;--google-text:#E3E3E3;
+--apple-bg:#FFFFFF;--apple-text:#000000;
 --scrim:rgba(0,0,0,.6);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 12px 40px rgba(0,0,0,.55)}}
 :root[data-theme=dark]{color-scheme:dark;
 --bg:#121513;--surface:#1B1F1C;--surface-2:#242925;--border:#343B36;--border-input:#7C867F;
@@ -36,6 +38,7 @@
 --info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;
 --heat-0:#2A302C;--heat-1:#24503A;--heat-2:#2F7A55;--heat-3:#43A773;--heat-4:#7FDDA8;
 --google-bg:#131314;--google-border:#8E918F;--google-text:#E3E3E3;
+--apple-bg:#FFFFFF;--apple-text:#000000;
 --scrim:rgba(0,0,0,.6);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 12px 40px rgba(0,0,0,.55)}
 :root[data-theme=light]{color-scheme:light}
 [hidden]{display:none!important}
@@ -166,6 +169,28 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 .dlg-form:has(input[value=remove]:checked) .when-keep{display:none}
 .dlg-form:has(input[value=remove]:checked) .when-remove{display:inline}
 .dlg-form:has(input[value=remove]:checked) .confirm-btn{background:var(--danger);color:var(--on-danger)}
+/* ---------- Phase 6 (v5.0): native variants ---------- */
+.alogo{width:15px;height:20px;flex:none;display:block;fill:currentColor}
+.abtn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:var(--tap);padding:6px 16px 6px 12px;border:1px solid var(--apple-bg);border-radius:var(--r-md);background:var(--apple-bg);color:var(--apple-text);font:500 15px/20px var(--font);cursor:pointer;text-align:center;max-width:100%}
+.abtn:hover{box-shadow:inset 0 0 0 100px color-mix(in srgb,var(--apple-text) 8%,transparent)}
+.abtn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
+.auth-stack{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.auth-stack>.abtn,.auth-stack>.gbtn{width:100%}
+.btn.danger-ghost{color:var(--danger);border-color:var(--danger);background:transparent}
+.delete-block{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.delete-block .hint{margin-top:0}
+.delete-block .btn{margin-top:12px}
+.delete-block .btn[disabled]{opacity:.55;cursor:not-allowed}
+.delete-block .reason{margin-top:8px}
+.links{display:flex;flex-wrap:wrap;gap:0 20px;margin-top:8px}
+.lnk{display:inline-flex;align-items:center;min-height:var(--tap);color:var(--primary);text-decoration:underline;font-weight:500}
+.shot{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;margin-top:8px}
+.phone{position:relative;width:220px;height:476px;border:2px solid var(--border-input);border-radius:28px;background:var(--bg);overflow:hidden;flex:none}
+.phone .band{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:14px;font-weight:700;text-align:center;color:var(--text)}
+.phone .top{top:0;height:31px;background:repeating-linear-gradient(45deg,var(--info-soft),var(--info-soft) 6px,var(--surface-2) 6px,var(--surface-2) 12px)}
+.phone .bot{bottom:0;height:17px;background:repeating-linear-gradient(45deg,var(--info-soft),var(--info-soft) 6px,var(--surface-2) 6px,var(--surface-2) 12px)}
+.phone .tabs{position:absolute;left:0;right:0;bottom:17px;height:28px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;font-size:10px;font-weight:600;color:var(--text-muted)}
+.phone .main{position:absolute;left:8px;right:8px;top:35px;bottom:50px;border:1px dashed var(--border-input);border-radius:6px;padding:6px;font-size:11px;line-height:15px;color:var(--text-muted)}
 .mock-tools{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:12px 16px;margin-bottom:16px;border:1px dashed var(--border-input);border-radius:var(--r-md);background:var(--surface);font-size:14px}
 .mock-tools label{display:inline-flex;align-items:center;gap:6px;min-height:var(--tap);padding:0 6px;cursor:pointer}
 .mock-tools select{min-height:var(--tap);font:inherit;padding:0 8px;border-radius:var(--r-md);border:1px solid var(--border-input);background:var(--surface);color:var(--text);max-width:100%}
@@ -191,6 +216,7 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 11a8 8 0 00-14-4M4 5v3h3M4 13a8 8 0 0014 4M20 19v-3h-3"/></symbol>
 <symbol id="i-lock-open" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 017.5-1.9"/></symbol>
 <symbol id="g-logo" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></symbol>
+<symbol id="a-logo" viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></symbol>
 </defs></svg>
 <a class="skip" href="#main">Skip to content</a>
 
@@ -214,6 +240,11 @@ h2{font-size:18px;line-height:26px;font-weight:600}
       <option value="in-offline">Signed in · offline, 3 pending</option>
       <option value="in-error">Signed in · sync error</option>
       <option value="exp">Session expired</option>
+    </select></label>
+    <label>Platform (v5.0) <select id="mplat">
+      <option value="web" selected>Web (browser / PWA)</option>
+      <option value="ios12">iOS app · M12–M14 (no scheduled notifications; Account hidden)</option>
+      <option value="ios15">iOS app · M15 (scheduled notifications, Apple button, Support link)</option>
     </select></label>
     <fieldset><legend>Theme</legend>
       <label><input type="radio" name="mtheme" value="system" checked> System</label>
@@ -246,19 +277,30 @@ h2{font-size:18px;line-height:26px;font-weight:600}
           <label><input type="radio" name="lang" value="vi"><span lang="vi">Tiếng Việt</span></label>
         </div>
       </fieldset>
-      <p class="hint">The date and time pickers and permission prompts follow your browser's language.</p>
+      <p class="hint" data-p="web">The date and time pickers and permission prompts follow your browser's language.</p>
+      <p class="hint" data-p="ios12 ios15">The date and time pickers and permission prompts follow your iPhone's language.</p>
       <p class="syncnote" data-v="in"><svg class="ic" aria-hidden="true"><use href="#i-cloud-check"/></svg><span>Saved to your account and used on your other devices.</span></p>
     </section>
 
     <!-- v2 M6/M7: Account (hidden when the build has no cloud configuration) -->
-    <section class="card" aria-labelledby="h-acct" data-v="cloud">
+    <section class="card" aria-labelledby="h-acct" data-v="cloud" data-p="web ios15">
       <h2 id="h-acct">Account</h2>
 
       <!-- A1 / A2-less: signed out -->
-      <div data-v="out">
+      <div data-v="out" data-p="web">
         <p class="desc">Sign in with Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.</p>
         <div class="btn-row"><button class="gbtn full" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button></div>
         <p class="hint" style="margin-top:8px">From Google, the app only receives your name and email.</p>
+      </div>
+      <!-- v5.0 (M14): iOS app, Apple above Google -->
+      <div data-v="out" data-p="ios15">
+        <p class="desc">Sign in with Apple or Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.</p>
+        <div class="auth-stack">
+          <button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span>Sign in with Apple</span></button>
+          <button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button>
+        </div>
+        <p class="hint" style="margin-top:12px">From Google or Apple, the app only receives your name and email.</p>
+        <p class="hint" style="margin-top:8px">If you choose Hide My Email, Apple gives you a private address and you get a separate account that isn't linked to a Google account.</p>
       </div>
 
       <!-- A3 signing in -->
@@ -270,7 +312,7 @@ h2{font-size:18px;line-height:26px;font-weight:600}
       <!-- A5 … A8 signed in -->
       <div data-v="in">
         <div class="who"><span class="avatar" aria-hidden="true">M</span>
-          <div class="t"><p class="name">Minh Test</p><p class="mail">minh.test@example.com</p><p class="mail">Signed in with Google</p></div></div>
+          <div class="t"><p class="name">Minh Test</p><p class="mail">minh.test@example.com</p><p class="mail" data-p="web">Signed in with Google</p><p class="mail" data-p="ios15">Signed in with Apple or Google</p></div></div>
         <div class="alert" role="alert" data-v="error" style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><div class="stack-t"><p>Couldn't reach your account just now. Your changes are safe on this device. We'll try again soon, or you can tap Sync now.</p><p class="small" style="margin-top:4px">Trying again at 14:09.</p></div></div>
         <dl class="dl">
           <div><dt>Last synced</dt><dd><span data-v="synced syncing">today at 14:05</span><span data-v="offline">2026-10-08 at 21:40</span><span data-v="error">today at 13:52</span></dd></div>
@@ -284,12 +326,32 @@ h2{font-size:18px;line-height:26px;font-weight:600}
           <button class="btn secondary" type="button">Sign out</button>
         </div>
         <p class="hint" id="off-sync" data-v="offline">You're offline. Changes are saved on this device and sync when you're back online.</p>
+        <!-- v5.0 (M14): Delete account entry, web and iOS -->
+        <div class="delete-block" data-v="synced syncing error">
+          <p class="hint">Permanently deletes your account and everything stored in it. This can't be undone.</p>
+          <button class="btn danger-ghost" type="button">Delete account</button>
+        </div>
+        <div class="delete-block" data-v="offline">
+          <p class="hint">Permanently deletes your account and everything stored in it. This can't be undone.</p>
+          <button class="btn danger-ghost" type="button" disabled aria-describedby="del-off">Delete account</button>
+          <p class="hint reason" id="del-off">You're offline. Connect to the internet to delete your account.</p>
+        </div>
       </div>
 
       <!-- A10 expired -->
       <div data-v="exp">
         <div class="alert info" role="status" style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-lock-open"/></svg><div class="stack-t"><strong>Sign in again</strong><p>Your sign-in expired. Sign in again to keep syncing. Your data, including changes that haven't synced yet, is kept on this device.</p><p class="small" style="margin-top:4px">Account: minh.test@example.com</p></div></div>
-        <div class="btn-row"><button class="gbtn full" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button><button class="btn secondary" type="button">Sign out</button></div>
+        <div class="btn-row" data-p="web"><button class="gbtn full" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button><button class="btn secondary" type="button">Sign out</button></div>
+        <div class="auth-stack" data-p="ios15">
+          <button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span>Sign in with Apple</span></button>
+          <button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button>
+          <button class="btn secondary" type="button">Sign out</button>
+        </div>
+        <div class="delete-block">
+          <p class="hint">Permanently deletes your account and everything stored in it. This can't be undone.</p>
+          <button class="btn danger-ghost" type="button" disabled aria-describedby="del-exp">Delete account</button>
+          <p class="hint reason" id="del-exp">Your sign-in expired. Sign in again first, then delete your account.</p>
+        </div>
       </div>
     </section>
 
@@ -297,8 +359,8 @@ h2{font-size:18px;line-height:26px;font-weight:600}
     <section class="card" aria-labelledby="h-rem">
       <h2 id="h-rem">Reminders</h2>
       <div class="sw-row">
-        <div><label for="rem">Daily reminder</label><p class="hint" id="rem-d" style="margin-top:0">Get a nudge when you haven't hit your targets today.</p></div>
-        <div style="display:flex;align-items:center"><span class="sw-state" aria-hidden="true">On</span><input id="rem" type="checkbox" role="switch" checked aria-describedby="rem-d"></div>
+        <div><label for="rem">Daily reminder</label><p class="hint" id="rem-d" data-p="web ios12" style="margin-top:0">Get a nudge when you haven't hit your targets today.</p><p class="hint" id="rem-d2" data-p="ios15" style="margin-top:0">Get a notification every day at your reminder time. If you've already met all your targets today, today's is skipped.</p></div>
+        <div style="display:flex;align-items:center"><span class="sw-state" aria-hidden="true">On</span><input id="rem" type="checkbox" role="switch" checked aria-describedby="rem-d rem-d2"></div>
       </div>
       <div class="field">
         <label for="time">Reminder time</label>
@@ -306,15 +368,22 @@ h2{font-size:18px;line-height:26px;font-weight:600}
       </div>
       <div class="perm">
         <strong id="perm-l">Notification permission</strong>
-        <span class="badge ok" aria-labelledby="perm-l perm-v"><span id="perm-v">Allowed</span></span>
+        <span class="badge ok" data-p="web ios15" aria-labelledby="perm-l perm-v"><span id="perm-v">Allowed</span></span>
+        <span class="badge" data-p="ios12">Not supported</span>
       </div>
-      <p class="hint">You'll get one notification a day while 1% Better is open.</p>
-      <div class="limit">
+      <p class="hint" data-p="web">You'll get one notification a day while 1% Better is open.</p>
+      <p class="hint" data-p="ios12">Reminder notifications aren't available in this version of the app. You'll still see a reminder banner in the app.</p>
+      <p class="hint" data-p="ios15">You'll get a notification at your reminder time, even when 1% Better is closed.</p>
+      <div class="limit" data-p="web ios12">
         <p>Heads up: reminders are sent only while 1% Better is open (in a tab or an installed window, even in the background). To be reminded when the app is closed, add a daily event to your calendar.</p>
-        <p>On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).</p>
+        <p data-p="web">On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).</p>
       </div>
-      <div class="btn-row"><button class="btn secondary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg>Add reminder to calendar (.ics)</button></div>
-      <p class="hint">Adds a repeating daily event at 20:00.</p>
+      <div class="limit" data-p="ios15">
+        <p>Your iPhone sends these reminders, even when 1% Better is closed. They're scheduled for the next 14 days each time you open the app, so open it now and then.</p>
+      </div>
+      <!-- .ics: kept on web and on iOS M12–M14; hidden once notifications are scheduled ahead (M15) -->
+      <div class="btn-row" data-p="web ios12"><button class="btn secondary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg>Add reminder to calendar (.ics)</button></div>
+      <p class="hint" data-p="web ios12">Adds a repeating daily event at 20:00.</p>
       <p class="syncnote" data-v="in"><svg class="ic" aria-hidden="true"><use href="#i-cloud-check"/></svg><span>Reminder on/off and time are saved to your account and used on your other devices. Notification permission is set separately on each device.</span></p>
     </section>
 
@@ -325,29 +394,45 @@ h2{font-size:18px;line-height:26px;font-weight:600}
       <p class="desc" data-v="outcopy">Your data lives on this device. Sign in to keep a copy in your account too, or export a backup file now and then.</p>
       <p class="desc" data-v="in">Your data is saved on this device and synced to your account. A backup file is an extra copy you keep yourself.</p>
       <div class="banner" style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><p>It's been 31 days since your last backup.</p></div>
+      <div class="banner" style="margin-top:12px" data-p="ios12 ios15"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><p>You haven't backed up yet. Export a backup so your data is safe if you delete the app or switch iPhones.</p></div>
       <p style="margin-top:12px"><strong>Last backup:</strong> <span class="num">2026-09-08</span></p>
       <div class="btn-row">
         <button class="btn primary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>Export backup (JSON)</button>
         <button class="btn secondary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg>Import backup…</button>
       </div>
+      <p class="hint" data-p="ios12 ios15">Export opens the iOS share sheet. Choose Save to Files, AirDrop, Mail or another app.</p>
       <p class="hint" data-v="off outcopy">Importing replaces everything currently on this device.</p>
       <p class="hint" data-v="in">Importing replaces everything on this device and in your account.</p>
       <!-- v2 M8: ExportSignInHint (appears after a successful Export, signed out only, at most once per 30 days) -->
-      <div class="limit" role="group" aria-label="Automatic backup" data-v="out">
+      <div class="limit" role="group" aria-label="Automatic backup" data-v="out" data-p="web">
         <p>Backup downloaded. To keep a copy automatically, sign in with Google: your goals and entries then sync to your account.</p>
         <div class="btn-row" style="margin-top:12px"><button class="gbtn full" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button></div>
       </div>
+      <div class="limit" role="group" aria-label="Automatic backup" data-v="out" data-p="ios15">
+        <p>Backup exported. To keep a copy automatically, sign in: your goals and entries then sync to your account.</p>
+        <div class="auth-stack" style="margin-top:12px"><button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span>Sign in with Apple</span></button><button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span>Sign in with Google</span></button></div>
+      </div>
       <div class="alert" role="alert" style="margin-top:12px"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p>This file isn't valid JSON. Choose a backup exported from 1% Better. Nothing was changed.</p></div>
+      <div class="alert" role="alert" style="margin-top:12px" data-p="ios12 ios15"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p>Couldn't create the backup file. Your data on this device is unchanged. Try again, and if it keeps failing, free up some space on your iPhone.</p></div>
     </section>
 
     <!-- M1 -->
     <section class="card" aria-labelledby="h-sto">
       <h2 id="h-sto">Storage</h2>
-      <div data-v="off in exp ing">
+      <!-- v5.0 (M12): native Storage — neutral chip, no "Protected" claim (no persist() on iOS) -->
+      <div data-p="ios12 ios15">
+        <div class="perm" style="margin-top:8px"><strong id="sto-ln">Where your data is kept</strong><span class="badge" aria-labelledby="sto-ln sto-vn"><span id="sto-vn">In this app</span></span></div>
+        <p class="hint">Your data is kept inside this app on your iPhone. Deleting the app deletes this data, and iOS may clear it if the iPhone runs very low on space. Export a backup now and then.</p>
+        <div data-v="out">
+          <p class="hint">Signing in also keeps a copy of your data in your account.</p>
+          <div class="btn-row" style="margin-top:8px"><button class="btn secondary" type="button">Go to Account</button></div>
+        </div>
+      </div>
+      <div data-v="off in exp ing" data-p="web">
         <div class="perm" style="margin-top:8px"><strong id="sto-l">Protection from automatic clearing</strong><span class="badge ok" aria-labelledby="sto-l sto-v"><span id="sto-v">Protected</span></span></div>
         <p class="hint">Your browser won't clear this data automatically.</p>
       </div>
-      <div data-v="out">
+      <div data-v="out" data-p="web">
         <div class="perm" style="margin-top:8px"><strong id="sto-l2">Protection from automatic clearing</strong><span class="badge" aria-labelledby="sto-l2 sto-v2"><span id="sto-v2">Not protected</span></span></div>
         <p class="hint">Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.</p>
         <p class="hint">Signing in also keeps a copy of your data in your account.</p>
@@ -358,14 +443,22 @@ h2{font-size:18px;line-height:26px;font-weight:600}
     <section class="card" aria-labelledby="h-abt">
       <h2 id="h-abt">About</h2>
       <p><strong>1% Better per Day</strong></p>
-      <p class="desc" data-v="off">Everything you log stays on this device. No account, no tracking.</p>
+      <p class="desc" data-v="off" data-p="web">Everything you log stays on this device. No account, no tracking.</p>
+      <p class="desc" data-v="off" data-p="ios12 ios15">Everything you log stays on this iPhone. No account, no tracking.</p>
       <p class="desc" data-v="outcopy">Everything you log is saved on this device first. Signing in is optional, and there's no tracking.</p>
       <p class="desc" data-v="in">Everything you log is saved on this device first and synced to your account. There's no tracking.</p>
       <p class="hint" data-v="cloud">If you sign in, your goals, entries, reminder settings and language are stored in this app's database (Supabase) under your account. Other people who use the app can't see them.</p>
+      <!-- links: web = same tab, relative; iOS = absolute, opens in Safari (hidden hint for screen readers); Support link arrives in M15 -->
+      <div class="links">
+        <a class="lnk" href="#main" data-p="web">Privacy policy</a>
+        <a class="lnk" href="#main" data-p="ios12 ios15" target="_blank" rel="noopener">Privacy policy<span class="sr-only"> (opens in Safari)</span></a>
+        <a class="lnk" href="#main" data-p="web">Support</a>
+        <a class="lnk" href="#main" data-p="ios15" target="_blank" rel="noopener">Support<span class="sr-only"> (opens in Safari)</span></a>
+      </div>
     </section>
 
     <!-- reference -->
-    <section class="card" aria-labelledby="h-ref">
+    <section class="card" aria-labelledby="h-ref" data-p="web">
       <h2 id="h-ref">Reference: the four permission states (Reminders card)</h2>
       <ul class="states" style="margin-top:8px">
         <li><span class="badge">Not asked yet</span><p>Turn on the reminder and your browser will ask for permission. (Button: "Allow notifications")</p></li>
@@ -377,6 +470,36 @@ h2{font-size:18px;line-height:26px;font-weight:600}
       <p class="hint" style="margin-top:8px" data-v="cloud">Phase 2: when reminders are turned on from another device and this one has not allowed notifications, the chip shows "Not asked yet" with "Reminders are on, but this device hasn't allowed notifications yet…" and the Allow notifications button. See 09-account.html section 6.</p>
     </section>
   </div>
+
+  <!-- v5.0: reference for the three notification-permission states on iOS (M15) + safe area diagram (M13) -->
+  <section class="card" aria-labelledby="h-ios" data-p="ios15" style="margin-top:16px">
+    <h2 id="h-ios">Reference: the three permission states on iOS (Reminders card, M15)</h2>
+    <ul class="states" style="margin-top:8px">
+      <li><span class="badge">Not asked yet</span><p>Turn on the reminder and iOS will ask for permission to send you notifications. (Button: "Allow notifications")</p></li>
+      <li><span class="badge ok">Allowed</span><p>You'll get a notification at your reminder time, even when 1% Better is closed.</p></li>
+      <li><span class="badge danger">Blocked</span><p>Notifications are turned off for 1% Better. Open the Settings app on your iPhone, tap Notifications, choose 1% Better and turn on Allow Notifications, then come back. You'll still see a reminder banner in the app.</p></li>
+    </ul>
+    <p class="hint" style="margin-top:8px">Reminders are scheduled one day at a time for the next 14 days. Notification text: title "1% Better", body "Log today's time. Small steps add up." (the same every day; no goal names or numbers on the lock screen).</p>
+  </section>
+
+  <section class="card" aria-labelledby="h-safe" data-p="ios12 ios15" style="margin-top:16px">
+    <h2 id="h-safe">Reference: safe area on iPhone (M13) — half scale</h2>
+    <p class="hint" style="margin-top:4px">Hatched bands are the system insets (iPhone 16 Pro Max portrait: top 62 pt, bottom 34 pt; iPhone SE: top 20, bottom 0; the web has 0). The page background (--bg) is painted under both bands; content, tab bar and toast avoid them with <code>var(--safe-top)</code> and <code>var(--safe-bottom)</code>.</p>
+    <div class="shot">
+      <div class="phone" role="img" aria-label="Safe area diagram">
+        <div class="band top">status bar · --safe-top 62</div>
+        <div class="main">main: padding-top 16 + --safe-top<br>page content …<br><br>toast: bottom = tab bar 56 + --safe-bottom + 12</div>
+        <div class="tabs"><span>Today</span><span>Goals</span><span>Review</span><span>Settings</span></div>
+        <div class="band bot">home indicator · --safe-bottom 34</div>
+      </div>
+      <ul class="small muted" style="min-width:200px;flex:1">
+        <li>Tab bar height = 56 + --safe-bottom; labels sit above the home indicator.</li>
+        <li>Dialog bottom sheet: max-height = 100dvh − 16 − --safe-top; sticky button row gets padding-bottom 12 + --safe-bottom.</li>
+        <li>Keyboard open: the tab bar is hidden.</li>
+        <li>Full-page states (404, storage error): padding 24 + --safe-top / --safe-bottom.</li>
+      </ul>
+    </div>
+  </section>
 
   <h2 class="preview-title">Dialog preview — Import backup (D3). Real app opens it as a modal &lt;dialog&gt; after the file is validated; initial focus on Cancel.</h2>
   <div class="dialog" role="group" aria-labelledby="dlg-h" data-v="off outcopy">
@@ -409,6 +532,7 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 
   <aside class="mock-note">Mockup S7 Settings. M1: Language + Storage + About. Language: choosing an option applies immediately (no Save button), keeps focus on the option, and shows the toast "Language changed" in the new language; both option labels always stay "English" / "Tiếng Việt". Card order: Language, Account (phase 2, only when cloud is configured), Reminders, Backup, Storage, About.</aside>
   <aside class="mock-note" style="margin-top:12px">M2: Reminders (switch, time, permission, limits, .ics). M3: Backup (the banner and the red alert are examples of states; only one of them shows at a time in the real app). The "Reference" card is for developers and not part of the real screen. Phase 2 (M6–M8): use "Account state" at the top to see the Account card, the sync indicator, the "saved to your account" notes, and the Backup / Storage / About / D3 copy that changes with the account state; the select is a design tool, not part of the app.</aside>
+  <aside class="mock-note" style="margin-top:12px">Phase 6 (DESIGN.md v5.0, 7.8.1 and S7 "tiếp"): use "Platform" at the top. <strong>iOS M12–M14</strong> forces the cloud-off state (the Account card is hidden because sign-in is not native yet), shows the neutral Storage chip, the share-sheet hint under Export, "Not supported" in Reminders (the web "only while open" limit stays, the Home Screen tip is gone) and keeps the .ics button. <strong>iOS M15</strong> adds scheduled notifications (three permission states, "Your iPhone sends these reminders…", no .ics button), the Apple button above Google in Account, Delete account, and the Support link. The web view is unchanged from v4.0. This file is English only; the Vietnamese strings for every variant are in DESIGN.md 7.8 (09-account.html has a language switch for the account and delete-account strings).</aside>
 </main>
 </div>
 
@@ -424,15 +548,23 @@ var TOK={
  "in-error":["cloud","in","error"],
  "exp":["cloud","exp","outcopy"]
 };
+var PLAT={"web":["web"],"ios12":["ios12"],"ios15":["ios15"]};
+function ok(el,attr,t){
+  var a=el.getAttribute(attr); if(a===null) return true;
+  return a.split(/\s+/).some(function(w){return t.indexOf(w)>=0});
+}
 function show(state){
-  var t=TOK[state];
-  document.querySelectorAll("[data-v]").forEach(function(el){
-    var want=el.getAttribute("data-v").split(/\s+/);
-    el.hidden=!want.some(function(w){return t.indexOf(w)>=0});
+  var plat=document.getElementById("mplat").value;
+  /* iOS M12-M14: AuthService.unavailable, so the app behaves like "cloud not configured" */
+  if(plat==="ios12"){state="off";sel.value="off";sel.disabled=true}else{sel.disabled=false}
+  var t=TOK[state], p=PLAT[plat];
+  document.querySelectorAll("[data-v],[data-p]").forEach(function(el){
+    el.hidden=!(ok(el,"data-v",t)&&ok(el,"data-p",p));
   });
 }
 var sel=document.getElementById("mstate");
 sel.addEventListener("change",function(){show(sel.value)});
+document.getElementById("mplat").addEventListener("change",function(){show(sel.value)});
 document.querySelectorAll("input[name=mtheme]").forEach(function(r){r.addEventListener("change",function(){
   if(r.value==="system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme",r.value)})});
 show(sel.value);

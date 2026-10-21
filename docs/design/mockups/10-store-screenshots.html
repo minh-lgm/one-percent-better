@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App Store screenshots — 1% Better (mockup, phase 6)</title>
+<style>
+:root{color-scheme:light dark;
+--font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--pbg:#E9E8E2;--ptext:#1D2320;--pmuted:#5A625D;--pborder:#B9B5A8}
+@media (prefers-color-scheme:dark){:root{--pbg:#0D0F0E;--ptext:#ECEFEA;--pmuted:#A3ACA5;--pborder:#4A524C}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--pbg);color:var(--ptext);font:400 16px/24px var(--font)}
+.page{max-width:1280px;margin:0 auto;padding:16px}
+h1{font-size:24px;line-height:30px;margin:0 0 8px}
+.lead{color:var(--pmuted);font-size:14px;line-height:20px;max-width:880px;margin:0 0 12px}
+.tools{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:8px 12px;margin:12px 0 20px;border:1px dashed var(--pborder);border-radius:10px;font-size:14px}
+.tools label{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 6px;cursor:pointer}
+.row{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.slot{width:222px}
+.frame{width:222px;height:480px;border:1px solid var(--pborder);border-radius:14px;overflow:hidden;background:#000}
+.cap{font-size:12px;line-height:16px;color:var(--pmuted);margin:6px 0 0}
+.note{margin-top:24px;padding:12px 16px;border:1px dashed var(--pborder);border-radius:10px;color:var(--pmuted);font-size:13px;line-height:18px}
+/* ---- one phone = 440x956 CSS px = 1320x2868 at 3x; shown at 50 % ---- */
+.phone{position:relative;width:440px;height:956px;overflow:hidden;transform:scale(.5);transform-origin:0 0;background:var(--bg);color:var(--text);font:400 16px/24px var(--font)}
+.t-light{--bg:#F7F6F2;--surface:#FFFFFF;--surface-2:#F0EEE7;--border:#DDD9CE;--border-input:#7F8882;--text:#1D2320;--text-muted:#5A625D;--primary:#1F7A4D;--on-primary:#FFFFFF;--primary-soft:#E3F2E9;--on-primary-soft:#14573A;--plus-bg:#FDF1DC;--plus-text:#8A3F06;--plus-border:#E9C98F;--info:#1D4E9E;--info-soft:#E8F0FC;--heat-0:#E7E5DC;--heat-1:#BFE3CC;--heat-2:#82C69C;--heat-3:#3FA06A;--heat-4:#1F7A4D}
+.t-dark{--bg:#121513;--surface:#1B1F1C;--surface-2:#242925;--border:#343B36;--border-input:#7C867F;--text:#ECEFEA;--text-muted:#A3ACA5;--primary:#5CC98F;--on-primary:#0C2217;--primary-soft:#1E3328;--on-primary-soft:#A8E6C3;--plus-bg:#3A2D14;--plus-text:#F5C97F;--plus-border:#6B5224;--info:#8DB4F5;--info-soft:#1C2A44;--heat-0:#2A302C;--heat-1:#24503A;--heat-2:#2F7A55;--heat-3:#43A773;--heat-4:#7FDDA8}
+.phone{--safe-top:62px;--safe-bottom:34px;--tabbar-h:56px}
+.phone main{padding:calc(16px + var(--safe-top)) 16px calc(var(--tabbar-h) + var(--safe-bottom) + 16px)}
+.phone h1{font-size:24px;line-height:30px;font-weight:700;margin:0}
+.phone h2{font-size:18px;line-height:26px;font-weight:600;margin:0}
+.phone p{margin:0}
+.muted{color:var(--text-muted)}.small{font-size:14px;line-height:20px}.num{font-variant-numeric:tabular-nums}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--border);font-size:14px;line-height:20px;font-weight:600;white-space:nowrap}
+.summary{font-weight:600;margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(20,30,25,.06)}
+.stack>*+*{margin-top:12px}
+.row2{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.amount{font-size:24px;line-height:30px;font-weight:700;margin-top:2px}
+.amount .unit{font-size:16px;font-weight:400;color:var(--text-muted)}
+.progress{height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden;border:1px solid var(--border);margin-top:8px}
+.progress>span{display:block;height:100%;background:var(--primary);border-radius:999px}
+.plus{display:inline-flex;align-items:center;gap:4px;padding:2px 10px 2px 8px;border-radius:999px;background:var(--plus-bg);color:var(--plus-text);border:1px solid var(--plus-border);font-weight:700;font-size:14px;line-height:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid transparent;border-radius:10px;font:600 15px/20px var(--font);background:none;color:var(--text)}
+.btn.primary{background:var(--primary);color:var(--on-primary)}
+.btn.secondary{background:var(--surface);border-color:var(--border-input)}
+.btn.ghost{color:var(--primary)}
+.btn.sm{min-height:44px;padding:0 12px}
+.actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.entries{list-style:none;margin:8px 0 0;padding:0;border-top:1px solid var(--border)}
+.entries li{display:flex;gap:8px;align-items:center;min-height:36px;border-bottom:1px solid var(--border);font-size:14px;line-height:20px}
+.entries .em{font-weight:600;min-width:56px}
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:13px;line-height:20px;font-weight:600;background:var(--surface-2);border:1px solid var(--border);white-space:nowrap}
+.badge.ok{background:var(--primary-soft);color:var(--on-primary-soft);border-color:transparent}
+.badge.info{background:var(--info-soft);color:var(--info);border-color:transparent}
+.timer{border:2px solid var(--primary)}
+.timer .clock{font-size:40px;line-height:44px;font-weight:700;margin-top:4px}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:calc(var(--tabbar-h) + var(--safe-bottom));padding-bottom:var(--safe-bottom);display:flex;background:var(--surface);border-top:1px solid var(--border)}
+.tabbar .item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-top:3px solid transparent;color:var(--text-muted);font-size:12px;line-height:16px;font-weight:600}
+.tabbar .item.on{color:var(--primary);border-top-color:var(--primary);font-weight:700}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic.s{width:14px;height:14px;stroke-width:2.5}
+.back{display:inline-flex;align-items:center;min-height:44px;color:var(--primary);font-weight:600}
+.headline{font-size:40px;line-height:44px;font-weight:700;color:var(--primary);margin-top:4px}
+.chart{margin-top:12px}
+.chart svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:13px;line-height:18px;color:var(--text-muted)}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid var(--primary);vertical-align:middle;margin-right:6px}
+.legend i.d{border-top:2px dashed var(--text-muted)}
+.legend i.z{border-top:2px solid var(--text-muted)}
+.selects{display:flex;gap:8px;margin:8px 0 12px;flex-wrap:wrap}
+.sel{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;border:1px solid var(--border-input);border-radius:10px;background:var(--surface);font-weight:600;font-size:15px}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,11px);gap:2px;margin-top:8px;justify-content:end}
+.heat i{width:11px;height:11px;border-radius:2px;background:var(--heat-0)}
+.heat i.l1{background:var(--heat-1)}.heat i.l2{background:var(--heat-2)}.heat i.l3{background:var(--heat-3)}.heat i.l4{background:var(--heat-4)}
+.heat i.fut{background:transparent;border:1px dashed var(--border)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.stat .v{font-size:24px;line-height:30px;font-weight:700}
+.stat .l{font-size:14px;line-height:20px;color:var(--text-muted)}
+.group{margin-top:16px}
+.group h2{margin-bottom:8px}
+.grow{min-width:0;flex:1}
+.name{font-weight:700;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-today" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></symbol>
+<symbol id="i-goals" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/></symbol>
+<symbol id="i-review" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V5M19 20v-12"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V6M6 11l6-6 6 6"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></symbol>
+<symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></symbol>
+</defs></svg>
+
+<div class="page">
+  <h1>App Store screenshots — layout sketch (M15)</h1>
+  <p class="lead">Five screens per language, 1320 × 2868 px (iPhone 6.9"): the app at 440 × 956 CSS px, device scale 3, shown here at 50 %. Real files come from the <code>native-e2e</code> build with the demo dataset (DESIGN.md 7.8.8), the clock fixed at 2026-10-09 19:30 (+07:00), and <code>--safe-top: 62px; --safe-bottom: 34px</code> to imitate an iPhone 16 Pro Max (no status bar in the picture, the area is simply the page background). No device frame, no caption text. The heatmap and the Guitar curve below are generated from the dataset rules, so what you see is what the data produces; the streak number and the two Review totals are illustrative.</p>
+  <div class="tools" role="group" aria-label="Mockup controls (not part of the app)">
+    <span><strong>Language</strong></span>
+    <label><input type="radio" name="lang" value="en" checked> English</label>
+    <label><input type="radio" name="lang" value="vi"> Tiếng Việt</label>
+  </div>
+
+  <div class="row" id="row"></div>
+
+  <div class="note">Plan: 01 Today (light) · 02 Today with the timer running on Spanish, 00:12:41 (light) · 03 Goal detail, Guitar, headline +175.0% (dark) · 04 Review, All goals, 2026 heatmap (dark) · 05 Goals with Active / Upcoming / Ended (light). File names: <code>store/ios/screenshots/{en-US,vi}/0N-&lt;screen&gt;.jpg</code>. Settings and Account are not photographed: the <code>native-e2e</code> build has no Account card and no native reminders. Dataset: DESIGN.md 7.8.8 (5 goals, deterministic entries).</div>
+</div>
+
+<script>
+(function(){
+var EN={today:"Today",goals:"Goals",review:"Review",settings:"Settings",
+ date:"Friday, October 9",streak:"12-day streak",summary:"2 of 3 goals on target",
+ min:"min",reached:"Target reached",extra:"Target reached · {n} min extra",toGo:"5 min to go",logTime:"Log time",startTimer:"Start timer",stop:"Stop",entriesToday:"Today's entries",
+ read:"Read",guitar:"Guitar",spanish:"Spanish",piano:"Piano",stretch:"Stretch",
+ nRead:"Chapter 12",nGuitar:"Scales and chorus",nSpanish:"Lesson 8",
+ timerRunning:"Timer running",
+ back:"Goals",gRange:"20 min/day · 2026-08-01 – 2026-12-31",gDay:"Day 70 of 153",headline:"+175.0% better",
+ sub:"Today: 22 min, +4.8% vs Oct 8 (21 min). ×2.75 since Aug 1 (8 min).",chartTitle:"Ideal vs. you",soFar:"So far",
+ lIdeal:"Ideal (+1% every day)",lYou:"You (vs. previous logged day, compounded)",lZero:"0% = your first logged day",
+ allGoals:"All goals",year:"2026",less:"Less",more:"More",totalTime:"Total time",daysLogged:"Days logged",hoursUnit:"h",
+ newGoal:"New goal",gActive:"Active (3)",gUp:"Upcoming (1)",gEnded:"Ended (1)",stActive:"Active",stUp:"Upcoming",stEnded:"Ended",
+ rowRead:"30 min/day · 2026-01-01 – 2026-12-31",rowGuitar:"20 min/day · 2026-08-01 – 2026-12-31",rowSpanish:"15 min/day · from 2026-06-01, no end date",
+ rowPiano:"25 min/day · 2026-11-01 – 2026-12-31",rowStretch:"10 min/day · 2026-09-01 – 2026-09-30",edit:"Edit",archive:"Archive",del:"Delete",
+ s1:"01-today.jpg · light",s2:"02-timer.jpg · light",s3:"03-curve.jpg · dark",s4:"04-review.jpg · dark",s5:"05-goals.jpg · light"};
+var VI={today:"Hôm nay",goals:"Mục tiêu",review:"Tổng kết",settings:"Cài đặt",
+ date:"Thứ Sáu, 9 tháng 10",streak:"Chuỗi 12 ngày",summary:"Đã đạt 2/3 mục tiêu",
+ min:"phút",reached:"Đã đạt chỉ tiêu",extra:"Đã đạt chỉ tiêu · vượt {n} phút",toGo:"Còn 5 phút",logTime:"Ghi thời gian",startTimer:"Đếm giờ",stop:"Dừng",entriesToday:"Các lần ghi hôm nay",
+ read:"Đọc sách",guitar:"Guitar",spanish:"Tiếng Tây Ban Nha",piano:"Piano",stretch:"Giãn cơ",
+ nRead:"Chương 12",nGuitar:"Gam và điệp khúc",nSpanish:"Bài 8",
+ timerRunning:"Đang đếm giờ",
+ back:"Mục tiêu",gRange:"20 phút/ngày · 01/08/2026 – 31/12/2026",gDay:"Ngày 70/153",headline:"Tốt hơn +175,0%",
+ sub:"Hôm nay: 22 phút, +4,8% so với 8 thg 10 (21 phút). ×2,75 kể từ 1 thg 8 (8 phút).",chartTitle:"Lý tưởng và thực tế",soFar:"Đến nay",
+ lIdeal:"Lý tưởng (+1% mỗi ngày)",lYou:"Bạn (so với ngày có ghi trước, nhân dồn)",lZero:"0% = ngày có ghi đầu tiên",
+ allGoals:"Tất cả mục tiêu",year:"2026",less:"Ít hơn",more:"Nhiều hơn",totalTime:"Tổng thời gian",daysLogged:"Số ngày đã ghi",hoursUnit:"giờ",
+ newGoal:"Mục tiêu mới",gActive:"Đang chạy (3)",gUp:"Sắp tới (1)",gEnded:"Đã kết thúc (1)",stActive:"Đang chạy",stUp:"Sắp tới",stEnded:"Đã kết thúc",
+ rowRead:"30 phút/ngày · 01/01/2026 – 31/12/2026",rowGuitar:"20 phút/ngày · 01/08/2026 – 31/12/2026",rowSpanish:"15 phút/ngày · từ 01/06/2026, không có thời hạn",
+ rowPiano:"25 phút/ngày · 01/11/2026 – 31/12/2026",rowStretch:"10 phút/ngày · 01/09/2026 – 30/09/2026",edit:"Sửa",archive:"Lưu trữ",del:"Xóa",
+ s1:"01-today.jpg · sáng",s2:"02-timer.jpg · sáng",s3:"03-curve.jpg · tối",s4:"04-review.jpg · tối",s5:"05-goals.jpg · sáng"};
+var lang="en";
+function T(k){return (lang==="vi"?VI:EN)[k]}
+function nf(n,d){return n.toLocaleString(lang==="vi"?"vi-VN":"en-US",{minimumFractionDigits:d||0,maximumFractionDigits:d||0})}
+
+/* ---------- dataset rules (DESIGN.md 7.8.8) ---------- */
+var D=function(y,m,d){return Date.UTC(y,m-1,d)/864e5};          // days since epoch
+var TODAY=D(2026,10,9);
+function doy(day){return day-D(2026,1,1)+1}
+var G={
+ read:{start:D(2026,1,1),end:D(2026,12,31),skip:function(day){return doy(day)%7===3},min:function(day){return 15+5*(doy(day)%6)},today:30},
+ guitar:{start:D(2026,8,1),end:D(2026,12,31),skip:function(day){return (day-D(2026,8,1))%6===5},min:function(day){var i=day-D(2026,8,1);return 8+Math.floor(i/5)+(i%2)},today:22},
+ spanish:{start:D(2026,6,1),end:null,skip:function(day){return (day-D(2026,6,1))%5===4},min:function(day){return 10+5*((day-D(2026,6,1))%3)},today:10},
+ stretch:{start:D(2026,9,1),end:D(2026,9,30),skip:function(day){return (day-D(2026,9,1))%4===3},min:function(){return 10},today:null}
+};
+function minutes(g,day){
+  if(day<g.start||day>TODAY||(g.end!==null&&day>g.end)) return 0;
+  if(day===TODAY) return g.today===null?0:g.today;
+  return g.skip(day)?0:g.min(day);
+}
+function total(day){return minutes(G.read,day)+minutes(G.guitar,day)+minutes(G.spanish,day)+minutes(G.stretch,day)}
+
+/* ---------- screens ---------- */
+var TABS=[["today","i-today"],["goals","i-goals"],["review","i-review"],["settings","i-settings"]];
+function tabbar(on){return '<nav class="tabbar" aria-label="Main">'+TABS.map(function(t){return '<span class="item'+(t[0]===on?' on':'')+'"><svg class="ic" aria-hidden="true"><use href="#'+t[1]+'"/></svg><span>'+T(t[0])+'</span></span>'}).join("")+'</nav>'}
+function goalCard(o){
+  var pct=Math.min(100,Math.round(o.cur/o.tgt*100)), met=o.cur>=o.tgt;
+  return '<article class="card"><div class="row2"><h2>'+T(o.k)+'</h2>'+(met?'<span class="plus"><svg class="ic s" aria-hidden="true"><use href="#i-up"/></svg>+1%</span>':'')+'</div>'
+   +'<p class="amount num">'+o.cur+'/'+o.tgt+' <span class="unit">'+T("min")+'</span></p>'
+   +'<div class="progress"><span style="width:'+pct+'%"></span></div>'
+   +'<p class="muted small" style="margin-top:6px">'+(met?(o.cur>o.tgt?T("extra").replace("{n}",o.cur-o.tgt):T("reached")):T("toGo"))+'</p>'
+   +(o.timer?'':'<div class="actions"><span class="btn secondary">'+T("logTime")+'</span><span class="btn ghost"><svg class="ic s" aria-hidden="true"><use href="#i-play"/></svg>'+T("startTimer")+'</span></div>')
+   +'<ul class="entries"><li><span class="em num">'+o.cur+' '+T("min")+'</span><span class="muted">'+T(o.note)+'</span></li></ul></article>';
+}
+function sToday(timer){
+  var cards=[{k:"read",cur:30,tgt:30,note:"nRead"},{k:"guitar",cur:22,tgt:20,note:"nGuitar"},{k:"spanish",cur:10,tgt:15,note:"nSpanish"}];
+  var tm=timer?'<article class="card timer" style="margin-bottom:12px"><p class="muted small">'+T("timerRunning")+' · '+T("spanish")+'</p><p class="clock num">00:12:41</p><div class="actions"><span class="btn primary"><svg class="ic s" aria-hidden="true"><use href="#i-stop"/></svg>'+T("stop")+'</span></div></article>':'';
+  return '<main><header class="head"><div><h1>'+T("today")+'</h1><p class="muted">'+T("date")+'</p></div><span class="chip num">'+T("streak")+'</span></header>'
+   +'<p class="summary">'+T("summary")+'</p>'+tm+'<div class="stack">'+cards.map(function(c,i){return goalCard({k:c.k,cur:c.cur,tgt:c.tgt,note:c.note,timer:timer&&i===2})}).join("")+'</div></main>'+tabbar("today");
+}
+function curveSvg(){
+  var W=400,H=210,L=44,R=12,Tp=10,B=22,n=70,ymax=200,pts=[],ideal=[],carry=8,first=8;
+  var gg=G.guitar;
+  for(var i=0;i<n;i++){
+    var day=gg.start+i, m=minutes(gg,day);
+    if(m>0) carry=m;
+    pts.push([i,(carry/first-1)*100]);
+    ideal.push([i,(Math.pow(1.01,i+1)-1)*100]);
+  }
+  function X(i){return L+(W-L-R)*i/(n-1)}
+  function Y(v){return Tp+(H-Tp-B)*(1-v/ymax)}
+  var yo=Y(0), d="";
+  pts.forEach(function(p,j){ if(j===0) d+="M"+X(p[0])+" "+Y(p[1]); else d+="H"+X(p[0])+"V"+Y(p[1]); });
+  var di=ideal.map(function(p,j){return (j?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)}).join("");
+  var grid=[0,50,100,150,200].map(function(v){return '<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--border)"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end" font-size="11" fill="var(--text-muted)">'+(v?"+"+v:"0")+'%</text>'}).join("");
+  var last=pts[n-1];
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+T("chartTitle")+'">'+grid
+   +'<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yo+'" y2="'+yo+'" stroke="var(--text-muted)" stroke-width="1.5"/>'
+   +'<path d="'+di+'" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="5 4"/>'
+   +'<path d="'+d+'" fill="none" stroke="var(--primary)" stroke-width="3"/>'
+   +'<circle cx="'+X(last[0])+'" cy="'+Y(last[1])+'" r="5" fill="var(--primary)"/>'
+   +'<text x="'+(X(last[0])-8)+'" y="'+(Y(last[1])-9)+'" text-anchor="end" font-size="12" font-weight="700" fill="var(--primary)">'+(lang==="vi"?"Bạn +175,0%":"You +175.0%")+'</text>'
+   +'<text x="'+(X(n-1)-8)+'" y="'+(Y(ideal[n-1][1])+16)+'" text-anchor="end" font-size="12" font-weight="700" fill="var(--text-muted)">'+(lang==="vi"?"Lý tưởng +100,7%":"Ideal +100.7%")+'</text></svg>';
+}
+function sCurve(){
+  return '<main><a class="back">‹ '+T("back")+'</a><h1>'+T("guitar")+'</h1><p class="muted small">'+T("gRange")+'</p>'
+   +'<div class="card" style="margin-top:12px"><p class="muted small">'+T("gDay")+'</p><p class="headline">'+T("headline")+'</p><p class="muted small" style="margin-top:6px">'+T("sub")+'</p></div>'
+   +'<section class="card chart"><div class="row2"><h2>'+T("chartTitle")+'</h2><span class="badge">'+T("soFar")+'</span></div>'+curveSvg()
+   +'<div class="legend"><span><i class="d"></i>'+T("lIdeal")+'</span><span><i></i>'+T("lYou")+'</span><span><i class="z"></i>'+T("lZero")+'</span></div></section></main>'+tabbar("goals");
+}
+function sReview(){
+  var weeksTotal=0, start=D(2025,12,29), cur=Math.floor((TODAY-start)/7), cells="", logged=0, mins=0, firstW=cur-27;
+  for(var day=D(2026,1,1);day<=TODAY;day++){var t=total(day); mins+=t; if(t>0) logged++}
+  for(var w=firstW;w<=cur;w++){
+    for(var r=0;r<7;r++){
+      var day2=start+w*7+r, cls="";
+      if(day2>TODAY||day2<D(2026,1,1)) cls=day2>TODAY?"fut":"";
+      else { var t2=total(day2); cls=t2===0?"":(t2<=30?"l1":(t2<=60?"l2":(t2<=90?"l3":"l4"))) }
+      cells+='<i class="'+cls+'"></i>';
+    }
+  }
+  return '<main><header class="head"><h1>'+T("review")+'</h1></header>'
+   +'<div class="selects"><span class="sel">'+T("allGoals")+' ▾</span><span class="sel">'+T("year")+' ▾</span></div>'
+   +'<section class="card"><div class="heat" aria-hidden="true">'+cells+'</div>'
+   +'<div class="row2 small muted" style="margin-top:10px"><span>'+T("less")+'</span><span>'+T("more")+'</span></div></section>'
+   +'<div class="stats"><div class="card stat"><div class="v num">'+nf(mins/60,1)+' '+T("hoursUnit")+'</div><div class="l">'+T("totalTime")+'</div></div>'
+   +'<div class="card stat"><div class="v num">'+nf(logged)+'</div><div class="l">'+T("daysLogged")+'</div></div></div></main>'+tabbar("review");
+}
+function goalRow(k,row,st,cls){
+  return '<article class="card"><div class="row2"><h2 class="grow name">'+T(k)+'</h2><span class="badge '+cls+'">'+T(st)+'</span></div><p class="muted small" style="margin-top:2px">'+T(row)+'</p>'
+   +'<div class="actions" style="margin-top:6px"><span class="btn ghost sm">'+T("edit")+'</span><span class="btn ghost sm">'+T("archive")+'</span><span class="btn ghost sm" style="color:#B3261E">'+T("del")+'</span></div></article>';
+}
+function sGoals(){
+  return '<main><header class="head"><h1>'+T("goals")+'</h1><span class="btn primary">'+T("newGoal")+'</span></header>'
+   +'<section class="group" style="margin-top:0"><h2>'+T("gActive")+'</h2><div class="stack">'+goalRow("read","rowRead","stActive","ok")+goalRow("guitar","rowGuitar","stActive","ok")+goalRow("spanish","rowSpanish","stActive","ok")+'</div></section>'
+   +'<section class="group"><h2>'+T("gUp")+'</h2><div class="stack">'+goalRow("piano","rowPiano","stUp","info")+'</div></section>'
+   +'<section class="group"><h2>'+T("gEnded")+'</h2><div class="stack">'+goalRow("stretch","rowStretch","stEnded","")+'</div></section></main>'+tabbar("goals");
+}
+var SCREENS=[["s1","t-light",function(){return sToday(false)}],["s2","t-light",function(){return sToday(true)}],["s3","t-dark",sCurve],["s4","t-dark",sReview],["s5","t-light",sGoals]];
+function render(){
+  document.documentElement.lang=lang;
+  document.getElementById("row").innerHTML=SCREENS.map(function(s){
+    return '<div class="slot"><div class="frame"><div class="phone '+s[1]+'">'+s[2]()+'</div></div><p class="cap">'+T(s[0])+'</p></div>';
+  }).join("");
+}
+document.querySelectorAll("input[name=lang]").forEach(function(r){r.addEventListener("change",function(){lang=r.value;render()})});
+render();
+})();
+</script>
+</body>
+</html>

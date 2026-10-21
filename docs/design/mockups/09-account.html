@@ -14,6 +14,7 @@
 --danger:#B3261E;--on-danger:#FFFFFF;--danger-soft:#FCE9E7;--on-danger-soft:#8C1D18;
 --info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;
 --google-bg:#FFFFFF;--google-border:#747775;--google-text:#1F1F1F;
+--apple-bg:#000000;--apple-text:#FFFFFF;
 --scrim:rgba(20,28,24,.5);--shadow-1:0 1px 2px rgba(20,30,25,.06);--shadow-2:0 12px 40px rgba(20,30,25,.22);
 --r-sm:6px;--r-md:10px;--r-lg:16px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:56px;--content-max:960px;--chip-h:32px}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){
@@ -24,6 +25,7 @@
 --danger:#FF8A80;--on-danger:#3B0A07;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;
 --info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;
 --google-bg:#131314;--google-border:#8E918F;--google-text:#E3E3E3;
+--apple-bg:#FFFFFF;--apple-text:#000000;
 --scrim:rgba(0,0,0,.6);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 12px 40px rgba(0,0,0,.55)}}
 :root[data-theme=dark]{color-scheme:dark;
 --bg:#121513;--surface:#1B1F1C;--surface-2:#242925;--border:#343B36;--border-input:#7C867F;
@@ -33,6 +35,7 @@
 --danger:#FF8A80;--on-danger:#3B0A07;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;
 --info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;
 --google-bg:#131314;--google-border:#8E918F;--google-text:#E3E3E3;
+--apple-bg:#FFFFFF;--apple-text:#000000;
 --scrim:rgba(0,0,0,.6);--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 12px 40px rgba(0,0,0,.55)}
 :root[data-theme=light]{color-scheme:light}
 *,*::before,*::after{box-sizing:border-box}
@@ -161,6 +164,39 @@ h2{font-size:18px;line-height:26px;font-weight:600}
 .dlg-form:has(input[value=remove]:checked) .confirm-btn{background:var(--danger);color:var(--on-danger)}
 .dlg-form .only-remove{display:none}
 .dlg-form:has(input[value=remove]:checked) .only-remove{display:flex}
+/* ---------- Phase 6 (v5.0): Sign in with Apple, Delete account, D6 ---------- */
+.alogo{width:15px;height:20px;flex:none;display:block;fill:currentColor}
+.abtn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:var(--tap);padding:6px 16px 6px 12px;border:1px solid var(--apple-bg);border-radius:var(--r-md);background:var(--apple-bg);color:var(--apple-text);font:500 15px/20px var(--font);cursor:pointer;text-align:center;max-width:100%}
+.abtn:hover,.abtn.hover{box-shadow:inset 0 0 0 100px color-mix(in srgb,var(--apple-text) 8%,transparent)}
+.abtn:active{box-shadow:inset 0 0 0 100px color-mix(in srgb,var(--apple-text) 12%,transparent)}
+.abtn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
+.abtn.focus{outline:2px solid var(--focus);outline-offset:2px}
+.auth-stack{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.auth-stack>.abtn,.auth-stack>.gbtn{width:100%}
+.auth-stack+.hint{margin-top:12px}
+.hint+.hint{margin-top:8px}
+.btn.danger-ghost{color:var(--danger);border-color:var(--danger);background:transparent}
+.btn.danger-ghost:hover{background:var(--danger-soft)}
+.btn.danger[aria-disabled=true]{opacity:1;cursor:progress}
+.delete-block{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.delete-block .hint{margin-top:0}
+.delete-block .btn{margin-top:12px}
+.delete-block .btn[disabled]{opacity:.55;cursor:not-allowed}
+.delete-block .reason{margin-top:8px}
+.revoke{display:block;margin-top:12px;padding:12px 16px;border-radius:var(--r-md);background:var(--info-soft);color:var(--info);font-weight:500}
+.revoke strong{display:flex;gap:8px;align-items:flex-start}
+.revoke strong .ic{margin-top:2px}
+.revoke p{margin-top:6px}
+.revoke .acts{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px}
+.revoke .lnk{display:inline-flex;align-items:center;min-height:var(--tap);color:var(--info);font-weight:600;text-decoration:underline}
+.revoke .btn.ghost{color:var(--info);text-decoration:underline}
+.warn.neutral{background:var(--info-soft);color:var(--info)}
+.d6-status{margin-top:12px;font-size:14px;line-height:20px;color:var(--text-muted)}
+.d6-status:empty{display:none}
+.alerts-list>*+*{margin-top:8px}
+.force-light,.force-dark{padding:12px;border-radius:var(--r-md);background:var(--surface);color:var(--text)}
+.force-light{--surface:#FFFFFF;--surface-2:#F0EEE7;--border:#DDD9CE;--border-input:#7F8882;--text:#1D2320;--text-muted:#5A625D;--primary:#1F7A4D;--on-primary:#FFFFFF;--primary-soft:#E3F2E9;--on-primary-soft:#14573A;--danger:#B3261E;--on-danger:#FFFFFF;--danger-soft:#FCE9E7;--on-danger-soft:#8C1D18;--info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;--google-bg:#FFFFFF;--google-border:#747775;--google-text:#1F1F1F;--apple-bg:#000000;--apple-text:#FFFFFF}
+.force-dark{--surface:#1B1F1C;--surface-2:#242925;--border:#343B36;--border-input:#7C867F;--text:#ECEFEA;--text-muted:#A3ACA5;--primary:#5CC98F;--on-primary:#0C2217;--primary-soft:#1E3328;--on-primary-soft:#A8E6C3;--danger:#FF8A80;--on-danger:#3B0A07;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;--info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;--google-bg:#131314;--google-border:#8E918F;--google-text:#E3E3E3;--apple-bg:#FFFFFF;--apple-text:#000000}
 /* mockup chrome */
 .mock-tools{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:12px 16px;margin-bottom:24px;border:1px dashed var(--border-input);border-radius:var(--r-md);background:var(--surface);font-size:14px}
 .mock-tools fieldset{border:0;margin:0;padding:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -198,6 +234,7 @@ figure.fig>figcaption{font-size:13px;line-height:18px;font-weight:700;color:var(
 <symbol id="i-lock-open" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 017.5-1.9"/></symbol>
 <symbol id="i-offline" viewBox="0 0 24 24"><path d="M3 9a14 14 0 0118 0M6 12.5a9 9 0 0112 0M9.5 16a4 4 0 015 0M12 19.5h.01M4 4l16 16"/></symbol>
 <symbol id="g-logo" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></symbol>
+<symbol id="a-logo" viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></symbol>
 </defs></svg>
 <a class="skip" href="#main" data-t="a11y.skip">Skip to content</a>
 
@@ -519,6 +556,271 @@ figure.fig>figcaption{font-size:13px;line-height:18px;font-weight:700;color:var(
     </div>
   </section>
 
+  <!-- ================= 7. iOS ACCOUNT CARD (v5.0, M14) ================= -->
+  <section class="sheet" aria-labelledby="s7">
+    <h2 id="s7">7. Account card on the iOS app (v5.0, M14) — Sign in with Apple above Google</h2>
+    <p class="lead">Only the iOS app has the Apple button (PRD FR-60, OQ-15). Apple always sits <strong>above</strong> Google, same width, same height (44), same type size, 12 px apart (HIG: not smaller, not dimmer, not below). The Delete account block (web and iOS) sits under the Sync now / Sign out row. States not shown here (A6, A8, A9) differ from the web card only by the same provider line and delete block.</p>
+    <div class="grid two">
+
+      <figure class="fig"><figcaption>I1 · A1 signed out, online (iOS)</figcaption>
+        <section class="card" aria-labelledby="i1h">
+          <h2 id="i1h" data-t="settings.account.title">Account</h2>
+          <p class="desc" data-t="settings.account.descSignedOutIos">Sign in with Apple or Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.</p>
+          <div class="auth-stack">
+            <button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button>
+            <button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button>
+          </div>
+          <p class="hint" data-t="settings.account.privacyNoteIos">From Google or Apple, the app only receives your name and email.</p>
+          <p class="hint" data-t="settings.account.hideEmailNote">If you choose Hide My Email, Apple gives you a private address and you get a separate account that isn't linked to a Google account.</p>
+        </section></figure>
+
+      <figure class="fig"><figcaption>I2 · A2 signed out, offline (both buttons disabled + visible reason)</figcaption>
+        <section class="card" aria-labelledby="i2h">
+          <h2 id="i2h" data-t="settings.account.title">Account</h2>
+          <p class="desc" data-t="settings.account.descSignedOutIos">Sign in with Apple or Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.</p>
+          <div class="auth-stack">
+            <button class="abtn" type="button" disabled aria-describedby="i2o"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button>
+            <button class="gbtn" type="button" disabled aria-describedby="i2o"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button>
+          </div>
+          <p class="hint" id="i2o" data-t="settings.account.offlineHint">You're offline. Connect to the internet to sign in.</p>
+          <p class="hint" data-t="settings.account.privacyNoteIos">From Google or Apple, the app only receives your name and email.</p>
+        </section></figure>
+
+      <figure class="fig"><figcaption>I3 · A3 signing in with Apple (the other button disabled; no page navigation)</figcaption>
+        <section class="card" aria-labelledby="i3h" aria-busy="true">
+          <h2 id="i3h" data-t="settings.account.title">Account</h2>
+          <div class="signing" role="status">
+            <svg class="ic spin" aria-hidden="true"><use href="#i-sync"/></svg>
+            <div><p style="color:var(--text);font-weight:600" data-t="settings.account.signingInStatus">Signing you in…</p><p data-t="settings.account.signingInBody">Finishing up. This only takes a moment.</p></div>
+          </div>
+          <div class="auth-stack">
+            <button class="abtn" type="button" disabled aria-busy="true"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signingIn">Signing in…</span></button>
+            <button class="gbtn" type="button" disabled><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button>
+          </div>
+        </section></figure>
+
+      <figure class="fig"><figcaption>I4 · A4 sign-in failed on iOS (errors.AUTH_FAILED_native: no "same browser")</figcaption>
+        <section class="card" aria-labelledby="i4h">
+          <h2 id="i4h" data-t="settings.account.title">Account</h2>
+          <div class="alert" role="alert"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p class="stack-t" data-t="errors.AUTH_FAILED_native">Couldn't sign you in. Nothing on this device changed. Try again.</p><button class="btn" type="button" data-t="common.dismiss">Dismiss</button></div>
+          <div class="auth-stack">
+            <button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button>
+            <button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button>
+          </div>
+        </section></figure>
+
+      <figure class="fig"><figcaption>I5 · A5 signed in with Apple (Hide My Email relay address) + Delete account enabled</figcaption>
+        <section class="card" aria-labelledby="i5h">
+          <h2 id="i5h" data-t="settings.account.title">Account</h2>
+          <div class="who"><span class="avatar" aria-hidden="true">M</span>
+            <div class="t"><p class="name">Minh Test</p><p class="mail">x7k2p9q4rt.8d@privaterelay.appleid.com</p><p class="mail" data-t="settings.account.providerApple">Signed in with Apple</p></div></div>
+          <dl class="dl">
+            <div><dt data-t="settings.account.lastSynced">Last synced</dt><dd data-t="format.todayAt" data-p='{"time":"14:05"}'>today at 14:05</dd></div>
+            <div><dt data-t="settings.account.pending">Waiting to sync</dt><dd data-t="format.changesCount_other" data-p='{"count":0}'>0 changes</dd></div>
+          </dl>
+          <p class="hint" data-t="settings.account.syncedInfo">Synced with this account: goals, entries, reminder settings and language. A running timer stays on the device where you started it.</p>
+          <div class="btn-row"><button class="btn secondary" type="button" data-t="settings.account.syncNow">Sync now</button><button class="btn secondary" type="button" data-t="settings.account.signOut">Sign out</button></div>
+          <div class="delete-block">
+            <p class="hint" data-t="settings.account.deleteDesc">Permanently deletes your account and everything stored in it. This can't be undone.</p>
+            <button class="btn danger-ghost" type="button" data-t="settings.account.delete">Delete account</button>
+          </div>
+        </section></figure>
+
+      <figure class="fig"><figcaption>I6 · A7 signed in (Apple + Google linked), offline: Sync now and Delete account disabled, reasons visible</figcaption>
+        <section class="card" aria-labelledby="i6h">
+          <h2 id="i6h" data-t="settings.account.title">Account</h2>
+          <div class="who"><span class="avatar" aria-hidden="true"><span class="js-ini">M</span></span>
+            <div class="t"><p class="name js-name">Minh Test</p><p class="mail js-mail">minh.test@example.com</p><p class="mail" data-t="settings.account.providerBoth">Signed in with Apple or Google</p></div></div>
+          <dl class="dl">
+            <div><dt data-t="settings.account.lastSynced">Last synced</dt><dd data-t="format.dateAt" data-p='{"date":"2026-10-08","dateVi":"08/10/2026","time":"21:40"}'>2026-10-08 at 21:40</dd></div>
+            <div><dt data-t="settings.account.pending">Waiting to sync</dt><dd data-t="format.changesCount_other" data-p='{"count":3}'>3 changes</dd></div>
+          </dl>
+          <div class="btn-row"><button class="btn secondary" type="button" disabled aria-describedby="i6o" data-t="settings.account.syncNow">Sync now</button><button class="btn secondary" type="button" data-t="settings.account.signOut">Sign out</button></div>
+          <p class="hint" id="i6o" data-t="settings.account.offlineSync">You're offline. Changes are saved on this device and sync when you're back online.</p>
+          <div class="delete-block">
+            <p class="hint" data-t="settings.account.deleteDesc">Permanently deletes your account and everything stored in it. This can't be undone.</p>
+            <button class="btn danger-ghost" type="button" disabled aria-describedby="i6r" data-t="settings.account.delete">Delete account</button>
+            <p class="hint reason" id="i6r" data-t="settings.account.deleteOffline">You're offline. Connect to the internet to delete your account.</p>
+          </div>
+        </section></figure>
+
+      <figure class="fig"><figcaption>I7 · A10 session expired on iOS: Apple, Google, Sign out; Delete account disabled until sign-in</figcaption>
+        <section class="card" aria-labelledby="i7h">
+          <h2 id="i7h" data-t="settings.account.title">Account</h2>
+          <div class="alert info" role="status"><svg class="ic" aria-hidden="true"><use href="#i-lock-open"/></svg><div class="stack-t"><strong data-t="settings.account.expiredTitle">Sign in again</strong><p data-t="errors.AUTH_SESSION_EXPIRED">Your sign-in expired. Sign in again to keep syncing. Your data, including changes that haven't synced yet, is kept on this device.</p><p class="small" style="margin-top:4px" data-t="settings.account.expiredAccount">Account: <span class="js-mail">minh.test@example.com</span></p></div></div>
+          <div class="auth-stack">
+            <button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button>
+            <button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button>
+            <button class="btn secondary" type="button" data-t="settings.account.signOut">Sign out</button>
+          </div>
+          <div class="delete-block">
+            <p class="hint" data-t="settings.account.deleteDesc">Permanently deletes your account and everything stored in it. This can't be undone.</p>
+            <button class="btn danger-ghost" type="button" disabled aria-describedby="i7r" data-t="settings.account.delete">Delete account</button>
+            <p class="hint reason" id="i7r" data-t="settings.account.deleteExpired">Your sign-in expired. Sign in again first, then delete your account.</p>
+          </div>
+        </section></figure>
+    </div>
+  </section>
+
+  <!-- ================= 8. APPLE BUTTON ================= -->
+  <section class="sheet" aria-labelledby="s8">
+    <h2 id="s8">8. "Sign in with Apple" button states (AppleSignInButton, M14)</h2>
+    <p class="lead">HIG: black on light, white on dark; the label is exactly "Sign in with Apple" / "Đăng nhập bằng Apple"; the Apple glyph is never recolored and sits left of the label. Height 44, radius 10, 15/20 type like the Google button. The glyph here is a stand-in for layout; the app uses Apple's official asset (OQ-D28). Contrast 21:1 in both themes.</p>
+    <div class="grid two">
+      <figure class="fig"><figcaption>Light theme (black)</figcaption>
+        <div class="force-light"><div class="chips">
+          <figure><figcaption>default</figcaption><button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button></figure>
+          <figure><figcaption>hover (8 % overlay)</figcaption><button class="abtn hover" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button></figure>
+          <figure><figcaption>focus-visible</figcaption><button class="abtn focus" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button></figure>
+          <figure><figcaption>disabled (offline)</figcaption><button class="abtn" type="button" disabled><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button></figure>
+          <figure><figcaption>busy</figcaption><button class="abtn" type="button" disabled aria-busy="true"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signingIn">Signing in…</span></button></figure>
+        </div>
+        <div class="auth-stack" style="margin-top:16px;max-width:360px"><button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button><button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button></div></div></figure>
+      <figure class="fig"><figcaption>Dark theme (white)</figcaption>
+        <div class="force-dark"><div class="chips">
+          <figure><figcaption>default</figcaption><button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button></figure>
+          <figure><figcaption>hover (8 % overlay)</figcaption><button class="abtn hover" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button></figure>
+          <figure><figcaption>focus-visible</figcaption><button class="abtn focus" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button></figure>
+          <figure><figcaption>disabled (offline)</figcaption><button class="abtn" type="button" disabled><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button></figure>
+          <figure><figcaption>busy</figcaption><button class="abtn" type="button" disabled aria-busy="true"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signingIn">Signing in…</span></button></figure>
+        </div>
+        <div class="auth-stack" style="margin-top:16px;max-width:360px"><button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button><button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button></div></div></figure>
+    </div>
+  </section>
+
+  <!-- ================= 9. BANNER + HINT ON iOS ================= -->
+  <section class="sheet" aria-labelledby="s9">
+    <h2 id="s9">9. LoginPromptBanner and ExportSignInHint on iOS (M14)</h2>
+    <div class="grid two">
+      <figure class="fig"><figcaption>LoginPromptBanner on Today (iOS): Apple, Google, then "Not now"; still not a dialog</figcaption>
+        <section class="promo" aria-label="Sign-in suggestion" data-ta="aria-label|loginPrompt.label">
+          <p class="promo-title"><svg class="ic" aria-hidden="true"><use href="#i-cloud"/></svg><span data-t="loginPrompt.title">Keep your progress safe</span></p>
+          <p data-t="loginPrompt.body">Sign in to back up your goals and entries online and use them on all your devices. It's optional.</p>
+          <div class="auth-stack" style="margin-top:12px">
+            <button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button>
+            <button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button>
+          </div>
+          <div class="promo-actions"><button class="btn ghost" type="button" data-t="loginPrompt.notNow">Not now</button></div>
+        </section></figure>
+      <figure class="fig"><figcaption>ExportSignInHint in the Backup card (iOS): text says "exported", share-sheet hint above</figcaption>
+        <section class="card" aria-label="Backup">
+          <h2 data-t="settings.backup.title">Backup</h2>
+          <div class="btn-row" style="margin-top:8px"><button class="btn primary" type="button" data-t="settings.backup.export">Export backup (JSON)</button><button class="btn secondary" type="button" data-t="settings.backup.import">Import backup…</button></div>
+          <p class="hint" data-t="settings.backup.shareHint">Export opens the iOS share sheet. Choose Save to Files, AirDrop, Mail or another app.</p>
+          <div class="limit" role="group" aria-label="Automatic backup" data-ta="aria-label|exportHint.label"><p data-t="exportHint.textNative">Backup exported. To keep a copy automatically, sign in: your goals and entries then sync to your account.</p>
+            <div class="auth-stack" style="margin-top:12px"><button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button><button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button></div></div>
+        </section></figure>
+    </div>
+  </section>
+
+  <!-- ================= 10. D6 DELETE ACCOUNT ================= -->
+  <section class="sheet" aria-labelledby="s10">
+    <h2 id="s10">10. D6 · Delete account dialog (M14, web and iOS) — all states</h2>
+    <p class="lead">Real app: modal &lt;dialog&gt; with focus trap, bottom sheet on mobile whose body scrolls while the button row stays at the bottom (above the home indicator). <strong>Initial focus is on Cancel.</strong> "Remove data from this device" is the default (OQ-16). The confirm button is red for both choices. At 360 px with the Apple note and an error Alert, D6 is taller than the screen: the body scrolls inside the dialog.</p>
+    <div class="grid two">
+
+      <figure class="fig"><figcaption>D6-a · default (Google account, web or iOS): Remove selected</figcaption>
+        <form class="dialog" role="group" aria-labelledby="d6ah" onsubmit="return false">
+          <h3 id="d6ah" data-t="auth.delete.title">Delete your account?</h3>
+          <p data-t="auth.delete.body">This permanently deletes your account and all the goals, entries and settings stored in it. It can't be undone. Other devices signed in to this account will need to sign in again.</p>
+          <p class="small" data-t="auth.delete.account">Account: <span class="js-mail">minh.test@example.com</span></p>
+          <fieldset class="radios"><legend data-t="auth.delete.legend">What should happen to the data on this device?</legend>
+            <label class="opt"><input type="radio" name="d6a" value="remove" checked><span class="l"><strong data-t="auth.delete.remove">Remove data from this device</strong><span class="d" data-t="auth.delete.removeDesc">Deletes the goals, entries and reminder settings on this device too, so nothing is left behind.</span></span></label>
+            <label class="opt"><input type="radio" name="d6a" value="keep"><span class="l"><strong data-t="auth.delete.keep">Keep data on this device</strong><span class="d" data-t="auth.delete.keepDesc">You can keep using 1% Better without an account. Only your account and the copy stored in it are deleted.</span></span></label>
+          </fieldset>
+          <div class="d6-status" role="status"></div>
+          <div class="actions"><button class="btn danger" type="button" data-t="auth.delete.confirm">Delete account</button><button class="btn secondary" type="button" data-t="common.cancel">Cancel</button></div>
+        </form></figure>
+
+      <figure class="fig"><figcaption>D6-b · Keep selected (same red button)</figcaption>
+        <form class="dialog" role="group" aria-labelledby="d6bh" onsubmit="return false">
+          <h3 id="d6bh" data-t="auth.delete.title">Delete your account?</h3>
+          <p data-t="auth.delete.body">This permanently deletes your account and all the goals, entries and settings stored in it. It can't be undone. Other devices signed in to this account will need to sign in again.</p>
+          <p class="small" data-t="auth.delete.account">Account: <span class="js-mail">minh.test@example.com</span></p>
+          <fieldset class="radios"><legend data-t="auth.delete.legend">What should happen to the data on this device?</legend>
+            <label class="opt"><input type="radio" name="d6b" value="remove"><span class="l"><strong data-t="auth.delete.remove">Remove data from this device</strong><span class="d" data-t="auth.delete.removeDesc">Deletes the goals, entries and reminder settings on this device too, so nothing is left behind.</span></span></label>
+            <label class="opt"><input type="radio" name="d6b" value="keep" checked><span class="l"><strong data-t="auth.delete.keep">Keep data on this device</strong><span class="d" data-t="auth.delete.keepDesc">You can keep using 1% Better without an account. Only your account and the copy stored in it are deleted.</span></span></label>
+          </fieldset>
+          <div class="actions"><button class="btn danger" type="button" data-t="auth.delete.confirm">Delete account</button><button class="btn secondary" type="button" data-t="common.cancel">Cancel</button></div>
+        </form></figure>
+
+      <figure class="fig"><figcaption>D6-c · iOS and the account has Apple: info block about the Apple confirmation step</figcaption>
+        <form class="dialog" role="group" aria-labelledby="d6ch" onsubmit="return false">
+          <h3 id="d6ch" data-t="auth.delete.title">Delete your account?</h3>
+          <p data-t="auth.delete.body">This permanently deletes your account and all the goals, entries and settings stored in it. It can't be undone. Other devices signed in to this account will need to sign in again.</p>
+          <p class="small" data-t="auth.delete.account">Account: <span class="js-mail">minh.test@example.com</span></p>
+          <div class="warn neutral"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><p data-t="auth.delete.appleNote">You use Sign in with Apple, so iOS will ask you to confirm with Apple first. This also removes 1% Better from the apps connected to your Apple ID.</p></div>
+          <fieldset class="radios"><legend data-t="auth.delete.legend">What should happen to the data on this device?</legend>
+            <label class="opt"><input type="radio" name="d6c" value="remove" checked><span class="l"><strong data-t="auth.delete.remove">Remove data from this device</strong><span class="d" data-t="auth.delete.removeDesc">Deletes the goals, entries and reminder settings on this device too, so nothing is left behind.</span></span></label>
+            <label class="opt"><input type="radio" name="d6c" value="keep"><span class="l"><strong data-t="auth.delete.keep">Keep data on this device</strong><span class="d" data-t="auth.delete.keepDesc">You can keep using 1% Better without an account. Only your account and the copy stored in it are deleted.</span></span></label>
+          </fieldset>
+          <div class="actions"><button class="btn danger" type="button" data-t="auth.delete.confirm">Delete account</button><button class="btn secondary" type="button" data-t="common.cancel">Cancel</button></div>
+        </form></figure>
+
+      <figure class="fig"><figcaption>D6-d · busy (confirm is aria-disabled to keep focus; Cancel and radios disabled; Esc and backdrop ignored)</figcaption>
+        <form class="dialog" role="group" aria-labelledby="d6dh" aria-busy="true" onsubmit="return false">
+          <h3 id="d6dh" data-t="auth.delete.title">Delete your account?</h3>
+          <p data-t="auth.delete.body">This permanently deletes your account and all the goals, entries and settings stored in it. It can't be undone. Other devices signed in to this account will need to sign in again.</p>
+          <fieldset class="radios" disabled><legend data-t="auth.delete.legend">What should happen to the data on this device?</legend>
+            <label class="opt"><input type="radio" name="d6d" value="remove" checked disabled><span class="l"><strong data-t="auth.delete.remove">Remove data from this device</strong></span></label>
+            <label class="opt"><input type="radio" name="d6d" value="keep" disabled><span class="l"><strong data-t="auth.delete.keep">Keep data on this device</strong></span></label>
+          </fieldset>
+          <div class="d6-status" role="status" data-t="auth.delete.workingStatus">Deleting your account. This can take a few seconds.</div>
+          <div class="actions"><button class="btn danger" type="button" aria-disabled="true"><svg class="ic spin" aria-hidden="true"><use href="#i-sync"/></svg><span data-t="auth.delete.working">Deleting…</span></button><button class="btn secondary" type="button" disabled data-t="common.cancel">Cancel</button></div>
+        </form></figure>
+
+      <figure class="fig"><figcaption>D6-e · error: ACCOUNT_DELETE_FAILED (Alert role="alert" right above the buttons; dialog stays open; pressing confirm again retries)</figcaption>
+        <form class="dialog" role="group" aria-labelledby="d6eh" onsubmit="return false">
+          <h3 id="d6eh" data-t="auth.delete.title">Delete your account?</h3>
+          <p data-t="auth.delete.body">This permanently deletes your account and all the goals, entries and settings stored in it. It can't be undone. Other devices signed in to this account will need to sign in again.</p>
+          <fieldset class="radios"><legend data-t="auth.delete.legend">What should happen to the data on this device?</legend>
+            <label class="opt"><input type="radio" name="d6e" value="remove" checked><span class="l"><strong data-t="auth.delete.remove">Remove data from this device</strong></span></label>
+            <label class="opt"><input type="radio" name="d6e" value="keep"><span class="l"><strong data-t="auth.delete.keep">Keep data on this device</strong></span></label>
+          </fieldset>
+          <div class="alert" role="alert"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p class="stack-t" data-t="errors.ACCOUNT_DELETE_FAILED">Couldn't delete your account just now. Nothing was removed from this device. Check your connection and try again. If it keeps failing, contact support from the About card.</p></div>
+          <div class="actions"><button class="btn danger" type="button" data-t="auth.delete.confirm">Delete account</button><button class="btn secondary" type="button" data-t="common.cancel">Cancel</button></div>
+        </form></figure>
+
+      <figure class="fig"><figcaption>D6-f · the other three errors (one at a time in the real dialog)</figcaption>
+        <div class="dialog" role="group" aria-label="Delete account errors">
+          <div class="alerts-list">
+            <div class="alert" role="presentation" style="margin-top:0"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p class="stack-t" data-t="errors.ACCOUNT_DELETE_OFFLINE">You're offline, so your account wasn't deleted. Connect to the internet and try again.</p></div>
+            <div class="alert" role="presentation"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p class="stack-t" data-t="errors.ACCOUNT_DELETE_CANCELLED">The Apple confirmation was cancelled, so your account wasn't deleted. Nothing changed.</p></div>
+            <div class="alert" role="presentation"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><p class="stack-t" data-t="errors.ACCOUNT_DELETE_SESSION_EXPIRED">Your sign-in is no longer valid, so the account couldn't be deleted. Sign in again and try again. If you deleted it a moment ago, it is already gone.</p></div>
+          </div>
+        </div></figure>
+    </div>
+  </section>
+
+  <!-- ================= 11. OUTCOMES ================= -->
+  <section class="sheet" aria-labelledby="s11">
+    <h2 id="s11">11. After the account is deleted (M14)</h2>
+    <p class="lead">D6 closes, the card returns to A1, the toast confirms (one toast), focus moves to the "Account" heading. When Apple could not be revoked automatically (<code>appleRevoked = 'manual-required'</code>) and the account had Apple, the instruction panel sits right under the heading until Dismiss. The panel is not a live region: the toast already announces the result.</p>
+    <div class="grid two">
+      <figure class="fig"><figcaption>A1 after deletion + Apple revoke panel (iOS)</figcaption>
+        <section class="card" aria-labelledby="i8h">
+          <h2 id="i8h" tabindex="-1" data-t="settings.account.title">Account</h2>
+          <section class="revoke" aria-labelledby="i8t">
+            <strong id="i8t"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><span data-t="auth.delete.revokeTitle">One more step for Apple</span></strong>
+            <p data-t="auth.delete.revokeBody">Your account is deleted, but Apple may still list 1% Better under Sign in with Apple. To remove it, open Settings on your iPhone, tap your name, then Sign-In &amp; Security &gt; Sign in with Apple, choose 1% Better per Day and tap Stop Using Apple ID.</p>
+            <div class="acts"><a class="lnk" href="https://support.apple.com/102571" target="_blank" rel="noopener"><span data-t="auth.delete.revokeLink">See Apple's instructions</span><span class="sr-only" data-t="a11y.opensExternal"> (opens in Safari)</span></a><button class="btn ghost" type="button" data-t="common.dismiss">Dismiss</button></div>
+          </section>
+          <p class="desc" style="margin-top:12px" data-t="settings.account.descSignedOutIos">Sign in with Apple or Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.</p>
+          <div class="auth-stack">
+            <button class="abtn" type="button"><svg class="alogo" aria-hidden="true"><use href="#a-logo"/></svg><span data-t="auth.signInApple">Sign in with Apple</span></button>
+            <button class="gbtn" type="button"><svg class="glogo" aria-hidden="true"><use href="#g-logo"/></svg><span data-t="auth.signInGoogle">Sign in with Google</span></button>
+          </div>
+        </section></figure>
+      <figure class="fig"><figcaption>Toasts (one at a time; role="status")</figcaption>
+        <div class="stage row-gap">
+          <div class="toast" role="status"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="toast.accountDeletedRemoved">Account deleted. Data removed from this device.</span></div>
+          <div class="toast" role="status"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="toast.accountDeletedKept">Account deleted. Your data is still on this device.</span></div>
+        </div></figure>
+    </div>
+  </section>
+
+  <aside class="mock-note">Mockup 09, sections 7 to 11 (phase 6, DESIGN.md v5.0, M14): iOS Account card, Sign in with Apple button, banner and hint on iOS, Delete account entry, D6 in every state, and the result after deletion. The Apple glyph is a stand-in. Strings in Vietnamese follow the vi column of DESIGN.md 7.8.2 and 7.8.3; Vietnamese iOS labels still need a check on a Vietnamese-language iPhone (OQ-D26). The Apple and Google sheets themselves are drawn by iOS and are not designed here.</aside>
+
   <aside class="mock-note">Mockup 09, reference sheet for phase 2 (DESIGN.md v2.0, sections 4 S7, 5, 7.7, 8.1). The first Backup and About paragraphs show the signed-out copy and the second paragraphs the signed-in copy; the real app shows only the one that matches the account state. Strings in Vietnamese are the same as the vi column of DESIGN.md section 7. Theme, language and long-name controls at the top are only for reviewing the design. Google sign-in itself happens on Google's own page and is not designed here.</aside>
 </main>
 </div>
@@ -585,7 +887,34 @@ var VI={
 "settings.storage.notProtectedSignIn":"Đăng nhập cũng giúp giữ một bản sao dữ liệu trong tài khoản của bạn.",
 "settings.about.title":"Giới thiệu","settings.about.descCloud":"Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước. Đăng nhập là tùy chọn và không có theo dõi.",
 "settings.about.descSignedIn":"Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước, rồi đồng bộ vào tài khoản của bạn. Không có theo dõi.",
-"settings.about.privacy":"Nếu bạn đăng nhập, mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ của bạn được lưu trong cơ sở dữ liệu của app (Supabase) dưới tài khoản của bạn. Những người khác dùng app không xem được chúng."
+"settings.about.privacy":"Nếu bạn đăng nhập, mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ của bạn được lưu trong cơ sở dữ liệu của app (Supabase) dưới tài khoản của bạn. Những người khác dùng app không xem được chúng.",
+"auth.signInApple":"Đăng nhập bằng Apple",
+"settings.account.descSignedOutIos":"Đăng nhập bằng Apple hoặc Google để lưu một bản sao mục tiêu và lần ghi vào tài khoản của bạn và dùng trên mọi thiết bị. Bạn không cần tài khoản để dùng 1% Better.",
+"settings.account.privacyNoteIos":"Từ Google hoặc Apple, app chỉ nhận tên và email của bạn.",
+"settings.account.hideEmailNote":"Nếu bạn chọn \"Ẩn email của tôi\" (Hide My Email), Apple sẽ cấp một địa chỉ riêng tư và bạn có một tài khoản riêng, không liên kết với tài khoản Google.",
+"settings.account.providerApple":"Đã đăng nhập bằng Apple","settings.account.providerBoth":"Đã đăng nhập bằng Apple hoặc Google",
+"errors.AUTH_FAILED_native":"Không đăng nhập được. Không có gì trên thiết bị này bị thay đổi. Hãy thử lại.",
+"exportHint.textNative":"Đã xuất bản sao lưu. Để có thêm một bản sao tự động, hãy đăng nhập: mục tiêu và lần ghi của bạn sẽ được đồng bộ vào tài khoản.",
+"settings.backup.shareHint":"Xuất sao lưu sẽ mở bảng chia sẻ của iOS. Hãy chọn Lưu vào Tệp, AirDrop, Mail hoặc app khác.",
+"settings.account.delete":"Xóa tài khoản","settings.account.deleteDesc":"Xóa vĩnh viễn tài khoản của bạn và mọi thứ được lưu trong đó. Bạn không thể hoàn tác.",
+"settings.account.deleteOffline":"Bạn đang ngoại tuyến. Hãy kết nối mạng để xóa tài khoản.",
+"settings.account.deleteExpired":"Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại trước, rồi xóa tài khoản.",
+"auth.delete.title":"Xóa tài khoản của bạn?",
+"auth.delete.body":"Thao tác này xóa vĩnh viễn tài khoản của bạn và mọi mục tiêu, lần ghi, cài đặt được lưu trong đó. Bạn không thể hoàn tác. Các thiết bị khác đang đăng nhập tài khoản này sẽ phải đăng nhập lại.",
+"auth.delete.account":"Tài khoản: {{email}}",
+"auth.delete.appleNote":"Bạn đang dùng Đăng nhập bằng Apple nên iOS sẽ yêu cầu bạn xác nhận với Apple trước. Việc này cũng gỡ 1% Better khỏi danh sách app đã kết nối với ID Apple của bạn.",
+"auth.delete.legend":"Dữ liệu trên thiết bị này sẽ được xử lý thế nào?",
+"auth.delete.remove":"Xóa dữ liệu khỏi thiết bị này","auth.delete.removeDesc":"Xóa luôn mục tiêu, lần ghi và cài đặt nhắc nhở trên thiết bị này, nên không còn gì sót lại.",
+"auth.delete.keep":"Giữ dữ liệu trên thiết bị này","auth.delete.keepDesc":"Bạn vẫn dùng 1% Better bình thường mà không cần tài khoản. Chỉ tài khoản của bạn và bản sao lưu trong đó bị xóa.",
+"auth.delete.confirm":"Xóa tài khoản","auth.delete.working":"Đang xóa…","auth.delete.workingStatus":"Đang xóa tài khoản của bạn. Việc này có thể mất vài giây.",
+"auth.delete.revokeTitle":"Còn một bước với Apple",
+"auth.delete.revokeBody":"Tài khoản của bạn đã được xóa, nhưng Apple có thể vẫn liệt kê 1% Better trong mục Đăng nhập bằng Apple. Để gỡ, hãy mở Cài đặt trên iPhone, chạm vào tên của bạn, chọn Đăng nhập &amp; Bảo mật &gt; Đăng nhập bằng Apple, chọn 1% Better per Day rồi chạm \"Stop Using Apple ID\" (Ngừng dùng ID Apple).",
+"auth.delete.revokeLink":"Xem hướng dẫn của Apple","a11y.opensExternal":" (mở trong Safari)",
+"errors.ACCOUNT_DELETE_OFFLINE":"Bạn đang ngoại tuyến nên tài khoản chưa được xóa. Hãy kết nối mạng rồi thử lại.",
+"errors.ACCOUNT_DELETE_CANCELLED":"Bạn đã hủy bước xác nhận với Apple nên tài khoản chưa được xóa. Không có gì thay đổi.",
+"errors.ACCOUNT_DELETE_FAILED":"Chưa xóa được tài khoản của bạn. Không có gì bị xóa khỏi thiết bị này. Hãy kiểm tra kết nối rồi thử lại. Nếu vẫn lỗi, hãy liên hệ hỗ trợ trong mục Giới thiệu.",
+"errors.ACCOUNT_DELETE_SESSION_EXPIRED":"Phiên đăng nhập không còn hợp lệ nên chưa xóa được tài khoản. Hãy đăng nhập lại rồi thử lại. Nếu bạn vừa xóa xong, tài khoản đã được xóa rồi.",
+"toast.accountDeletedKept":"Đã xóa tài khoản. Dữ liệu của bạn vẫn còn trên thiết bị này.","toast.accountDeletedRemoved":"Đã xóa tài khoản. Dữ liệu đã được xóa khỏi thiết bị này."
 };
 var UNIT={goals:"mục tiêu",entries:"lần ghi",curGoals:"mục tiêu",curEntries:"lần ghi"};
 var lang="en", long=false;
