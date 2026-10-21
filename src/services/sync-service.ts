@@ -73,6 +73,8 @@ class SyncAborted extends Error {
 const DEFAULT_BATCH = 500;
 const DEFAULT_MAX_PUSH_BATCHES = 20;
 const DEFAULT_SIGN_OUT_TIMEOUT_MS = 10_000;
+/** v5.0 (M14, ARCH §4.7 b.3): a cycle still running when the account is being deleted is waited for at most this long. */
+const DEFAULT_DELETION_WAIT_MS = 10_000;
 /** Reasons that run even while a retry is pending (manual, network back, the retry itself, sign-in/out, startup). */
 const BYPASS_BACKOFF: ReadonlySet<SyncReason> = new Set(['manual', 'online', 'retry', 'sign-in', 'sign-out', 'startup', 'rerun']);
 
@@ -96,6 +98,8 @@ export class SyncService {
   private cycleRejected = 0;
   private retryTimer: unknown = null;
   private started = false;
+  /** v5.0 (M14): set while the account is being deleted; every `syncNow` is skipped (nothing may be pushed any more). */
+  private deleting = false;
   private stopPending: (() => void) | null = null;
   private stopMeta: (() => void) | null = null;
   private remote: RemoteStore | null = null;
@@ -274,17 +278,56 @@ export class SyncService {
   /**
    * After sign-out: forget cursors and bookkeeping (`lastUserId` is kept by AuthService). When the
    * kv row is already gone (Sign out → Remove ran `clearUserData`), nothing is written back.
+   * v5.0 (M14, A-61): `forgetLastUser` — the account was deleted, so the device is no longer bound to it
+   * (`lastUserId` cleared; the next sign-in merges silently instead of asking D5 about a dead account).
    */
-  async reset(): Promise<void> {
+  async reset({ forgetLastUser = false }: { forgetLastUser?: boolean } = {}): Promise<void> {
     this.clearRetry();
     this.failures = 0;
     this.generation += 1;
+    this.deleting = false;
     this.setPrompt(null);
     this.firstSignIn = null;
     if ((await this.deps.kv.get<unknown>('sync')) != null) {
-      await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null }));
+      await this.deps.kv.update<unknown>('sync', (cur) => {
+        const meta = normalizeSyncMeta(cur);
+        return { ...meta, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null, ...(forgetLastUser ? { userId: null, account: null, lastUserId: null } : {}) };
+      });
     }
     this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined, remoteInvalid: undefined, remoteSkipped: undefined, rejected: undefined, lastSyncedAt: null });
+  }
+
+  /**
+   * v5.0 (M14, ARCH §4.7 b.3): the account is about to be deleted. From now on every `syncNow` is skipped
+   * (`paused`), retries stop, and a cycle that is still running is waited for (bounded) so nothing lands in
+   * the cloud after the deletion request. `resumeAfterAccountDeletion()` undoes it when the deletion fails.
+   */
+  async pauseForAccountDeletion(waitMs = DEFAULT_DELETION_WAIT_MS): Promise<void> {
+    this.deleting = true;
+    this.clearRetry();
+    this.generation += 1;
+    if (this.running) {
+      let timer: unknown = null;
+      const timeout = new Promise<void>((resolve) => {
+        timer = this.timers.setTimeout(resolve, waitMs);
+      });
+      try {
+        await Promise.race([this.running.then(() => undefined, () => undefined), timeout]);
+      } finally {
+        if (timer !== null) this.timers.clearTimeout(timer);
+      }
+    }
+    this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined });
+  }
+
+  /** The deletion failed: the account still exists, sync may run again. */
+  resumeAfterAccountDeletion(): void {
+    this.deleting = false;
+  }
+
+  /** Tests / UI: `true` between `pauseForAccountDeletion` and `reset` / `resumeAfterAccountDeletion`. */
+  isPausedForDeletion(): boolean {
+    return this.deleting;
   }
 
   /** Rows on this device the cloud refused (`dirty = 2`), read fresh (D4 warns about them, M7-D5). */
@@ -323,6 +366,7 @@ export class SyncService {
 
   private async guardedCycle(reason: SyncReason): Promise<SyncOutcome> {
     const userId = this.deps.auth.currentUserId();
+    if (this.deleting) return { status: 'skipped', why: 'paused' };
     if (!userId) {
       this.set({ kind: 'paused' });
       return { status: 'skipped', why: 'paused' };

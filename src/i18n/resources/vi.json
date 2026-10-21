@@ -81,7 +81,9 @@
     "mergeDone": "Đã đăng nhập. Tài khoản của bạn hiện có {{goals}}, {{entries}}.",
     "prefsFromAccount": "Đã cập nhật cài đặt từ tài khoản của bạn",
     "syncNowDone": "Mọi thứ đã được cập nhật",
-    "icsShared": "Đã chia sẻ tệp lịch"
+    "icsShared": "Đã chia sẻ tệp lịch",
+    "accountDeletedKept": "Đã xóa tài khoản. Dữ liệu của bạn vẫn còn trên thiết bị này.",
+    "accountDeletedRemoved": "Đã xóa tài khoản. Dữ liệu đã được xóa khỏi thiết bị này."
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Hãy nhập tên cho mục tiêu của bạn.",
@@ -129,7 +131,12 @@
     "SYNC_UNREACHABLE": "Hiện chưa kết nối được tới tài khoản của bạn. Thay đổi của bạn vẫn an toàn trên thiết bị này. App sẽ tự thử lại, hoặc bạn có thể bấm Đồng bộ ngay.",
     "SYNC_UNAUTHORIZED": "Phiên đăng nhập không còn hợp lệ. Hãy đăng nhập lại để tiếp tục đồng bộ. Dữ liệu trên thiết bị này vẫn an toàn.",
     "SYNC_REMOTE_INVALID": "Một số mục từ tài khoản của bạn không đọc được nên đã bị bỏ qua. Mọi thứ còn lại đã được đồng bộ.",
-    "EXPORT_FAILED_native": "Không tạo được tệp sao lưu. Dữ liệu trên thiết bị này không thay đổi. Hãy thử lại; nếu vẫn lỗi, hãy giải phóng bớt dung lượng trên iPhone."
+    "EXPORT_FAILED_native": "Không tạo được tệp sao lưu. Dữ liệu trên thiết bị này không thay đổi. Hãy thử lại; nếu vẫn lỗi, hãy giải phóng bớt dung lượng trên iPhone.",
+    "AUTH_FAILED_native": "Không đăng nhập được. Không có gì trên thiết bị này bị thay đổi. Hãy thử lại.",
+    "ACCOUNT_DELETE_OFFLINE": "Bạn đang ngoại tuyến nên tài khoản chưa được xóa. Hãy kết nối mạng rồi thử lại.",
+    "ACCOUNT_DELETE_CANCELLED": "Bạn đã hủy bước xác nhận với Apple nên tài khoản chưa được xóa. Không có gì thay đổi.",
+    "ACCOUNT_DELETE_FAILED": "Chưa xóa được tài khoản của bạn. Không có gì bị xóa khỏi thiết bị này. Hãy kiểm tra kết nối rồi thử lại. Nếu vẫn lỗi, hãy liên hệ hỗ trợ trong mục Giới thiệu.",
+    "ACCOUNT_DELETE_SESSION_EXPIRED": "Phiên đăng nhập không còn hợp lệ nên chưa xóa được tài khoản. Hãy đăng nhập lại rồi thử lại. Nếu bạn vừa xóa xong, tài khoản đã được xóa rồi."
   },
   "empty": {
     "today": {
@@ -346,7 +353,16 @@
       "syncNow": "Đồng bộ ngay",
       "offlineSync": "Bạn đang ngoại tuyến. Thay đổi được lưu trên thiết bị này và sẽ đồng bộ khi có mạng trở lại.",
       "nextRetry": "Sẽ thử lại lúc {{time}}.",
-      "localRejected_other": "{{count}} mục trên thiết bị này không tải lên được tài khoản của bạn nên chỉ còn ở đây. Hãy xuất bản sao lưu để giữ một bản sao; mọi thứ còn lại đã được đồng bộ."
+      "localRejected_other": "{{count}} mục trên thiết bị này không tải lên được tài khoản của bạn nên chỉ còn ở đây. Hãy xuất bản sao lưu để giữ một bản sao; mọi thứ còn lại đã được đồng bộ.",
+      "descSignedOutIos": "Đăng nhập bằng Apple hoặc Google để lưu một bản sao mục tiêu và lần ghi vào tài khoản của bạn và dùng trên mọi thiết bị. Bạn không cần tài khoản để dùng 1% Better.",
+      "privacyNoteIos": "Từ Google hoặc Apple, app chỉ nhận tên và email của bạn.",
+      "hideEmailNote": "Nếu bạn chọn \"Ẩn email của tôi\" (Hide My Email), Apple sẽ cấp một địa chỉ riêng tư và bạn có một tài khoản riêng, không liên kết với tài khoản Google.",
+      "providerApple": "Đã đăng nhập bằng Apple",
+      "providerBoth": "Đã đăng nhập bằng Apple hoặc Google",
+      "delete": "Xóa tài khoản",
+      "deleteDesc": "Xóa vĩnh viễn tài khoản của bạn và mọi thứ được lưu trong đó. Bạn không thể hoàn tác.",
+      "deleteOffline": "Bạn đang ngoại tuyến. Hãy kết nối mạng để xóa tài khoản.",
+      "deleteExpired": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại trước, rồi xóa tài khoản."
     },
     "reminders": {
       "title": "Nhắc nhở",
@@ -585,6 +601,24 @@
       "note": "Chọn Hủy sẽ đăng xuất. Không có gì được tải lên.",
       "confirm": "Thêm vào tài khoản",
       "working": "Đang thêm…"
+    },
+    "signInApple": "Đăng nhập bằng Apple",
+    "delete": {
+      "title": "Xóa tài khoản của bạn?",
+      "body": "Thao tác này xóa vĩnh viễn tài khoản của bạn và mọi mục tiêu, lần ghi, cài đặt được lưu trong đó. Bạn không thể hoàn tác. Các thiết bị khác đang đăng nhập tài khoản này sẽ phải đăng nhập lại.",
+      "account": "Tài khoản: {{email}}",
+      "appleNote": "Bạn đang dùng Đăng nhập bằng Apple nên iOS sẽ yêu cầu bạn xác nhận với Apple trước. Việc này cũng gỡ 1% Better khỏi danh sách app đã kết nối với ID Apple của bạn.",
+      "legend": "Dữ liệu trên thiết bị này sẽ được xử lý thế nào?",
+      "remove": "Xóa dữ liệu khỏi thiết bị này",
+      "removeDesc": "Xóa luôn mục tiêu, lần ghi và cài đặt nhắc nhở trên thiết bị này, nên không còn gì sót lại.",
+      "keep": "Giữ dữ liệu trên thiết bị này",
+      "keepDesc": "Bạn vẫn dùng 1% Better bình thường mà không cần tài khoản. Chỉ tài khoản của bạn và bản sao lưu trong đó bị xóa.",
+      "confirm": "Xóa tài khoản",
+      "working": "Đang xóa…",
+      "workingStatus": "Đang xóa tài khoản của bạn. Việc này có thể mất vài giây.",
+      "revokeTitle": "Còn một bước với Apple",
+      "revokeBody": "Tài khoản của bạn đã được xóa, nhưng Apple có thể vẫn liệt kê 1% Better trong mục Đăng nhập bằng Apple. Để gỡ, hãy mở Cài đặt trên iPhone, chạm vào tên của bạn, chọn Đăng nhập & Bảo mật > Đăng nhập bằng Apple, chọn 1% Better per Day rồi chạm \"Stop Using Apple ID\" (Ngừng dùng ID Apple).",
+      "revokeLink": "Xem hướng dẫn của Apple"
     }
   },
   "sync": {
@@ -618,6 +652,7 @@
   },
   "exportHint": {
     "label": "Sao lưu tự động",
-    "text": "Đã tải bản sao lưu. Để có thêm một bản sao tự động, hãy đăng nhập bằng Google: mục tiêu và lần ghi của bạn sẽ được đồng bộ vào tài khoản."
+    "text": "Đã tải bản sao lưu. Để có thêm một bản sao tự động, hãy đăng nhập bằng Google: mục tiêu và lần ghi của bạn sẽ được đồng bộ vào tài khoản.",
+    "textNative": "Đã xuất bản sao lưu. Để có thêm một bản sao tự động, hãy đăng nhập: mục tiêu và lần ghi của bạn sẽ được đồng bộ vào tài khoản."
   }
 }

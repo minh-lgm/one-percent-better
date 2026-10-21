@@ -87,10 +87,18 @@ export type ErrorCode =
   | 'AUTH_OFFLINE'
   | 'AUTH_CANCELLED'
   | 'AUTH_FAILED'
-  | 'AUTH_SESSION_EXPIRED';
+  | 'AUTH_SESSION_EXPIRED'
+  // v5.0 (M14) — delete account (ARCHITECTURE §5.4 v5.0, §4.7)
+  | 'ACCOUNT_DELETE_OFFLINE'
+  | 'ACCOUNT_DELETE_CANCELLED'
+  | 'ACCOUNT_DELETE_FAILED'
+  | 'ACCOUNT_DELETE_SESSION_EXPIRED';
 
 /** Sign-in error codes surfaced by `AuthService` (subset of `ErrorCode`). */
 export type AuthErrorCode = 'AUTH_OFFLINE' | 'AUTH_CANCELLED' | 'AUTH_FAILED' | 'AUTH_SESSION_EXPIRED';
+
+/** v5.0 (M14): outcomes of `AuthService.deleteAccount` shown inside D6 (DESIGN 7.8.3). */
+export type AccountDeleteErrorCode = 'ACCOUNT_DELETE_OFFLINE' | 'ACCOUNT_DELETE_CANCELLED' | 'ACCOUNT_DELETE_FAILED' | 'ACCOUNT_DELETE_SESSION_EXPIRED';
 
 /**
  * A domain error. `message` is for logs only and never displayed; the UI maps

@@ -41,8 +41,8 @@ export interface SyncMeta {
   userId: string | null;
   /** Last account that synced on this device (FR-47, kept across sign-outs). */
   lastUserId: string | null;
-  /** Shown immediately while offline / before the SDK loads (FR-40). */
-  account: { email: string; name: string } | null;
+  /** Shown immediately while offline / before the SDK loads (FR-40). v5.0: `provider` = the native sheet used to sign in (M14). */
+  account: { email: string; name: string; provider?: 'google' | 'apple' } | null;
   cursor: { goals: PullCursor | null; entries: PullCursor | null };
   lastSyncedAt: ISODateTime | null;
   lastError: { code: SyncErrorCode; at: ISODateTime } | null;
@@ -65,7 +65,7 @@ export const EMPTY_SYNC_META: SyncMeta = {
 /** Normalise whatever is stored under kv `sync` into a complete `SyncMeta` (corrupt → defaults). */
 export function normalizeSyncMeta(raw: unknown): SyncMeta {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Record<keyof SyncMeta, unknown>>;
-  const account = r.account && typeof r.account === 'object' ? (r.account as { email?: unknown; name?: unknown }) : null;
+  const account = r.account && typeof r.account === 'object' ? (r.account as { email?: unknown; name?: unknown; provider?: unknown }) : null;
   const cursor = r.cursor && typeof r.cursor === 'object' ? (r.cursor as { goals?: unknown; entries?: unknown }) : null;
   const isCursor = (c: unknown): c is PullCursor =>
     !!c && typeof c === 'object' && typeof (c as PullCursor).serverUpdatedAt === 'string' && typeof (c as PullCursor).id === 'string';
@@ -73,7 +73,10 @@ export function normalizeSyncMeta(raw: unknown): SyncMeta {
   return {
     userId: typeof r.userId === 'string' ? r.userId : null,
     lastUserId: typeof r.lastUserId === 'string' ? r.lastUserId : null,
-    account: account && typeof account.email === 'string' ? { email: account.email, name: typeof account.name === 'string' ? account.name : '' } : null,
+    account:
+      account && typeof account.email === 'string'
+        ? { email: account.email, name: typeof account.name === 'string' ? account.name : '', ...(account.provider === 'google' || account.provider === 'apple' ? { provider: account.provider } : {}) }
+        : null,
     cursor: { goals: isCursor(cursor?.goals) ? cursor.goals : null, entries: isCursor(cursor?.entries) ? cursor.entries : null },
     lastSyncedAt: typeof r.lastSyncedAt === 'string' ? r.lastSyncedAt : null,
     lastError: lastError && typeof lastError.code === 'string' && typeof lastError.at === 'string' ? { code: lastError.code as SyncErrorCode, at: lastError.at } : null,

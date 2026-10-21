@@ -62,6 +62,10 @@ export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
     case 'AUTH_CANCELLED':
     case 'AUTH_FAILED':
     case 'AUTH_SESSION_EXPIRED':
+    case 'ACCOUNT_DELETE_OFFLINE':
+    case 'ACCOUNT_DELETE_CANCELLED':
+    case 'ACCOUNT_DELETE_FAILED':
+    case 'ACCOUNT_DELETE_SESSION_EXPIRED':
       return { key: `errors.${error.code}` };
     default:
       return { key: 'errors.UNKNOWN' };

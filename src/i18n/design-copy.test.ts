@@ -115,3 +115,53 @@ describe('en.json / vi.json match DESIGN v4.0 verbatim (M11-AC11, A-56)', () => 
     expect(KEYS_V4).toHaveLength(12);
   });
 });
+
+// ---- v5.0 (M14-AC11): the 33 keys of DESIGN 7.8.2 (Sign in with Apple) and 7.8.3 (Delete account, D6, Apple panel, errors, toasts) ----
+const KEYS_M14 = [
+  'auth.signInApple',
+  'settings.account.descSignedOutIos',
+  'settings.account.privacyNoteIos',
+  'settings.account.hideEmailNote',
+  'settings.account.providerApple',
+  'settings.account.providerBoth',
+  'errors.AUTH_FAILED_native',
+  'exportHint.textNative',
+  'settings.account.delete',
+  'settings.account.deleteDesc',
+  'settings.account.deleteOffline',
+  'settings.account.deleteExpired',
+  'auth.delete.title',
+  'auth.delete.body',
+  'auth.delete.account',
+  'auth.delete.appleNote',
+  'auth.delete.legend',
+  'auth.delete.remove',
+  'auth.delete.removeDesc',
+  'auth.delete.keep',
+  'auth.delete.keepDesc',
+  'auth.delete.confirm',
+  'auth.delete.working',
+  'auth.delete.workingStatus',
+  'auth.delete.revokeTitle',
+  'auth.delete.revokeBody',
+  'auth.delete.revokeLink',
+  'errors.ACCOUNT_DELETE_OFFLINE',
+  'errors.ACCOUNT_DELETE_CANCELLED',
+  'errors.ACCOUNT_DELETE_FAILED',
+  'errors.ACCOUNT_DELETE_SESSION_EXPIRED',
+  'toast.accountDeletedKept',
+  'toast.accountDeletedRemoved',
+];
+
+describe('en.json / vi.json match DESIGN v5.0 7.8.2 / 7.8.3 verbatim (M14-AC11)', () => {
+  it('exactly 33 keys', () => {
+    expect(KEYS_M14).toHaveLength(33);
+  });
+  for (const key of KEYS_M14) {
+    it(key, () => {
+      const expected = designCopy(key);
+      expect(EN[key], `en ${key}`).toBe(expected.en);
+      expect(VI[key], `vi ${key}`).toBe(expected.vi);
+    });
+  }
+});

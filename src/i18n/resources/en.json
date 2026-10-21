@@ -85,7 +85,9 @@
     "mergeDone": "Signed in. Your account now has {{goals}}, {{entries}}.",
     "prefsFromAccount": "Settings updated from your account",
     "syncNowDone": "Everything is up to date",
-    "icsShared": "Calendar file shared"
+    "icsShared": "Calendar file shared",
+    "accountDeletedKept": "Account deleted. Your data is still on this device.",
+    "accountDeletedRemoved": "Account deleted. Data removed from this device."
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Enter a name for your goal.",
@@ -133,7 +135,12 @@
     "SYNC_UNREACHABLE": "Couldn't reach your account just now. Your changes are safe on this device. We'll try again soon, or you can tap Sync now.",
     "SYNC_UNAUTHORIZED": "Your sign-in is no longer valid. Sign in again to keep syncing. Your data on this device is safe.",
     "SYNC_REMOTE_INVALID": "Some items from your account couldn't be read and were skipped. Everything else is synced.",
-    "EXPORT_FAILED_native": "Couldn't create the backup file. Your data on this device is unchanged. Try again, and if it keeps failing, free up some space on your iPhone."
+    "EXPORT_FAILED_native": "Couldn't create the backup file. Your data on this device is unchanged. Try again, and if it keeps failing, free up some space on your iPhone.",
+    "AUTH_FAILED_native": "Couldn't sign you in. Nothing on this device changed. Try again.",
+    "ACCOUNT_DELETE_OFFLINE": "You're offline, so your account wasn't deleted. Connect to the internet and try again.",
+    "ACCOUNT_DELETE_CANCELLED": "The Apple confirmation was cancelled, so your account wasn't deleted. Nothing changed.",
+    "ACCOUNT_DELETE_FAILED": "Couldn't delete your account just now. Nothing was removed from this device. Check your connection and try again. If it keeps failing, contact support from the About card.",
+    "ACCOUNT_DELETE_SESSION_EXPIRED": "Your sign-in is no longer valid, so the account couldn't be deleted. Sign in again and try again. If you deleted it a moment ago, it is already gone."
   },
   "empty": {
     "today": {
@@ -355,7 +362,16 @@
       "offlineSync": "You're offline. Changes are saved on this device and sync when you're back online.",
       "nextRetry": "Trying again at {{time}}.",
       "localRejected_one": "1 item on this device couldn't be uploaded to your account and stays only here. Export a backup to keep a copy; everything else is synced.",
-      "localRejected_other": "{{count}} items on this device couldn't be uploaded to your account and stay only here. Export a backup to keep a copy; everything else is synced."
+      "localRejected_other": "{{count}} items on this device couldn't be uploaded to your account and stay only here. Export a backup to keep a copy; everything else is synced.",
+      "descSignedOutIos": "Sign in with Apple or Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.",
+      "privacyNoteIos": "From Google or Apple, the app only receives your name and email.",
+      "hideEmailNote": "If you choose Hide My Email, Apple gives you a private address and you get a separate account that isn't linked to a Google account.",
+      "providerApple": "Signed in with Apple",
+      "providerBoth": "Signed in with Apple or Google",
+      "delete": "Delete account",
+      "deleteDesc": "Permanently deletes your account and everything stored in it. This can't be undone.",
+      "deleteOffline": "You're offline. Connect to the internet to delete your account.",
+      "deleteExpired": "Your sign-in expired. Sign in again first, then delete your account."
     },
     "reminders": {
       "title": "Reminders",
@@ -598,6 +614,24 @@
       "note": "Cancel signs you out. Nothing is uploaded.",
       "confirm": "Add to account",
       "working": "Adding…"
+    },
+    "signInApple": "Sign in with Apple",
+    "delete": {
+      "title": "Delete your account?",
+      "body": "This permanently deletes your account and all the goals, entries and settings stored in it. It can't be undone. Other devices signed in to this account will need to sign in again.",
+      "account": "Account: {{email}}",
+      "appleNote": "You use Sign in with Apple, so iOS will ask you to confirm with Apple first. This also removes 1% Better from the apps connected to your Apple ID.",
+      "legend": "What should happen to the data on this device?",
+      "remove": "Remove data from this device",
+      "removeDesc": "Deletes the goals, entries and reminder settings on this device too, so nothing is left behind.",
+      "keep": "Keep data on this device",
+      "keepDesc": "You can keep using 1% Better without an account. Only your account and the copy stored in it are deleted.",
+      "confirm": "Delete account",
+      "working": "Deleting…",
+      "workingStatus": "Deleting your account. This can take a few seconds.",
+      "revokeTitle": "One more step for Apple",
+      "revokeBody": "Your account is deleted, but Apple may still list 1% Better under Sign in with Apple. To remove it, open Settings on your iPhone, tap your name, then Sign-In & Security > Sign in with Apple, choose 1% Better per Day and tap Stop Using Apple ID.",
+      "revokeLink": "See Apple's instructions"
     }
   },
   "sync": {
@@ -633,6 +667,7 @@
   },
   "exportHint": {
     "label": "Automatic backup",
-    "text": "Backup downloaded. To keep a copy automatically, sign in with Google: your goals and entries then sync to your account."
+    "text": "Backup downloaded. To keep a copy automatically, sign in with Google: your goals and entries then sync to your account.",
+    "textNative": "Backup exported. To keep a copy automatically, sign in: your goals and entries then sync to your account."
   }
 }

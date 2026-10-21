@@ -8,7 +8,9 @@ import type { NativePlatform } from '../integration/platform';
 import type { PersistState } from '../integration/storage';
 import type { FileExportOutcome, FileExportPort } from '../services/file-export-port';
 import { noLocks } from '../services/lock-port';
+import { FakeAccountDeletionPort } from './fake-account-deletion-port';
 import { fakeAuthLoader, FakeAuthPort, MemoryReturnTo } from './fake-auth-port';
+import { FakeIdTokenProvider } from './fake-id-token-provider';
 import { FakeRemoteServer, FakeRemoteStore } from './fake-remote-store';
 import { fakeNotifications, type FakeNotifications } from './notifications';
 
@@ -21,6 +23,10 @@ export interface TestAuth {
   /** M7: the fake cloud behind `syncService` (shared between containers when `remoteServer` is passed). */
   server: FakeRemoteServer;
   remote: FakeRemoteStore;
+  /** v5.0 (M14): the fake Edge Function port behind `authService.deleteAccount`. */
+  deletion: FakeAccountDeletionPort;
+  /** v5.0 (M14): the native sign-in sheets (only with `native` + `idTokens`). */
+  idTokens: FakeIdTokenProvider | null;
 }
 
 export interface TestContainer {
@@ -58,13 +64,17 @@ export function fakeFileExport(next: FileExportOutcome = 'saved'): FakeFileExpor
 
 export interface FakeNativePlatform extends NativePlatform {
   fileExport: FakeFileExport;
+  idTokens?: FakeIdTokenProvider;
   /** Fires the `resume` listeners (the Capacitor `resume` event). */
   resume(): void;
   resumeListeners(): number;
 }
 
-/** A fake Capacitor runtime (ARCH §5.12): `fileExport` records calls, `lifecycle.onResume` can be fired by the test. */
-export function fakeNativePlatform(platform: 'ios' | 'android' = 'ios', exportOutcome: FileExportOutcome = 'shared'): FakeNativePlatform {
+/**
+ * A fake Capacitor runtime (ARCH §5.12): `fileExport` records calls, `lifecycle.onResume` can be fired by the test.
+ * v5.0 (M14): pass `idTokens` to model a runtime with native sign-in (`capabilities.nativeAuth`).
+ */
+export function fakeNativePlatform(platform: 'ios' | 'android' = 'ios', exportOutcome: FileExportOutcome = 'shared', idTokens?: FakeIdTokenProvider): FakeNativePlatform {
   const listeners = new Set<() => void>();
   return {
     platform,
@@ -77,6 +87,7 @@ export function fakeNativePlatform(platform: 'ios' | 'android' = 'ios', exportOu
         };
       },
     },
+    ...(idTokens ? { idTokens } : {}),
     resume: () => listeners.forEach((l) => l()),
     resumeListeners: () => listeners.size,
   };
@@ -110,6 +121,13 @@ export async function createTestContainer(
     exportOutcome?: FileExportOutcome;
     /** v5.0: `__OPB_NATIVE__` of the build (defaults: true with `native`, false otherwise). */
     nativeBuild?: boolean;
+    /**
+     * v5.0 (M14): native sign-in on a `native: 'ios' | 'android'` container — `true` = a FakeIdTokenProvider for the
+     * platform (Apple only on iOS), or a prepared one. Without it the runtime has no sheets (M12/M13 behaviour).
+     */
+    idTokens?: boolean | FakeIdTokenProvider;
+    /** v5.0 (M14): the fake Edge Function port (default: deletes with `appleRevoked: 'not-applicable'`). */
+    deletion?: FakeAccountDeletionPort;
   } = {},
 ): Promise<TestContainer> {
   const i18n = createI18n({ locale: options.locale ?? 'en', strictMissingKeys: true });
@@ -132,8 +150,10 @@ export async function createTestContainer(
   const returnTo = new MemoryReturnTo();
   const server = options.remoteServer ?? new FakeRemoteServer();
   const remote = new FakeRemoteStore(server, options.remoteUserId ?? '00000000-0000-4000-8000-000000000001');
-  const native = options.native ? (typeof options.native === 'string' ? fakeNativePlatform(options.native, options.exportOutcome ?? 'shared') : options.native) : null;
+  const idTokens = options.idTokens ? (options.idTokens === true ? new FakeIdTokenProvider(options.native === 'android' ? ['google'] : ['google', 'apple']) : options.idTokens) : undefined;
+  const native = options.native ? (typeof options.native === 'string' ? fakeNativePlatform(options.native, options.exportOutcome ?? 'shared', idTokens) : options.native) : null;
   const fileExport = native ? native.fileExport : options.exportOutcome ? fakeFileExport(options.exportOutcome) : null;
+  const deletion = options.deletion ?? new FakeAccountDeletionPort();
   const container = await createContainer({
     i18n,
     dbName: `test-app-${Date.now()}-${++n}-${Math.random().toString(36).slice(2)}`,
@@ -146,6 +166,7 @@ export async function createTestContainer(
     authStorage: null,
     loadAuth: loader?.loadAuth,
     loadRemote: async () => remote,
+    loadAccountDeletion: async () => deletion,
     locks: noLocks,
     connectivity,
     returnTo,
@@ -167,7 +188,7 @@ export async function createTestContainer(
     container,
     i18n,
     notifications,
-    auth: loader ? { port: loader.port, state: loader.state, returnTo, online, server, remote } : null,
+    auth: loader ? { port: loader.port, state: loader.state, returnTo, online, server, remote, deletion, idTokens: native?.idTokens ?? null } : null,
     fileExport,
     native,
     async dispose() {
