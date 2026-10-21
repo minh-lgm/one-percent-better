@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const SQL_PATH = fileURLToPath(new URL('../../supabase/migrations/20261012000000_cloud_sync.sql', import.meta.url));
-const sql = readFileSync(SQL_PATH, 'utf8');
+// M12-D2: normalise CRLF (Windows checkout with core.autocrlf=true) before the line-based comment stripping.
+const sql = readFileSync(SQL_PATH, 'utf8').replace(/\r\n/g, '\n');
 /** Strip `-- comments` so prose cannot satisfy or trip the assertions. */
 function stripComments(text: string): string {
   return text

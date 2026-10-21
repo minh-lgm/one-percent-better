@@ -4,8 +4,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const yml = readFileSync(join(process.cwd(), '.github/workflows/ios.yml'), 'utf8');
-const lines = yml.split(/\r?\n/);
+// M12-D2: normalise CRLF so a Windows checkout with core.autocrlf=true reads the same text.
+const readLf = (rel: string) => readFileSync(join(process.cwd(), rel), 'utf8').replace(/\r\n/g, '\n');
+const yml = readLf('.github/workflows/ios.yml');
+const lines = yml.split('\n');
 
 /** Text of one top-level job (from `  <name>:` to the next job at the same indentation). */
 function job(name: string): string {
@@ -78,7 +80,7 @@ describe('.github/workflows/ios.yml', () => {
   });
 
   it('pages.yml is untouched by this milestone (still deploys from dist with the same steps)', () => {
-    const pages = readFileSync(join(process.cwd(), '.github/workflows/pages.yml'), 'utf8');
+    const pages = readLf('.github/workflows/pages.yml');
     expect(pages).toContain('path: dist\n');
     expect(pages).not.toContain('native');
     expect(pages).not.toContain('capacitor');
