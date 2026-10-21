@@ -1,6 +1,7 @@
 // Lazy entry to the Supabase SDK (ADR-18). This file must stay free of static
 // `@supabase/*` imports so the SDK lands in its own chunk, loaded only when needed.
 import type { CloudConfig } from '../../config/env';
+import type { AccountDeletionPort } from '../../services/account-deletion-port';
 import type { AuthPort } from '../../services/auth-port';
 import type { RemoteStore } from '../../services/remote-store';
 
@@ -90,6 +91,25 @@ export function createRemoteLoader(loadAuth: () => Promise<AuthPort>): () => Pro
     if (!pending) {
       pending = Promise.all([loadAuth(), importClient()])
         .then(([port, m]) => m.createSupabaseRemoteStore(port))
+        .catch((e: unknown) => {
+          pending = null;
+          throw e;
+        });
+    }
+    return pending;
+  };
+}
+
+/**
+ * v5.0 (M14): `() => Promise<AccountDeletionPort>` sharing the SDK client of the auth port (ARCH §5.16).
+ * Same chunk, loaded only when the user confirms the deletion.
+ */
+export function createAccountDeletionLoader(loadAuth: () => Promise<AuthPort>): () => Promise<AccountDeletionPort> {
+  let pending: Promise<AccountDeletionPort> | null = null;
+  return () => {
+    if (!pending) {
+      pending = Promise.all([loadAuth(), importClient()])
+        .then(([port, m]) => m.createSupabaseAccountDeletionPort(port))
         .catch((e: unknown) => {
           pending = null;
           throw e;

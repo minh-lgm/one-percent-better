@@ -4,7 +4,8 @@ import { createClient, type AuthChangeEvent, type Session, type SupabaseClient, 
 import type { CloudConfig } from '../../config/env';
 import type { PullCursor, RemoteChanges, RemotePrefs } from '../../data/repositories';
 import type { Goal, LogEntry } from '../../domain/types';
-import { displayName, type AuthEvent, type AuthPort, type AuthSession } from '../../services/auth-port';
+import type { AccountDeletionPort, AccountDeletionResult, AppleRevokeResult } from '../../services/account-deletion-port';
+import { displayName, type AuthEvent, type AuthPort, type AuthProvider, type AuthSession } from '../../services/auth-port';
 import { chunk, FETCH_IDS_BATCH_MAX, isConstraintRejection, NO_REJECTS, PUSH_BATCH_MAX, REMOTE_TIMEOUT_MS, RemoteError, type FetchedRows, type PulledPrefs, type PullPage, type PushResult, type RemoteStore, type RemoteTable } from '../../services/remote-store';
 import { AUTH_STORAGE_KEY, clearPkceVerifiers, clearStoredSession } from './loader';
 import { entryRowSchema, entryToRow, goalRowSchema, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, prefsToRow } from './mapper';
@@ -32,9 +33,24 @@ export function createSupabase(cloud: CloudConfig, options: SupabaseClientOption
   });
 }
 
+/** `app_metadata.providers` narrowed to the providers the app knows (v5.0). */
+function providersOf(user: Session['user']): AuthProvider[] | undefined {
+  const raw = (user.app_metadata as { providers?: unknown } | undefined)?.providers;
+  if (!Array.isArray(raw)) return undefined;
+  const known = raw.filter((p): p is AuthProvider => p === 'google' || p === 'apple');
+  return known.length > 0 ? known : undefined;
+}
+
 function toSession(session: Session): AuthSession {
   const email = session.user.email ?? '';
-  return { userId: session.user.id, email, name: displayName(session.user.user_metadata as { full_name?: unknown; name?: unknown }, email) };
+  const providers = providersOf(session.user);
+  return { userId: session.user.id, email, name: displayName(session.user.user_metadata as { full_name?: unknown; name?: unknown }, email), ...(providers ? { providers } : {}) };
+}
+
+/** The account has a stored display name (`user_metadata.full_name` or `name`), so an Apple name must not overwrite it (A-60). */
+function hasStoredName(user: Session['user'] | null | undefined): boolean {
+  const meta = (user?.user_metadata ?? {}) as { full_name?: unknown; name?: unknown };
+  return (typeof meta.full_name === 'string' && meta.full_name.trim() !== '') || (typeof meta.name === 'string' && meta.name.trim() !== '');
 }
 
 /** Errors the SDK marks as transient network failures (offline, DNS, 5xx retried). */
@@ -96,6 +112,29 @@ export class SupabaseAuthPort implements AuthPort {
     }
   }
 
+  /** v5.0 (M14, ADR-36): `POST /auth/v1/token?grant_type=id_token` with the raw nonce (GoTrue hashes it). */
+  async signInWithIdToken({ provider, token, nonce }: { provider: AuthProvider; token: string; nonce: string }): Promise<AuthSession> {
+    this.exchanging = true;
+    try {
+      const { data, error } = await this.client.auth.signInWithIdToken({ provider, token, nonce });
+      if (error) throw error;
+      if (!data.session) throw new Error('no session in token response');
+      return toSession(data.session);
+    } finally {
+      this.exchanging = false;
+    }
+  }
+
+  /** v5.0 (M14, A-60): `PUT /auth/v1/user` with `full_name` — only when the account has no name yet. */
+  async setDisplayName(name: string): Promise<void> {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const { data } = await this.client.auth.getSession();
+    if (!data.session || hasStoredName(data.session.user)) return;
+    const { error } = await this.client.auth.updateUser({ data: { full_name: trimmed } });
+    if (error) throw error;
+  }
+
   /** Scope `local`. A failed server call (offline) must still clear the device session. */
   async signOut(): Promise<void> {
     this.signingOut = true;
@@ -137,6 +176,60 @@ export class SupabaseAuthPort implements AuthPort {
 export function createSupabaseAuthPort(cloud: CloudConfig, storage?: Storage | SupportedStorage, options: Omit<SupabaseClientOptions, 'storage'> = {}): AuthPort {
   const client = createSupabase(cloud, { ...options, storage });
   return new SupabaseAuthPort(client, { ...options, storage });
+}
+
+// ---- M14: AccountDeletionPort over the Edge Function `delete-account` (ARCHITECTURE §5.16, §4.7) ----
+
+export const DELETE_ACCOUNT_FUNCTION = 'delete-account';
+export const DELETE_ACCOUNT_TIMEOUT_MS = 20_000;
+
+const APPLE_REVOKE_RESULTS: ReadonlySet<string> = new Set(['not-applicable', 'revoked', 'manual-required']);
+
+/**
+ * `client.functions.invoke('delete-account')` — the SDK attaches the session's JWT and the API key. Mapping
+ * (§5.16): 200 + `deleted: true` → deleted; 401 → session-expired; the request never reached the function →
+ * offline; anything else (5xx, timeout, unexpected body) → failed. No automatic retry.
+ */
+export class SupabaseAccountDeletionPort implements AccountDeletionPort {
+  constructor(
+    readonly client: SupabaseClient,
+    private readonly timeoutMs = DELETE_ACCOUNT_TIMEOUT_MS,
+  ) {}
+
+  async deleteAccount(input: { appleAuthorizationCode?: string }): Promise<AccountDeletionResult> {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer =
+      this.timeoutMs > 0
+        ? setTimeout(() => {
+            timedOut = true;
+            controller.abort();
+          }, this.timeoutMs)
+        : null;
+    try {
+      const body = input.appleAuthorizationCode ? { appleAuthorizationCode: input.appleAuthorizationCode } : {};
+      const { data, error } = await this.client.functions.invoke<unknown>(DELETE_ACCOUNT_FUNCTION, { body, signal: controller.signal });
+      if (error) {
+        const name = (error as { name?: string }).name ?? '';
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (status === 401) return { kind: 'session-expired' };
+        if (name === 'FunctionsFetchError' && !timedOut) return { kind: 'offline' };
+        return { kind: 'failed' };
+      }
+      const out = data as { deleted?: unknown; appleRevoked?: unknown } | null;
+      if (!out || out.deleted !== true || typeof out.appleRevoked !== 'string' || !APPLE_REVOKE_RESULTS.has(out.appleRevoked)) return { kind: 'failed' };
+      return { kind: 'deleted', appleRevoked: out.appleRevoked as AppleRevokeResult };
+    } catch {
+      return { kind: 'failed' };
+    } finally {
+      if (timer !== null) clearTimeout(timer);
+    }
+  }
+}
+
+/** Factory used by `loader.ts`: shares the auth port's SDK client (same session, same chunk). */
+export function createSupabaseAccountDeletionPort(port: AuthPort, timeoutMs?: number): AccountDeletionPort {
+  return new SupabaseAccountDeletionPort((port as SupabaseAuthPort).client, timeoutMs);
 }
 
 // ---- M7: RemoteStore over PostgREST (ARCHITECTURE §5.10) ----

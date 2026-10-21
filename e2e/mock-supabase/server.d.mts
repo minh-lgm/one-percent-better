@@ -7,6 +7,15 @@ export interface MockUser {
 
 export declare const USERS: { u1: MockUser; u2: MockUser };
 
+/** v5.0 (M14): an account in the mock's auth table (fixed users + accounts created by `grant_type=id_token`). */
+export interface MockAccount extends MockUser {
+  providers: Array<'google' | 'apple'>;
+  meta: Record<string, unknown>;
+}
+
+/** v5.0 (M14): a fake provider ID token (HS256 with the mock secret) for `signInWithIdToken` tests. */
+export declare function signMockIdToken(claims: Record<string, unknown>): string;
+
 export interface MockLogEntry {
   method: string;
   path: string;
@@ -26,6 +35,12 @@ export interface MockState {
   rows: { goals: Map<string, Map<string, Record<string, unknown>>>; entries: Map<string, Map<string, Record<string, unknown>>>; settings: Map<string, Record<string, unknown>> };
   exchanges: number;
   refreshes: number;
+  /** v5.0 (M14) */
+  users: Map<string, MockAccount>;
+  deleted: Set<string>;
+  idTokenSignIns?: number;
+  userUpdates?: number;
+  deletions?: number;
 }
 
 export interface MockSupabase {

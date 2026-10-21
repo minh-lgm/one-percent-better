@@ -84,7 +84,7 @@ describe('SupabaseAuthPort + mock Supabase (PKCE)', () => {
     expect(code).toBeTruthy();
 
     const session = await port.exchangeCode(code);
-    expect(session).toEqual({ userId: USERS.u1.id, email: USERS.u1.email, name: USERS.u1.name });
+    expect(session).toEqual({ userId: USERS.u1.id, email: USERS.u1.email, name: USERS.u1.name, providers: ['google'] });
     expect(mock.state.exchanges).toBe(1);
     const stored = JSON.parse(storage.getItem(AUTH_STORAGE_KEY)!) as { access_token: string; refresh_token: string; user: { email: string } };
     expect(stored.access_token).toBeTruthy();
@@ -187,7 +187,7 @@ describe('SupabaseAuthPort + mock Supabase (PKCE)', () => {
       },
     });
     const session = await offline.getSession();
-    expect(session).toEqual({ userId: USERS.u1.id, email: USERS.u1.email, name: USERS.u1.name });
+    expect(session).toEqual({ userId: USERS.u1.id, email: USERS.u1.email, name: USERS.u1.name, providers: ['google'] });
     expect(storage.getItem(AUTH_STORAGE_KEY)).toBeTruthy();
   });
 });

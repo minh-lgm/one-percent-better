@@ -1,9 +1,10 @@
 // Mock Supabase for E2E and integration tests (ARCHITECTURE §5.11, ADR-23).
 // Plain Node `http`, no dependencies, in-memory state. It imitates exactly what the
 // app needs from Supabase Auth (OAuth PKCE with a fake account chooser, token
-// exchange, refresh, logout), the PostgREST subset used by `SupabaseRemoteStore`
-// (M7: upsert with merge-duplicates, select with `in`/`or`/`eq`/`order`/`limit`,
-// per-user rows like RLS, last-write-wins like the SQL triggers), plus `/__test/*` controls.
+// exchange, refresh, logout; v5.0: `grant_type=id_token` with a nonce check, `PUT /user`),
+// the PostgREST subset used by `SupabaseRemoteStore` (M7: upsert with merge-duplicates,
+// select with `in`/`or`/`eq`/`order`/`limit`, per-user rows like RLS, last-write-wins like
+// the SQL triggers), the Edge Function `delete-account` (v5.0, ARCH §4.7 c), plus `/__test/*` controls.
 //
 // Run standalone: `node e2e/mock-supabase/server.mjs [--port 54321]`
 // In Vitest:      `const mock = await startMockSupabase(0)` (random port).
@@ -58,6 +59,21 @@ const ms = (v) => {
 };
 
 const userKeyOf = (id) => Object.keys(USERS).find((k) => USERS[k].id === id) ?? null;
+/** Rows are kept under `u1` / `u2` for the fixed users and under the user id for accounts created by `id_token`. */
+const keyFor = (user) => userKeyOf(user.id) ?? user.id;
+const sha256Hex = (s) => createHash('sha256').update(String(s)).digest('hex');
+
+/** v5.0 (M14): an ID token "from Google/Apple" for tests — same HS256 secret as the sessions, so the mock can verify it. */
+export function signMockIdToken(claims) {
+  return signJwt({ iss: 'https://accounts.google.com', aud: 'mock-client-id', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 300, email_verified: true, ...claims });
+}
+
+/** The two fixed accounts, as the auth table starts (fresh copies per partition; `id_token` sign-ins may add more). */
+function seedUsers() {
+  const users = new Map();
+  for (const u of Object.values(USERS)) users.set(u.id, { ...u, providers: ['google'], meta: {} });
+  return users;
+}
 
 /** Domain (camelCase) → cloud row (snake_case); accepts rows already in snake_case. */
 function toSnakeGoal(r) {
@@ -160,7 +176,9 @@ export function createMockSupabase() {
       log: [],
       flows: new Map(), // flowId → { challenge, method, redirectTo }
       codes: new Map(), // code → { challenge, userKey, used }
-      refreshTokens: new Map(), // refresh_token → userKey
+      refreshTokens: new Map(), // refresh_token → user id
+      users: seedUsers(), // user id → { id, email, name, providers, meta }
+      deleted: new Set(), // user ids removed by delete-account
       tokenTtlS: DEFAULT_TOKEN_TTL_S,
       /** Fixed "now" (ms) for issued tokens; null = real clock. Lets E2E with a frozen page clock expire tokens. */
       now: null,
@@ -182,9 +200,10 @@ export function createMockSupabase() {
     return new Date(t).toISOString();
   }
 
+  const userByKey = (state, userKey) => state.users.get(USERS[userKey]?.id);
+
   /** `identity` (test only): override email/name of the issued session (`name: ''` = no name in metadata). */
-  function issueSession(state, userKey, identity = null) {
-    const base = USERS[userKey];
+  function issueSession(state, base, identity = null) {
     const user = identity ? { ...base, email: identity.email ?? base.email, name: identity.name === undefined ? base.name : identity.name } : base;
     const iat = nowS(state);
     const exp = iat + state.tokenTtlS;
@@ -199,11 +218,11 @@ export function createMockSupabase() {
       iat,
       session_id: sessionId,
       is_anonymous: false,
-      app_metadata: { provider: 'google', providers: ['google'] },
+      app_metadata: appMetadataOf(user),
       user_metadata: metadataOf(user),
     });
     const refresh_token = b64url(randomBytes(24));
-    state.refreshTokens.set(refresh_token, userKey);
+    state.refreshTokens.set(refresh_token, user.id);
     return {
       access_token,
       token_type: 'bearer',
@@ -214,8 +233,12 @@ export function createMockSupabase() {
     };
   }
 
+  const providersOf = (user) => (Array.isArray(user.providers) && user.providers.length > 0 ? user.providers : ['google']);
+  const appMetadataOf = (user) => ({ provider: providersOf(user)[0], providers: providersOf(user) });
+
   function metadataOf(user) {
-    return user.name === '' ? { email: user.email, email_verified: true } : { email: user.email, email_verified: true, full_name: user.name, name: user.name };
+    const base = user.name === '' ? { email: user.email, email_verified: true } : { email: user.email, email_verified: true, full_name: user.name, name: user.name };
+    return { ...base, ...(user.meta ?? {}) };
   }
 
   function userJson(state, user) {
@@ -229,9 +252,9 @@ export function createMockSupabase() {
       phone: '',
       confirmed_at: t,
       last_sign_in_at: new Date(state.now ?? Date.now()).toISOString(),
-      app_metadata: { provider: 'google', providers: ['google'] },
+      app_metadata: appMetadataOf(user),
       user_metadata: metadataOf(user),
-      identities: [],
+      identities: providersOf(user).map((provider) => ({ identity_id: randomUUID(), id: user.id, user_id: user.id, provider, identity_data: { sub: user.id, email: user.email }, created_at: t, last_sign_in_at: t, updated_at: t })),
       created_at: t,
       updated_at: t,
       is_anonymous: false,
@@ -274,7 +297,8 @@ export function createMockSupabase() {
     const token = auth.replace(/^Bearer\s+/i, '');
     const claims = verifyJwt(token);
     if (!claims || typeof claims.exp !== 'number' || claims.exp <= nowS(state)) return null;
-    return Object.values(USERS).find((u) => u.id === claims.sub) ?? null;
+    // A deleted account's JWT is no longer accepted anywhere (ARCH §4.7 e).
+    return state.users.get(claims.sub) ?? null;
   }
 
   /** `/__test/fail?path=token&status=500&times=1[&delay=ms]`: the next `times` requests whose path contains `path` fail. */
@@ -438,7 +462,7 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
     if (!REST_TABLES.includes(table)) return restError(res, 404, 'PGRST205', `Could not find the table 'public.${table}' in the schema cache`);
     const user = bearerUser(state, req);
     if (!user) return restError(res, 401, 'PGRST301', 'JWT expired');
-    const userKey = userKeyOf(user.id);
+    const userKey = keyFor(user);
     const prefer = String(req.headers.prefer ?? '');
     const wantsRows = prefer.includes('return=representation');
 
@@ -515,6 +539,26 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
 
     if (pathname.startsWith('/rest/v1/')) return handleRest(state, req, res, url, body);
 
+    // ---- Edge Function delete-account (v5.0, ARCH §4.7 c; same contract as supabase/functions/delete-account) ----
+    if (pathname === '/functions/v1/delete-account') {
+      if (req.method !== 'POST') return send(res, 405, { error: 'method_not_allowed' });
+      const user = bearerUser(state, req);
+      if (!user) return send(res, 401, { error: 'unauthorized' });
+      const key = keyFor(user);
+      // Hard delete of the auth user; the FK cascade removes every row of the account in the same transaction.
+      state.users.delete(user.id);
+      state.deleted.add(user.id);
+      state.rows.goals.delete(key);
+      state.rows.entries.delete(key);
+      state.rows.settings.delete(key);
+      for (const [token, id] of [...state.refreshTokens]) if (id === user.id) state.refreshTokens.delete(token);
+      const code = body && typeof body === 'object' && typeof body.appleAuthorizationCode === 'string' && body.appleAuthorizationCode !== '' ? body.appleAuthorizationCode : null;
+      const hasApple = providersOf(user).includes('apple');
+      const appleRevoked = !hasApple ? 'not-applicable' : code ? 'revoked' : 'manual-required';
+      state.deletions = (state.deletions ?? 0) + 1;
+      return send(res, 200, { deleted: true, appleRevoked });
+    }
+
     // ---- Auth ----
     if (pathname === '/auth/v1/health') return send(res, 200, { name: 'mock-supabase', version: 'mock', ok: true });
 
@@ -554,15 +598,39 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
         const expected = createHash('sha256').update(String(body?.code_verifier ?? '')).digest('base64url');
         if (expected !== entry.challenge) return authError(res, 400, 'invalid_grant', 'code verifier does not match');
         entry.used = true;
-        return send(res, 200, issueSession(state, entry.userKey));
+        return send(res, 200, issueSession(state, userByKey(state, entry.userKey)));
       }
       if (grant === 'refresh_token') {
         state.refreshes += 1;
         if (state.refreshMode === 'invalid_grant') return authError(res, 400, 'invalid_grant', 'Invalid Refresh Token: Already Used');
-        const userKey = state.refreshTokens.get(body?.refresh_token);
-        if (!userKey) return authError(res, 400, 'invalid_grant', 'Invalid Refresh Token: Refresh Token Not Found');
+        const userId = state.refreshTokens.get(body?.refresh_token);
+        const user = userId ? state.users.get(userId) : null;
+        if (!user) return authError(res, 400, 'invalid_grant', 'Invalid Refresh Token: Refresh Token Not Found');
         state.refreshTokens.delete(body.refresh_token);
-        return send(res, 200, issueSession(state, userKey));
+        return send(res, 200, issueSession(state, user));
+      }
+      if (grant === 'id_token') {
+        // v5.0 (M14, ADR-36): `{ provider, id_token, nonce }`. The token is "signed by the provider" (here: the mock
+        // secret); its `nonce` claim must equal SHA-256(raw nonce); the verified email links or creates the account.
+        state.idTokenSignIns = (state.idTokenSignIns ?? 0) + 1;
+        const provider = body?.provider;
+        if (provider !== 'google' && provider !== 'apple') return authError(res, 400, 'validation_failed', `unsupported provider ${String(provider)}`);
+        const claims = verifyJwt(body?.id_token);
+        if (!claims || typeof claims.email !== 'string') return authError(res, 400, 'invalid_grant', 'invalid id_token');
+        if (typeof claims.exp === 'number' && claims.exp <= Math.floor(Date.now() / 1000)) return authError(res, 400, 'invalid_grant', 'id_token expired');
+        if (typeof claims.nonce === 'string') {
+          if (typeof body?.nonce !== 'string' || sha256Hex(body.nonce) !== claims.nonce) return authError(res, 400, 'invalid_grant', 'Passed nonce and nonce in id_token should either both exist or not.');
+        }
+        if (claims.email_verified !== true) return authError(res, 400, 'invalid_grant', 'email not verified');
+        const email = String(claims.email).toLowerCase();
+        let user = [...state.users.values()].find((u) => u.email.toLowerCase() === email) ?? null;
+        if (user) {
+          if (!providersOf(user).includes(provider)) user.providers = [...providersOf(user), provider];
+        } else {
+          user = { id: randomUUID(), email, name: typeof claims.name === 'string' ? claims.name : '', providers: [provider], meta: {} };
+          state.users.set(user.id, user);
+        }
+        return send(res, 200, issueSession(state, user));
       }
       return authError(res, 400, 'unsupported_grant_type', `unsupported grant_type ${grant}`);
     }
@@ -570,6 +638,17 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
     if (pathname === '/auth/v1/user' && req.method === 'GET') {
       const user = bearerUser(state, req);
       if (!user) return authError(res, 401, 'invalid_token', 'invalid JWT');
+      return send(res, 200, userJson(state, user));
+    }
+
+    if (pathname === '/auth/v1/user' && req.method === 'PUT') {
+      // v5.0 (M14, A-60): `updateUser({ data })` merges into `user_metadata` (the Apple name on the first sign-in).
+      const user = bearerUser(state, req);
+      if (!user) return authError(res, 401, 'invalid_token', 'invalid JWT');
+      const data = body && typeof body === 'object' && body.data && typeof body.data === 'object' ? body.data : {};
+      user.meta = { ...(user.meta ?? {}), ...data };
+      if (typeof data.full_name === 'string') user.name = data.full_name;
+      state.userUpdates = (state.userUpdates ?? 0) + 1;
       return send(res, 200, userJson(state, user));
     }
 
@@ -583,7 +662,11 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
       Object.assign(state, freshState());
       return send(res, 200, { ok: true, partitions: partitions.size });
     }
-    if (pathname === '/__test/log') return send(res, 200, { log: state.log, exchanges: state.exchanges, refreshes: state.refreshes });
+    if (pathname === '/__test/log') return send(res, 200, { log: state.log, exchanges: state.exchanges, refreshes: state.refreshes, idTokenSignIns: state.idTokenSignIns ?? 0, userUpdates: state.userUpdates ?? 0, deletions: state.deletions ?? 0 });
+    if (pathname === '/__test/users') {
+      // v5.0 (M14): the auth table as seen by the test (`deleted` = ids removed by delete-account).
+      return send(res, 200, { users: [...state.users.values()].map((u) => ({ id: u.id, email: u.email, name: u.name, providers: providersOf(u) })), deleted: [...state.deleted] });
+    }
     if (pathname === '/__test/fail') {
       if (q.clear !== undefined) {
         state.fail = [];
@@ -604,7 +687,7 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
       // still accepts the token (a hand-forged token is rejected with 401 like on real Supabase).
       const userKey = USERS[q.user] ? q.user : 'u1';
       const identity = q.email !== undefined || q.name !== undefined ? { email: q.email, name: q.name } : null;
-      return send(res, 200, issueSession(state, userKey, identity));
+      return send(res, 200, issueSession(state, userByKey(state, userKey), identity));
     }
     if (pathname === '/__test/seed' && req.method === 'POST') {
       // Rows may be given in domain (camelCase) or cloud (snake_case) shape; they bypass LWW and get a server stamp.
