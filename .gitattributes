@@ -1,0 +1,18 @@
+# M12-D2: line endings are LF in the repository and in every checkout (Windows clones with core.autocrlf=true
+# included), so the static tests that read YAML/SQL/CSS as text behave the same on every machine.
+* text=auto eol=lf
+
+# Never touch binary files.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.p8 binary
+*.p12 binary
+*.mobileprovision binary
+*.cer binary
+*.jks binary
+*.keystore binary
+*.tar.gz binary
