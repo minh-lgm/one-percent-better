@@ -5,6 +5,7 @@ import { MemoryRouter, RouterProvider } from 'react-router';
 import { App } from '../app/App';
 import { ServicesProvider } from '../app/AppContext';
 import { createTestRouter } from '../app/router';
+import { Settings } from '../ui/screens/Settings';
 import { flattenMessages } from '../i18n/parity';
 import en from '../i18n/resources/en.json';
 import vi from '../i18n/resources/vi.json';
@@ -51,7 +52,8 @@ export async function renderWithLocale(ui: ReactElement, locale: Locale = 'en', 
  */
 export async function renderApp(options: RenderOptions = {}): Promise<RenderResult & { tc: TestContainer; router: ReturnType<typeof createTestRouter> }> {
   const tc = options.container ?? (await createTestContainer({ locale: options.locale ?? 'en' }));
-  const router = createTestRouter([options.route ?? '/today']);
+  // Settings is lazy in the app (M14, ADR-27); tests mount it synchronously so `getBy*` right after render keeps working.
+  const router = createTestRouter([options.route ?? '/today'], { Settings });
   const result = render(<App container={tc.container} router={router as unknown as Parameters<typeof RouterProvider>[0]['router'] & ReturnType<typeof createTestRouter>} />);
   return Object.assign(result, { tc, router });
 }
