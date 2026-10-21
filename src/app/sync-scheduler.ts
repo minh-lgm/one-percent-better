@@ -23,10 +23,12 @@ export interface SyncSchedulerOptions {
   auth: { watch(): Subscribable<AuthState> };
   intervalMs: number;
   deps?: Partial<SyncSchedulerDeps>;
+  /** v5.0 (ARCH §5.12): extra trigger source, the native `resume` event; same effect as `visibilitychange` to visible. */
+  resume?: (cb: () => void) => () => void;
 }
 
 /** Start the triggers; returns a function that stops everything. */
-export function startSyncScheduler({ sync, auth, intervalMs, deps = {} }: SyncSchedulerOptions): () => void {
+export function startSyncScheduler({ sync, auth, intervalMs, deps = {}, resume }: SyncSchedulerOptions): () => void {
   const d: SyncSchedulerDeps = {
     setTimeout: deps.setTimeout ?? ((fn, ms) => setTimeout(fn, ms)),
     clearTimeout: deps.clearTimeout ?? ((id) => clearTimeout(id as ReturnType<typeof setTimeout>)),
@@ -90,6 +92,7 @@ export function startSyncScheduler({ sync, auth, intervalMs, deps = {} }: SyncSc
   }, intervalMs);
   d.window?.addEventListener('online', onOnline);
   d.document?.addEventListener('visibilitychange', onVisibility);
+  const stopResume = resume?.(onVisibility);
 
   return () => {
     stopStatus();
@@ -98,5 +101,6 @@ export function startSyncScheduler({ sync, auth, intervalMs, deps = {} }: SyncSc
     if (debounce !== null) d.clearTimeout(debounce);
     d.window?.removeEventListener('online', onOnline);
     d.document?.removeEventListener('visibilitychange', onVisibility);
+    stopResume?.();
   };
 }

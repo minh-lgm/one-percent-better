@@ -12,10 +12,12 @@ export interface ReminderSchedulerOptions {
   check: (now: Date) => Promise<unknown>;
   intervalMs: number;
   deps?: Partial<SchedulerDeps>;
+  /** v5.0 (ARCH §5.12): extra trigger source, the native `resume` event; same effect as `visibilitychange` to visible. */
+  resume?: (cb: () => void) => () => void;
 }
 
 /** Start checking; returns a function that stops the schedule. */
-export function startReminderScheduler({ check, intervalMs, deps = {} }: ReminderSchedulerOptions): () => void {
+export function startReminderScheduler({ check, intervalMs, deps = {}, resume }: ReminderSchedulerOptions): () => void {
   const d: SchedulerDeps = {
     setInterval: deps.setInterval ?? ((fn, ms) => setInterval(fn, ms)),
     clearInterval: deps.clearInterval ?? ((id) => clearInterval(id as ReturnType<typeof setInterval>)),
@@ -48,8 +50,10 @@ export function startReminderScheduler({ check, intervalMs, deps = {} }: Reminde
   run();
   const id = d.setInterval(run, intervalMs);
   d.document?.addEventListener('visibilitychange', onVisibility);
+  const stopResume = resume?.(run);
   return () => {
     d.clearInterval(id);
     d.document?.removeEventListener('visibilitychange', onVisibility);
+    stopResume?.();
   };
 }

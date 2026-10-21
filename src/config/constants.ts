@@ -36,3 +36,6 @@ export const LOADING_DELAY_MS = 150;
 export const TOAST_DURATION_MS = 4000;
 /** Error toasts with an action stay longer (DESIGN 5: Toast tone error, 8 s). */
 export const TOAST_ERROR_DURATION_MS = 8000;
+
+/** v5.0 (ARCH §5.12): public base of privacy.html / support.html, used as an absolute link by the native app. */
+export const PUBLIC_SITE_URL = 'https://minh-lgm.github.io/one-percent-better/';

@@ -16,7 +16,8 @@
   },
   "a11y": {
     "skip": "Chuyển đến nội dung chính",
-    "required": "(bắt buộc)"
+    "required": "(bắt buộc)",
+    "opensExternal": "(mở trong Safari)"
   },
   "offline": {
     "chip": "Ngoại tuyến — lưu trên thiết bị"
@@ -79,7 +80,8 @@
     "signInFailed": "Không đăng nhập được.",
     "mergeDone": "Đã đăng nhập. Tài khoản của bạn hiện có {{goals}}, {{entries}}.",
     "prefsFromAccount": "Đã cập nhật cài đặt từ tài khoản của bạn",
-    "syncNowDone": "Mọi thứ đã được cập nhật"
+    "syncNowDone": "Mọi thứ đã được cập nhật",
+    "icsShared": "Đã chia sẻ tệp lịch"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Hãy nhập tên cho mục tiêu của bạn.",
@@ -126,7 +128,8 @@
     "SYNC_OFFLINE": "Bạn đang ngoại tuyến. Thay đổi của bạn đã được lưu trên thiết bị này và sẽ được đồng bộ khi có mạng trở lại.",
     "SYNC_UNREACHABLE": "Hiện chưa kết nối được tới tài khoản của bạn. Thay đổi của bạn vẫn an toàn trên thiết bị này. App sẽ tự thử lại, hoặc bạn có thể bấm Đồng bộ ngay.",
     "SYNC_UNAUTHORIZED": "Phiên đăng nhập không còn hợp lệ. Hãy đăng nhập lại để tiếp tục đồng bộ. Dữ liệu trên thiết bị này vẫn an toàn.",
-    "SYNC_REMOTE_INVALID": "Một số mục từ tài khoản của bạn không đọc được nên đã bị bỏ qua. Mọi thứ còn lại đã được đồng bộ."
+    "SYNC_REMOTE_INVALID": "Một số mục từ tài khoản của bạn không đọc được nên đã bị bỏ qua. Mọi thứ còn lại đã được đồng bộ.",
+    "EXPORT_FAILED_native": "Không tạo được tệp sao lưu. Dữ liệu trên thiết bị này không thay đổi. Hãy thử lại; nếu vẫn lỗi, hãy giải phóng bớt dung lượng trên iPhone."
   },
   "empty": {
     "today": {
@@ -321,7 +324,8 @@
       },
       "browserNote": "Ô chọn ngày, giờ và hộp xin quyền do trình duyệt hiển thị nên theo ngôn ngữ của trình duyệt.",
       "saveFailed": "Đã đổi ngôn ngữ, nhưng không lưu được trên thiết bị này. Ngôn ngữ có thể trở về mặc định khi bạn tải lại trang.",
-      "syncNote": "Được lưu vào tài khoản của bạn và dùng cho các thiết bị khác của bạn."
+      "syncNote": "Được lưu vào tài khoản của bạn và dùng cho các thiết bị khác của bạn.",
+      "nativeNote": "Ô chọn ngày, giờ và hộp xin quyền do iOS hiển thị nên theo ngôn ngữ của iPhone."
     },
     "account": {
       "title": "Tài khoản",
@@ -366,7 +370,8 @@
       "unsupported": "Không hỗ trợ",
       "defaultDesc": "Bật nhắc nhở và trình duyệt sẽ xin quyền thông báo của bạn.",
       "grantedDesc": "Bạn sẽ nhận một thông báo mỗi ngày khi 1% Better đang mở.",
-      "defaultOnDesc": "Nhắc nhở đang bật nhưng thiết bị này chưa cho phép thông báo. Hãy cho phép để nhận thông báo; bạn vẫn sẽ thấy lời nhắc ngay trong app."
+      "defaultOnDesc": "Nhắc nhở đang bật nhưng thiết bị này chưa cho phép thông báo. Hãy cho phép để nhận thông báo; bạn vẫn sẽ thấy lời nhắc ngay trong app.",
+      "nativeUnsupportedDesc": "Thông báo nhắc nhở chưa có trong phiên bản app này. Bạn vẫn sẽ thấy lời nhắc ngay trong app."
     },
     "backup": {
       "title": "Sao lưu",
@@ -378,7 +383,8 @@
       "importHint": "Nhập sao lưu sẽ thay thế toàn bộ dữ liệu hiện có trên thiết bị này.",
       "descSignedIn": "Dữ liệu của bạn được lưu trên thiết bị này và đồng bộ vào tài khoản. Tệp sao lưu là một bản sao bạn tự giữ.",
       "importHintSignedIn": "Nhập sao lưu sẽ thay thế toàn bộ dữ liệu trên thiết bị này và trong tài khoản của bạn.",
-      "descSignedOut": "Dữ liệu của bạn nằm trên thiết bị này. Hãy đăng nhập để có thêm một bản sao trong tài khoản, hoặc thỉnh thoảng xuất tệp sao lưu."
+      "descSignedOut": "Dữ liệu của bạn nằm trên thiết bị này. Hãy đăng nhập để có thêm một bản sao trong tài khoản, hoặc thỉnh thoảng xuất tệp sao lưu.",
+      "shareHint": "Xuất sao lưu sẽ mở bảng chia sẻ của iOS. Hãy chọn Lưu vào Tệp, AirDrop, Mail hoặc app khác."
     },
     "storage": {
       "title": "Bộ nhớ",
@@ -389,7 +395,10 @@
       "protectedDesc": "Trình duyệt sẽ không tự động xóa dữ liệu này.",
       "notProtectedDesc": "Trình duyệt có thể xóa dữ liệu này khi thiết bị sắp hết dung lượng. Hãy cài app (menu trình duyệt → Cài đặt ứng dụng, hoặc Thêm vào Màn hình chính) và thỉnh thoảng xuất bản sao lưu.",
       "unknownDesc": "Trình duyệt không cho biết dữ liệu có được bảo vệ hay không. Hãy thỉnh thoảng xuất bản sao lưu.",
-      "notProtectedSignIn": "Đăng nhập cũng giúp giữ một bản sao dữ liệu trong tài khoản của bạn."
+      "notProtectedSignIn": "Đăng nhập cũng giúp giữ một bản sao dữ liệu trong tài khoản của bạn.",
+      "nativeLabel": "Nơi lưu dữ liệu của bạn",
+      "nativeChip": "Trong app này",
+      "nativeDesc": "Dữ liệu của bạn được lưu bên trong app này trên iPhone. Xóa app sẽ xóa dữ liệu này, và iOS có thể xóa nó khi iPhone gần hết dung lượng. Hãy thỉnh thoảng xuất bản sao lưu."
     },
     "about": {
       "title": "Giới thiệu",
@@ -397,7 +406,8 @@
       "descCloud": "Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước. Đăng nhập là tùy chọn và không có theo dõi.",
       "descSignedIn": "Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước, rồi đồng bộ vào tài khoản của bạn. Không có theo dõi.",
       "privacy": "Nếu bạn đăng nhập, mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ của bạn được lưu trong cơ sở dữ liệu của app (Supabase) dưới tài khoản của bạn. Những người khác dùng app không xem được chúng.",
-      "privacyLink": "Chính sách quyền riêng tư"
+      "privacyLink": "Chính sách quyền riêng tư",
+      "descNative": "Mọi thứ bạn ghi lại đều nằm trên iPhone này. Không tài khoản, không theo dõi."
     }
   },
   "notFound": {
@@ -412,7 +422,11 @@
     "body": "1% Better lưu dữ liệu của bạn trong bộ nhớ của trình duyệt, nhưng hiện không dùng được. Lỗi này thường gặp ở cửa sổ riêng tư (ẩn danh) hoặc khi trình duyệt chặn dữ liệu trang web. Chưa có gì bị thay đổi.",
     "step1": "Mở app trong cửa sổ thường (không phải riêng tư).",
     "step2": "Cho phép dữ liệu trang web và cookie cho trang này trong cài đặt trình duyệt.",
-    "step3": "Tải lại trang."
+    "step3": "Tải lại trang.",
+    "bodyNative": "1% Better lưu dữ liệu của bạn trong bộ nhớ của app trên iPhone, nhưng hiện không dùng được. Chưa có gì bị thay đổi.",
+    "step1Native": "Đóng hẳn 1% Better rồi mở lại.",
+    "step2Native": "Khởi động lại iPhone.",
+    "step3Native": "Đảm bảo iPhone còn dung lượng trống."
   },
   "timer": {
     "cardTitle": "Đang đếm giờ · {{goal}}",
@@ -458,7 +472,8 @@
     "banner": {
       "never": "Bạn chưa sao lưu lần nào. Hãy xuất một bản sao lưu để dữ liệu vẫn an toàn nếu trình duyệt xóa dữ liệu.",
       "old": "Đã {{n}} ngày kể từ lần sao lưu gần nhất.",
-      "action": "Sao lưu ngay"
+      "action": "Sao lưu ngay",
+      "neverNative": "Bạn chưa sao lưu lần nào. Hãy xuất một bản sao lưu để dữ liệu vẫn an toàn nếu bạn xóa app hoặc đổi iPhone."
     }
   },
   "import": {

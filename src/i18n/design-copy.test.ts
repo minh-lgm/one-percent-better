@@ -50,9 +50,25 @@ const KEYS = [
   'errors.IMPORT_INVALID_SCHEMA_outOfRange',
   'errors.EXPORT_FAILED',
   'empty.day.noGoals',
+  // v5.0 (M12-AC11): the 15 native-variant keys of DESIGN 7.8.1.
+  'settings.language.nativeNote',
+  'settings.permission.nativeUnsupportedDesc',
+  'settings.backup.shareHint',
+  'backup.banner.neverNative',
+  'errors.EXPORT_FAILED_native',
+  'toast.icsShared',
+  'settings.storage.nativeLabel',
+  'settings.storage.nativeChip',
+  'settings.storage.nativeDesc',
+  'settings.about.descNative',
+  'storageError.bodyNative',
+  'storageError.step1Native',
+  'storageError.step2Native',
+  'storageError.step3Native',
+  'a11y.opensExternal',
 ];
 
-describe('en.json / vi.json match DESIGN v3.1 verbatim (M10-AC11)', () => {
+describe('en.json / vi.json match DESIGN verbatim (M10-AC11, M12-AC11)', () => {
   for (const key of KEYS) {
     it(key, () => {
       const expected = designCopy(key);

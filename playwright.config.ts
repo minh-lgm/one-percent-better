@@ -8,6 +8,10 @@ export const CLOUD_PORT = 4174;
 export const CLOUD_BASE_URL = `http://localhost:${CLOUD_PORT}/one-percent-better/`;
 export const MOCK_SUPABASE_URL = 'http://127.0.0.1:54321';
 
+/** Native project (v5.0, ARCHITECTURE §8): the Capacitor build (`--mode native-e2e`, base '/', no SW) opened in Chromium. */
+export const NATIVE_PORT = 4175;
+export const NATIVE_BASE_URL = `http://localhost:${NATIVE_PORT}/`;
+
 export default defineConfig({
   testDir: '.',
   fullyParallel: true,
@@ -41,6 +45,13 @@ export default defineConfig({
       fullyParallel: false,
       use: { ...devices['Desktop Chrome'], baseURL: CLOUD_BASE_URL },
     },
+    {
+      // The native build in a browser: `Capacitor.getPlatform()` is 'web' (web adapters), but every compile-time
+      // branch of the native build applies (no service worker, no manifest, no update toast, no PWA hints).
+      name: 'native-web',
+      testMatch: ['e2e/native/**/*.spec.ts', 'tests/qc/native/**/*.spec.ts'],
+      use: { ...devices['Desktop Chrome'], baseURL: NATIVE_BASE_URL },
+    },
   ],
   webServer: [
     {
@@ -52,6 +63,12 @@ export default defineConfig({
     {
       command: 'npm run build:cloud-e2e && npm run preview:cloud-e2e',
       url: CLOUD_BASE_URL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+    },
+    {
+      command: 'npm run build:native-e2e && npm run preview:native-e2e',
+      url: NATIVE_BASE_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },

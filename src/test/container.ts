@@ -4,7 +4,9 @@ import type { CloudConfig } from '../config/env';
 import type { NotificationPermissionState } from '../domain/reminder';
 import { createI18n } from '../i18n/instance';
 import type { Locale } from '../i18n/types';
+import type { NativePlatform } from '../integration/platform';
 import type { PersistState } from '../integration/storage';
+import type { FileExportOutcome, FileExportPort } from '../services/file-export-port';
 import { noLocks } from '../services/lock-port';
 import { fakeAuthLoader, FakeAuthPort, MemoryReturnTo } from './fake-auth-port';
 import { FakeRemoteServer, FakeRemoteStore } from './fake-remote-store';
@@ -27,7 +29,57 @@ export interface TestContainer {
   notifications: FakeNotifications;
   /** Present when the container was created with `cloud`. */
   auth: TestAuth | null;
+  /** v5.0: the fake export port: the platform's on a `native` container, or the one injected by `exportOutcome`; `null` = real web download. */
+  fileExport: FakeFileExport | null;
+  /** v5.0: present when the container was created with `native`. */
+  native: FakeNativePlatform | null;
   dispose(): Promise<void>;
+}
+
+export interface FakeFileExport extends FileExportPort {
+  /** What the next `saveText` resolves to (default `'saved'`); set to an Error to reject. */
+  next: FileExportOutcome | Error;
+  calls: Array<{ fileName: string; content: string; mimeType: string }>;
+}
+
+/** In-memory `FileExportPort` (ARCH §5.15) that records every call. */
+export function fakeFileExport(next: FileExportOutcome = 'saved'): FakeFileExport {
+  const fake: FakeFileExport = {
+    next,
+    calls: [],
+    async saveText(fileName, content, mimeType) {
+      fake.calls.push({ fileName, content, mimeType });
+      if (fake.next instanceof Error) throw fake.next;
+      return fake.next;
+    },
+  };
+  return fake;
+}
+
+export interface FakeNativePlatform extends NativePlatform {
+  fileExport: FakeFileExport;
+  /** Fires the `resume` listeners (the Capacitor `resume` event). */
+  resume(): void;
+  resumeListeners(): number;
+}
+
+/** A fake Capacitor runtime (ARCH §5.12): `fileExport` records calls, `lifecycle.onResume` can be fired by the test. */
+export function fakeNativePlatform(platform: 'ios' | 'android' = 'ios', exportOutcome: FileExportOutcome = 'shared'): FakeNativePlatform {
+  const listeners = new Set<() => void>();
+  return {
+    platform,
+    fileExport: fakeFileExport(exportOutcome),
+    lifecycle: {
+      onResume(cb) {
+        listeners.add(cb);
+        return () => {
+          listeners.delete(cb);
+        };
+      },
+    },
+    resume: () => listeners.forEach((l) => l()),
+    resumeListeners: () => listeners.size,
+  };
 }
 
 export const TEST_CLOUD: CloudConfig = { url: 'http://127.0.0.1:54321', key: 'sb_publishable_mock' };
@@ -52,6 +104,12 @@ export async function createTestContainer(
     /** M7: which user the fake RemoteStore writes as (defaults to USER1). */
     remoteUserId?: string;
     clock?: () => Date;
+    /** v5.0: run as the native app (`'ios'` | `'android'`, or a prepared fake); the share sheet resolves `exportOutcome` (default `'shared'`). */
+    native?: 'ios' | 'android' | FakeNativePlatform;
+    /** v5.0: inject a fake `FileExportPort` resolving this value (web containers use the real download otherwise). */
+    exportOutcome?: FileExportOutcome;
+    /** v5.0: `__OPB_NATIVE__` of the build (defaults: true with `native`, false otherwise). */
+    nativeBuild?: boolean;
   } = {},
 ): Promise<TestContainer> {
   const i18n = createI18n({ locale: options.locale ?? 'en', strictMissingKeys: true });
@@ -74,12 +132,15 @@ export async function createTestContainer(
   const returnTo = new MemoryReturnTo();
   const server = options.remoteServer ?? new FakeRemoteServer();
   const remote = new FakeRemoteStore(server, options.remoteUserId ?? '00000000-0000-4000-8000-000000000001');
+  const native = options.native ? (typeof options.native === 'string' ? fakeNativePlatform(options.native, options.exportOutcome ?? 'shared') : options.native) : null;
+  const fileExport = native ? native.fileExport : options.exportOutcome ? fakeFileExport(options.exportOutcome) : null;
   const container = await createContainer({
     i18n,
     dbName: `test-app-${Date.now()}-${++n}-${Math.random().toString(36).slice(2)}`,
     storage,
     indexedDbAvailable: true,
-    notifications,
+    // A native container gets the real "unsupported" port (M12 … M14) unless the test asks for a permission state.
+    notifications: native && options.permission === undefined ? undefined : notifications,
     notificationIconUrl: '/icons/pwa-192.png',
     cloud: options.cloud ? TEST_CLOUD : null,
     authStorage: null,
@@ -90,8 +151,13 @@ export async function createTestContainer(
     returnTo,
     redirectUrl: TEST_REDIRECT_URL,
     clock: options.clock,
+    native,
+    nativeBuild: options.nativeBuild,
+    baseUrl: '/',
+    fileExport: fileExport ?? undefined,
   });
-  if (loader) {
+  // v5.0: on a native container the cloud is ignored (M12 … M13) and `authService` is the `unavailable` stub.
+  if (loader && container.authService.isAvailable()) {
     // The real container reads localStorage; the test container uses the fake loader's flag instead.
     const svc = container.authService as unknown as { deps: { storedSession: () => boolean; clearStoredSession?: () => void } };
     svc.deps.storedSession = loader.storedSession;
@@ -102,6 +168,8 @@ export async function createTestContainer(
     i18n,
     notifications,
     auth: loader ? { port: loader.port, state: loader.state, returnTo, online, server, remote } : null,
+    fileExport,
+    native,
     async dispose() {
       container.dispose();
       await container.db.delete();

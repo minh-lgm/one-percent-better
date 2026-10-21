@@ -39,7 +39,14 @@ const BACKUP_STATIC_RULE = [
   'Do not import domain/backup statically: use domain/backup-file (types/constants) or BackupService.parse (ADR-27).',
   { allowTypeImports: true },
 ];
-const BOUNDARY_RULES = [ZOD_RULE, ...SUPABASE_RULES];
+// ARCHITECTURE §3 (v5.0, ADR-35): Capacitor (and Capgo plugins) live in src/integration/native/** only; the web
+// bundle must not contain a byte of them. Reached from outside only through the `import()` in integration/platform.ts.
+const CAPACITOR_RULES = [[pkg(['@capacitor', '@capgo']), '@capacitor/* and @capgo/* may only be imported in src/integration/native/** (ARCH §3 v5.0, ADR-35).']];
+const BOUNDARY_RULES = [ZOD_RULE, ...SUPABASE_RULES, ...CAPACITOR_RULES];
+// The `src/integration/native/**` files themselves: every boundary rule except the Capacitor one.
+const NATIVE_DIR_RULES = [ZOD_RULE, ...SUPABASE_RULES];
+// `src/ui/**` reads capabilities and ports from the container; it must not import integration values (types are fine).
+const UI_INTEGRATION_RULE = [dir(['integration']), 'UI must not import src/integration values: use the ports/capabilities from the container (ARCH §3 v5.0). `import type` is allowed.', { allowTypeImports: true }];
 
 const DOMAIN_RULES = [
   [pkg(['react', 'react-dom', 'dexie', 'recharts', 'i18next', 'react-i18next']), 'Domain must stay pure (ARCH §3).'],
@@ -57,6 +64,15 @@ const DYNAMIC_SUPABASE_SELECTORS = [
     message: 'Dynamic import of supabase-client is only allowed in src/integration/supabase/loader.ts (ADR-18).',
   },
 ];
+
+// ADR-35: `import('…/integration/native/…')` is written exactly once, in src/integration/platform.ts.
+const DYNAMIC_NATIVE_SELECTORS = [
+  {
+    selector: String.raw`ImportExpression > Literal[value=/integration\/native|\/native\//]`,
+    message: 'Dynamic import of integration/native is only allowed in src/integration/platform.ts (ADR-35).',
+  },
+];
+const DYNAMIC_IMPORT_SELECTORS = [...DYNAMIC_SUPABASE_SELECTORS, ...DYNAMIC_NATIVE_SELECTORS];
 
 const HARDCODED_TEXT_SELECTORS = [
   {
@@ -84,6 +100,9 @@ export default tseslint.config(
     ignores: [
       'dist/**',
       'dist-cloud-e2e/**',
+      'dist-native/**',
+      'dist-native-e2e/**',
+      'ios/**',
       'dev-dist/**',
       'node_modules/**',
       'coverage/**',
@@ -125,23 +144,49 @@ export default tseslint.config(
     rules: restrictImports(SUPABASE_RULES),
   },
   {
+    // Capacitor containment (ADR-35): applies to every file outside src/integration/native/**, tests and e2e included.
+    files: ['src/**/*.ts', 'src/**/*.tsx', 'e2e/**/*.ts', 'tests/**/*.ts', 'tests/**/*.tsx'],
+    ignores: ['src/integration/native/**', 'src/integration/supabase/**', 'tests/db/**'],
+    rules: restrictImports([...SUPABASE_RULES, ...CAPACITOR_RULES]),
+  },
+  {
     // zod containment (ADR-27): every app file except the two lazy boundaries (tests included, so a
     // test cannot smuggle zod into a helper that production code imports).
     files: ['src/**/*.ts', 'src/**/*.tsx'],
-    ignores: ['src/integration/supabase/**', 'src/domain/backup.ts'],
+    ignores: ['src/integration/supabase/**', 'src/integration/native/**', 'src/domain/backup.ts'],
     rules: restrictImports(BOUNDARY_RULES),
   },
   {
     // Static `domain/backup` containment (ADR-27): app layers use `domain/backup-file`; tests may import the schema directly.
     files: ['src/**/*.ts', 'src/**/*.tsx'],
-    ignores: [...TEST_FILES, 'src/domain/backup.ts', 'src/integration/supabase/**'],
+    ignores: [...TEST_FILES, 'src/domain/backup.ts', 'src/integration/supabase/**', 'src/integration/native/**'],
     rules: restrictImports([...BOUNDARY_RULES, BACKUP_STATIC_RULE]),
   },
   {
-    // Non-JSX files: only the dynamic-import rule (the .tsx configs below restate it next to the text rules).
+    // The native adapters (ADR-35): Capacitor allowed, every other boundary kept.
+    files: ['src/integration/native/**/*.ts'],
+    ignores: TEST_FILES,
+    rules: restrictImports([...NATIVE_DIR_RULES, BACKUP_STATIC_RULE]),
+  },
+  {
+    files: ['src/integration/native/**/*.test.ts'],
+    rules: restrictImports(NATIVE_DIR_RULES),
+  },
+  {
+    // Non-JSX files: only the dynamic-import rules (the .tsx configs below restate them next to the text rules).
     files: ['src/**/*.ts', 'e2e/**/*.ts', 'tests/**/*.ts'],
-    ignores: ['src/integration/supabase/**', 'tests/db/**'],
+    ignores: ['src/integration/supabase/**', 'src/integration/platform.ts', 'tests/db/**'],
+    rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_IMPORT_SELECTORS] },
+  },
+  {
+    // platform.ts is the one place allowed to `import()` integration/native (ADR-35); the Supabase rule still applies.
+    files: ['src/integration/platform.ts'],
     rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_SUPABASE_SELECTORS] },
+  },
+  {
+    // The Supabase folder may import() its own client (ADR-18) but not the native adapters (ADR-35).
+    files: ['src/integration/supabase/**/*.ts'],
+    rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_NATIVE_SELECTORS] },
   },
 
   // ---- Layer rules (ARCHITECTURE §3) ----
@@ -172,12 +217,13 @@ export default tseslint.config(
     ]),
   },
   {
-    // UI: no Dexie, no direct i18next (use hooks).
+    // UI: no Dexie, no direct i18next (use hooks), no integration values (v5.0: ports/capabilities via the container).
     files: ['src/ui/**/*.ts', 'src/ui/**/*.tsx'],
     ignores: TEST_FILES,
     rules: restrictImports([
       [pkg(['dexie', 'i18next']), 'UI must not import Dexie or i18next directly (ARCH §3).'],
       [dir(['dexie']), 'UI must not import the Dexie implementation (ARCH §3).'],
+      UI_INTEGRATION_RULE,
       ...BOUNDARY_RULES,
       BACKUP_STATIC_RULE,
     ]),
@@ -198,14 +244,14 @@ export default tseslint.config(
     files: ['src/ui/**/*.tsx', 'src/app/**/*.tsx'],
     ignores: TEST_FILES,
     rules: {
-      'no-restricted-syntax': ['error', ...HARDCODED_TEXT_SELECTORS, ...DYNAMIC_SUPABASE_SELECTORS],
+      'no-restricted-syntax': ['error', ...HARDCODED_TEXT_SELECTORS, ...DYNAMIC_IMPORT_SELECTORS],
     },
   },
   {
     files: ['**/*.tsx'],
     ignores: ['src/ui/**/*.tsx', 'src/app/**/*.tsx'],
     rules: {
-      'no-restricted-syntax': ['error', HARDCODED_TEXT_SELECTORS[0], ...DYNAMIC_SUPABASE_SELECTORS],
+      'no-restricted-syntax': ['error', HARDCODED_TEXT_SELECTORS[0], ...DYNAMIC_IMPORT_SELECTORS],
     },
   },
 );

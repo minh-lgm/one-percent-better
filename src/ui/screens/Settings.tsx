@@ -2,12 +2,11 @@ import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
 import { IMPORT_MAX_BYTES } from '../../config/constants';
 import { BACKUP_MIME_TYPE, backupReminder } from '../../domain/backup-file';
 import { toISODate } from '../../domain/dates';
-import { buildReminderIcs, ICS_FILE_NAME } from '../../domain/ics';
+import { buildReminderIcs, ICS_FILE_NAME, ICS_MIME_TYPE } from '../../domain/ics';
 import type { NotificationPermissionState } from '../../domain/reminder';
 import type { SyncStatus } from '../../domain/sync';
 import type { DomainError } from '../../domain/types';
 import type { MessageKey } from '../../i18n/types';
-import { downloadTextFile, ICS_MIME_TYPE, readTextFile } from '../../integration/file-io';
 import type { PersistState } from '../../integration/storage';
 import type { BackupCounts, BackupPreview } from '../../services/backup-service';
 import { AccountCard } from '../components/AccountCard';
@@ -23,7 +22,7 @@ import { PageHeader } from '../components/PageHeader';
 import { ReminderTimeField } from '../components/ReminderTimeField';
 import { SignOutDialog, type SignOutChoice } from '../components/SignOutDialog';
 import { Switch } from '../components/Switch';
-import { errorMessage, EXPORT_FAILED_KEY, WRITE_FAILED_KEY } from '../error-messages';
+import { errorMessage, EXPORT_FAILED_KEY, EXPORT_FAILED_NATIVE_KEY, WRITE_FAILED_KEY } from '../error-messages';
 import { useFormat } from '../hooks/useFormat';
 import { useNow } from '../hooks/useNow';
 import { useOnline } from '../hooks/useOnline';
@@ -68,7 +67,9 @@ export function Settings() {
   const toast = useToast();
   const id = useId();
   const now = useNow();
-  const { storagePersistence, settingsService, notifications, backupService, goalService, authService, syncService, loginPromptService } = useServices();
+  const { storagePersistence, settingsService, notifications, backupService, goalService, authService, syncService, loginPromptService, capabilities, fileExport, readTextFile } = useServices();
+  // v5.0 (DESIGN 7.8.1, S7 "tiếp"): native variants are chosen from `capabilities` only.
+  const native = capabilities.platform !== 'web';
   const online = useOnline();
   const auth = useSubscribable(() => authService.watch(), [authService]);
   const authState = auth.data ?? authService.state();
@@ -154,7 +155,9 @@ export function Settings() {
     const now = new Date();
     try {
       const { fileName, json } = await backupService.export(now);
-      downloadTextFile(fileName, json, BACKUP_MIME_TYPE);
+      // Web: download; native: share sheet (ARCH §5.15). A dismissed share sheet is not a backup (A-65): nothing changes.
+      const outcome = await fileExport.saveText(fileName, json, BACKUP_MIME_TYPE);
+      if (outcome === 'cancelled') return;
       // Only now is it a backup (M10-D2): "Last backup" and the 30-day reminder follow the file, not the attempt.
       await backupService.recordExport(now);
       toast.show('toast.backupExported');
@@ -223,7 +226,7 @@ export function Settings() {
   let importErrorText: string | null = null;
   if (importError === 'read') importErrorText = t('errors.UNKNOWN');
   else if (importError === 'write') importErrorText = t(WRITE_FAILED_KEY);
-  else if (importError === 'export') importErrorText = t(EXPORT_FAILED_KEY);
+  else if (importError === 'export') importErrorText = t(capabilities.nativeShare ? EXPORT_FAILED_NATIVE_KEY : EXPORT_FAILED_KEY);
   else if (importError) {
     const m = errorMessage(importError, f);
     importErrorText = t(m.key, m.params);
@@ -321,13 +324,16 @@ export function Settings() {
     }
   }
 
-  const aboutDesc = signedIn ? t('settings.about.descSignedIn') : cloudOn ? t('settings.about.descCloud') : t('settings.about.desc');
+  const aboutDesc = signedIn ? t('settings.about.descSignedIn') : cloudOn ? t('settings.about.descCloud') : native ? t('settings.about.descNative') : t('settings.about.desc');
   // Copy by account state (DESIGN S7 table; `expired` counts as signed out, A-D27).
   const backupDesc = signedIn ? t('settings.backup.descSignedIn') : cloudOn ? t('settings.backup.descSignedOut') : t('settings.backup.desc');
   const showExportHint = exportHint && cloudOn && authState.kind !== 'signed-in';
-  const storageSignIn = cloudOn && !signedIn && persist === 'not-persisted';
+  // Native (DESIGN S7 "tiếp", Storage): no persist() state; the sign-in nudge follows the account state alone.
+  const storageSignIn = cloudOn && !signedIn && (native || persist === 'not-persisted');
+  const [icsBusy, setIcsBusy] = useState(false);
 
-  function downloadIcs() {
+  async function downloadIcs() {
+    if (icsBusy) return;
     const now = new Date();
     const ics = buildReminderIcs({
       reminderTime,
@@ -337,8 +343,17 @@ export function Settings() {
       uid: `${crypto.randomUUID()}@one-percent-better`,
       now,
     });
-    downloadTextFile(ICS_FILE_NAME, ics, ICS_MIME_TYPE);
-    toast.show('toast.icsDownloaded');
+    setIcsBusy(true);
+    try {
+      // Same port as the backup (ARCH §5.15): download on the web, share sheet on native; a cancel is silent (F19).
+      const outcome = await fileExport.saveText(ICS_FILE_NAME, ics, ICS_MIME_TYPE);
+      if (outcome === 'cancelled') return;
+      toast.show(outcome === 'shared' ? 'toast.icsShared' : 'toast.icsDownloaded');
+    } catch {
+      setImportError('export');
+    } finally {
+      setIcsBusy(false);
+    }
   }
 
   return (
@@ -352,7 +367,7 @@ export function Settings() {
           </p>
           <LanguageSwitcher describedBy="lang-desc" />
           {signedIn ? <SettingsSyncNote text={t('settings.language.syncNote')} testId="language-sync-note" /> : null}
-          <p className="hint">{t('settings.language.browserNote')}</p>
+          <p className="hint">{t(native ? 'settings.language.nativeNote' : 'settings.language.browserNote')}</p>
         </section>
 
         {authState.kind !== 'unavailable' ? (
@@ -392,14 +407,14 @@ export function Settings() {
           />
           <div className="perm">
             <strong id={`${id}-perm-label`}>{t('settings.reminders.permission')}</strong>
-            <Badge tone={perm.tone} id={`${id}-perm-value`}>
-              {t(perm.chip)}
+            <Badge tone={native ? 'neutral' : perm.tone} id={`${id}-perm-value`}>
+              {t(native ? 'settings.permission.unsupported' : perm.chip)}
             </Badge>
           </div>
           <p className="hint" data-testid="permission-desc">
-            {t(permDesc)}
+            {t(native ? 'settings.permission.nativeUnsupportedDesc' : permDesc)}
           </p>
-          {permission === 'default' ? (
+          {permission === 'default' && !native ? (
             <div className="btn-row">
               <Button variant="secondary" onClick={() => void requestPermission()}>
                 {t('settings.reminders.allow')}
@@ -408,11 +423,11 @@ export function Settings() {
           ) : null}
           <div className="limit">
             <p>{t('settings.reminders.limit')}</p>
-            <p>{t('settings.reminders.ios')}</p>
+            {capabilities.pwaHints ? <p>{t('settings.reminders.ios')}</p> : null}
           </div>
           <div className="btn-row">
-            <Button variant="secondary" icon="cal" onClick={downloadIcs}>
-              {t('settings.reminders.ics')}
+            <Button variant="secondary" icon="cal" disabled={icsBusy} aria-busy={icsBusy || undefined} onClick={() => void downloadIcs()}>
+              {icsBusy ? t('common.working') : t('settings.reminders.ics')}
             </Button>
           </div>
           <p className="hint" id={`${id}-ics-hint`}>
@@ -447,6 +462,11 @@ export function Settings() {
               onChange={(e) => void onImportFile(e)}
             />
           </div>
+          {capabilities.nativeShare ? (
+            <p className="hint" data-testid="share-hint">
+              {t('settings.backup.shareHint')}
+            </p>
+          ) : null}
           <p className="hint" data-testid="import-hint">
             {signedIn ? t('settings.backup.importHintSignedIn') : t('settings.backup.importHint')}
           </p>
@@ -456,20 +476,37 @@ export function Settings() {
 
         <section className="card" aria-labelledby="h-storage">
           <h2 id="h-storage">{t('settings.storage.title')}</h2>
-          <div className="perm">
-            <strong id="storage-label">{t('settings.storage.label')}</strong>
-            {storage ? (
-              <Badge tone={storage.tone} id="storage-value">
-                {t(storage.chip)}
-              </Badge>
-            ) : null}
-          </div>
-          {storage ? (
-            <p className="hint" data-testid="storage-desc">
-              {t(storage.desc)}
-              {storageSignIn ? <> {t('settings.storage.notProtectedSignIn')}</> : null}
-            </p>
-          ) : null}
+          {native ? (
+            <>
+              <div className="perm">
+                <strong id="storage-label">{t('settings.storage.nativeLabel')}</strong>
+                <Badge tone="neutral" id="storage-value">
+                  {t('settings.storage.nativeChip')}
+                </Badge>
+              </div>
+              <p className="hint" data-testid="storage-desc">
+                {t('settings.storage.nativeDesc')}
+                {storageSignIn ? <> {t('settings.storage.notProtectedSignIn')}</> : null}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="perm">
+                <strong id="storage-label">{t('settings.storage.label')}</strong>
+                {storage ? (
+                  <Badge tone={storage.tone} id="storage-value">
+                    {t(storage.chip)}
+                  </Badge>
+                ) : null}
+              </div>
+              {storage ? (
+                <p className="hint" data-testid="storage-desc">
+                  {t(storage.desc)}
+                  {storageSignIn ? <> {t('settings.storage.notProtectedSignIn')}</> : null}
+                </p>
+              ) : null}
+            </>
+          )}
           {storageSignIn ? (
             <div className="btn-row">
               <Button variant="secondary" onClick={goToAccount} data-testid="storage-go-to-account">
@@ -487,9 +524,17 @@ export function Settings() {
           <p className="desc">{aboutDesc}</p>
           {cloudOn ? <p className="hint">{t('settings.about.privacy')}</p> : null}
           <p className="hint">
-            <a href={`${import.meta.env.BASE_URL}privacy.html`} data-testid="privacy-link">
-              {t('settings.about.privacyLink')}
-            </a>
+            {native ? (
+              // DESIGN 7.8.1 row 14: absolute link, opened by Safari; the WebView must not navigate away from the SPA.
+              <a href={`${capabilities.publicSiteUrl}privacy.html`} target="_blank" rel="noopener" data-testid="privacy-link">
+                {t('settings.about.privacyLink')}
+                <span className="sr-only"> {t('a11y.opensExternal')}</span>
+              </a>
+            ) : (
+              <a href={`${capabilities.publicSiteUrl}privacy.html`} data-testid="privacy-link">
+                {t('settings.about.privacyLink')}
+              </a>
+            )}
           </p>
         </section>
       </div>

@@ -27,11 +27,20 @@
     "db:reset": "npx --yes supabase@2.120.0 db reset",
     "test:db": "node scripts/test-db.mjs",
     "check": "npm run lint && npm run typecheck && npm test && npm run build:e2e",
+    "build:native": "tsc -b && vite build --mode native",
+    "build:native-e2e": "vite build --mode native-e2e",
+    "preview:native-e2e": "vite preview --mode native-e2e --outDir dist-native-e2e --port 4175 --strictPort",
+    "cap:sync": "npm run build:native && cap sync ios",
     "icons": "node scripts/gen-icons.mjs",
     "fixtures:large": "node scripts/gen-large-backup.mjs",
     "bench": "cross-env BENCH_ASSERT=1 vitest run src/services/stats-service.test.ts --reporter=verbose"
   },
   "dependencies": {
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/share": "8.0.3",
     "@supabase/supabase-js": "2.117.3",
     "date-fns": "4.4.0",
     "dexie": "4.4.6",
@@ -48,6 +57,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@capacitor/cli": "8.5.3",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.0",
     "@testing-library/dom": "10.4.2",

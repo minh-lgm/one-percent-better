@@ -16,7 +16,9 @@ import { createTranslator, currentLocale, setLocale } from '../i18n/instance';
 import type { Locale, Translator } from '../i18n/types';
 import { callbackRedirectUrl, sessionReturnTo } from '../integration/auth-callback';
 import { alwaysOnline, createConnectivity, type Connectivity } from '../integration/connectivity';
-import { createBrowserNotifications } from '../integration/notifications';
+import { createWebFileExport, readTextFile } from '../integration/file-io';
+import { createBrowserNotifications, unsupportedNotifications } from '../integration/notifications';
+import type { NativePlatform } from '../integration/platform';
 import { isIndexedDbAvailable, requestPersistentStorage, type PersistState } from '../integration/storage';
 import { clearPkceVerifiers, clearStoredSession, createRemoteLoader, createSupabaseLoader, hasStoredSession } from '../integration/supabase/loader';
 import { createWebLocks } from '../integration/web-locks';
@@ -24,6 +26,7 @@ import type { AuthPort, ReturnToStore } from '../services/auth-port';
 import { AuthService } from '../services/auth-service';
 import { BackupService } from '../services/backup-service';
 import { EntryService } from '../services/entry-service';
+import type { FileExportPort } from '../services/file-export-port';
 import { GoalService, defaultIdGenerator } from '../services/goal-service';
 import { LocaleService } from '../services/locale-service';
 import type { LockPort } from '../services/lock-port';
@@ -35,6 +38,7 @@ import { SettingsService } from '../services/settings-service';
 import { StatsService } from '../services/stats-service';
 import { SyncService } from '../services/sync-service';
 import { TimerService } from '../services/timer-service';
+import { computeCapabilities, type AppCapabilities } from './capabilities';
 import { createUpdateStore, type UpdateStore } from './updates';
 
 export interface LocaleControl {
@@ -70,6 +74,14 @@ export interface AppContainer {
   updates: UpdateStore;
   /** v3.1 (ADR-29): hard-delete old tombstones nobody can still need; run once at startup by `app/maintenance`. */
   purgeTombstones: (now: Date) => Promise<{ goals: number; entries: number }>;
+  /** v5.0 (ARCH §5.12): what this build/platform can do; the UI reads this instead of importing integration code. */
+  capabilities: AppCapabilities;
+  /** v5.0 (ARCH §5.15): backup / .ics export: download on the web, share sheet on native. */
+  fileExport: FileExportPort;
+  /** Reads a user-selected file as text (Import); the UI gets it here so it never imports integration code. */
+  readTextFile: (file: Blob) => Promise<string>;
+  /** The Capacitor runtime when running inside the native app (`null` on the web). */
+  native: NativePlatform | null;
   /** Stops the watchers the container started (tests). */
   dispose(): void;
 }
@@ -96,6 +108,14 @@ export interface ContainerOptions {
   /** `<origin><BASE_URL>?auth=callback`; defaults from `location` + `import.meta.env.BASE_URL`. */
   redirectUrl?: string;
   clock?: () => Date;
+  /** v5.0: the native runtime from `loadNativePlatform()`; `null`/omitted = web adapters. */
+  native?: NativePlatform | null;
+  /** v5.0: `__OPB_NATIVE__` of the build (tests inject it; a non-null `native` implies it). */
+  nativeBuild?: boolean;
+  /** `import.meta.env.BASE_URL`; tests pass a fixed value. */
+  baseUrl?: string;
+  /** Override the export port (tests inject a fake). */
+  fileExport?: FileExportPort;
 }
 
 export async function createContainer({
@@ -103,7 +123,7 @@ export async function createContainer({
   dbName,
   storage,
   indexedDbAvailable = isIndexedDbAvailable(),
-  notifications = createBrowserNotifications(),
+  notifications,
   notificationIconUrl,
   cloud = null,
   authStorage = typeof localStorage === 'undefined' ? null : localStorage,
@@ -114,8 +134,20 @@ export async function createContainer({
   returnTo = sessionReturnTo(typeof sessionStorage === 'undefined' ? null : sessionStorage),
   redirectUrl = typeof location === 'undefined' ? '' : callbackRedirectUrl(location.origin, import.meta.env.BASE_URL),
   clock = () => new Date(),
+  native = null,
+  nativeBuild = native !== null || __OPB_NATIVE__,
+  baseUrl = import.meta.env.BASE_URL,
+  fileExport,
 }: ContainerOptions): Promise<AppContainer> {
   if (!indexedDbAvailable) throw new StorageError('IndexedDB is not available in this browser');
+
+  // v5.0 (ADR-34/35): platform differences are decided here, once. Native M12 and M13: no notification API in
+  // WKWebView yet (M15), export through the share sheet, and no account until native sign-in exists (M14), so
+  // the cloud configuration is ignored and the SDK is never loaded.
+  const capabilities = computeCapabilities({ native, nativeBuild, baseUrl });
+  const notificationPort = notifications ?? (native ? unsupportedNotifications() : createBrowserNotifications());
+  const exportPort = fileExport ?? native?.fileExport ?? createWebFileExport();
+  if (native && !capabilities.nativeAuth) cloud = null;
 
   const db = createDatabase(dbName);
   await openDatabase(db);
@@ -181,14 +213,14 @@ export async function createContainer({
     localeService,
     settingsService,
     timerService: new TimerService(kvRepo, goalRepo, entryService, timerRepo),
-    reminderService: new ReminderService(settingsService, goalRepo, entryRepo, notifications, translator, notificationIconUrl),
+    reminderService: new ReminderService(settingsService, goalRepo, entryRepo, notificationPort, translator, notificationIconUrl),
     backupService: new BackupService(new DexieBackupRepository(db, clock), settingsService, () => authService.currentUserId() !== null),
     statsService: new StatsService(goalRepo, entryRepo),
     authService,
     syncService,
     loginPromptService: new LoginPromptService(kvRepo, goalRepo, entryRepo),
     connectivity,
-    notifications,
+    notifications: notificationPort,
     locale: {
       current: () => currentLocale(i18n),
       async change(locale) {
@@ -196,9 +228,14 @@ export async function createContainer({
         await localeService.set(locale);
       },
     },
-    storagePersistence: requestPersistentStorage(storage),
+    // No `persist()` story on native (DESIGN 7.8.1 row 12): the data lives inside the app container.
+    storagePersistence: native ? Promise.resolve<PersistState>('unsupported') : requestPersistentStorage(storage),
     updates: createUpdateStore(),
     purgeTombstones: (now) => syncStore.purgeTombstones(now),
+    capabilities,
+    fileExport: exportPort,
+    readTextFile,
+    native,
     dispose() {
       stopLocaleWatch();
       syncService?.stop();

@@ -4,6 +4,8 @@ node_modules/
 .env.*.local
 dist/
 dist-cloud-e2e/
+dist-native/
+dist-native-e2e/
 dev-dist/
 coverage/
 playwright-report/
@@ -19,3 +21,15 @@ logo/
 
 # Developer-side Playwright artifacts (parallel QC runs share test-results/)
 test-results-dev/
+
+# Capacitor (v5.0): generated per `npx cap sync ios`; the Xcode project itself is committed
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/App/config.xml
+# Release secrets never belong in the repo (NFR-22)
+*.p8
+*.p12
+*.mobileprovision
+*.cer
+*.jks
+*.keystore

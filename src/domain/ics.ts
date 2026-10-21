@@ -6,6 +6,8 @@ import type { ISODate } from './types';
 
 export const ICS_FILE_NAME = '1percent-better-reminder.ics';
 export const ICS_PRODID = '-//1% Better//EN';
+/** MIME type of the generated file (v5.0: lives in the domain so the UI needs no integration import). */
+export const ICS_MIME_TYPE = 'text/calendar;charset=utf-8';
 const CRLF = '\r\n';
 const MAX_LINE_OCTETS = 75;
 

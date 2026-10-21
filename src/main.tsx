@@ -7,9 +7,11 @@ import { createContainer } from './app/container';
 import { startMaintenance } from './app/maintenance';
 import { startReminderScheduler } from './app/reminder-scheduler';
 import { createAppRouter } from './app/router';
+import { startApp } from './app/start';
 import { startSyncScheduler } from './app/sync-scheduler';
 import { env } from './config/env';
 import { cleanCallbackUrl, clearPkceVerifier, readAuthCallback, sessionReturnTo } from './integration/auth-callback';
+import { loadNativePlatform } from './integration/platform';
 import { listenForNavigation } from './integration/sw-messages';
 import { registerServiceWorker } from './integration/sw-register';
 import { StorageError } from './ui/screens/StorageError';
@@ -18,11 +20,13 @@ import './ui/styles/app.css';
 const root = createRoot(document.getElementById('root') as HTMLElement);
 
 async function start(): Promise<void> {
+  // v5.0 (ADR-35): the Capacitor runtime, or `null` on the web build (the call is a constant `null` there).
+  const native = await loadNativePlatform();
   // OAuth callback (`<BASE_URL>?auth=callback&code=…`, ADR-19) is read once, before the hash router exists.
   const authCallback = readAuthCallback(window.location);
   const result = await bootstrap({
     navigatorLanguage: navigator.language,
-    createContainer: (i18n) => createContainer({ i18n, dbName: env.dbName, cloud: env.cloud, notificationIconUrl: `${import.meta.env.BASE_URL}icons/pwa-192.png` }),
+    createContainer: (i18n) => createContainer({ i18n, dbName: env.dbName, cloud: env.cloud, notificationIconUrl: `${import.meta.env.BASE_URL}icons/pwa-192.png`, native }),
     authCallback,
     cleanCallbackUrl: () => cleanCallbackUrl(window.history, import.meta.env.BASE_URL, sessionReturnTo(window.sessionStorage).take()),
     // The single-use PKCE verifier must not outlive the callback (M6-P1).
@@ -33,7 +37,7 @@ async function start(): Promise<void> {
     root.render(
       <StrictMode>
         <I18nextProvider i18n={result.i18n}>
-          <StorageError onRetry={start} />
+          <StorageError onRetry={start} platform={native?.platform ?? 'web'} />
         </I18nextProvider>
       </StrictMode>,
     );
@@ -47,22 +51,15 @@ async function start(): Promise<void> {
     </StrictMode>,
   );
 
-  // Old tombstones are purged once, after the first paint (ADR-29); cloud on or off.
-  void startMaintenance({ purge: (now) => container.purgeTombstones(now) });
-  // Daily reminder: check now, every interval and when the tab becomes visible (ARCH §5.6).
-  startReminderScheduler({ check: (now) => container.reminderService.check(now), intervalMs: env.reminderCheckIntervalMs });
-  // A click on the reminder notification asks the page to go to Today.
-  listenForNavigation();
-  // M7: background sync triggers (sign-in, startup, online, visible, 2 s after a change, every interval).
-  if (container.syncService) startSyncScheduler({ sync: container.syncService, auth: container.authService, intervalMs: env.syncIntervalMs });
-
-  // Service worker only in production builds (ADR-06); dev server runs without it.
-  if (import.meta.env.PROD) {
-    void registerServiceWorker({
-      swUrl: `${import.meta.env.BASE_URL}sw.js`,
-      onUpdateAvailable: () => container.updates.notify(),
-    }).then((handle) => container.updates.setHandle(handle));
-  }
+  // Background work (maintenance, reminders, sync, service worker on the web build only — ARCH §5.12).
+  startApp({
+    container,
+    reminderCheckIntervalMs: env.reminderCheckIntervalMs,
+    syncIntervalMs: env.syncIntervalMs,
+    prod: import.meta.env.PROD,
+    baseUrl: import.meta.env.BASE_URL,
+    deps: { registerServiceWorker, listenForNavigation, startMaintenance, startReminderScheduler, startSyncScheduler },
+  });
 }
 
 void start();

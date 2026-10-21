@@ -73,3 +73,15 @@ export function createBrowserNotifications({
     },
   };
 }
+
+/**
+ * v5.0 (M12 … M14): the native app has no `Notification` API in WKWebView and no scheduled notifications yet
+ * (M15) — the Reminders card shows "Not supported" and the in-app banner still works (DESIGN 7.8.1 row 6).
+ */
+export function unsupportedNotifications(): NotificationPort {
+  return {
+    permission: () => 'unsupported',
+    requestPermission: async () => 'unsupported',
+    show: async () => false,
+  };
+}

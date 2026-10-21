@@ -73,3 +73,5 @@ export const WRITE_FAILED_KEY: MessageKey = 'errors.WRITE_FAILED';
 
 /** Key used when creating the backup file fails (not a DomainError; DESIGN §7.3 v3.1, M3-P1). */
 export const EXPORT_FAILED_KEY: MessageKey = 'errors.EXPORT_FAILED';
+/** v5.0 (DESIGN §7.3): the same failure in the native app, where there is no "download" (`capabilities.nativeShare`). */
+export const EXPORT_FAILED_NATIVE_KEY: MessageKey = 'errors.EXPORT_FAILED_native';

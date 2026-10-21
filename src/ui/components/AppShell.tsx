@@ -19,7 +19,7 @@ const TABS: Array<{ to: string; icon: IconName; key: 'nav.today' | 'nav.goals' |
 /** Skip link, tab bar (< 1024 px) / sidebar (≥ 1024 px), main region (with the StatusRow), toasts. */
 export function AppShell() {
   const { t } = useT();
-  const { authService } = useServices();
+  const { authService, capabilities } = useServices();
   const mainRef = useRef<HTMLElement>(null);
   // Review uses the 960 px column (DESIGN §3.2 / S6, mockup 06 `main.wide`) so the 53-week heatmap fits on desktop.
   const wide = useLocation().pathname.startsWith('/review');
@@ -57,7 +57,8 @@ export function AppShell() {
         </main>
       </div>
       <ToastRegion />
-      <UpdateToast />
+      {/* v5.0 (DESIGN 7.8.1 row 1): no service worker on native, so no "New version" toast. */}
+      {capabilities.serviceWorker ? <UpdateToast /> : null}
       {cloud ? <AuthFeedback /> : null}
       {cloud ? <SyncFeedback /> : null}
     </>

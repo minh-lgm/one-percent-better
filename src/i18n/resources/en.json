@@ -16,7 +16,8 @@
   },
   "a11y": {
     "skip": "Skip to content",
-    "required": "(required)"
+    "required": "(required)",
+    "opensExternal": "(opens in Safari)"
   },
   "offline": {
     "chip": "Offline — saved on this device"
@@ -83,7 +84,8 @@
     "signInFailed": "Couldn't sign you in.",
     "mergeDone": "Signed in. Your account now has {{goals}}, {{entries}}.",
     "prefsFromAccount": "Settings updated from your account",
-    "syncNowDone": "Everything is up to date"
+    "syncNowDone": "Everything is up to date",
+    "icsShared": "Calendar file shared"
   },
   "errors": {
     "GOAL_NAME_REQUIRED": "Enter a name for your goal.",
@@ -130,7 +132,8 @@
     "SYNC_OFFLINE": "You're offline. Your changes are saved on this device and will sync when you're back online.",
     "SYNC_UNREACHABLE": "Couldn't reach your account just now. Your changes are safe on this device. We'll try again soon, or you can tap Sync now.",
     "SYNC_UNAUTHORIZED": "Your sign-in is no longer valid. Sign in again to keep syncing. Your data on this device is safe.",
-    "SYNC_REMOTE_INVALID": "Some items from your account couldn't be read and were skipped. Everything else is synced."
+    "SYNC_REMOTE_INVALID": "Some items from your account couldn't be read and were skipped. Everything else is synced.",
+    "EXPORT_FAILED_native": "Couldn't create the backup file. Your data on this device is unchanged. Try again, and if it keeps failing, free up some space on your iPhone."
   },
   "empty": {
     "today": {
@@ -329,7 +332,8 @@
       },
       "browserNote": "The date and time pickers and permission prompts follow your browser's language.",
       "saveFailed": "Language changed, but it couldn't be saved on this device. It may reset when you reload.",
-      "syncNote": "Saved to your account and used on your other devices."
+      "syncNote": "Saved to your account and used on your other devices.",
+      "nativeNote": "The date and time pickers and permission prompts follow your iPhone's language."
     },
     "account": {
       "title": "Account",
@@ -375,7 +379,8 @@
       "unsupported": "Not supported",
       "defaultDesc": "Turn on the reminder and your browser will ask for permission.",
       "grantedDesc": "You'll get one notification a day while 1% Better is open.",
-      "defaultOnDesc": "Reminders are on, but this device hasn't allowed notifications yet. Allow them to get a notification; you'll still see the reminder banner in the app."
+      "defaultOnDesc": "Reminders are on, but this device hasn't allowed notifications yet. Allow them to get a notification; you'll still see the reminder banner in the app.",
+      "nativeUnsupportedDesc": "Reminder notifications aren't available in this version of the app. You'll still see a reminder banner in the app."
     },
     "backup": {
       "title": "Backup",
@@ -387,7 +392,8 @@
       "importHint": "Importing replaces everything currently on this device.",
       "descSignedIn": "Your data is saved on this device and synced to your account. A backup file is an extra copy you keep yourself.",
       "importHintSignedIn": "Importing replaces everything on this device and in your account.",
-      "descSignedOut": "Your data lives on this device. Sign in to keep a copy in your account too, or export a backup file now and then."
+      "descSignedOut": "Your data lives on this device. Sign in to keep a copy in your account too, or export a backup file now and then.",
+      "shareHint": "Export opens the iOS share sheet. Choose Save to Files, AirDrop, Mail or another app."
     },
     "storage": {
       "title": "Storage",
@@ -398,7 +404,10 @@
       "protectedDesc": "Your browser won't clear this data automatically.",
       "notProtectedDesc": "Your browser may clear this data if the device runs low on space. Install the app (browser menu → Install, or Add to Home Screen) and export a backup now and then.",
       "unknownDesc": "Your browser doesn't report storage protection. Export a backup now and then.",
-      "notProtectedSignIn": "Signing in also keeps a copy of your data in your account."
+      "notProtectedSignIn": "Signing in also keeps a copy of your data in your account.",
+      "nativeLabel": "Where your data is kept",
+      "nativeChip": "In this app",
+      "nativeDesc": "Your data is kept inside this app on your iPhone. Deleting the app deletes this data, and iOS may clear it if the iPhone runs very low on space. Export a backup now and then."
     },
     "about": {
       "title": "About",
@@ -406,7 +415,8 @@
       "descCloud": "Everything you log is saved on this device first. Signing in is optional, and there's no tracking.",
       "descSignedIn": "Everything you log is saved on this device first and synced to your account. There's no tracking.",
       "privacy": "If you sign in, your goals, entries, reminder settings and language are stored in this app's database (Supabase) under your account. Other people who use the app can't see them.",
-      "privacyLink": "Privacy policy"
+      "privacyLink": "Privacy policy",
+      "descNative": "Everything you log stays on this iPhone. No account, no tracking."
     }
   },
   "notFound": {
@@ -421,7 +431,11 @@
     "body": "1% Better keeps your data in your browser's storage, and it isn't available right now. This often happens in private or incognito windows, or when site data is blocked in browser settings. Nothing has been changed.",
     "step1": "Open the app in a regular (non-private) window.",
     "step2": "Allow site data and cookies for this site in your browser settings.",
-    "step3": "Reload the page."
+    "step3": "Reload the page.",
+    "bodyNative": "1% Better keeps your data in this app's storage on your iPhone, and it isn't available right now. Nothing has been changed.",
+    "step1Native": "Close 1% Better completely and open it again.",
+    "step2Native": "Restart your iPhone.",
+    "step3Native": "Make sure your iPhone has some free space."
   },
   "timer": {
     "cardTitle": "Timer running · {{goal}}",
@@ -469,7 +483,8 @@
     "banner": {
       "never": "You haven't backed up yet. Export a backup so your data is safe if this browser clears it.",
       "old": "It's been {{n}} days since your last backup.",
-      "action": "Back up now"
+      "action": "Back up now",
+      "neverNative": "You haven't backed up yet. Export a backup so your data is safe if you delete the app or switch iPhones."
     }
   },
   "import": {
