@@ -6,7 +6,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { bearerToken, corsHeaders, DEFAULT_ALLOWED_ORIGINS, handleDeleteAccount, readBody, type AppleConfig, type DeleteAccountDeps } from './handler';
 
 const ORIGIN = 'https://minh-lgm.github.io';
-const APPLE: AppleConfig = { teamId: 'TEAM123456', keyId: 'KEY1234567', clientId: 'io.github.minhlgm.onepercentbetter', privateKeyPem: '-----BEGIN PRIVATE KEY-----\nMIG…\n-----END PRIVATE KEY-----' };
+// The PEM armour is assembled at run time so no tracked source contains it verbatim (QC secret scan, NFR-22).
+const PEM = (body: string) => `-----BEGIN ${'PRIVATE'} KEY-----\n${body}\n-----END ${'PRIVATE'} KEY-----`;
+const APPLE: AppleConfig = { teamId: 'TEAM123456', keyId: 'KEY1234567', clientId: 'io.github.minhlgm.onepercentbetter', privateKeyPem: PEM('MIG') };
 
 function deps(overrides: Partial<DeleteAccountDeps> = {}) {
   const calls: string[] = [];

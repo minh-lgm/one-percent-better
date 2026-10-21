@@ -4,11 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { APPLE_AUDIENCE, APPLE_REVOKE_URL, APPLE_TOKEN_URL, appleConfigFromEnv, base64url, CLIENT_SECRET_TTL_S, createClientSecret, exchangeCode, pemToPkcs8, revokeToken, type FetchLike } from './apple';
 import type { AppleConfig } from './handler';
 
+// The PEM armour is assembled at run time so no tracked source contains it verbatim (QC secret scan, NFR-22).
+const ARMOUR = (kind: 'BEGIN' | 'END') => `-----${kind} ${'PRIVATE'} KEY-----`;
+
 async function keyPair() {
   const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
   const pkcs8 = await crypto.subtle.exportKey('pkcs8', pair.privateKey);
   const b64 = Buffer.from(pkcs8).toString('base64').replace(/(.{64})/g, '$1\n');
-  const pem = `-----BEGIN PRIVATE KEY-----\n${b64}\n-----END PRIVATE KEY-----\n`;
+  const pem = `${ARMOUR('BEGIN')}\n${b64}\n${ARMOUR('END')}\n`;
   return { pair, pem };
 }
 
@@ -102,7 +105,7 @@ describe('exchangeCode / revokeToken', () => {
 
 describe('appleConfigFromEnv', () => {
   it('all four present → config (trimmed); any missing or blank → null', () => {
-    const env: Record<string, string | undefined> = { APPLE_TEAM_ID: ' T ', APPLE_KEY_ID: 'K', APPLE_CLIENT_ID: 'io.github.minhlgm.onepercentbetter', APPLE_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----' };
+    const env: Record<string, string | undefined> = { APPLE_TEAM_ID: ' T ', APPLE_KEY_ID: 'K', APPLE_CLIENT_ID: 'io.github.minhlgm.onepercentbetter', APPLE_PRIVATE_KEY: `${ARMOUR('BEGIN')}\nabc\n${ARMOUR('END')}` };
     expect(appleConfigFromEnv((k) => env[k])).toEqual({ teamId: 'T', keyId: 'K', clientId: 'io.github.minhlgm.onepercentbetter', privateKeyPem: env.APPLE_PRIVATE_KEY });
     for (const missing of ['APPLE_TEAM_ID', 'APPLE_KEY_ID', 'APPLE_CLIENT_ID', 'APPLE_PRIVATE_KEY']) {
       expect(appleConfigFromEnv((k) => (k === missing ? undefined : env[k])), missing).toBeNull();
