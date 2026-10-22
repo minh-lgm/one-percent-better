@@ -119,9 +119,12 @@ test.describe('M12 QC: native build as iOS (en)', () => {
     await expect(body).not.toContainText('Install the app');
     await expect(body).not.toContainText('Add to Home Screen');
     await expect(body).not.toContainText('browser');
-    await expect(page.getByTestId('permission-desc')).toHaveText(EN.settings.permission.nativeUnsupportedDesc);
-    await expect(page.getByText(EN.settings.permission.unsupported, { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: EN.settings.reminders.allow })).toHaveCount(0);
+    // QC M15 round 1 (re-target): the iOS card is the M15 variant. This fake bridge has no LocalNotifications plugin, so the
+    // permission stays "Not asked yet" (Allow button shown); "Not supported" no longer exists on iOS.
+    await expect(page.getByTestId('permission-desc')).toHaveText(EN.settings.permission.nativeDefaultDesc);
+    await expect(page.getByText(EN.settings.permission.default, { exact: true })).toBeVisible();
+    await expect(page.getByText(EN.settings.permission.unsupported, { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: EN.settings.reminders.allow })).toBeVisible();
     await expect(page.getByText(EN.settings.language.nativeNote)).toBeVisible();
     await expect(page.getByTestId('share-hint')).toHaveText(EN.settings.backup.shareHint);
     await expect(page.getByText(EN.settings.storage.nativeLabel)).toBeVisible();
@@ -240,29 +243,17 @@ test.describe('M12 QC: native build as iOS (en)', () => {
     expect(await bridgeCalls(page, 'Filesystem')).toHaveLength(2);
   });
 
-  test('.ics goes through the same port: ics file, share, "Calendar file shared"; dismissed = silent', async ({ page }) => {
+  // QC M15 round 1 (re-target, DESIGN 7.8.4 / TASKS M15-T3): from M15 the iOS card Reminders has no .ics button (the OS delivers the
+  // reminders; a calendar event would double them), so the M12 test of the .ics share path is replaced by the absence check below.
+  test('M15: no .ics button or hint on iOS, so no calendar file ever reaches the share sheet', async ({ page }) => {
     await emulateIos(page, 'ok');
     await seed(page);
     await gotoHash(page, '/settings');
-    await page.getByRole('button', { name: EN.settings.reminders.ics }).click();
-    await expect(toast(page)).toContainText(EN.toast.icsShared);
-    const fs = await bridgeCalls(page, 'Filesystem');
-    expect(fs).toHaveLength(1);
-    expect(fs[0].options.path).toBe('1percent-better-reminder.ics');
-    expect(String(fs[0].options.data)).toContain('BEGIN:VCALENDAR');
-    expect(String(fs[0].options.data)).toContain('RRULE:FREQ=DAILY');
-    // Backup state untouched by a calendar export.
-    await expect(page.getByTestId('last-backup')).toHaveText(EN.settings.backup.lastNever);
-
-    await page.evaluate(() => {
-      window.__qc.mode = 'cancel-error';
-    });
-    await expect(toast(page)).toHaveCount(0, { timeout: 8000 });
-    await page.getByRole('button', { name: EN.settings.reminders.ics }).click();
-    await expect.poll(async () => (await bridgeCalls(page, 'Share')).length).toBe(2);
-    await page.waitForTimeout(500);
-    await expect(toast(page)).toHaveCount(0);
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.getByRole('switch', { name: EN.settings.reminders.switch })).toBeVisible();
+    await expect(page.getByRole('button', { name: EN.settings.reminders.ics })).toHaveCount(0);
+    await expect(page.locator('body')).not.toContainText('.ics');
+    expect(await bridgeCalls(page, 'Share')).toHaveLength(0);
+    expect((await bridgeCalls(page, 'Filesystem')).filter((c) => String(c.options.path).endsWith('.ics'))).toHaveLength(0);
   });
 
   test('Import still works through the file input (Files picker)', async ({ page }) => {
@@ -307,7 +298,8 @@ test.describe('M12 QC: native build as iOS (vi, 360x740)', () => {
     await expect(body).not.toContainText(EN.settings.reminders.ios);
     await expect(body).not.toContainText('trình duyệt');
     await expect(page.getByText(VI.settings.language.nativeNote)).toBeVisible();
-    await expect(page.getByTestId('permission-desc')).toHaveText(VI.settings.permission.nativeUnsupportedDesc);
+    // QC M15 round 1 (re-target): M15 iOS variant (no LocalNotifications plugin in this fake bridge -> "Not asked yet").
+    await expect(page.getByTestId('permission-desc')).toHaveText(VI.settings.permission.nativeDefaultDesc);
     await expect(page.getByTestId('share-hint')).toHaveText(VI.settings.backup.shareHint);
     await expect(page.getByTestId('storage-desc')).toHaveText(VI.settings.storage.nativeDesc);
     await expect(page.getByText(VI.settings.about.descNative)).toBeVisible();

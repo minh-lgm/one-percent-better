@@ -261,7 +261,7 @@ async function expectAlertVisibleAboveButtons(page: Page) {
   expect(covered).toBe(false);
 }
 
-test.describe('QC M14 r2: D5 busy status (fixed) and D6 alert visibility (NOT fixed, kept as expected failures)', () => {
+test.describe('QC M14 r2: D5 busy status (fixed) and D6 alert visibility (FIXED in e275393, re-targeted by QC M15 r1 from expected failures to plain tests)', () => {
   for (const [label, scheme, locale, copy] of [
     ['en light', 'light', 'en-US', EN],
     ['vi dark', 'dark', 'vi-VN', VI],
@@ -306,16 +306,15 @@ test.describe('QC M14 r2: D5 busy status (fixed) and D6 alert visibility (NOT fi
         await expectNoHorizontalScroll(page);
       });
 
-      // M14-D6 still open after 6e6a175: scrollIntoView({block:'nearest'}) does nothing because the Alert is inside the
-      // dialog's visible box, but the sticky button row covers its lower part (dialog scrollTop stays 0).
-      test.fail(`D6 360 x 740: the error Alert is fully visible above the sticky buttons`, async ({ page, mock }) => {
+      // M14-D6: fixed in e275393 (QC M15 r1 confirmed: the Alert's bounding box ends above the sticky row; formerly test.fail).
+      test(`D6 360 x 740: the error Alert is fully visible above the sticky buttons`, async ({ page, mock }) => {
         await prepare(page, mock, 740);
         await expectAlertVisibleAboveButtons(page);
       });
     });
   }
 
-  test.fail('D6 360 x 480: the error Alert is fully visible above the sticky buttons', async ({ page, mock }) => {
+  test('D6 360 x 480: the error Alert is fully visible above the sticky buttons', async ({ page, mock }) => {
     await page.setViewportSize({ width: 360, height: 480 });
     await signInAsMinh(page);
     await expectSyncState(page, 'synced');

@@ -75,8 +75,10 @@ test.describe('M12 QC explore: iOS emulation', () => {
     await gotoHash(page, '/settings');
     await page.getByRole('switch', { name: EN.settings.reminders.switch }).click();
     await expect(page.getByRole('switch', { name: EN.settings.reminders.switch })).toBeChecked();
-    await expect(page.getByText(EN.settings.permission.unsupported, { exact: true })).toBeVisible();
-    await expect(page.getByTestId('permission-desc')).toHaveText(EN.settings.permission.nativeUnsupportedDesc);
+    // QC M15 round 1 (re-target): the plugin is absent from this fake bridge, so asking fails and the chip stays "Not asked yet"
+    // with the "reminders are on" variant (DESIGN 7.8.4); "Not supported" no longer exists on iOS.
+    await expect(page.getByText(EN.settings.permission.default, { exact: true })).toBeVisible();
+    await expect(page.getByTestId('permission-desc')).toHaveText(EN.settings.permission.nativeDefaultOnDesc);
     await expect(page.getByRole('alert')).toHaveCount(0);
     const text = (await page.locator('body').innerText()).toLowerCase();
     expect(text).not.toContain('browser');
@@ -144,16 +146,13 @@ test.describe('M12 QC explore: iOS emulation', () => {
     expect(await count(page, 'Share')).toBe(1);
   });
 
-  test('.ics: a fast double tap opens at most one share sheet (iOS rejects a second one with a non-cancel error)', async ({ page }) => {
+  // QC M15 round 1 (re-target, DESIGN 7.8.4): the iOS card has no .ics button from M15, so the M12 double-tap guard has nothing to guard.
+  test('M15: the .ics button does not exist on iOS (nothing to double-tap)', async ({ page }) => {
     await emulateIos(page, { hold: true });
     await freezeClock(page);
     await gotoHash(page, '/settings');
-    const ics = page.getByRole('button', { name: EN.settings.reminders.ics });
-    await ics.dblclick(); // a real double tap: two input events, React commits `busy` in between
-    await expect.poll(() => count(page, 'Share')).toBeGreaterThanOrEqual(1);
-    await page.waitForTimeout(300);
-    const shares = await count(page, 'Share');
-    await page.evaluate(() => window.__qc2.release());
-    expect(shares, 'second Share.share while the first sheet is open').toBe(1);
+    await expect(page.getByRole('switch', { name: EN.settings.reminders.switch })).toBeVisible();
+    await expect(page.getByRole('button', { name: EN.settings.reminders.ics })).toHaveCount(0);
+    expect(await count(page, 'Share')).toBe(0);
   });
 });

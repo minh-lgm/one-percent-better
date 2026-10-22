@@ -43,10 +43,13 @@ describe('M12 QC: Xcode project consistency (M12-AC7)', () => {
   // QC M14 round 1 (re-target, TASKS M14-T2 / ARCH §2 v5.0): M14 adds @capgo/capacitor-social-login 8.7.4, so the runtime plugin
   // set is seven after M14 (six @capacitor/* + CapgoCapacitorSocialLogin). The Capgo SPM product name is read from the package's
   // own Package.swift so the check stays independent of the developer's wording.
-  it('the package list in Package.swift is exactly the runtime plugins of package.json (seven after M14), pinned to the Capacitor core version', () => {
+  // QC M15 round 1 (re-target, dispute accepted; TASKS M15-T2 / ARCH §2 v5.0): M15 adds @capacitor/local-notifications 8.3.1, the eighth
+  // runtime plugin. The explicit list now has eight names; the equality with package.json's dependencies is unchanged.
+  it('the package list in Package.swift is exactly the runtime plugins of package.json (eight after M15), pinned to the Capacitor core version', () => {
     expect(spm).toContain('exact: "8.5.3"');
     const plugins = [...spm.matchAll(/\.package\(name: "(\w+)"/g)].map((m) => m[1]).sort();
-    expect(plugins).toEqual(['CapacitorApp', 'CapacitorFilesystem', 'CapacitorKeyboard', 'CapacitorShare', 'CapacitorSplashScreen', 'CapacitorStatusBar', 'CapgoCapacitorSocialLogin']);
+    expect(plugins).toEqual(['CapacitorApp', 'CapacitorFilesystem', 'CapacitorKeyboard', 'CapacitorLocalNotifications', 'CapacitorShare', 'CapacitorSplashScreen', 'CapacitorStatusBar', 'CapgoCapacitorSocialLogin']);
+    expect(JSON.parse(read('package.json')).dependencies['@capacitor/local-notifications']).toBe('8.3.1');
     const deps = (JSON.parse(read('package.json')) as { dependencies: Record<string, string> }).dependencies;
     const declared = Object.keys(deps)
       .filter((n) => n.startsWith('@capacitor/') && !['@capacitor/core', '@capacitor/ios'].includes(n))
