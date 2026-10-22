@@ -1,4 +1,4 @@
-// QC M15 r1 — planReminderDates / reminderDateTime against an independent oracle (seeded fuzz + hand cases),
+// QC M15 r1 (re-targeted r2 for M15-D2: second precision) — planReminderDates / reminderDateTime against an independent oracle (seeded fuzz + hand cases),
 // run under several process time zones (QC_TZ=America/New_York npx vitest run tests/qc/m15-r1-plan.test.ts).
 import { describe, expect, it } from 'vitest';
 import { planReminderDates, reminderDateTime } from '../../src/domain/reminder-plan';
@@ -17,12 +17,12 @@ const goal = (id: string, start: string, end: string | null, extra: Partial<Goal
   id, name: id, why: '', targetType: 'daily', targetMinutes: 10, startDate: start, endDate: end, archived: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', ...extra,
 });
 
-function oracle(args: { nowParts: [number, number, number, number, number]; enabled: boolean; time: string; goals: Goal[]; progress: Array<{ id: string; current: number; target: number }>; days: number }): string[] {
+function oracle(args: { nowParts: [number, number, number, number, number, number]; enabled: boolean; time: string; goals: Goal[]; progress: Array<{ id: string; current: number; target: number }>; days: number }): string[] {
   if (!args.enabled) return [];
   const m = /^(\d\d):(\d\d)$/.exec(args.time);
   if (!m) return [];
   const t = +m[1] * 60 + +m[2];
-  const [y, mo, d, h, mi] = args.nowParts;
+  const [y, mo, d, h, mi, sec] = args.nowParts;
   const today = iso(y, mo, d);
   const active = (g: Goal, day: string) => !g.archived && day >= g.startDate && (g.endDate === null || day <= g.endDate);
   const out: string[] = [];
@@ -30,7 +30,8 @@ function oracle(args: { nowParts: [number, number, number, number, number]; enab
     const day = plus(today, i);
     if (!args.goals.some((g) => active(g, day))) continue;
     if (i === 0) {
-      if (h * 60 + mi > t) continue;
+      // M15-D2 (r2): today's reminder instant must not be in the past; exactly hh:mm:00.000 still counts as 'not past'.
+      if (h * 60 + mi > t || (h * 60 + mi === t && sec > 0)) continue;
       const allDone = args.goals.filter((g) => active(g, today)).every((g) => {
         const p = args.progress.find((x) => x.id === g.id);
         return p !== undefined && p.current >= p.target;
@@ -73,7 +74,7 @@ describe('M15 QC — planReminderDates vs oracle', () => {
       const days = r() < 0.8 ? 14 : 1 + pick(20);
       const now = new Date(y, mo, d, h, mi, sec, 0);
       const got = planReminderDates({ now, reminderEnabled: enabled, reminderTime: time, goals, todayProgress: progress, days });
-      const want = oracle({ nowParts: [y, mo, d, h, mi], enabled, time, goals, progress, days });
+      const want = oracle({ nowParts: [y, mo, d, h, mi, sec], enabled, time, goals, progress, days });
       expect(got, `case ${c} ${now.toString()} ${time} ${JSON.stringify(goals.map((g) => [g.startDate, g.endDate, g.archived]))}`).toEqual(want);
     }
   });
@@ -87,7 +88,22 @@ describe('M15 QC — planReminderDates vs oracle', () => {
     expect(plan(at(10, 0))[0]).toBe('2026-10-09');
     expect(plan(at(10, 0)).at(-1)).toBe('2026-10-22');
     expect(plan(at(20, 0, 0))[0]).toBe('2026-10-09');
-    expect(plan(at(20, 0, 59))[0]).toBe('2026-10-09');
+    // M15-D2 (r2): second precision. 19:59:59 and 20:00:00 keep today; 20:00:01 .. 20:01:00 start tomorrow.
+    expect(plan(at(19, 59, 59))[0]).toBe('2026-10-09');
+    expect(plan(at(20, 0, 0))[0]).toBe('2026-10-09');
+    for (const [h, m, s] of [[20, 0, 1], [20, 0, 30], [20, 0, 59], [20, 1, 0]] as const) {
+      expect(plan(at(h, m, s))[0], `${h}:${m}:${s}`).toBe('2026-10-10');
+      expect(plan(at(h, m, s))).toHaveLength(13);
+    }
+    // 20:00:00.001 is already past; 19:59:59.999 is not
+    expect(plan(new Date(2026, 9, 9, 20, 0, 0, 1))[0]).toBe('2026-10-10');
+    expect(plan(new Date(2026, 9, 9, 19, 59, 59, 999))[0]).toBe('2026-10-09');
+    // invariant: no planned instant is earlier than now (the iOS plugin would fire it immediately)
+    for (let sec = 0; sec < 3600; sec += 7) {
+      const now = new Date(2026, 9, 9, 19, 30, 0).getTime() + sec * 1000;
+      const nowD = new Date(now);
+      for (const date of plan(nowD)) expect(reminderDateTime(date, '20:00').getTime(), `${nowD.toString()} ${date}`).toBeGreaterThanOrEqual(now);
+    }
     expect(plan(at(20, 1))[0]).toBe('2026-10-10');
     expect(plan(at(20, 1))).toHaveLength(13);
     // year / month boundary and midnight edges
