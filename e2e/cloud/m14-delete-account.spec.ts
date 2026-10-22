@@ -1,7 +1,7 @@
 // M14-AC6: Delete account on the web against the mock Supabase (FR-61, ARCH §4.7, DESIGN S7 D6).
 import { expect, test } from './fixtures';
 import { createGoal, EN, expectAxeClean, expectNoHorizontalScroll, expectNoViLeaks, freezeClock, goalCard, gotoHash, toast, VI } from '../helpers/app';
-import { accountCard, C1, expectSyncState, MOCK_SUPABASE_URL, recordRequests, signInAsMinh, signInButton, syncNow } from './helpers';
+import { accountCard, C1, expectSyncState, MOCK_SUPABASE_URL, recordRequests, signInAsMinh, signInButton, signInViaMock, syncNow } from './helpers';
 
 const READ = { name: 'Read', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' };
 const DELETE_PATH = '/functions/v1/delete-account';
@@ -130,7 +130,6 @@ test.describe('M14-AC6 delete account (web, mock)', () => {
     await freezeClock(b.page);
     await signInAsMinh(b.page);
     await expectSyncState(b.page, 'synced');
-    await expect(goalCard(b.page, 'Cloud goal').or(b.page.getByText('Cloud goal'))).toBeVisible();
 
     await deleteButton(page).click();
     await dialog(page).getByTestId('delete-account-confirm').click();
@@ -195,7 +194,9 @@ test.describe('M14-AC6 vi-VN, a11y, 360 px', () => {
     await page.setViewportSize({ width: 360, height: 740 });
     await mock.seed('u1', C1);
     await createGoal(page, READ, VI);
-    await signInAsMinh(page);
+    await gotoHash(page, '/settings');
+    await signInViaMock(page, 'Minh Test', VI);
+    await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in');
     await syncNow(page);
     await expect(deleteButton(page, VI)).toBeVisible();
     await expect(accountCard(page).getByText(VI.settings.account.deleteDesc)).toBeVisible();

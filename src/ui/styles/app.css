@@ -1773,7 +1773,7 @@ details.curve-table summary:focus-visible {
   }
 }
 
-/* ---- M14: Sign in with Apple (DESIGN 5 "Nút Sign in with Apple", HIG), the button group, Delete account, D6, Apple panel ---- */
+/* ---- M14: Sign in with Apple (DESIGN 5, HIG), the button group, Delete account, D6, Apple panel ---- */
 .abtn {
   display: inline-flex;
   align-items: center;
@@ -1815,7 +1815,7 @@ details.curve-table summary:focus-visible {
     width: 100%;
   }
 }
-/* Apple above Google, same width, 12 px apart (DESIGN 3.6 row "Cặp nút"); the group fills its button row. */
+/* Apple above Google, same width, 12 px apart (DESIGN 3.6, the button pair row); the group fills its button row. */
 .signin-buttons {
   display: flex;
   flex-direction: column;
