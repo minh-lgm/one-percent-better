@@ -300,10 +300,12 @@ describe('M13 QC: native project and secrets hygiene (M13-AC7)', () => {
     expect([...orient.matchAll(/<string>([^<]+)<\/string>/g)].map((m) => m[1])).toEqual(['UIInterfaceOrientationPortrait']);
     expect(plist).not.toMatch(/UISupportedInterfaceOrientations~ipad|NS\w+UsageDescription|UIBackgroundModes/);
   });
-  it('pbxproj: iPhone only, version 1.0.0, no team id, no profile, no entitlements', () => {
+  // QC M14 round 1 (re-target, M14-AC8 / ARCH §5.13): the only entitlements file is App/App.entitlements (Debug + Release).
+  it('pbxproj: iPhone only, version 1.0.0, no team id, no profile, only the Sign in with Apple entitlements file', () => {
     const pbx = read('ios/App/App.xcodeproj/project.pbxproj');
     expect(new Set([...pbx.matchAll(/TARGETED_DEVICE_FAMILY = ([^;]+);/g)].map((m) => m[1]))).toEqual(new Set(['1']));
-    expect(pbx).not.toMatch(/DEVELOPMENT_TEAM|PROVISIONING_PROFILE|CODE_SIGN_ENTITLEMENTS|SUPPORTS_MACCATALYST = YES/);
+    expect(pbx).not.toMatch(/DEVELOPMENT_TEAM|PROVISIONING_PROFILE|SUPPORTS_MACCATALYST = YES/);
+    expect([...pbx.matchAll(/CODE_SIGN_ENTITLEMENTS = ([^;]+);/g)].map((m) => m[1])).toEqual(['App/App.entitlements', 'App/App.entitlements']);
   });
   it('no key, certificate or profile is tracked; no private-key text or API-key-shaped blob in any tracked file outside docs and tests/qc', () => {
     const files = execSync('git ls-files', { cwd: root, encoding: 'utf8' }).split(/\r?\n/).filter(Boolean);

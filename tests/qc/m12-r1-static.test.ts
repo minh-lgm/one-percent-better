@@ -40,21 +40,28 @@ describe('M12 QC: Xcode project consistency (M12-AC7)', () => {
   // QC M13 round 1 (dispute accepted): TASKS M13-T4 / ARCH §2 v5.0 pin @capacitor/status-bar, splash-screen and keyboard,
   // so after M13 the runtime plugin set is six. Re-targeted from "exactly three" to "exactly the @capacitor/* plugins that
   // package.json declares (minus core/ios/cli)", plus the explicit M13 list.
-  it('the package list in Package.swift is exactly the runtime plugins of package.json (six after M13), pinned to the Capacitor core version', () => {
+  // QC M14 round 1 (re-target, TASKS M14-T2 / ARCH §2 v5.0): M14 adds @capgo/capacitor-social-login 8.7.4, so the runtime plugin
+  // set is seven after M14 (six @capacitor/* + CapgoCapacitorSocialLogin). The Capgo SPM product name is read from the package's
+  // own Package.swift so the check stays independent of the developer's wording.
+  it('the package list in Package.swift is exactly the runtime plugins of package.json (seven after M14), pinned to the Capacitor core version', () => {
     expect(spm).toContain('exact: "8.5.3"');
     const plugins = [...spm.matchAll(/\.package\(name: "(\w+)"/g)].map((m) => m[1]).sort();
-    expect(plugins).toEqual(['CapacitorApp', 'CapacitorFilesystem', 'CapacitorKeyboard', 'CapacitorShare', 'CapacitorSplashScreen', 'CapacitorStatusBar']);
+    expect(plugins).toEqual(['CapacitorApp', 'CapacitorFilesystem', 'CapacitorKeyboard', 'CapacitorShare', 'CapacitorSplashScreen', 'CapacitorStatusBar', 'CapgoCapacitorSocialLogin']);
     const deps = (JSON.parse(read('package.json')) as { dependencies: Record<string, string> }).dependencies;
     const declared = Object.keys(deps)
       .filter((n) => n.startsWith('@capacitor/') && !['@capacitor/core', '@capacitor/ios'].includes(n))
       .map((n) => 'Capacitor' + n.slice('@capacitor/'.length).replace(/(^|-)(\w)/g, (_m, _d, c: string) => c.toUpperCase()))
       .sort();
-    expect(plugins).toEqual(declared);
+    const capgoName = /name:\s*"(\w+)"/.exec(read('node_modules/@capgo/capacitor-social-login/Package.swift'))![1];
+    expect(deps['@capgo/capacitor-social-login']).toBe('8.7.4');
+    expect(plugins).toEqual([...declared, capgoName].sort());
   });
-  it('no team, no provisioning, no signing identity pinned in the project (signing is the CI lane, M13)', () => {
+  it('no team, no provisioning, no signing identity pinned in the project (signing is the CI lane, M13); only the Sign in with Apple entitlements file (M14)', () => {
     expect(pbx).not.toMatch(/DEVELOPMENT_TEAM/);
     expect(pbx).not.toMatch(/PROVISIONING_PROFILE/);
-    expect(pbx).not.toMatch(/CODE_SIGN_ENTITLEMENTS/); // arrives with Sign in with Apple (M14)
+    // QC M14 round 1 (re-target, M14-AC8 / ARCH §5.13): CODE_SIGN_ENTITLEMENTS arrives with Sign in with Apple, but only the
+    // fixed in-repo entitlements file (Debug + Release); no team, no profile, no other entitlements path.
+    expect([...pbx.matchAll(/CODE_SIGN_ENTITLEMENTS = ([^;]+);/g)].map((m) => m[1])).toEqual(['App/App.entitlements', 'App/App.entitlements']);
   });
   it('generated, per-machine files are not tracked', () => {
     const ignore = read('.gitignore') + '\n' + read('ios/.gitignore');
