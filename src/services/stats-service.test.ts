@@ -218,7 +218,7 @@ describe('StatsService.curve (M9-T1, M9-AC1/AC2)', () => {
     expect(c.ideal).toHaveLength(31);
     expect(c.actual).toHaveLength(9);
     expect(c.headlinePercent).toBe(0);
-    expect(c.idealPercent).toBe(9.4);
+    expect(c.idealPercent).toBe(8.3);
     expect(c.loggedDays).toBe(8);
     expect(c.baseline).toEqual({ date: '2026-10-01', minutes: 30 });
     expect(c.latest).toEqual({ date: '2026-10-08', minutes: 30 });

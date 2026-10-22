@@ -28,7 +28,7 @@ Mockup dùng một đoạn JS nhỏ inline: (a) sinh heatmap/biểu đồ từ d
 
 1. **Ghi nhanh hơn nghĩ.** Việc lặp lại nhiều nhất (ghi thời gian hôm nay) làm được ngay trên Today, tối đa 3 thao tác: bấm `Log time` → nhập phút → `Save entry` (PRD §8). Không điều hướng sang màn khác để ghi.
 2. **Khích lệ nhẹ, không phô trương.** "+1%" là một viên thuốc (pill) nhỏ màu hổ phách, chỉ xuất hiện khi goal đạt chỉ tiêu ngày. Không confetti, không âm thanh, không điểm/huy hiệu (PRD non-goal). Ngày chưa đạt **không dùng màu đỏ** và không có chữ "failed"/"missed". **(v3.0)** Đường "Bạn" giờ có thể đi xuống (FR-27 v3.0; A-02 cũ "ngày lỡ không trừ" chỉ còn đúng với ngày 0 phút, vốn đi ngang): số âm vẫn **không đỏ**, không có chữ "worse"/"failed"; headline âm đổi sang màu chữ thường `--text` và nói trung tính "so với ngày đầu". Đỏ chỉ dành cho lỗi và hành động phá huỷ.
-3. **Số liệu trung thực.** **(v3.0)** Đường lý tưởng 1.01^k và đường "Bạn" (phút của ngày có ghi gần nhất so với ngày đầu có ghi, nhân dồn từ mỗi ngày so với ngày có ghi trước) vẽ cùng một thang tuyến tính **tự co giãn theo cả hai** và luôn có vạch 0%; hiển thị đúng con số (một chữ số thập phân, có dấu `+`/`−`), có chú thích cách tính và đúng số phút làm nên con số đó. Heatmap/biểu đồ luôn có bản text tương đương.
+3. **Số liệu trung thực.** **(v3.0)** Đường lý tưởng 1.01^k (**v5.1:** 1.01^(k−1), ngày đầu của khoảng ở +0%) và đường "Bạn" (phút của ngày có ghi gần nhất so với ngày đầu có ghi, nhân dồn từ mỗi ngày so với ngày có ghi trước) vẽ cùng một thang tuyến tính **tự co giãn theo cả hai** và luôn có vạch 0%; hiển thị đúng con số (một chữ số thập phân, có dấu `+`/`−`), có chú thích cách tính và đúng số phút làm nên con số đó. Heatmap/biểu đồ luôn có bản text tương đương.
 4. **Mobile-first, desktop rộng rãi.** Cùng nội dung, khác bố cục: thanh tab dưới (< 1024 px) → sidebar trái (≥ 1024 px); Review và Goal detail tận dụng chiều rộng để thấy cả heatmap năm.
 5. **Dữ liệu của bạn, nằm trên máy bạn trước.** Giọng điệu bình tĩnh, nói rõ giới hạn thật (nhắc nhở chỉ khi app mở, cần backup, trình duyệt có thể dọn dữ liệu). Không dọa, không đổ lỗi người dùng.
 6. **(Phase 2) Tài khoản là một lựa chọn, không phải một cánh cổng.** Đăng nhập Google chỉ thêm một bản sao an toàn trên cloud; app không bao giờ chặn, không hỏi lặp, không làm chậm việc ghi thời gian vì chưa đăng nhập hoặc vì mất mạng. Mọi chỗ nhắc đăng nhập đều là banner/dòng chữ có "Not now" hoặc có thể bỏ qua, không phải dialog. Mọi nơi nói về dữ liệu phải nói **đúng nơi dữ liệu đang nằm** (chỉ trên máy này / máy này + tài khoản của bạn) và trạng thái đồng bộ phải luôn đọc được, kể cả bằng screen reader.
@@ -2809,6 +2809,8 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 ---
 
 ## Changelog
+
+- 2026-10-22 — **v5.1**: đường Ideal bắt đầu ở +0% ngày đầu của khoảng (`1.01^(k−1)`, PRD/ARCH v5.1); không đổi layout, copy, key hay token — chỉ số liệu trên biểu đồ, nhãn trực tiếp, tooltip, tóm tắt và bảng dịch xuống một ngày (R1 ngày 4: +3,0% thay vì +4,1%).
 
 - 2026-10-09 — v1, tạo mới (mode `new`): user flows, 9 màn hình + 3 dialog, component, tokens (sáng/tối), copy, a11y, 8 mockup HTML.
 - 2026-10-09 — v1.1 (mode `revise`, feedback Gate 2: thêm tiếng Việt; PRD v1.2, FR-32 … FR-36, NFR-11):

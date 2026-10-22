@@ -103,8 +103,8 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
     await expect(sub(page)).toHaveText('Today: 27 min, +92.9% vs Oct 12 (14 min). ×5.4 since Oct 10 (5 min).');
     await page.getByText(EN.goal.detail.showTable).click();
     await expect(rows(page)).toHaveCount(83);
-    await expect(rows(page).nth(3).locator('td')).toHaveText(['+4.1%', '+440.0%', '27', '+92.9%']);
-    await expect(rows(page).nth(10).locator('td')).toHaveText(['+11.6%', '—', '—', '—']); // Oct 20 is in the future: no You, no minutes
+    await expect(rows(page).nth(3).locator('td')).toHaveText(['+3.0%', '+440.0%', '27', '+92.9%']);
+    await expect(rows(page).nth(10).locator('td')).toHaveText(['+10.5%', '—', '—', '—']); // Oct 20 is in the future: no You, no minutes
     await page.getByRole('radio', { name: EN.goal.detail.rangeSoFar }).check();
     await expect(rows(page)).toHaveCount(4);
     await noGarbage(page);
@@ -127,10 +127,10 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
     await expect(headline(page)).toHaveText('+170.0% better'); // 27 / 10
     await expect(sub(page)).toHaveText('Today: 27 min, +92.9% vs Oct 12 (14 min). ×2.7 since Oct 11 (10 min).');
     await page.getByText(EN.goal.detail.showTable).click();
-    await expect(rows(page).nth(0).locator('td')).toHaveText(['+1.0%', '+0.0%', '0', '—']); // before the baseline: 1, not logged
-    await expect(rows(page).nth(1).locator('td')).toHaveText(['+2.0%', '+0.0%', '10', '—']); // new baseline
-    await expect(rows(page).nth(2).locator('td')).toHaveText(['+3.0%', '+40.0%', '14', '+40.0%']);
-    await expect(rows(page).nth(3).locator('td')).toHaveText(['+4.1%', '+170.0%', '27', '+92.9%']);
+    await expect(rows(page).nth(0).locator('td')).toHaveText(['+0.0%', '+0.0%', '0', '—']); // before the baseline: 1, not logged
+    await expect(rows(page).nth(1).locator('td')).toHaveText(['+1.0%', '+0.0%', '10', '—']); // new baseline
+    await expect(rows(page).nth(2).locator('td')).toHaveText(['+2.0%', '+40.0%', '14', '+40.0%']);
+    await expect(rows(page).nth(3).locator('td')).toHaveText(['+3.0%', '+170.0%', '27', '+92.9%']);
 
     await del('2026-10-13', '27 min'); // today unlogged -> flat at the last logged day
     await gotoHash(page, '/goals/r1');
@@ -253,7 +253,7 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
     await expect(headline(page)).toHaveText('+0.0% better');
     await expect(headline(page)).toHaveAttribute('data-sign', 'positive');
     await page.getByText(EN.goal.detail.showTable).click();
-    await expect(rows(page).nth(1).locator('td')).toHaveText(['+2.0%', '+0.0%', '2,999', '+0.0%']);
+    await expect(rows(page).nth(1).locator('td')).toHaveText(['+1.0%', '+0.0%', '2,999', '+0.0%']);
     const text = await page.locator('main').innerText();
     expect(text).not.toMatch(/[-−]0\.0%/);
     expect((await yTicks(page)).every((t) => !/[-−]0%/.test(t))).toBe(true);
@@ -261,7 +261,7 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
     await page.keyboard.press('End');
     await page.keyboard.press('Home');
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 11 · 2,999 min, +0.0% vs previous logged day · You +0.0% since your first day · Ideal +2.0%');
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 11 · 2,999 min, +0.0% vs previous logged day · You +0.0% since your first day · Ideal +1.0%');
 
     await gotoHash(page, '/goals/m');
     await expect(headline(page)).toHaveText(`${MINUS}0.1% vs your first day`);
@@ -291,7 +291,7 @@ test.describe('M9 QC — extreme values and long goals at 360 px', () => {
     await expectNoHorizontalScroll(page);
     await noGarbage(page);
     await page.getByText(EN.goal.detail.showTable).click();
-    await expect(rows(page).nth(1).locator('td')).toHaveText(['+2.0%', '+5,759,900.0%', '57,600', '+5,759,900.0%']);
+    await expect(rows(page).nth(1).locator('td')).toHaveText(['+1.0%', '+5,759,900.0%', '57,600', '+5,759,900.0%']);
     await expectNoHorizontalScroll(page);
     await expectAxeClean(page);
     // vi
@@ -389,7 +389,7 @@ test.describe('M9 QC — interaction, language, theme', () => {
     await expect(page.getByTestId('curve-summary')).toContainText('+440,0%');
     expect(await yTicks(page)).toContain('+500%');
     await page.getByText(VI.goal.detail.showTable).click();
-    await expect(rows(page).nth(3).locator('td')).toHaveText(['+4,1%', '+440,0%', '27', '+92,9%']);
+    await expect(rows(page).nth(3).locator('td')).toHaveText(['+3,0%', '+440,0%', '27', '+92,9%']);
     await expectNoViLeaks(page);
     await page.getByRole('link', { name: VI.nav.settings }).click();
     await page.getByRole('radio', { name: 'English' }).check();
@@ -413,8 +413,8 @@ test.describe('M9 QC — interaction, language, theme', () => {
       if (await tip.count()) seen.add((await tip.first().innerText()).replace(/\s+/g, ' ').trim());
     }
     const all = [...seen].join(' || ');
-    expect(all).toContain(`Oct 11 · 3 min, ${MINUS}40.0% vs previous logged day · You ${MINUS}40.0% since your first day · Ideal +2.0%`);
-    expect(all).toContain('Oct 10 · 5 min, your first logged day · You +0.0% · Ideal +1.0%');
+    expect(all).toContain(`Oct 11 · 3 min, ${MINUS}40.0% vs previous logged day · You ${MINUS}40.0% since your first day · Ideal +1.0%`);
+    expect(all).toContain('Oct 10 · 5 min, your first logged day · You +0.0% · Ideal +0.0%');
     expect(all).not.toMatch(/NaN|undefined|null/);
     expect(all).not.toMatch(/(^|[^\w])-\d/); // ASCII hyphen as a sign
     await page.mouse.move(5, 5);
@@ -444,7 +444,7 @@ test.describe('M9 QC — interaction, language, theme', () => {
     await page.getByRole('radio', { name: EN.goal.detail.rangeWhole }).check();
     await expect.poll(async () => Number(await chart(page).getAttribute('data-y-max'))).toBeGreaterThanOrEqual(3678); // 1.01^365
     await page.keyboard.press('Tab'); // focus stays in the Range control group, summary unchanged
-    await expect(page.getByTestId('curve-summary')).toHaveText('Day 4 of 365: your line is +440.0% compared with your first logged day. The ideal line is +4.1%.');
+    await expect(page.getByTestId('curve-summary')).toHaveText('Day 4 of 365: your line is +440.0% compared with your first logged day. The ideal line is +3.0%.');
   });
 
   test.describe('dark scheme', () => {

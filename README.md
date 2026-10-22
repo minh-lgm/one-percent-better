@@ -116,7 +116,7 @@ On **Today**, press **Start timer** on an active goal. Only one timer runs at a 
 
 Each goal page shows its **1% curve** with two lines:
 
-- **Ideal** is `1.01^k` for day *k* of the period (one percent better every day, starting at +1.0 % on the first day of the goal). It never changes.
+- **Ideal** is `1.01^(k−1)` for day *k* of the period (one percent better every day, starting at +0.0 % on the first day of the goal). It never changes.
 - **You** (since v3, M9) compares the minutes you log with your **previous logged day** and compounds the changes from your **first logged day**. Because the daily ratios multiply out, the value on any day is simply *minutes of the most recent logged day ÷ minutes of the first logged day*; the first logged day is 0 %. Days without time keep the line flat (nothing is subtracted), and logging less than the previous logged day moves it down (the headline can be negative, e.g. `−40.0% vs your first day`). The daily target plays no part here: it still drives the "+1%" feedback on Today, days on target, streaks, progress and pace.
 
 Example with real data — 5, 10, 14 and 27 minutes on four consecutive days: +100 % (10 vs 5), then +40 % (14 vs 10), then +92.9 % (27 vs 14); compounded, 27 ÷ 5 = ×5.4, so the headline reads **`+440.0% better`** and the subtitle `Today: 27 min, +92.9% vs Oct 12 (14 min). ×5.4 since Oct 10 (5 min).` Percentages are rounded to one decimal, half away from zero, and always carry a sign (`+0.0%`, `−40.0%`; the minus is U+2212).

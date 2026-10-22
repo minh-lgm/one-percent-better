@@ -1,7 +1,9 @@
 // The 1% curve (FR-27 v3.0; ARCHITECTURE §4.5, ADR-26). Pure functions over one
 // goal and its entries; `today` is passed in.
 //
-// For day d of the period with ordinal k (startDate = 1): ideal(d) = 1.01^k.
+// For day d of the period with ordinal k (startDate = 1): ideal(d) = 1.01^(k−1) — the first day
+// of the goal is the +0% starting point and each later day is +1% on the previous one (user
+// decision 2026-10-22; before that it was 1.01^k, which drew day 1 at +1%).
 // "You": m(d) = minutes logged on d. f = first logged day (baseline), p(d) = last
 // logged day ≤ d. actual(d) = m(p(d)) / m(f) (1 before the baseline). Each logged
 // day is compared with the previous logged day and the ratios compound, which
@@ -20,7 +22,7 @@ export interface IdealPoint {
   date: ISODate;
   /** Ordinal of the day in the period, 1-based. */
   k: number;
-  /** `1.01^k` */
+  /** `1.01^(k−1)` (1 on the first day of the period) */
   value: number;
 }
 
@@ -66,11 +68,11 @@ export interface CurveData {
   latestChangePercent: number | null;
   /** actual(last): 1 when nothing is logged or the goal is upcoming. */
   actualFactor: number;
-  /** `1.01^elapsedDays` (1 when upcoming) */
+  /** `1.01^(elapsedDays − 1)` (1 when upcoming or on the first day) */
   idealFactor: number;
   /** Signed headline percent, one decimal: pct(m(p(last)), m(f)); 0 without a baseline. */
   headlinePercent: number;
-  /** `(1.01^elapsedDays − 1) × 100`, rounded to 1 decimal. */
+  /** `(1.01^(elapsedDays − 1) − 1) × 100`, rounded to 1 decimal; 0 on the first day. */
   idealPercent: number;
 }
 
@@ -109,7 +111,7 @@ export function curve(goal: Goal, goalEntries: readonly LogEntry[], today: ISODa
   const start = dayNumber(goal.startDate);
   const ideal: IdealPoint[] = new Array(periodDays);
   for (let i = 0; i < periodDays; i++) {
-    ideal[i] = { date: isoFromDayNumber(start + i), k: i + 1, value: growth(i + 1) };
+    ideal[i] = { date: isoFromDayNumber(start + i), k: i + 1, value: growth(i) };
   }
 
   const actual: ActualPoint[] = [];
@@ -144,7 +146,7 @@ export function curve(goal: Goal, goalEntries: readonly LogEntry[], today: ISODa
   }
   const elapsedDays = actual.length;
   const actualFactor = baseline && latest ? latest.minutes / baseline.minutes : 1;
-  const idealFactor = growth(elapsedDays);
+  const idealFactor = elapsedDays > 0 ? growth(elapsedDays - 1) : 1;
   return {
     ideal,
     actual,

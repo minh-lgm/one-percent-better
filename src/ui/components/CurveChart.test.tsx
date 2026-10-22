@@ -29,7 +29,7 @@ const r1 = datasetR1();
 const real = curve(r1.goals[0], r1.entries, TODAY_R1);
 const r4 = datasetR4();
 const extreme = curve(r4.goals[0], r4.entries, '2026-10-11');
-const LABEL_R1 = 'Day 4 of 83: your line is +440.0% compared with your first logged day. The ideal line is +4.1%.';
+const LABEL_R1 = 'Day 4 of 83: your line is +440.0% compared with your first logged day. The ideal line is +3.0%.';
 
 // Recharts 3 renders tick labels and reference-dot labels in their own z-index layers (not nested
 // under the axis / dot), so select by their own classes.
@@ -52,7 +52,7 @@ describe('CurveChart v3 (M9-AC3, DESIGN S4 "Biểu đồ v3")', () => {
     expect(chart.querySelector('.recharts-reference-line.zero-line')).not.toBeNull();
     expect(chart.querySelectorAll('.recharts-reference-dot')).toHaveLength(2);
     expect(chart.querySelectorAll('.curve-dot')).toHaveLength(4);
-    expect(chart.textContent).toContain('Ideal +4.1%');
+    expect(chart.textContent).toContain('Ideal +3.0%');
     expect(chart.textContent).toContain('You +440.0%');
     const ticks = yTicks(chart);
     expect(ticks).toContain('0%');
@@ -74,13 +74,13 @@ describe('CurveChart v3 (M9-AC3, DESIGN S4 "Biểu đồ v3")', () => {
     expect(reading).toHaveTextContent('');
     chart.focus();
     await user.keyboard('{ArrowRight}');
-    expect(reading).toHaveTextContent('Oct 13 · 27 min, +92.9% vs previous logged day · You +440.0% since your first day · Ideal +4.1%');
+    expect(reading).toHaveTextContent('Oct 13 · 27 min, +92.9% vs previous logged day · You +440.0% since your first day · Ideal +3.0%');
     await user.keyboard('{ArrowLeft}');
-    expect(reading).toHaveTextContent('Oct 12 · 14 min, +40.0% vs previous logged day · You +180.0% since your first day · Ideal +3.0%');
+    expect(reading).toHaveTextContent('Oct 12 · 14 min, +40.0% vs previous logged day · You +180.0% since your first day · Ideal +2.0%');
     await user.keyboard('{Home}');
-    expect(reading).toHaveTextContent('Oct 10 · 5 min, your first logged day · You +0.0% · Ideal +1.0%');
+    expect(reading).toHaveTextContent('Oct 10 · 5 min, your first logged day · You +0.0% · Ideal +0.0%');
     await user.keyboard('{End}');
-    expect(reading).toHaveTextContent('Dec 31 · Ideal +128.4%');
+    expect(reading).toHaveTextContent('Dec 31 · Ideal +126.1%');
     await user.keyboard('{Escape}');
     expect(reading).toHaveTextContent('');
     await user.keyboard('{ArrowRight}');
@@ -97,12 +97,12 @@ describe('CurveChart v3 (M9-AC3, DESIGN S4 "Biểu đồ v3")', () => {
     const chart = screen.getByTestId('curve-chart');
     await waitFor(() => expect(chart.querySelectorAll('.recharts-line')).toHaveLength(2));
     expect(chart.textContent).toContain('You +0.0%');
-    expect(chart.textContent).toContain('Ideal +9.4%');
+    expect(chart.textContent).toContain('Ideal +8.3%');
     chart.focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByTestId('curve-reading')).toHaveTextContent('Oct 9 · Nothing logged, the line stays flat · You +0.0% · Ideal +9.4%');
+    expect(screen.getByTestId('curve-reading')).toHaveTextContent('Oct 9 · Nothing logged, the line stays flat · You +0.0% · Ideal +8.3%');
     await user.keyboard('{ArrowLeft}');
-    expect(screen.getByTestId('curve-reading')).toHaveTextContent('Oct 8 · 30 min, +0.0% vs previous logged day · You +0.0% since your first day · Ideal +8.3%');
+    expect(screen.getByTestId('curve-reading')).toHaveTextContent('Oct 8 · 30 min, +0.0% vs previous logged day · You +0.0% since your first day · Ideal +7.2%');
     r.unmount();
 
     const sofar = await renderWithLocale(<CurveChart ideal={guitar.ideal.slice(0, guitar.elapsedDays)} actual={guitar.actual} label="x" testId="curve-chart" />, 'en', { container: tc });
@@ -137,11 +137,11 @@ describe('CurveChart v3 (M9-AC3, DESIGN S4 "Biểu đồ v3")', () => {
     expect(chart.querySelectorAll('.recharts-reference-dot')).toHaveLength(1);
     expect(chart.querySelector('.recharts-reference-line.zero-line')).not.toBeNull();
     expect(chart.querySelectorAll('.curve-dot')).toHaveLength(0);
-    expect(chart.textContent).toContain('Ideal +9.4%');
+    expect(chart.textContent).toContain('Ideal +8.3%');
     expect(chart.textContent).not.toContain('You ');
     chart.focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByTestId('curve-reading')).toHaveTextContent('Oct 9 · Ideal +9.4%');
+    expect(screen.getByTestId('curve-reading')).toHaveTextContent('Oct 9 · Ideal +8.3%');
     r.unmount();
 
     const up = await renderWithLocale(<CurveChart ideal={upcoming.ideal} actual={upcoming.actual} label="x" testId="curve-chart" />, 'en', { container: tc });
@@ -152,14 +152,14 @@ describe('CurveChart v3 (M9-AC3, DESIGN S4 "Biểu đồ v3")', () => {
 
   it('direct labels never overlap: when You is close to Ideal the higher one goes above and the lower below; dots are dropped past 45 points', async () => {
     const goal = goalOf('g1');
-    const close = curve(goal, [buildEntry({ id: 'a', goalId: 'g1', date: '2026-10-01', minutes: 100 }), buildEntry({ id: 'b', goalId: 'g1', date: '2026-10-09', minutes: 109 })], TODAY);
-    expect(close.headlinePercent).toBe(9);
+    const close = curve(goal, [buildEntry({ id: 'a', goalId: 'g1', date: '2026-10-01', minutes: 100 }), buildEntry({ id: 'b', goalId: 'g1', date: '2026-10-09', minutes: 107 })], TODAY);
+    expect(close.headlinePercent).toBe(7);
     const r = await renderWithLocale(<CurveChart ideal={close.ideal.slice(0, close.elapsedDays)} actual={close.actual} label="x" testId="curve-chart" />);
     tc = r.tc;
     const chart = screen.getByTestId('curve-chart');
     await waitFor(() => expect(chart.querySelectorAll('.recharts-reference-dot')).toHaveLength(2));
     const labels = labelTexts(chart);
-    expect(labels.map((l) => l.text)).toEqual(['Ideal +9.4%', 'You +9.0%']);
+    expect(labels.map((l) => l.text)).toEqual(['Ideal +8.3%', 'You +7.0%']);
     expect(labels.map((l) => l.dy)).toEqual(['-10', '14']);
     r.unmount();
 
@@ -184,19 +184,19 @@ describe('CurveChart v3 (M9-AC3, DESIGN S4 "Biểu đồ v3")', () => {
     const r = await renderWithLocale(<CurveChart ideal={real.ideal} actual={real.actual} label="Ngày 4/83: đường của bạn ở mức +440,0% so với ngày có ghi đầu tiên." testId="curve-chart" />, 'vi');
     tc = r.tc;
     const chart = screen.getByTestId('curve-chart');
-    await waitFor(() => expect(chart.textContent).toContain('Lý tưởng +4,1%'));
+    await waitFor(() => expect(chart.textContent).toContain('Lý tưởng +3,0%'));
     expect(chart.textContent).toContain('Bạn +440,0%');
     expect(yTicks(chart)).toContain('+500%');
     chart.focus();
     await user.keyboard('{ArrowRight}');
     const oct13 = new Intl.DateTimeFormat('vi-VN', { month: 'short', day: 'numeric' }).format(new Date(2026, 9, 13));
-    expect(screen.getByTestId('curve-reading')).toHaveTextContent(`${oct13} · 27 phút, +92,9% so với ngày có ghi trước · Bạn +440,0% so với ngày đầu · Lý tưởng +4,1%`);
+    expect(screen.getByTestId('curve-reading')).toHaveTextContent(`${oct13} · 27 phút, +92,9% so với ngày có ghi trước · Bạn +440,0% so với ngày đầu · Lý tưởng +3,0%`);
     await user.keyboard('{ArrowLeft}');
-    expect(screen.getByTestId('curve-reading')).toHaveTextContent(/14 phút, \+40,0% so với ngày có ghi trước · Bạn \+180,0% so với ngày đầu · Lý tưởng \+3,0%$/);
+    expect(screen.getByTestId('curve-reading')).toHaveTextContent(/14 phút, \+40,0% so với ngày có ghi trước · Bạn \+180,0% so với ngày đầu · Lý tưởng \+2,0%$/);
     await user.keyboard('{Home}');
-    expect(screen.getByTestId('curve-reading')).toHaveTextContent(/5 phút, ngày có ghi đầu tiên · Bạn \+0,0% · Lý tưởng \+1,0%$/);
+    expect(screen.getByTestId('curve-reading')).toHaveTextContent(/5 phút, ngày có ghi đầu tiên · Bạn \+0,0% · Lý tưởng \+0,0%$/);
     await user.keyboard('{End}');
-    expect(screen.getByTestId('curve-reading')).toHaveTextContent(/Lý tưởng \+128,4%$/);
+    expect(screen.getByTestId('curve-reading')).toHaveTextContent(/Lý tưởng \+126,1%$/);
     expect(scanVi()).toEqual([]);
     r.unmount();
 
@@ -289,7 +289,7 @@ describe('M10-D4: a press held longer than the fallback delay keeps the reading 
 
 // ---- v4.0 (M11, DESIGN S4 rule 6 / A-D59): one point per line sits in the middle of the plot ----
 describe('CurveChart — open-ended goal on its first day (M11-T5)', () => {
-  it('a single point: both reference dots share one x in the middle of the plot (not on the left edge), labels Ideal +1.0% / You +0.0%, one X tick', async () => {
+  it('a single point: both reference dots share one x in the middle of the plot (not on the left edge), labels Ideal +0.0% / You +0.0%, one X tick', async () => {
     const goal = { ...datasetO1().goals[0], startDate: TODAY };
     const single = curve(goal, [buildEntry({ id: 'x', goalId: 'o1', date: TODAY, minutes: 10 })], TODAY);
     expect(single.ideal).toHaveLength(1);
@@ -303,7 +303,7 @@ describe('CurveChart — open-ended goal on its first day (M11-T5)', () => {
     // jsdom width 320, y axis ≥ 44 px, right margin 24 → the plot spans ≈ 44 … 296; the middle is ≈ 170.
     expect(xs[0]).toBeGreaterThan(120);
     expect(xs[0]).toBeLessThan(220);
-    expect(chart.textContent).toContain('Ideal +1.0%');
+    expect(chart.textContent).toContain('Ideal +0.0%');
     expect(chart.textContent).toContain('You +0.0%');
     expect(chart.querySelectorAll('.recharts-xAxis .recharts-cartesian-axis-tick').length + chart.querySelectorAll('.recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value').length).toBeGreaterThanOrEqual(1);
   });
@@ -318,7 +318,7 @@ describe('CurveChart — open-ended goal on its first day (M11-T5)', () => {
     const xs = Array.from(chart.querySelectorAll('.recharts-reference-dot circle')).map((c) => Number(c.getAttribute('cx')));
     expect(xs[0]).toBeGreaterThan(250);
     expect(chart.textContent).toContain('You +100.0%');
-    expect(chart.textContent).toContain('Ideal +9.4%');
+    expect(chart.textContent).toContain('Ideal +8.3%');
     expect(chart.querySelectorAll('.curve-dot')).toHaveLength(4);
   });
 });

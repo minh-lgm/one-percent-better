@@ -34,7 +34,7 @@ describe('curve — R1, the user\'s real data (M9-AC1, ARCH §4.5)', () => {
     expect(c.actual.every((p) => p.logged)).toBe(true);
   });
 
-  it('headline 440, factor 5.4, baseline/latest/previous, loggedDays 4, elapsed 4 of 83, ideal 1/2/3/4.1 → idealPercent 4.1', () => {
+  it('headline 440, factor 5.4, baseline/latest/previous, loggedDays 4, elapsed 4 of 83, ideal 0/1/2/3 → idealPercent 3', () => {
     expect(c.headlinePercent).toBe(440);
     expect(c.actualFactor).toBeCloseTo(5.4, 12);
     expect(c.baseline).toEqual({ date: '2026-10-10', minutes: 5 });
@@ -45,14 +45,14 @@ describe('curve — R1, the user\'s real data (M9-AC1, ARCH §4.5)', () => {
     expect(c.elapsedDays).toBe(4);
     expect(c.periodDays).toBe(83);
     expect(c.ideal).toHaveLength(83);
-    expect(c.ideal.slice(0, 4).map((p) => growthPercent(p.value))).toEqual([1, 2, 3, 4.1]);
-    expect(c.idealPercent).toBe(4.1);
-    expect(c.idealFactor).toBeCloseTo(Math.pow(1.01, 4), 12);
+    expect(c.ideal.slice(0, 4).map((p) => growthPercent(p.value))).toEqual([0, 1, 2, 3]);
+    expect(c.idealPercent).toBe(3);
+    expect(c.idealFactor).toBeCloseTo(Math.pow(1.01, 3), 12);
     // The daily target (30) is above every logged day and plays no part (A-42).
     expect(curve({ ...r1.goals[0], targetMinutes: 1 }, r1.entries, TODAY_R1)).toEqual(c);
   });
 
-  it('(a) today 10-14 without a new entry → 5 points, last one flat {0 min, not logged, 5.4, 440, null}; headline 440; latest stays 10-13; ideal 5.1', () => {
+  it('(a) today 10-14 without a new entry → 5 points, last one flat {0 min, not logged, 5.4, 440, null}; headline 440; latest stays 10-13; ideal 4.1', () => {
     const a = curve(r1.goals[0], r1.entries, '2026-10-14');
     expect(a.actual).toHaveLength(5);
     expect(a.actual[4]).toMatchObject({ date: '2026-10-14', minutes: 0, logged: false, percent: 440, changePercent: null });
@@ -62,7 +62,7 @@ describe('curve — R1, the user\'s real data (M9-AC1, ARCH §4.5)', () => {
     expect(a.previous).toEqual({ date: '2026-10-12', minutes: 14 });
     expect(a.elapsedDays).toBe(5);
     expect(a.loggedDays).toBe(4);
-    expect(a.idealPercent).toBe(5.1);
+    expect(a.idealPercent).toBe(4.1);
   });
 
   it('(b) the 27 minutes of 10-13 split into 20 + 7 → identical result (entries of a day add up, ADR-04)', () => {
@@ -102,7 +102,7 @@ describe('curve — R1, the user\'s real data (M9-AC1, ARCH §4.5)', () => {
 });
 
 describe('curve — S1 at 2026-10-09 and boundary rules (M9-AC2)', () => {
-  it('G1 "Read" (30 min on 8 days): 9 points all value 1 / percent 0; change null, 0 ×7, null; headline 0; loggedDays 8; ideal 9.4', () => {
+  it('G1 "Read" (30 min on 8 days): 9 points all value 1 / percent 0; change null, 0 ×7, null; headline 0; loggedDays 8; ideal 8.3', () => {
     const c = curve(goalOf('g1'), entriesOf('g1'), TODAY);
     expect(c.actual).toHaveLength(9);
     expect(c.actual.every((p) => p.value === 1 && p.percent === 0)).toBe(true);
@@ -113,12 +113,12 @@ describe('curve — S1 at 2026-10-09 and boundary rules (M9-AC2)', () => {
     expect(c.loggedDays).toBe(8);
     expect(c.elapsedDays).toBe(9);
     expect(c.periodDays).toBe(31);
-    expect(c.idealPercent).toBe(9.4);
+    expect(c.idealPercent).toBe(8.3);
     expect(c.ideal).toHaveLength(31);
     const idealToday = c.ideal.find((p) => p.date === TODAY)!;
     expect(idealToday.k).toBe(9);
-    expect(idealToday.value).toBeCloseTo(1.0937, 4);
-    expect(c.ideal[0].value).toBeCloseTo(1.01, 10);
+    expect(idealToday.value).toBeCloseTo(1.0829, 4);
+    expect(c.ideal[0].value).toBe(1);
     expect(c.ideal[30]).toMatchObject({ date: '2026-10-31', k: 31 });
     expect(c.baseline).toEqual({ date: '2026-10-01', minutes: 30 });
     expect(c.latest).toEqual({ date: '2026-10-08', minutes: 30 });
@@ -127,7 +127,7 @@ describe('curve — S1 at 2026-10-09 and boundary rules (M9-AC2)', () => {
     expect(c.actualFactor).toBe(1);
   });
 
-  it('G2 "Guitar": 39 points; 09-15 −50 (10 vs 20), flat −50 until 10-06, 10-07 back to 0 with +100; headline 0; loggedDays 13; ideal 47.4', () => {
+  it('G2 "Guitar": 39 points; 09-15 −50 (10 vs 20), flat −50 until 10-06, 10-07 back to 0 with +100; headline 0; loggedDays 13; ideal 46', () => {
     const c = curve(goalOf('g2'), entriesOf('g2'), TODAY);
     expect(c.actual).toHaveLength(39);
     const by = (date: string) => c.actual.find((p) => p.date === date)!;
@@ -140,7 +140,7 @@ describe('curve — S1 at 2026-10-09 and boundary rules (M9-AC2)', () => {
     expect(by('2026-10-09')).toMatchObject({ logged: false, percent: 0, changePercent: null });
     expect(c.headlinePercent).toBe(0);
     expect(c.loggedDays).toBe(13);
-    expect(c.idealPercent).toBe(47.4);
+    expect(c.idealPercent).toBe(46);
   });
 
   it('G3 "Spanish" (one entry): 282 points, headline 0, baseline = latest, previous null, latestChangePercent null', () => {
@@ -240,12 +240,12 @@ describe('curve — S1 at 2026-10-09 and boundary rules (M9-AC2)', () => {
     expect(curve(goal, [], '2026-10-08').actual).toEqual([]);
   });
 
-  it('1827-day period (maximum): 1827 ideal points, last ≈ 1.01^1827; 1500 logged days computed by direct ratio (no drift)', () => {
+  it('1827-day period (maximum): 1827 ideal points, last ≈ 1.01^1826; 1500 logged days computed by direct ratio (no drift)', () => {
     const wide = buildGoal({ id: 'w', startDate: '2022-01-01', endDate: '2027-01-01', targetMinutes: 1 });
     const cw = curve(wide, [], TODAY);
     expect(cw.periodDays).toBe(1827);
     expect(cw.ideal).toHaveLength(1827);
-    expect(cw.ideal.at(-1)!.value).toBeCloseTo(Math.pow(1.01, 1827), 0);
+    expect(cw.ideal.at(-1)!.value).toBeCloseTo(Math.pow(1.01, 1826), 0);
     const goal = buildGoal({ id: 'max', startDate: '2022-01-01', endDate: '2026-12-31', targetMinutes: 1 });
     const entries = daily('max', '2022-01-01', 1500, 7);
     entries[1499] = { ...entries[1499], minutes: 21 };
@@ -345,7 +345,7 @@ describe('curve — open-ended goal O1 (M11-AC3, FR-27 v4.0)', () => {
     expect(c.actual).toHaveLength(9);
     expect(c.periodDays).toBe(9);
     expect(c.elapsedDays).toBe(9);
-    expect(c.ideal[0]).toEqual({ date: '2026-10-01', k: 1, value: growth(1) });
+    expect(c.ideal[0]).toEqual({ date: '2026-10-01', k: 1, value: 1 });
     expect(c.ideal[8].date).toBe('2026-10-09');
     expect(c.ideal.every((p) => p.date <= TODAY)).toBe(true);
     expect(c.actual.map((p) => p.percent)).toEqual([0, 50, 50, 50, 0, 0, 0, 100, 100]);
@@ -358,8 +358,8 @@ describe('curve — open-ended goal O1 (M11-AC3, FR-27 v4.0)', () => {
     expect(c.previous).toEqual({ date: '2026-10-05', minutes: 10 });
     expect(c.latestChangePercent).toBe(100);
     expect(c.loggedDays).toBe(4);
-    expect(c.idealPercent).toBe(9.4);
-    expect(c.idealFactor).toBeCloseTo(growth(9), 12);
+    expect(c.idealPercent).toBe(8.3);
+    expect(c.idealFactor).toBeCloseTo(growth(8), 12);
   });
 
   it('today 2026-10-20: 20 + 20 points, headline still 100, nothing dated after today', () => {
@@ -392,7 +392,7 @@ describe('curve — open-ended goal O1 (M11-AC3, FR-27 v4.0)', () => {
     expect(c.ideal).toHaveLength(1);
     expect(c.actual).toHaveLength(1);
     expect(c.actual[0]).toMatchObject({ k: 1, logged: true, percent: 0, changePercent: null });
-    expect(c.idealPercent).toBe(1);
+    expect(c.idealPercent).toBe(0);
   });
 
   it('lastElapsedDay: today for a running open-ended goal, null before it starts; finite goals unchanged', () => {
