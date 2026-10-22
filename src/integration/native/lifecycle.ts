@@ -1,5 +1,7 @@
 // App lifecycle on native (ARCHITECTURE §5.12): `resume` from @capacitor/app drives the same triggers as
-// `visibilitychange → visible` on the web (reminder check, sync).
+// `visibilitychange → visible` on the web (reminder check / replan, sync, `useNow`).
+// M15: several subscribers (schedulers + every mounted `useNow`) share ONE plugin listener, registered when the
+// first subscriber arrives and removed when the last one leaves, so the bridge sees a single `App.addListener`.
 import { App } from '@capacitor/app';
 import type { PluginListenerHandle } from '@capacitor/core';
 
@@ -17,16 +19,30 @@ const defaultDeps = (): LifecycleDeps => ({
 });
 
 export function createLifecycle(deps: LifecycleDeps = defaultDeps()): NativeLifecycle {
+  const subscribers = new Set<() => void>();
+  let handle: Promise<PluginListenerHandle> | null = null;
+
+  const ensureListener = () => {
+    if (handle) return;
+    // The plugin registers asynchronously; the listener fans out to whoever is subscribed at the time it fires.
+    handle = deps.addResumeListener(() => {
+      for (const cb of [...subscribers]) cb();
+    });
+  };
+  const dropListener = () => {
+    const h = handle;
+    handle = null;
+    // An unsubscribe that comes before the registration lands removes the handle once it does.
+    void h?.then((l) => l.remove()).catch(() => undefined);
+  };
+
   return {
     onResume(cb) {
-      let active = true;
-      // The plugin registers asynchronously; an unsubscribe that comes first removes the handle once it lands.
-      const handle = deps.addResumeListener(() => {
-        if (active) cb();
-      });
+      subscribers.add(cb);
+      ensureListener();
       return () => {
-        active = false;
-        void handle.then((h) => h.remove()).catch(() => undefined);
+        if (!subscribers.delete(cb)) return;
+        if (subscribers.size === 0) dropListener();
       };
     },
   };

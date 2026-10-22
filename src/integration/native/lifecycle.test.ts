@@ -66,3 +66,35 @@ describe('createLifecycle', () => {
     expect(cb).toHaveBeenCalledTimes(0);
   });
 });
+
+describe('M15: subscribers share one plugin listener', () => {
+  it('three subscribers → one App.addListener; each gets every resume; the listener is removed only when the last one leaves', async () => {
+    const add = vi.fn(async (cb: () => void): Promise<PluginListenerHandle> => {
+      if (!listeners.has('shared')) listeners.set('shared', new Set());
+      listeners.get('shared')!.add(cb);
+      return { remove: async () => void listeners.get('shared')!.delete(cb) };
+    });
+    const lifecycle = createLifecycle({ addResumeListener: add });
+    const [a, b, c] = [vi.fn(), vi.fn(), vi.fn()];
+    const stopA = lifecycle.onResume(a);
+    const stopB = lifecycle.onResume(b);
+    const stopC = lifecycle.onResume(c);
+    await settle();
+    expect(add).toHaveBeenCalledTimes(1);
+    fire('shared');
+    expect([a, b, c].map((f) => f.mock.calls.length)).toEqual([1, 1, 1]);
+    stopB();
+    stopB(); // idempotent
+    fire('shared');
+    expect([a, b, c].map((f) => f.mock.calls.length)).toEqual([2, 1, 2]);
+    expect(listeners.get('shared')!.size).toBe(1);
+    stopA();
+    stopC();
+    await settle();
+    expect(listeners.get('shared')!.size).toBe(0);
+    // A new subscriber after everyone left registers again (one more plugin listener).
+    lifecycle.onResume(vi.fn());
+    await settle();
+    expect(add).toHaveBeenCalledTimes(2);
+  });
+});
