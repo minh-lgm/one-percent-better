@@ -6,6 +6,7 @@ import { env, type GoogleNativeConfig } from '../../config/env';
 import type { NativePlatform } from '../platform';
 import { createNativeFileExport } from './file-export';
 import { createLifecycle } from './lifecycle';
+import { createLocalNotifications } from './local-notifications';
 import { createSocialLogin } from './social-login';
 import { createSystemUi } from './system-ui';
 
@@ -24,11 +25,15 @@ const defaultDeps = (): NativeDeps => ({ getPlatform: () => Capacitor.getPlatfor
 export function createNativePlatform(deps: NativeDeps = defaultDeps()): NativePlatform | null {
   const platform = deps.getPlatform();
   if (platform !== 'ios' && platform !== 'android') return null;
+  // M15 (ADR-40): the OS delivers the reminder schedule; a tap on a notification opens Today for the app's lifetime.
+  const notifications = createLocalNotifications();
+  notifications.listen();
   return {
     platform,
     fileExport: createNativeFileExport(),
     lifecycle: createLifecycle(),
     systemUi: createSystemUi(),
+    notifications,
     // M14 (ADR-36): the sheets exist on every native platform; what each one offers is `available()`'s business.
     idTokens: createSocialLogin({ platform, googleWebClientId: deps.google.webClientId, googleIosClientId: deps.google.iosClientId }),
   };

@@ -3,7 +3,7 @@
 // is never called; the web container is unchanged.
 import { afterEach, describe, expect, it } from 'vitest';
 import { PUBLIC_SITE_URL } from '../config/constants';
-import { createTestContainer, type TestContainer } from '../test/container';
+import { createTestContainer, type FakeNativePlatform, type TestContainer } from '../test/container';
 import { computeCapabilities } from './capabilities';
 
 let tc: TestContainer | undefined;
@@ -140,3 +140,26 @@ describe('capabilities.googleSignIn (M14-D1)', () => {
     expect(tc.container.capabilities).toMatchObject({ nativeAuth: true, appleSignIn: true, googleSignIn: false });
   });
 });
+
+describe('scheduledNotifications (M15, ARCH §5.6 v5.0)', () => {
+  it('follows the notification port: a scheduling port on iOS → true; the web port → false', async () => {
+    expect(computeCapabilities({ native: ios, nativeBuild: true, baseUrl: '/', notifications: { canSchedule: true } }).scheduledNotifications).toBe(true);
+    expect(computeCapabilities({ native: ios, nativeBuild: true, baseUrl: '/', notifications: { canSchedule: false } }).scheduledNotifications).toBe(false);
+    expect(computeCapabilities({ native: null, nativeBuild: false, baseUrl: '/', notifications: { canSchedule: false } }).scheduledNotifications).toBe(false);
+  });
+
+  it('the container reads it from the runtime adapter (native.notifications) when no port is injected', async () => {
+    const native = { ...ios, notifications: { ...tcFakePort(), canSchedule: true } };
+    tc = await createTestContainer({ native: native as unknown as FakeNativePlatform });
+    expect(tc.container.capabilities.scheduledNotifications).toBe(true);
+    expect(tc.container.notifications.canSchedule).toBe(true);
+    await tc.dispose();
+    tc = await createTestContainer({ native: 'ios', scheduledNotifications: true });
+    expect(tc.container.capabilities.scheduledNotifications).toBe(true);
+    expect(tc.container.capabilities.platform).toBe('ios');
+  });
+});
+
+function tcFakePort() {
+  return { permission: () => 'default' as const, requestPermission: async () => 'default' as const, show: async () => false, schedule: async () => true, cancelAll: async () => undefined };
+}

@@ -41,6 +41,10 @@ export function createBrowserNotifications({
 }: BrowserNotificationOptions = {}): NotificationPort {
   const api = () => win.Notification;
   return {
+    // v5.0 (M15): the browser cannot deliver while the app is closed (NFR-07); scheduling is a native-only feature.
+    canSchedule: false,
+    schedule: async () => false,
+    cancelAll: async () => undefined,
     permission() {
       const n = api();
       return n ? toState(n.permission) : 'unsupported';
@@ -75,13 +79,17 @@ export function createBrowserNotifications({
 }
 
 /**
- * v5.0 (M12 … M14): the native app has no `Notification` API in WKWebView and no scheduled notifications yet
- * (M15) — the Reminders card shows "Not supported" and the in-app banner still works (DESIGN 7.8.1 row 6).
+ * A runtime with neither the browser API nor the local-notifications plugin (the native build in a browser, or a
+ * native platform without the adapter): the Reminders card shows "Not supported" and the in-app banner still works
+ * (DESIGN 7.8.1 row 6). From M15 the real iOS runtime uses src/integration/native/local-notifications.ts instead.
  */
 export function unsupportedNotifications(): NotificationPort {
   return {
     permission: () => 'unsupported',
     requestPermission: async () => 'unsupported',
     show: async () => false,
+    canSchedule: false,
+    schedule: async () => false,
+    cancelAll: async () => undefined,
   };
 }

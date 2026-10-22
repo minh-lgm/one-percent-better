@@ -16,6 +16,8 @@ export const SAME_VALUE_ALLOWLIST = [
   'settings.language.option.vi',
   'goalCard.plusOne',
   'notification.title',
+  // M15 (DESIGN 7.8.4): the local-notification title is the brand in both languages.
+  'notification.nativeTitle',
 ] as const;
 
 describe('translation parity (NFR-11a, M1-AC17)', () => {

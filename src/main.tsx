@@ -6,7 +6,7 @@ import { bootstrap } from './app/bootstrap';
 import { createContainer } from './app/container';
 import { FirstRenderSignal } from './app/FirstRenderSignal';
 import { startMaintenance } from './app/maintenance';
-import { startReminderScheduler } from './app/reminder-scheduler';
+import { startNativeReminderScheduler, startReminderScheduler } from './app/reminder-scheduler';
 import { createAppRouter } from './app/router';
 import { startApp, startNativeShell } from './app/start';
 import { startSyncScheduler } from './app/sync-scheduler';
@@ -72,7 +72,7 @@ async function start(): Promise<void> {
     syncIntervalMs: env.syncIntervalMs,
     prod: import.meta.env.PROD,
     baseUrl: import.meta.env.BASE_URL,
-    deps: { registerServiceWorker, listenForNavigation, startMaintenance, startReminderScheduler, startSyncScheduler },
+    deps: { registerServiceWorker, listenForNavigation, startMaintenance, startReminderScheduler, startNativeReminderScheduler, startSyncScheduler },
   });
 }
 

@@ -377,7 +377,9 @@
       "ios": "Trên iPhone hoặc iPad, thông báo chỉ hoạt động sau khi bạn thêm app vào Màn hình chính (iOS 16.4 trở lên).",
       "ics": "Thêm lời nhắc vào lịch (.ics)",
       "icsHint": "Thêm một sự kiện lặp lại hằng ngày lúc {{time}}.",
-      "syncNote": "Việc bật/tắt và giờ nhắc được lưu vào tài khoản của bạn và dùng cho các thiết bị khác. Quyền thông báo được đặt riêng trên từng thiết bị."
+      "syncNote": "Việc bật/tắt và giờ nhắc được lưu vào tài khoản của bạn và dùng cho các thiết bị khác. Quyền thông báo được đặt riêng trên từng thiết bị.",
+      "nativeSwitchDesc": "Nhận thông báo mỗi ngày vào giờ nhắc. Nếu hôm nay bạn đã đạt mọi chỉ tiêu, thông báo của hôm nay sẽ được bỏ qua.",
+      "nativeInfo": "iPhone của bạn sẽ gửi các lời nhắc này, kể cả khi 1% Better đã đóng. Mỗi lần bạn mở app, lời nhắc được lên lịch cho 14 ngày tới, nên hãy thỉnh thoảng mở app."
     },
     "permission": {
       "default": "Chưa hỏi",
@@ -387,7 +389,11 @@
       "defaultDesc": "Bật nhắc nhở và trình duyệt sẽ xin quyền thông báo của bạn.",
       "grantedDesc": "Bạn sẽ nhận một thông báo mỗi ngày khi 1% Better đang mở.",
       "defaultOnDesc": "Nhắc nhở đang bật nhưng thiết bị này chưa cho phép thông báo. Hãy cho phép để nhận thông báo; bạn vẫn sẽ thấy lời nhắc ngay trong app.",
-      "nativeUnsupportedDesc": "Thông báo nhắc nhở chưa có trong phiên bản app này. Bạn vẫn sẽ thấy lời nhắc ngay trong app."
+      "nativeUnsupportedDesc": "Thông báo nhắc nhở chưa có trong phiên bản app này. Bạn vẫn sẽ thấy lời nhắc ngay trong app.",
+      "nativeDefaultDesc": "Bật nhắc nhở và iOS sẽ xin quyền gửi thông báo cho bạn.",
+      "nativeGrantedDesc": "Bạn sẽ nhận thông báo vào giờ nhắc, kể cả khi 1% Better đã đóng.",
+      "nativeDeniedDesc": "Thông báo đang bị tắt cho 1% Better. Hãy mở app Cài đặt trên iPhone, chạm Thông báo, chọn 1% Better và bật Cho phép thông báo, rồi quay lại. Bạn vẫn sẽ thấy lời nhắc ngay trong app.",
+      "nativeDefaultOnDesc": "Nhắc nhở đang bật nhưng iPhone này chưa cho phép thông báo. Hãy cho phép để nhận lời nhắc; bạn vẫn sẽ thấy lời nhắc ngay trong app."
     },
     "backup": {
       "title": "Sao lưu",
@@ -423,7 +429,8 @@
       "descSignedIn": "Mọi thứ bạn ghi lại đều được lưu trên thiết bị này trước, rồi đồng bộ vào tài khoản của bạn. Không có theo dõi.",
       "privacy": "Nếu bạn đăng nhập, mục tiêu, lần ghi, cài đặt nhắc nhở và ngôn ngữ của bạn được lưu trong cơ sở dữ liệu của app (Supabase) dưới tài khoản của bạn. Những người khác dùng app không xem được chúng.",
       "privacyLink": "Chính sách quyền riêng tư",
-      "descNative": "Mọi thứ bạn ghi lại đều nằm trên iPhone này. Không tài khoản, không theo dõi."
+      "descNative": "Mọi thứ bạn ghi lại đều nằm trên iPhone này. Không tài khoản, không theo dõi.",
+      "supportLink": "Hỗ trợ"
     }
   },
   "notFound": {
@@ -464,6 +471,8 @@
   },
   "notification": {
     "title": "1% Better",
+    "nativeTitle": "1% Better",
+    "nativeBody": "Hãy ghi thời gian hôm nay. Từng bước nhỏ sẽ dày lên.",
     "body_other": "Hôm nay còn {{count}} mục tiêu: {{list}}",
     "item": "{{goal}} {{current}}/{{target}} phút",
     "more": "{{items}} và {{k}} mục tiêu nữa"

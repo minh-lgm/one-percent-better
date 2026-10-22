@@ -4,11 +4,13 @@
 // channel; the Capacitor `resume` event feeds the same triggers as `visibilitychange`. M13: the native system UI
 // (status bar, keyboard class) starts after the render and the launch image is hidden exactly once — after the
 // first render, or after `splashTimeoutMs` if the render has not finished by then (DESIGN "Native shell" 2).
+import { OPEN_END_QUERY_MAX } from '../config/constants';
+import { toISODate } from '../domain/dates';
 import type { NativePlatform } from '../integration/platform';
 import type { ServiceWorkerHandle } from '../integration/sw-register';
 import type { AppContainer } from './container';
 import { startMaintenance } from './maintenance';
-import { startReminderScheduler } from './reminder-scheduler';
+import { startNativeReminderScheduler, startReminderScheduler } from './reminder-scheduler';
 import { startSyncScheduler } from './sync-scheduler';
 
 export interface StartDeps {
@@ -16,6 +18,8 @@ export interface StartDeps {
   listenForNavigation: () => () => void;
   startMaintenance: typeof startMaintenance;
   startReminderScheduler: typeof startReminderScheduler;
+  /** v5.0 (M15): the native schedule (`replan`) used instead of the interval check when the OS can deliver. */
+  startNativeReminderScheduler: typeof startNativeReminderScheduler;
   startSyncScheduler: typeof startSyncScheduler;
 }
 
@@ -74,8 +78,24 @@ export function startApp({ container, reminderCheckIntervalMs, syncIntervalMs, p
 
   // Old tombstones are purged once, after the first paint (ADR-29); cloud on or off.
   void deps.startMaintenance({ purge: (now) => container.purgeTombstones(now) });
-  // Daily reminder: check now, every interval and when the tab becomes visible / the app resumes (ARCH §5.6).
-  stops.push(deps.startReminderScheduler({ check: (now) => container.reminderService.check(now), intervalMs: reminderCheckIntervalMs, resume }));
+  if (container.capabilities.scheduledNotifications) {
+    // M15 (ARCH §5.6 v5.0, ADR-40): the OS delivers the 14-day schedule; rebuild it at startup, on resume, when the
+    // reminder settings / language change and (debounced) when goals or entries change. No interval `check()` here.
+    const today = toISODate(new Date());
+    stops.push(
+      deps.startNativeReminderScheduler({
+        replan: (now) => container.reminderService.replan(now),
+        resume: resume ?? (() => () => {}),
+        settings: container.settingsService.watch(),
+        locale: container.localeService.watch(),
+        // Entries from today on (entries are never in the future, so this is "every entry that can change the plan").
+        changes: [container.goalService.watchAll(), container.entryService.watchByDateRange(today, OPEN_END_QUERY_MAX)],
+      }),
+    );
+  } else {
+    // Daily reminder: check now, every interval and when the tab becomes visible / the app resumes (ARCH §5.6).
+    stops.push(deps.startReminderScheduler({ check: (now) => container.reminderService.check(now), intervalMs: reminderCheckIntervalMs, resume }));
+  }
   // M7: background sync triggers (sign-in, startup, online, visible/resume, 2 s after a change, every interval).
   if (container.syncService) stops.push(deps.startSyncScheduler({ sync: container.syncService, auth: container.authService, intervalMs: syncIntervalMs, resume }));
 

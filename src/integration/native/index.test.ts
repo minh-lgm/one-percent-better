@@ -6,6 +6,7 @@ vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: vi.fn(() => 'web')
 vi.mock('@capacitor/app', () => ({ App: { addListener: vi.fn(async () => ({ remove: async () => {} })) } }));
 vi.mock('@capacitor/filesystem', () => ({ Filesystem: { writeFile: vi.fn() }, Directory: { Cache: 'CACHE' }, Encoding: { UTF8: 'utf8' } }));
 vi.mock('@capacitor/share', () => ({ Share: { share: vi.fn() } }));
+vi.mock('@capacitor/local-notifications', () => ({ LocalNotifications: { checkPermissions: vi.fn(async () => ({ display: 'prompt' })), requestPermissions: vi.fn(), getPending: vi.fn(async () => ({ notifications: [] })), cancel: vi.fn(), schedule: vi.fn(), addListener: vi.fn(async () => ({ remove: async () => {} })) } }));
 vi.mock('@capgo/capacitor-social-login', () => ({ SocialLogin: { initialize: vi.fn(), login: vi.fn(), logout: vi.fn() } }));
 
 import { Capacitor } from '@capacitor/core';

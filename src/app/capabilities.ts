@@ -2,6 +2,7 @@
 // read by the UI through the container; the UI never imports integration code to find out where it runs.
 import { PUBLIC_SITE_URL } from '../config/constants';
 import type { NativePlatform } from '../integration/platform';
+import type { NotificationPort } from '../services/notification-port';
 
 export interface AppCapabilities {
   platform: 'web' | 'ios' | 'android';
@@ -17,7 +18,7 @@ export interface AppCapabilities {
   appleSignIn: boolean;
   /** Web: always (PKCE redirect). Native: only when the sheet has both Google client ids (`VITE_GOOGLE_*`, M14-D1). */
   googleSignIn: boolean;
-  /** Notifications scheduled by the OS — M15. */
+  /** Notifications scheduled by the OS (`NotificationPort.canSchedule`) — M15. */
   scheduledNotifications: boolean;
   /** Base of the public pages (privacy.html, support.html): relative on the web, absolute on native. */
   publicSiteUrl: string;
@@ -30,9 +31,11 @@ export interface CapabilitiesInput {
   nativeBuild: boolean;
   /** `import.meta.env.BASE_URL` of the web build. */
   baseUrl: string;
+  /** v5.0 (M15): the notification port the container wires (web, native adapter, or a test fake). */
+  notifications?: Pick<NotificationPort, 'canSchedule'>;
 }
 
-export function computeCapabilities({ native, nativeBuild, baseUrl }: CapabilitiesInput): AppCapabilities {
+export function computeCapabilities({ native, nativeBuild, baseUrl, notifications }: CapabilitiesInput): AppCapabilities {
   return {
     platform: native?.platform ?? 'web',
     serviceWorker: !nativeBuild,
@@ -41,7 +44,7 @@ export function computeCapabilities({ native, nativeBuild, baseUrl }: Capabiliti
     nativeAuth: native?.idTokens !== undefined,
     appleSignIn: native?.idTokens !== undefined && native.platform === 'ios',
     googleSignIn: native?.idTokens ? native.idTokens.available('google') : true,
-    scheduledNotifications: false,
+    scheduledNotifications: notifications?.canSchedule ?? false,
     publicSiteUrl: nativeBuild ? PUBLIC_SITE_URL : baseUrl,
   };
 }

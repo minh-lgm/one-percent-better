@@ -386,7 +386,9 @@
       "ios": "On iPhone or iPad, notifications work only after you add this app to your Home Screen (iOS 16.4 or later).",
       "ics": "Add reminder to calendar (.ics)",
       "icsHint": "Adds a repeating daily event at {{time}}.",
-      "syncNote": "Reminder on/off and time are saved to your account and used on your other devices. Notification permission is set separately on each device."
+      "syncNote": "Reminder on/off and time are saved to your account and used on your other devices. Notification permission is set separately on each device.",
+      "nativeSwitchDesc": "Get a notification every day at your reminder time. If you've already met all your targets today, today's is skipped.",
+      "nativeInfo": "Your iPhone sends these reminders, even when 1% Better is closed. They're scheduled for the next 14 days each time you open the app, so open it now and then."
     },
     "permission": {
       "default": "Not asked yet",
@@ -396,7 +398,11 @@
       "defaultDesc": "Turn on the reminder and your browser will ask for permission.",
       "grantedDesc": "You'll get one notification a day while 1% Better is open.",
       "defaultOnDesc": "Reminders are on, but this device hasn't allowed notifications yet. Allow them to get a notification; you'll still see the reminder banner in the app.",
-      "nativeUnsupportedDesc": "Reminder notifications aren't available in this version of the app. You'll still see a reminder banner in the app."
+      "nativeUnsupportedDesc": "Reminder notifications aren't available in this version of the app. You'll still see a reminder banner in the app.",
+      "nativeDefaultDesc": "Turn on the reminder and iOS will ask for permission to send you notifications.",
+      "nativeGrantedDesc": "You'll get a notification at your reminder time, even when 1% Better is closed.",
+      "nativeDeniedDesc": "Notifications are turned off for 1% Better. Open the Settings app on your iPhone, tap Notifications, choose 1% Better and turn on Allow Notifications, then come back. You'll still see a reminder banner in the app.",
+      "nativeDefaultOnDesc": "Reminders are on, but this iPhone hasn't allowed notifications yet. Allow them to get your reminder; you'll still see the reminder banner in the app."
     },
     "backup": {
       "title": "Backup",
@@ -432,7 +438,8 @@
       "descSignedIn": "Everything you log is saved on this device first and synced to your account. There's no tracking.",
       "privacy": "If you sign in, your goals, entries, reminder settings and language are stored in this app's database (Supabase) under your account. Other people who use the app can't see them.",
       "privacyLink": "Privacy policy",
-      "descNative": "Everything you log stays on this iPhone. No account, no tracking."
+      "descNative": "Everything you log stays on this iPhone. No account, no tracking.",
+      "supportLink": "Support"
     }
   },
   "notFound": {
@@ -474,6 +481,8 @@
   },
   "notification": {
     "title": "1% Better",
+    "nativeTitle": "1% Better",
+    "nativeBody": "Log today's time. Small steps add up.",
     "body_one": "1 goal left today: {{list}}",
     "body_other": "{{count}} goals left today: {{list}}",
     "item": "{{goal}} {{current}}/{{target}} min",

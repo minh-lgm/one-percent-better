@@ -128,12 +128,14 @@ export async function createTestContainer(
     idTokens?: boolean | FakeIdTokenProvider;
     /** v5.0 (M14): the fake Edge Function port (default: deletes with `appleRevoked: 'not-applicable'`). */
     deletion?: FakeAccountDeletionPort;
+    /** v5.0 (M15): the fake port can schedule (the iOS adapter) → `capabilities.scheduledNotifications`; `permission` defaults to `default`. */
+    scheduledNotifications?: boolean;
   } = {},
 ): Promise<TestContainer> {
   const i18n = createI18n({ locale: options.locale ?? 'en', strictMissingKeys: true });
   const persistResult = options.persist ?? 'persisted';
   const storage = persistResult === 'unsupported' ? undefined : { persist: async () => persistResult === 'persisted' };
-  const notifications = fakeNotifications(options.permission ?? 'default');
+  const notifications = fakeNotifications(options.permission ?? 'default', { canSchedule: options.scheduledNotifications ?? false });
   const online = { value: options.online ?? true };
   const listeners = new Set<() => void>();
   const connectivity = {
@@ -160,7 +162,7 @@ export async function createTestContainer(
     storage,
     indexedDbAvailable: true,
     // A native container gets the real "unsupported" port (M12 … M14) unless the test asks for a permission state.
-    notifications: native && options.permission === undefined ? undefined : notifications,
+    notifications: native && options.permission === undefined && !options.scheduledNotifications ? undefined : notifications,
     notificationIconUrl: '/icons/pwa-192.png',
     cloud: options.cloud ? TEST_CLOUD : null,
     authStorage: null,

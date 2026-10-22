@@ -145,11 +145,12 @@ export async function createContainer({
 }: ContainerOptions): Promise<AppContainer> {
   if (!indexedDbAvailable) throw new StorageError('IndexedDB is not available in this browser');
 
-  // v5.0 (ADR-34/35): platform differences are decided here, once. Native: no notification API in WKWebView yet
-  // (M15), export through the share sheet; the account exists only when the runtime offers native sign-in
-  // (`idTokens`, M14) — a runtime without it ignores the cloud configuration and never loads the SDK.
-  const capabilities = computeCapabilities({ native, nativeBuild, baseUrl });
-  const notificationPort = notifications ?? (native ? unsupportedNotifications() : createBrowserNotifications());
+  // v5.0 (ADR-34/35): platform differences are decided here, once. Native: notifications scheduled by the OS through
+  // the runtime's adapter (M15; a runtime without it → "Not supported"), export through the share sheet; the account
+  // exists only when the runtime offers native sign-in (`idTokens`, M14) — a runtime without it ignores the cloud
+  // configuration and never loads the SDK.
+  const notificationPort = notifications ?? native?.notifications ?? (native ? unsupportedNotifications() : createBrowserNotifications());
+  const capabilities = computeCapabilities({ native, nativeBuild, baseUrl, notifications: notificationPort });
   const exportPort = fileExport ?? native?.fileExport ?? createWebFileExport();
   if (native && !capabilities.nativeAuth) cloud = null;
 

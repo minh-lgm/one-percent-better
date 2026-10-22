@@ -20,6 +20,7 @@ function deps(): StartDeps & { stopNavigation: ReturnType<typeof vi.fn> } {
     listenForNavigation: vi.fn(() => stopNavigation),
     startMaintenance: vi.fn(() => Promise.resolve()),
     startReminderScheduler: vi.fn(() => () => {}),
+    startNativeReminderScheduler: vi.fn(() => () => {}),
     startSyncScheduler: vi.fn(() => () => {}),
     stopNavigation,
   };

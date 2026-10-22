@@ -39,3 +39,8 @@ export const TOAST_ERROR_DURATION_MS = 8000;
 
 /** v5.0 (ARCH §5.12): public base of privacy.html / support.html, used as an absolute link by the native app. */
 export const PUBLIC_SITE_URL = 'https://minh-lgm.github.io/one-percent-better/';
+
+/** v5.0 (M15, ADR-40, A-63): local notifications are scheduled one per day for this many days from today. */
+export const REMINDER_PLAN_DAYS = 14;
+/** v5.0 (M15): notification ids of the plan are `REMINDER_NOTIFICATION_ID_BASE + dayIndex` (1000 … 1013). */
+export const REMINDER_NOTIFICATION_ID_BASE = 1000;

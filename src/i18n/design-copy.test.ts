@@ -35,6 +35,8 @@ function designCopy(key: string): { en: string; vi: string | null } {
   const c = cells(line);
   const enText = unquote(c[c.length - 2]);
   const viCell = c[c.length - 1];
+  // DESIGN writes "`x` (= en)" when the Vietnamese value is the English one (brand strings).
+  if (/\(= en\)\s*$/.test(viCell)) return { en: enText, vi: enText };
   return { en: enText, vi: viCell === '—' ? null : unquote(viCell) };
 }
 
@@ -66,6 +68,16 @@ const KEYS = [
   'storageError.step2Native',
   'storageError.step3Native',
   'a11y.opensExternal',
+  // v5.0 (M15-AC11): the 9 keys of DESIGN 7.8.4 / 7.8.5.
+  'notification.nativeTitle',
+  'notification.nativeBody',
+  'settings.reminders.nativeSwitchDesc',
+  'settings.reminders.nativeInfo',
+  'settings.permission.nativeDefaultDesc',
+  'settings.permission.nativeGrantedDesc',
+  'settings.permission.nativeDeniedDesc',
+  'settings.permission.nativeDefaultOnDesc',
+  'settings.about.supportLink',
 ];
 
 describe('en.json / vi.json match DESIGN verbatim (M10-AC11, M12-AC11)', () => {

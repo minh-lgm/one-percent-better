@@ -3,6 +3,7 @@
 // and emits no Capacitor chunk; `true` only for `--mode native` / `--mode native-e2e`.
 import type { FileExportPort } from '../services/file-export-port';
 import type { IdTokenProvider } from '../services/id-token-port';
+import type { NotificationPort } from '../services/notification-port';
 
 export type EffectiveTheme = 'light' | 'dark';
 
@@ -29,6 +30,8 @@ export interface NativePlatform {
   systemUi?: NativeSystemUi;
   /** M14 (§5.9 v5.0): native sign-in sheets; its presence is what `capabilities.nativeAuth` means. */
   idTokens?: IdTokenProvider;
+  /** M15 (§5.6 v5.0): local notifications scheduled by the OS (`canSchedule`); absent → "Not supported". */
+  notifications?: NotificationPort;
 }
 
 export interface NativeModule {

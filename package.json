@@ -34,7 +34,9 @@
     "icons": "node scripts/gen-icons.mjs",
     "fixtures:large": "node scripts/gen-large-backup.mjs",
     "bench": "cross-env BENCH_ASSERT=1 vitest run src/services/stats-service.test.ts --reporter=verbose",
-    "ios:assets": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 node scripts/gen-ios-assets.mjs"
+    "ios:assets": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 node scripts/gen-ios-assets.mjs",
+    "store:screenshots": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright test -c playwright.store.config.ts",
+    "store:fixtures": "node scripts/gen-store-fixtures.mjs"
   },
   "dependencies": {
     "@capacitor/app": "8.1.2",
@@ -42,6 +44,7 @@
     "@capacitor/filesystem": "8.1.5",
     "@capacitor/ios": "8.5.3",
     "@capacitor/keyboard": "8.0.6",
+    "@capacitor/local-notifications": "8.3.1",
     "@capacitor/share": "8.0.3",
     "@capacitor/splash-screen": "8.0.2",
     "@capacitor/status-bar": "8.0.4",
