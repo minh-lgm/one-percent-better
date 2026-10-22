@@ -316,7 +316,7 @@ describe('M13 QC: native project and secrets hygiene (M13-AC7)', () => {
     for (const f of files) {
       if (f.startsWith('docs/') || f.startsWith('tests/qc/') || /\.(png|jpg|ico|woff2?)$/.test(f)) continue;
       const text = readFileSync(join(root, f), 'utf8');
-      if (new RegExp(marker).test(text) || new RegExp(['MIGT', 'AgEAMBMG', 'ByqGSM49'].join('')).test(text)) hits.push(f);
+      if (new RegExp(marker + '\\s*[A-Za-z0-9+/]{40,}').test(text) || new RegExp(['MIGT', 'AgEAMBMG', 'ByqGSM49'].join('')).test(text)) hits.push(f);
     }
     expect(hits).toEqual([]);
   });

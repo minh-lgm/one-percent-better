@@ -27,7 +27,7 @@ describe('QC M14: secrets hygiene (M14-AC9, NFR-22, DoD 14)', () => {
       } catch {
         continue;
       }
-      if (/AgEAMBMGByqGSM49|sb_secret_[A-Za-z0-9_]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(t)) offenders.push(f);
+      if (/AgEAMBMGByqGSM49|sb_secret_[A-Za-z0-9_]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----\s*[A-Za-z0-9+/]{40,}/.test(t)) offenders.push(f); // r2: a header with no key body (README example) is documentation, not a key
       if (/eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/.test(t) && !f.startsWith('e2e/') && !f.endsWith('.test.ts') && !f.endsWith('.test.tsx')) offenders.push(`${f} (JWT-shaped)`);
     }
     expect(offenders).toEqual([]);

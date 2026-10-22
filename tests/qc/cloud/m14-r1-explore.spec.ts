@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { expect, test } from '../../../e2e/cloud/fixtures';
 import { accountCard, C1, expectSyncState, MOCK_SUPABASE_URL, signInAsMinh, signInViaMock, signOutDialog } from '../../../e2e/cloud/helpers';
-import { EN, expectAxeClean, expectNoHorizontalScroll, expectNoViLeaks, freezeClock, goalCard, gotoHash, toast, VI } from '../../../e2e/helpers/app';
+import { createGoal, EN, expectAxeClean, expectNoHorizontalScroll, expectNoViLeaks, freezeClock, goalCard, gotoHash, toast, VI } from '../../../e2e/helpers/app';
 
 const SHOTS = process.env.QC_SHOTS ?? '';
 const shot = async (page: Page, name: string) => {
@@ -175,44 +175,154 @@ test.describe('QC M14 web has no Apple UI', () => {
   });
 });
 
-test.describe('QC M14 after deletion', () => {
-  // M14-D3 (same defect): known, kept as an expected failure.
-  test.fail('Keep data, then sign in with another account: no D5 question (A-61), device data merges into the new account', async ({ page, mock }) => {
+test.describe('QC M14 after deletion (M14-D3, fixed in 6e6a175)', () => {
+  const keepAndDelete = async (page: Page) => {
     await signInAsMinh(page);
     await expectSyncState(page, 'synced');
     await openD6(page);
     await dialog(page).getByRole('radio', { name: EN.auth.delete.keep }).check();
     await confirm(page).click();
     await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-out', { timeout: 15_000 });
+  };
+
+  test('Keep data, then sign in with another account: no D5 question (A-61), the device data is uploaded to the new account', async ({ page, mock }) => {
+    await keepAndDelete(page);
     await signInViaMock(page, 'Other User');
     await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in', { timeout: 15_000 });
-    await expect(page.getByTestId('first-signin-dialog')).toHaveCount(0);
+    await expect(page.getByTestId('merge-dialog')).toBeHidden();
     await expectSyncState(page, 'synced');
-    const rows = await mock.rows('u2');
+    const u2 = await mock.liveRows('u2');
+    expect(u2.goals.map((g) => g.name)).toEqual(['Cloud goal']);
+    expect(u2.entries.length).toBeGreaterThan(0);
     await gotoHash(page, '/today');
-    await expect(goalCard(page, 'Cloud goal')).toBeVisible(); // still on the device
-    expect(JSON.stringify(rows.goals.map((g) => g.name))).toBe('["Cloud goal"]'); // and now in the new account too
+    await expect(goalCard(page, 'Cloud goal')).toBeVisible(); // still on the device too
   });
 
-  // M14-D3: known defect, kept as an expected failure until fixed (A-61 says the kept data is merged into the next account).
-  test.fail('data kept after Delete account reaches the next account: sign out with Remove, sign back in -> the goal is still there', async ({ page }) => {
-    await signInAsMinh(page);
-    await expectSyncState(page, 'synced');
-    await openD6(page);
-    await dialog(page).getByRole('radio', { name: EN.auth.delete.keep }).check();
-    await confirm(page).click();
-    await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-out', { timeout: 15_000 });
+  test('full D3 scenario: Delete -> Keep -> sign in as B -> data on B -> Sign out Remove -> sign in as B again -> goal still there', async ({ page, mock }) => {
+    await keepAndDelete(page);
     await signInViaMock(page, 'Other User');
     await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in', { timeout: 15_000 });
     await expectSyncState(page, 'synced');
+    expect((await mock.liveRows('u2')).goals.map((g) => g.name)).toEqual(['Cloud goal']);
     await accountCard(page).getByRole('button', { name: EN.settings.account.signOut }).click();
     await signOutDialog(page).getByRole('radio', { name: EN.auth.signOut.remove }).check();
     await page.getByTestId('signout-confirm').click();
     await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-out', { timeout: 30_000 });
+    await gotoHash(page, '/today');
+    await expect(goalCard(page, 'Cloud goal')).toHaveCount(0); // Remove really wiped the device
+    await gotoHash(page, '/settings');
     await signInViaMock(page, 'Other User');
     await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in', { timeout: 15_000 });
     await expectSyncState(page, 'synced');
     await gotoHash(page, '/today');
     await expect(goalCard(page, 'Cloud goal')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Keep, work signed-out (new goal), then sign in as B whose account already has a goal: three goals everywhere, no D5', async ({ page, mock }) => {
+    await mock.seed('u2', { goals: [{ id: 'b-goal', name: 'B goal', why: '', targetType: 'daily', targetMinutes: 20, startDate: '2026-01-01', endDate: '2026-12-31', archived: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }] });
+    await keepAndDelete(page);
+    await createGoal(page, { name: 'Signed-out goal', targetValue: 15, startDate: '2026-10-01', endDate: '2026-10-31' });
+    await gotoHash(page, '/settings');
+    await signInViaMock(page, 'Other User');
+    await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in', { timeout: 15_000 });
+    await expect(page.getByTestId('merge-dialog')).toBeHidden();
+    await expectSyncState(page, 'synced');
+    expect((await mock.liveRows('u2')).goals.map((g) => g.name).sort()).toEqual(['B goal', 'Cloud goal', 'Signed-out goal']);
+    await gotoHash(page, '/today');
+    for (const n of ['B goal', 'Cloud goal', 'Signed-out goal']) await expect(goalCard(page, n)).toBeVisible();
+  });
+
+  test('Keep, never sign in, reload: data intact and signed-out; Settings offers Sign in; no request to the function after the first', async ({ page, mock }) => {
+    await keepAndDelete(page);
+    await page.reload();
+    await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-out');
+    await gotoHash(page, '/today');
+    await expect(goalCard(page, 'Cloud goal')).toBeVisible();
+    expect((await mock.log()).log.filter((l) => l.path === '/functions/v1/delete-account' && l.method === 'POST')).toHaveLength(1);
+    expect((await mock.liveRows('u2')).goals).toEqual([]);
+  });
+});
+
+// ---- round 2: M14-D5 (busy status look) and M14-D6 (error Alert visible above the sticky buttons at 360 x 740) ----
+async function expectAlertVisibleAboveButtons(page: Page) {
+  const d = dialog(page);
+  const alert = d.getByTestId('delete-account-error');
+  await expect(alert).toBeVisible({ timeout: 10_000 });
+  await expect(alert).toBeInViewport({ ratio: 1 });
+  const [a, actions, box] = [await alert.boundingBox(), await d.locator('.actions').boundingBox(), await d.boundingBox()];
+  expect(a!.height).toBeGreaterThan(20);
+  expect(a!.y + a!.height).toBeLessThanOrEqual(actions!.y + 1); // not covered by the sticky row
+  expect(a!.y).toBeGreaterThanOrEqual(box!.y - 1); // not clipped at the top of the dialog
+  const covered = await alert.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height - 4);
+    return !(top && (el === top || el.contains(top)));
+  });
+  expect(covered).toBe(false);
+}
+
+test.describe('QC M14 r2: D5 busy status (fixed) and D6 alert visibility (NOT fixed, kept as expected failures)', () => {
+  for (const [label, scheme, locale, copy] of [
+    ['en light', 'light', 'en-US', EN],
+    ['vi dark', 'dark', 'vi-VN', VI],
+  ] as const) {
+    test.describe(label, () => {
+      test.use({ colorScheme: scheme, locale });
+      const prepare = async (page: Page, mock: { fail: (p: string, s: number, t?: number, d?: number) => Promise<unknown> }, height: number, delay = 0) => {
+        await page.setViewportSize({ width: 360, height });
+        await page.goto('./#/settings');
+        await signInViaMock(page, 'Minh Test', copy);
+        await expectSyncState(page, 'synced');
+        await gotoHash(page, '/settings');
+        await openD6(page, copy);
+        await mock.fail('delete-account', 500, 1, delay);
+        await confirm(page).click();
+      };
+
+      test(`D5 360 x 740: busy status is plain muted text (no box, 14 px, --text-muted); error shows, focus stays on confirm, axe clean, no horizontal scroll`, async ({ page, mock }) => {
+        await prepare(page, mock, 740, 1500);
+        const working = dialog(page).getByTestId('delete-working');
+        await expect(working).toHaveText(copy.auth.delete.workingStatus);
+        const look = await working.evaluate((el) => {
+          const s = getComputedStyle(el);
+          const muted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+          const p = document.createElement('span');
+          p.style.color = muted;
+          document.body.appendChild(p);
+          const probe = getComputedStyle(p).color;
+          p.remove();
+          return { bg: s.backgroundColor, border: s.borderTopWidth, color: s.color, cls: el.className, fontSize: s.fontSize, probe };
+        });
+        expect(look.cls).toContain('delete-status');
+        expect(look.bg).toBe('rgba(0, 0, 0, 0)');
+        expect(look.border).toBe('0px');
+        expect(look.color).toBe(look.probe);
+        expect(look.fontSize).toBe('14px');
+        await shot(page, `r2-d5-busy-${label.replace(' ', '-')}`);
+        await expect(dialog(page).getByTestId('delete-account-error')).toBeVisible({ timeout: 10_000 });
+        await expect(confirm(page)).toBeFocused();
+        await shot(page, `r2-d6-error-${label.replace(' ', '-')}`);
+        await expectAxeClean(page);
+        await expectNoHorizontalScroll(page);
+      });
+
+      // M14-D6 still open after 6e6a175: scrollIntoView({block:'nearest'}) does nothing because the Alert is inside the
+      // dialog's visible box, but the sticky button row covers its lower part (dialog scrollTop stays 0).
+      test.fail(`D6 360 x 740: the error Alert is fully visible above the sticky buttons`, async ({ page, mock }) => {
+        await prepare(page, mock, 740);
+        await expectAlertVisibleAboveButtons(page);
+      });
+    });
+  }
+
+  test.fail('D6 360 x 480: the error Alert is fully visible above the sticky buttons', async ({ page, mock }) => {
+    await page.setViewportSize({ width: 360, height: 480 });
+    await signInAsMinh(page);
+    await expectSyncState(page, 'synced');
+    await gotoHash(page, '/settings');
+    await openD6(page);
+    await mock.fail('delete-account', 500, 1);
+    await confirm(page).click();
+    await expectAlertVisibleAboveButtons(page);
   });
 });

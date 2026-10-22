@@ -19,8 +19,8 @@ afterEach(async () => {
 const noop = () => undefined;
 
 describe('QC M14: iOS build without Google client ids', () => {
-  // M14-D1: known defect, kept as an expected failure until fixed (then this test starts passing and `it.fails` flips it red).
-  it.fails('signed-out card on iOS where only Apple is available shows the Apple button and NO Google button', async () => {
+  // M14-D1: fixed in 6e6a175 (capabilities.googleSignIn); round 2 keeps it as a normal test.
+  it('signed-out card on iOS where only Apple is available shows the Apple button and NO Google button', async () => {
     const sheets = new FakeIdTokenProvider(['apple']); // google unavailable, exactly what createSocialLogin reports without the two ids
     tc = await createTestContainer({ locale: 'en', cloud: true, native: 'ios', idTokens: sheets });
     await renderWithLocale(<AccountCard auth={{ kind: 'signed-out' }} online onSignIn={noop} onSignOut={noop} onDismissError={noop} onDeleteAccount={noop} onDismissRevoke={noop} revokePanel={false} />, 'en', { container: tc });

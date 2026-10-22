@@ -44,8 +44,8 @@ describe('QC M14: deleteAccount exploratory', () => {
     expect(deletion.calls.length).toBeLessThanOrEqual(2);
   });
 
-  // M14-D2 (Minor): known defect, kept as an expected failure until fixed.
-  it.fails('server deleted the account but wiping local data throws: the state must not stay signed-in on a dead account, and the call must not throw', async () => {
+  // M14-D2: fixed in 6e6a175; round 2 asserts the new contract (no throw, signed-out, result says the data is still on the device).
+  it('server deleted the account but wiping local data throws: no throw, state signed-out, result keepData true, data still on the device', async () => {
     await signedIn();
     const proto = DexieLocalDataRepository.prototype;
     const original = proto.clearUserData;
@@ -53,16 +53,18 @@ describe('QC M14: deleteAccount exploratory', () => {
       throw new Error('IndexedDB blocked');
     };
     let thrown: unknown = null;
+    let result: unknown = null;
     try {
-      await tc!.container.authService.deleteAccount({ keepData: false });
+      result = await tc!.container.authService.deleteAccount({ keepData: false });
     } catch (e) {
       thrown = e;
     } finally {
       proto.clearUserData = original;
     }
-    // Observed: deleteAccount rejects with "IndexedDB blocked" and the state stays signed-in (kv sync.userId already null).
     expect(thrown).toBeNull();
+    expect(result).toEqual({ ok: true, value: { appleRevoked: 'not-applicable', hadApple: false, keepData: true } });
     expect(tc!.container.authService.state().kind).toBe('signed-out');
+    expect(await tc!.container.db.goals.count()).toBe(1);
   });
 
   it('Apple identity known only from kv (session carries no providers): D6 still deletes, hadApple is false (no sheet), nothing crashes', async () => {
