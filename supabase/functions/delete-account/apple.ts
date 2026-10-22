@@ -25,9 +25,16 @@ function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-/** The `.p8` file: PKCS#8 PEM → DER bytes (header/footer/whitespace stripped). */
+/**
+ * The `.p8` file: PKCS#8 PEM → DER bytes. Tolerates how a secret may have been pasted (M14-D7): surrounding
+ * quotes, line breaks written as the two characters `\n` (an env file value that was not unescaped), CRLF, and
+ * the header/footer with or without the line breaks around them — only the base64 body matters.
+ */
 export function pemToPkcs8(pem: string): Uint8Array<ArrayBuffer> {
   const body = pem
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/\\r\\n|\\n/g, '\n')
     .replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----/g, '')
     .replace(/-----END [A-Z ]*PRIVATE KEY-----/g, '')
     .replace(/\s+/g, '');

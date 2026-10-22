@@ -187,6 +187,9 @@ export function createMockSupabase() {
       rows: { goals: new Map(), entries: new Map(), settings: new Map() }, // userKey → Map(id → row)
       exchanges: 0,
       refreshes: 0,
+      idTokenSignIns: 0,
+      userUpdates: 0,
+      deletions: 0,
       lastServerStamp: 0,
     };
   }

@@ -279,7 +279,10 @@ export class SyncService {
    * After sign-out: forget cursors and bookkeeping (`lastUserId` is kept by AuthService). When the
    * kv row is already gone (Sign out → Remove ran `clearUserData`), nothing is written back.
    * v5.0 (M14, A-61): `forgetLastUser` — the account was deleted, so the device is no longer bound to it
-   * (`lastUserId` cleared; the next sign-in merges silently instead of asking D5 about a dead account).
+   * (`lastUserId` cleared; the next sign-in merges silently instead of asking D5 about a dead account) and the data
+   * still on the device is "never synced" again: every live row and preference group is marked dirty so that the
+   * next sign-in uploads it (M14-D3; without this, rows the dead account had acknowledged would never reach the
+   * new account and a later "Sign out → Remove" would lose them).
    */
   async reset({ forgetLastUser = false }: { forgetLastUser?: boolean } = {}): Promise<void> {
     this.clearRetry();
@@ -293,6 +296,10 @@ export class SyncService {
         const meta = normalizeSyncMeta(cur);
         return { ...meta, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null, ...(forgetLastUser ? { userId: null, account: null, lastUserId: null } : {}) };
       });
+    }
+    if (forgetLastUser) {
+      await this.deps.local.markAllDirty();
+      await this.deps.prefs.markAllDirty();
     }
     this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined, remoteInvalid: undefined, remoteSkipped: undefined, rejected: undefined, lastSyncedAt: null });
   }

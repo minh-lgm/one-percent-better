@@ -102,6 +102,8 @@ describe('DeleteAccountDialog — D6', () => {
     expect(screen.getByRole('radio', { name: en.auth.delete.remove })).toBeDisabled();
     expect(screen.getByRole('radio', { name: en.auth.delete.keep })).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent(en.auth.delete.workingStatus);
+    expect(screen.getByRole('status')).toHaveClass('delete-status'); // neutral muted text, not the danger box (M14-D5)
+    expect(screen.getByRole('status')).not.toHaveClass('remove-note');
     fireEvent(dialog, new Event('cancel', { cancelable: true }));
     fireEvent.click(dialog);
     expect(onCancel).not.toHaveBeenCalled();

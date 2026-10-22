@@ -32,6 +32,9 @@ let lastTapped: AuthProvider | null = null;
 export function SignInButtons({ onSignIn, busy = false, disabled = false, describedBy, full = true, firstRef }: SignInButtonsProps) {
   const { capabilities } = useServices();
   const apple = capabilities.appleSignIn;
+  // M14-D1: a native build without the two Google client ids has no working Google sheet, and the PKCE redirect
+  // cannot run inside the WKWebView — so the Google button is not offered at all (Apple alone on iOS).
+  const google = capabilities.googleSignIn;
   useEffect(() => {
     if (!busy) lastTapped = null;
   }, [busy]);
@@ -40,7 +43,7 @@ export function SignInButtons({ onSignIn, busy = false, disabled = false, descri
     lastTapped = provider;
     onSignIn(provider);
   };
-  const google = (
+  const googleButton = google ? (
     <GoogleSignInButton
       ref={apple ? undefined : firstRef}
       onClick={() => click('google')}
@@ -49,12 +52,14 @@ export function SignInButtons({ onSignIn, busy = false, disabled = false, descri
       describedBy={describedBy}
       full={full}
     />
-  );
-  if (!apple) return google;
+  ) : null;
+  if (!apple) return googleButton;
+  const appleButton = <AppleSignInButton ref={firstRef} onClick={() => click('apple')} busy={busyProvider === 'apple'} disabled={disabled || (busy && busyProvider !== 'apple')} describedBy={describedBy} full={full} />;
+  if (!googleButton) return appleButton;
   return (
     <div className="signin-buttons" data-testid="sign-in-buttons">
-      <AppleSignInButton ref={firstRef} onClick={() => click('apple')} busy={busyProvider === 'apple'} disabled={disabled || (busy && busyProvider !== 'apple')} describedBy={describedBy} full={full} />
-      {google}
+      {appleButton}
+      {googleButton}
     </div>
   );
 }

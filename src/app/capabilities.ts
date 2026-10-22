@@ -15,6 +15,8 @@ export interface AppCapabilities {
   nativeAuth: boolean;
   /** `nativeAuth && platform === 'ios'` — M14. */
   appleSignIn: boolean;
+  /** Web: always (PKCE redirect). Native: only when the sheet has both Google client ids (`VITE_GOOGLE_*`, M14-D1). */
+  googleSignIn: boolean;
   /** Notifications scheduled by the OS — M15. */
   scheduledNotifications: boolean;
   /** Base of the public pages (privacy.html, support.html): relative on the web, absolute on native. */
@@ -38,6 +40,7 @@ export function computeCapabilities({ native, nativeBuild, baseUrl }: Capabiliti
     nativeShare: native !== null,
     nativeAuth: native?.idTokens !== undefined,
     appleSignIn: native?.idTokens !== undefined && native.platform === 'ios',
+    googleSignIn: native?.idTokens ? native.idTokens.available('google') : true,
     scheduledNotifications: false,
     publicSiteUrl: nativeBuild ? PUBLIC_SITE_URL : baseUrl,
   };

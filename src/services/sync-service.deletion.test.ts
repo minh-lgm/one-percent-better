@@ -93,4 +93,19 @@ describe('reset({ forgetLastUser })', () => {
     expect((await meta(e)).lastUserId).toBe(U1);
     expect((await meta(e)).userId).toBe(U1); // AuthService clears userId on sign-out, not reset()
   });
+
+  it('M14-D3: forgetLastUser re-marks every live row and preference group dirty (acknowledged rows included), tombstones untouched; plain reset() does not', async () => {
+    const d = await device();
+    await d.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, NOW);
+    await d.localeService.set('vi');
+    await d.sync.syncNow('manual');
+    expect(await d.store.countDirty()).toBe(0);
+    await d.sync.reset();
+    expect(await d.store.countDirty()).toBe(0);
+    await d.sync.reset({ forgetLastUser: true });
+    const dirty = await d.store.getDirty(10);
+    expect(dirty.goals.map((g) => g.name)).toEqual(['Read']);
+    expect(dirty.entries).toEqual([]);
+    expect(await d.prefs.getDirty()).not.toBeNull();
+  });
 });

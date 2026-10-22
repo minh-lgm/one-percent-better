@@ -42,6 +42,17 @@ describe('createClientSecret', () => {
     expect(Buffer.from(parts[2], 'base64url')).toHaveLength(64); // r || s, not DER
   });
 
+  it('M14-D7: a PEM pasted with literal backslash-n line breaks, surrounding quotes or CRLF still signs (same DER as the real PEM)', async () => {
+    const { cfg: c, publicKey } = await cfg();
+    const escaped = `"${c.privateKeyPem.trim().replace(/\n/g, '\\n')}"`;
+    expect(escaped).toContain('\\n');
+    expect(Buffer.from(pemToPkcs8(escaped))).toEqual(Buffer.from(pemToPkcs8(c.privateKeyPem)));
+    expect(Buffer.from(pemToPkcs8(c.privateKeyPem.replace(/\n/g, '\r\n')))).toEqual(Buffer.from(pemToPkcs8(c.privateKeyPem)));
+    const jwt = await createClientSecret({ ...c, privateKeyPem: escaped });
+    const parts = jwt.split('.');
+    expect(await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, publicKey, Buffer.from(parts[2], 'base64url'), new TextEncoder().encode(`${parts[0]}.${parts[1]}`))).toBe(true);
+  });
+
   it('a key that is not PEM → throws; base64url has no padding or +/', async () => {
     const { cfg: c } = await cfg();
     await expect(createClientSecret({ ...c, privateKeyPem: '' })).rejects.toThrow(/PEM/);

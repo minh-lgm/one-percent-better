@@ -23,6 +23,7 @@ describe('computeCapabilities', () => {
       nativeShare: false,
       nativeAuth: false,
       appleSignIn: false,
+      googleSignIn: true,
       scheduledNotifications: false,
       publicSiteUrl: '/one-percent-better/',
     });
@@ -36,6 +37,7 @@ describe('computeCapabilities', () => {
       nativeShare: true,
       nativeAuth: false,
       appleSignIn: false,
+      googleSignIn: true,
       scheduledNotifications: false,
       publicSiteUrl: 'https://minh-lgm.github.io/one-percent-better/',
     });
@@ -58,6 +60,7 @@ describe('createContainer with a native platform', () => {
       nativeShare: true,
       nativeAuth: false,
       appleSignIn: false,
+      googleSignIn: true,
       scheduledNotifications: false,
       publicSiteUrl: PUBLIC_SITE_URL,
     });
@@ -95,7 +98,7 @@ describe('createContainer with a native platform', () => {
 describe('createContainer with native sign-in (M14)', () => {
   it('iOS + idTokens + cloud: nativeAuth and appleSignIn true, the account service is available and uses the sheets, sync service present', async () => {
     tc = await createTestContainer({ cloud: true, native: 'ios', idTokens: true });
-    expect(tc.container.capabilities).toMatchObject({ platform: 'ios', nativeAuth: true, appleSignIn: true, nativeShare: true, serviceWorker: false });
+    expect(tc.container.capabilities).toMatchObject({ platform: 'ios', nativeAuth: true, appleSignIn: true, googleSignIn: true, nativeShare: true, serviceWorker: false });
     expect(tc.container.authService.isAvailable()).toBe(true);
     expect(tc.container.syncService).not.toBeNull();
     await tc.container.authService.init();
@@ -121,5 +124,19 @@ describe('createContainer with native sign-in (M14)', () => {
     const sheets = { available: () => true, getIdToken: async () => ({ kind: 'cancelled' as const }), logout: async () => undefined };
     expect(computeCapabilities({ native: { ...ios, idTokens: sheets }, nativeBuild: true, baseUrl: '/' })).toMatchObject({ nativeAuth: true, appleSignIn: true });
     expect(computeCapabilities({ native: { ...ios, platform: 'android', idTokens: sheets }, nativeBuild: true, baseUrl: '/' })).toMatchObject({ nativeAuth: true, appleSignIn: false });
+  });
+});
+
+describe('capabilities.googleSignIn (M14-D1)', () => {
+  it('web: true; iOS with both client ids: true; iOS without them (sheet says google unavailable): false while Apple stays true', async () => {
+    tc = await createTestContainer({ cloud: true });
+    expect(tc.container.capabilities.googleSignIn).toBe(true);
+    await tc.dispose();
+    tc = await createTestContainer({ cloud: true, native: 'ios', idTokens: true });
+    expect(tc.container.capabilities.googleSignIn).toBe(true);
+    await tc.dispose();
+    const { FakeIdTokenProvider } = await import('../test/fake-id-token-provider');
+    tc = await createTestContainer({ cloud: true, native: 'ios', idTokens: new FakeIdTokenProvider(['apple']) });
+    expect(tc.container.capabilities).toMatchObject({ nativeAuth: true, appleSignIn: true, googleSignIn: false });
   });
 });

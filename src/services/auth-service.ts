@@ -25,6 +25,7 @@ export interface AccountDeleted {
   appleRevoked: AppleRevokeResult;
   /** The deleted account carried an Apple identity (the manual-revocation panel only makes sense then). */
   hadApple: boolean;
+  /** `true` when the data is still on the device — chosen by the user, or because wiping it failed (M14-D2). */
   keepData: boolean;
 }
 
@@ -385,20 +386,33 @@ export class AuthService {
       return err('ACCOUNT_DELETE_FAILED', 'delete-account failed');
     }
 
-    // 5. The account is gone: local sign-out, forget the device binding (A-61), optionally wipe the data.
-    const provider = (await this.readMeta()).account?.provider;
+    // 5. The account is gone: local sign-out, forget the device binding (A-61), optionally wipe the data. Nothing
+    //    from here on can turn the result back into "not deleted" (M14-D2): every local step is best effort, the
+    //    state always ends `signed-out`, and a failed wipe is reported as "data still on this device".
+    let dataKept = keepData;
     this.signingOut = true;
     try {
-      await this.signOutLocally();
+      const provider = await this.readMeta().then((m) => m.account?.provider, () => undefined);
+      await this.signOutLocally().catch(() => this.deps!.clearStoredSession?.());
       if (provider) await this.deps.idTokens?.logout(provider);
-      if (sync) await sync.reset({ forgetLastUser: true });
-      else await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), userId: null, account: null, lastUserId: null }));
-      if (!keepData) await this.deps.local.clearUserData();
-      this.set({ kind: 'signed-out' });
+      try {
+        if (sync) await sync.reset({ forgetLastUser: true });
+        else await this.deps.kv.update<unknown>('sync', (cur) => ({ ...normalizeSyncMeta(cur), userId: null, account: null, lastUserId: null }));
+      } catch {
+        // kv unreachable: the stored session is already gone, so the next start lands on `signed-out`/`expired` anyway.
+      }
+      if (!keepData) {
+        try {
+          await this.deps.local.clearUserData();
+        } catch {
+          dataKept = true; // the account is deleted; the device still holds its copy (the toast says so)
+        }
+      }
     } finally {
+      this.set({ kind: 'signed-out' });
       this.signingOut = false;
     }
-    return ok({ appleRevoked: outcome.appleRevoked, hadApple, keepData });
+    return ok({ appleRevoked: outcome.appleRevoked, hadApple, keepData: dataKept });
   }
 
   /** A4 "Dismiss": forget the last sign-in error. */

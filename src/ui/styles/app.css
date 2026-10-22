@@ -1850,6 +1850,16 @@ details.curve-table summary:focus-visible {
 .revoke-panel {
   margin: 8px 0 12px;
 }
+/* D6 while the function runs (mockup d6-status, M14-D5): plain muted text, no box. */
+.dialog .delete-status {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 20px;
+}
+.dialog .alert {
+  scroll-margin-bottom: 12px;
+}
 .revoke-panel .alert-actions .btn.ghost {
   min-height: var(--tap);
   text-decoration: underline;

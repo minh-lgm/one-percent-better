@@ -89,6 +89,20 @@ describe('A1 signed-out on iOS (M14-AC7)', () => {
     expect(screen.queryByTestId('hide-email-note')).toBeNull();
   });
 
+  it('M14-D1: iOS without the Google client ids (sheet: only apple available) → Apple button only, no Google button, no group wrapper; A10 too', async () => {
+    const { FakeIdTokenProvider } = await import('../../test/fake-id-token-provider');
+    tc = await createTestContainer({ cloud: true, native: 'ios', idTokens: new FakeIdTokenProvider(['apple']) });
+    const handlers = { onSignIn: vitest.fn(), onSignOut: vitest.fn(), onDismissError: vitest.fn() };
+    const { rerender } = await renderWithLocale(<AccountCard auth={{ kind: 'signed-out' }} online {...handlers} />, 'en', { container: tc });
+    expect(apple()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: en.auth.signInGoogle })).toBeNull();
+    expect(screen.queryByTestId('sign-in-buttons')).toBeNull();
+    expect(screen.getByText(en.settings.account.descSignedOutIos)).toBeInTheDocument();
+    rerender(<AccountCard auth={{ kind: 'expired', email: 'x@y.z' }} online {...handlers} />);
+    expect(apple()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: en.auth.signInGoogle })).toBeNull();
+  });
+
   it('android (native sign-in without Apple): Google only, web copy', async () => {
     await renderCard({ kind: 'signed-out' }, { platform: 'android' });
     expect(apple()).toBeNull();

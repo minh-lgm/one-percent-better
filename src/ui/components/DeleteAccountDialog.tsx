@@ -31,6 +31,7 @@ export function DeleteAccountDialog({ open, email, appleNote = false, busy = fal
   const ref = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const [choice, setChoice] = useState<Choice>('remove');
 
   useEffect(() => {
@@ -56,9 +57,12 @@ export function DeleteAccountDialog({ open, email, appleNote = false, busy = fal
     return () => dialog.removeEventListener('cancel', handleCancel);
   }, [onCancel, busy]);
 
-  // After a failure the user is still on the confirm button (they pressed it); make sure focus is there (DESIGN 8.3).
+  // After a failure the user is still on the confirm button (they pressed it); make sure focus is there (DESIGN 8.3)
+  // and that the Alert is not hidden behind the sticky button row on small screens (M14-D6).
   useEffect(() => {
-    if (open && error && !busy) confirmRef.current?.focus();
+    if (!open || !error || busy) return;
+    errorRef.current?.scrollIntoView?.({ block: 'nearest' });
+    confirmRef.current?.focus({ preventScroll: true });
   }, [open, error, busy]);
 
   function submit(e: FormEvent) {
@@ -111,12 +115,12 @@ export function DeleteAccountDialog({ open, email, appleNote = false, busy = fal
               </span>
             </label>
           </fieldset>
-          {/* Always in the DOM (DESIGN 8.3): text appearing inside a live region is announced. */}
-          <div role="status" className={busy ? 'remove-note' : 'sr-only'} data-testid="delete-working">
+          {/* Always in the DOM (DESIGN 8.3): text appearing inside a live region is announced. Neutral muted text (mockup D6 busy, M14-D5). */}
+          <div role="status" className={busy ? 'delete-status' : 'sr-only'} data-testid="delete-working">
             {busy ? t('auth.delete.workingStatus') : ''}
           </div>
           {error ? (
-            <div className="alert" role="alert" data-testid="delete-account-error">
+            <div ref={errorRef} className="alert" role="alert" data-testid="delete-account-error">
               <Icon name="alert" />
               <p>{t(`errors.${error}`)}</p>
             </div>

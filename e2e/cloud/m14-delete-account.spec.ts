@@ -122,6 +122,39 @@ test.describe('M14-AC6 delete account (web, mock)', () => {
     await expect(page.getByTestId('login-prompt-banner')).toHaveCount(0);
   });
 
+  test('M14-D3: Keep data, sign in as Other User → no D5, the kept goal is uploaded to u2 (merge toast); Sign out → Remove warns about nothing pending and the goal survives in u2 after signing in again', async ({ page, mock }) => {
+    await mock.seed('u1', C1);
+    await signInAsMinh(page);
+    await expectSyncState(page, 'synced');
+    await deleteButton(page).click();
+    await dialog(page).getByRole('radio', { name: EN.auth.delete.keep }).check();
+    await dialog(page).getByTestId('delete-account-confirm').click();
+    await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-out', { timeout: 15_000 });
+    expect((await mock.rows('u2')).goals).toEqual([]);
+
+    await signInViaMock(page, 'Other User');
+    await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-in', { timeout: 15_000 });
+    await expect(page.getByTestId('merge-dialog')).toBeHidden();
+    await expectSyncState(page, 'synced');
+    await expect(toast(page)).toHaveText('Signed in. Your account now has 1 goal, 2 entries.');
+    const u2 = await mock.liveRows('u2');
+    expect(u2.goals.map((g) => g.name)).toEqual(['Cloud goal']);
+    expect(u2.entries).toHaveLength(2);
+
+    // The device copy may now be removed safely: the account keeps everything.
+    await accountCard(page).getByRole('button', { name: EN.settings.account.signOut }).click();
+    await page.getByTestId('signout-dialog').getByRole('radio', { name: EN.auth.signOut.remove }).check();
+    await page.getByTestId('signout-confirm').click();
+    await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-out', { timeout: 30_000 });
+    await gotoHash(page, '/today');
+    await expect(goalCard(page, 'Cloud goal')).toHaveCount(0);
+    await gotoHash(page, '/settings');
+    await signInViaMock(page, 'Other User');
+    await expectSyncState(page, 'synced');
+    await gotoHash(page, '/today');
+    await expect(goalCard(page, 'Cloud goal')).toBeVisible();
+  });
+
   test('a second device signed in to the deleted account: Sync now → "Sign in again" (expired), its local goal stays', async ({ page, mock, device }) => {
     await mock.seed('u1', C1);
     await signInAsMinh(page);

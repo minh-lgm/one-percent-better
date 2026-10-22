@@ -59,6 +59,52 @@ describe('deleteAccount — success (web, Google account)', () => {
     expect(await tc!.container.syncService!.prepareFirstSignIn('00000000-0000-4000-8000-00000000abcd')).toBe('merge-silently');
   });
 
+  it('M14-D3: keepData true → every kept row and preference group is dirty again, so the next sign-in (another account) uploads them (A-61 / A-27)', async () => {
+    await signedIn();
+    await tc!.container.localeService.set('vi'); // a synced preference group too
+    await tc!.container.syncService!.syncNow('manual'); // acknowledged by the (dead) account: nothing dirty
+    const dirtyGoals = async () => (await tc!.container.db.goals.toArray()).filter((g) => g.dirty === 1).length;
+    const dirtyEntries = async () => (await tc!.container.db.entries.toArray()).filter((e) => e.dirty === 1).length;
+    expect(await dirtyGoals()).toBe(0);
+    const r = await tc!.container.authService.deleteAccount({ keepData: true });
+    expect(r.ok).toBe(true);
+    expect(await dirtyGoals()).toBe(1);
+    expect(await dirtyEntries()).toBe(1);
+    const prefs = (await tc!.container.db.kv.get('prefsSync'))?.value as { locale: { dirty: number; updatedAt: string | null } };
+    expect(prefs.locale.dirty).toBe(1);
+    // Sign in as another account on the same device: handleSignedIn merges silently and pushes the rows.
+    const { server } = tc!.auth!;
+    const other = '00000000-0000-4000-8000-000000000002';
+    (tc!.auth!.remote as { userId: string }).userId = other; // the fake store writes as this user from now on
+    tc!.auth!.port.exchangeResult = { userId: other, email: 'other.user@example.com', name: 'Other User', providers: ['google'] };
+    expect((await tc!.container.authService.completeCallback({ code: 'other' })).ok).toBe(true);
+    expect(tc!.container.authService.state()).toMatchObject({ kind: 'signed-in', userId: other });
+    expect(await tc!.container.syncService!.prepareFirstSignIn(other)).toBe('merge-silently');
+    await tc!.container.syncService!.handleSignedIn(other, 'other.user@example.com');
+    expect(server.live('goals', other).map((g) => g.name)).toEqual(['Read']);
+    expect(server.live('entries', other)).toHaveLength(1);
+  });
+
+  it('M14-D2: the server deleted the account but wiping the local data throws → no throw, state signed-out, result says the data is still on the device', async () => {
+    await signedIn();
+    const local = tc!.container.db;
+    const { DexieLocalDataRepository } = await import('../data/dexie/local-data-repo');
+    const original = DexieLocalDataRepository.prototype.clearUserData;
+    DexieLocalDataRepository.prototype.clearUserData = async () => {
+      throw new Error('IndexedDB blocked');
+    };
+    try {
+      const r = await tc!.container.authService.deleteAccount({ keepData: false });
+      expect(r).toEqual({ ok: true, value: { appleRevoked: 'not-applicable', hadApple: false, keepData: true } });
+    } finally {
+      DexieLocalDataRepository.prototype.clearUserData = original;
+    }
+    expect(tc!.container.authService.state()).toEqual({ kind: 'signed-out' });
+    expect(tc!.auth!.port.calls.signOut).toBe(1);
+    expect(await local.goals.count()).toBe(1);
+    expect(tc!.container.syncService!.isPausedForDeletion()).toBe(false);
+  });
+
   it('during the deletion syncNow() is skipped (nothing is pushed), afterwards the sync engine is reset', async () => {
     await signedIn();
     const { deletion, server } = tc!.auth!;
