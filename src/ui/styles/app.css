@@ -2298,3 +2298,16 @@ dialog.dialog.merge .hint {
 .export-hint .hint {
   margin: 0;
 }
+
+/* M15 (DESIGN 3.6 "About"): Privacy + Support links side by side, 44 px tap targets, wrap on narrow screens. */
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
+.about-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  text-decoration: underline;
+}

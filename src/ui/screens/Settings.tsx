@@ -40,6 +40,14 @@ const STORAGE_VIEW: Record<PersistState, { chip: 'settings.storage.protected' | 
   unsupported: { chip: 'settings.storage.unknown', desc: 'settings.storage.unknownDesc', tone: 'neutral' },
 };
 
+/** M15 (DESIGN 7.8.4): descriptions under the chip on iOS with scheduled notifications (no 'unsupported' there). */
+const NATIVE_PERMISSION_DESC: Record<NotificationPermissionState, MessageKey> = {
+  default: 'settings.permission.nativeDefaultDesc',
+  granted: 'settings.permission.nativeGrantedDesc',
+  denied: 'settings.permission.nativeDeniedDesc',
+  unsupported: 'settings.permission.nativeUnsupportedDesc',
+};
+
 const PERMISSION_VIEW: Record<NotificationPermissionState, { chip: MessageKey; desc: MessageKey; tone: BadgeTone }> = {
   default: { chip: 'settings.permission.default', desc: 'settings.permission.defaultDesc', tone: 'neutral' },
   granted: { chip: 'settings.permission.granted', desc: 'settings.permission.grantedDesc', tone: 'success' },
@@ -70,9 +78,11 @@ export function Settings() {
   const toast = useToast();
   const id = useId();
   const now = useNow();
-  const { storagePersistence, settingsService, notifications, backupService, goalService, authService, syncService, loginPromptService, capabilities, fileExport, readTextFile } = useServices();
+  const { storagePersistence, settingsService, notifications, reminderService, backupService, goalService, authService, syncService, loginPromptService, capabilities, fileExport, readTextFile } = useServices();
   // v5.0 (DESIGN 7.8.1, S7 "tiếp"): native variants are chosen from `capabilities` only.
   const native = capabilities.platform !== 'web';
+  // M15 (DESIGN 7.8.4): the OS delivers scheduled reminders → 3 permission states, iOS Settings guidance, no .ics.
+  const scheduled = capabilities.scheduledNotifications;
   const online = useOnline();
   const auth = useSubscribable(() => authService.watch(), [authService]);
   const authState = auth.data ?? authService.state();
@@ -126,12 +136,21 @@ export function Settings() {
     };
   }, [storagePersistence]);
 
-  // Re-read the permission when the user comes back from the browser's site settings.
+  // Re-read the permission when the user comes back from the browser's site settings (or the iOS Settings app:
+  // the native adapter answers asynchronously, so refresh its cache too — M15).
   useEffect(() => {
-    const refresh = () => setPermission(notifications.permission());
+    let active = true;
+    const refresh = () => {
+      setPermission(notifications.permission());
+      void notifications.refreshPermission?.().then((p) => {
+        if (active) setPermission(p);
+      });
+    };
+    refresh();
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
     return () => {
+      active = false;
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
@@ -142,10 +161,21 @@ export function Settings() {
   const reminderTime = settings.data?.reminderTime ?? '20:00';
   const perm = PERMISSION_VIEW[permission];
   // Reminders turned on elsewhere (synced) while this device never allowed notifications (DESIGN S7, FR-55).
-  const permDesc: MessageKey = permission === 'default' && reminderEnabled ? 'settings.permission.defaultOnDesc' : perm.desc;
+  const permDesc: MessageKey = scheduled
+    ? permission === 'default' && reminderEnabled
+      ? 'settings.permission.nativeDefaultOnDesc'
+      : NATIVE_PERMISSION_DESC[permission]
+    : native
+      ? 'settings.permission.nativeUnsupportedDesc'
+      : permission === 'default' && reminderEnabled
+        ? 'settings.permission.defaultOnDesc'
+        : perm.desc;
 
   async function requestPermission() {
-    setPermission(await notifications.requestPermission());
+    const next = await notifications.requestPermission();
+    setPermission(next);
+    // M15: the schedule is rebuilt on settings changes, but a permission answer is not a setting — replan now.
+    if (scheduled && next === 'granted') void reminderService.replan(new Date()).catch(() => undefined);
   }
 
   async function toggleReminder(checked: boolean) {
@@ -441,7 +471,7 @@ export function Settings() {
           <Switch
             id={`${id}-reminder`}
             label={t('settings.reminders.switch')}
-            description={t('settings.reminders.switchDesc')}
+            description={t(scheduled ? 'settings.reminders.nativeSwitchDesc' : 'settings.reminders.switchDesc')}
             checked={reminderEnabled}
             disabled={settings.loading}
             onChange={(checked) => void toggleReminder(checked)}
@@ -453,36 +483,45 @@ export function Settings() {
             disabled={!reminderEnabled}
             onCommit={changeTime}
             onSettled={() => toast.show('toast.reminderTime')}
-            describedBy={`${id}-ics-hint`}
+            describedBy={scheduled ? undefined : `${id}-ics-hint`}
           />
           <div className="perm">
             <strong id={`${id}-perm-label`}>{t('settings.reminders.permission')}</strong>
-            <Badge tone={native ? 'neutral' : perm.tone} id={`${id}-perm-value`}>
-              {t(native ? 'settings.permission.unsupported' : perm.chip)}
+            <Badge tone={native && !scheduled ? 'neutral' : perm.tone} id={`${id}-perm-value`}>
+              {t(native && !scheduled ? 'settings.permission.unsupported' : perm.chip)}
             </Badge>
           </div>
           <p className="hint" data-testid="permission-desc">
-            {t(native ? 'settings.permission.nativeUnsupportedDesc' : permDesc)}
+            {t(permDesc)}
           </p>
-          {permission === 'default' && !native ? (
+          {permission === 'default' && (!native || scheduled) ? (
             <div className="btn-row">
               <Button variant="secondary" onClick={() => void requestPermission()}>
                 {t('settings.reminders.allow')}
               </Button>
             </div>
           ) : null}
-          <div className="limit">
-            <p>{t('settings.reminders.limit')}</p>
-            {capabilities.pwaHints ? <p>{t('settings.reminders.ios')}</p> : null}
-          </div>
-          <div className="btn-row">
-            <Button variant="secondary" icon="cal" disabled={icsBusy} aria-busy={icsBusy || undefined} onClick={() => void downloadIcs()}>
-              {icsBusy ? t('common.working') : t('settings.reminders.ics')}
-            </Button>
-          </div>
-          <p className="hint" id={`${id}-ics-hint`}>
-            {t('settings.reminders.icsHint', { time: reminderTime })}
-          </p>
+          {scheduled ? (
+            // DESIGN 7.8.4: the OS delivers while the app is closed; no .ics (it would remind twice), no Home Screen tip.
+            <div className="limit" data-testid="reminders-native-info">
+              <p>{t('settings.reminders.nativeInfo')}</p>
+            </div>
+          ) : (
+            <>
+              <div className="limit">
+                <p>{t('settings.reminders.limit')}</p>
+                {capabilities.pwaHints ? <p>{t('settings.reminders.ios')}</p> : null}
+              </div>
+              <div className="btn-row">
+                <Button variant="secondary" icon="cal" disabled={icsBusy} aria-busy={icsBusy || undefined} onClick={() => void downloadIcs()}>
+                  {icsBusy ? t('common.working') : t('settings.reminders.ics')}
+                </Button>
+              </div>
+              <p className="hint" id={`${id}-ics-hint`}>
+                {t('settings.reminders.icsHint', { time: reminderTime })}
+              </p>
+            </>
+          )}
         </section>
 
         <section className="card" aria-labelledby="h-backup">
@@ -573,9 +612,9 @@ export function Settings() {
           </p>
           <p className="desc">{aboutDesc}</p>
           {cloudOn ? <p className="hint">{t('settings.about.privacy')}</p> : null}
-          <p className="hint">
+          {/* DESIGN 7.8.5: Privacy then Support (M15); native: absolute links opened by Safari (7.8.1 row 14). */}
+          <p className="hint about-links">
             {native ? (
-              // DESIGN 7.8.1 row 14: absolute link, opened by Safari; the WebView must not navigate away from the SPA.
               <a href={`${capabilities.publicSiteUrl}privacy.html`} target="_blank" rel="noopener" data-testid="privacy-link">
                 {t('settings.about.privacyLink')}
                 <span className="sr-only"> {t('a11y.opensExternal')}</span>
@@ -583,6 +622,16 @@ export function Settings() {
             ) : (
               <a href={`${capabilities.publicSiteUrl}privacy.html`} data-testid="privacy-link">
                 {t('settings.about.privacyLink')}
+              </a>
+            )}
+            {native ? (
+              <a href={`${capabilities.publicSiteUrl}support.html`} target="_blank" rel="noopener" data-testid="support-link">
+                {t('settings.about.supportLink')}
+                <span className="sr-only"> {t('a11y.opensExternal')}</span>
+              </a>
+            ) : (
+              <a href={`${capabilities.publicSiteUrl}support.html`} data-testid="support-link">
+                {t('settings.about.supportLink')}
               </a>
             )}
           </p>
