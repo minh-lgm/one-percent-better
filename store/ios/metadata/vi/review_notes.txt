@@ -1,0 +1,7 @@
+Không cần đăng nhập để dùng app: mọi tính năng đều chạy được khi không có tài khoản và không có mạng. Đăng nhập (Sign in with Apple hoặc Google) là tùy chọn và chỉ đồng bộ mục tiêu và lần ghi của người dùng vào tài khoản của chính họ. Người duyệt có thể dùng Apple ID của mình để thử; không cần tài khoản demo.
+
+Xóa tài khoản: đăng nhập, rồi mở Cài đặt > Tài khoản > Xóa tài khoản (Settings > Account > Delete account) và xác nhận. Thao tác này xóa vĩnh viễn tài khoản và toàn bộ dữ liệu khỏi máy chủ ngay lập tức. Nếu tài khoản dùng Sign in with Apple, iOS sẽ yêu cầu xác nhận với Apple trước để thu hồi kết nối Sign in with Apple.
+
+Lời nhắc là thông báo cục bộ do thiết bị lên lịch (Cài đặt > Nhắc nhở / Settings > Reminders); không dùng máy chủ thông báo đẩy. App không dùng theo dõi, quảng cáo, vị trí, camera, danh bạ hay HealthKit.
+
+Liên hệ: minh.lgm@gmail.com

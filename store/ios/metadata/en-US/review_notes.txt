@@ -1,0 +1,7 @@
+No sign-in is required to use the app: every feature works without an account and without a network connection. Signing in (Sign in with Apple or Google) is optional and only syncs the user's goals and entries to their own account. Please use your own Apple ID if you want to try it; no demo account is needed.
+
+Account deletion: sign in, then open Settings > Account > Delete account and confirm. This permanently deletes the account and all its data from our server right away. If the account uses Sign in with Apple, iOS first asks you to confirm with Apple so the Sign in with Apple connection is revoked.
+
+Reminders are local notifications scheduled on the device (Settings > Reminders); no push server is used. The app does not use tracking, advertising, location, camera, contacts or HealthKit.
+
+Contact: minh.lgm@gmail.com
