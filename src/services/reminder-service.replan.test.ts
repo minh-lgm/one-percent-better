@@ -91,8 +91,8 @@ describe('ReminderService.replan (M15-AC2)', () => {
     expect(items[0].title).toBe(vi.notification.nativeTitle);
     expect(items[0].body).toBe(vi.notification.nativeBody);
     expect(items[0].at.getTime()).toBe(local('2026-10-09', 7, 30).getTime());
-    // Past 07:30 today → tomorrow first.
-    expect(await service.replan(at('07:31:00'))).toBe('scheduled');
+    // Past 07:30 today (even by seconds, M15-D2) → tomorrow first.
+    expect(await service.replan(at('07:30:05'))).toBe('scheduled');
     expect(pendingSchedule(notifications)[0].at.getTime()).toBe(local('2026-10-10', 7, 30).getTime());
     expect(pendingSchedule(notifications)).toHaveLength(13);
   });

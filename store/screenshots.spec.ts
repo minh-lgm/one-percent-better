@@ -94,6 +94,12 @@ for (const [locale, appLocale, copy] of [
             await expectAmount(page, 'Guitar', '22/20');
             await expectAmount(page, copy === EN ? 'Spanish' : 'Tiếng Tây Ban Nha', '10/15');
             expect(await page.locator('[data-testid="backup-banner"], [data-testid="reminder-banner"]').count()).toBe(0);
+            // M15-D1: the in-progress card (10/15, "5 min to go") must be inside the picture, not under the tab bar.
+            await expect(page.getByRole('heading', { level: 1 })).toBeInViewport();
+            await expect(page.getByText(/^(5 min to go|Còn 5 phút)$/)).toBeInViewport({ ratio: 1 });
+            break;
+          case '02-timer.jpg':
+            await expect(page.getByText(/^(5 min to go|Còn 5 phút)$/)).toBeInViewport({ ratio: 1 });
             break;
           case '03-curve.jpg':
             await expect(page.getByRole('heading', { level: 1, name: 'Guitar' })).toBeVisible();
@@ -102,9 +108,21 @@ for (const [locale, appLocale, copy] of [
           case '04-review.jpg':
             await expect(page.getByTestId('heatmap')).toBeVisible();
             break;
-          case '05-goals.jpg':
+          case '05-goals.jpg': {
             await expect(goalCard(page, 'Piano').or(page.getByText('Piano'))).toBeVisible();
+            // M15-D1: show the three groups. The Active cards alone fill most of the screen, so the page is scrolled until
+            // the Ended heading and the top of the Stretch card sit just above the tab bar (the title scrolls off).
+            const ended = page.getByRole('heading', { level: 2, name: /^(Ended|Đã kết thúc)/ });
+            await ended.evaluate((el) => {
+              const tabBar = document.querySelector('.nav') as HTMLElement | null;
+              const reserve = (tabBar?.getBoundingClientRect().height ?? 90) + 200; // tab bar + first rows of the Stretch card
+              window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - (window.innerHeight - reserve)));
+            });
+            await expect(ended).toBeInViewport({ ratio: 1 });
+            await expect(page.getByRole('heading', { level: 2, name: /^(Upcoming|Sắp tới)/ })).toBeInViewport({ ratio: 1 });
+            await expect(page.getByRole('heading', { level: 3, name: copy === EN ? 'Stretch' : 'Giãn cơ' })).toBeInViewport({ ratio: 1 });
             break;
+          }
           default:
             break;
         }

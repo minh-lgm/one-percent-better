@@ -14,8 +14,13 @@ export const DEMO_TODAY = '2026-10-09';
 export const DEMO_EXPORTED_AT = '2026-10-09T12:30:00.000Z';
 /** kv `settings.lastBackupAt` of the screenshot device (no "not backed up" banner, DESIGN 7.8.8). */
 export const DEMO_LAST_BACKUP_AT = '2026-10-05T12:00:00.000Z';
-/** Goals are created in table order (Read, Guitar, Spanish, Piano, Stretch): Today sorts by createdAt (DESIGN 7.8.8 screenshot 1). */
-const stampOf = (index) => `2026-01-01T01:0${index}:00.000Z`;
+/**
+ * Today / Goals sort by createdAt. Creation order Read → Spanish → Guitar → Piano → Stretch puts the one goal still in
+ * progress (Spanish 10/15, "5 min to go") in the first screenful of screenshots 01/02 at 440 × 956 (M15-D1); the goals
+ * array itself stays in DESIGN table order.
+ */
+const CREATION_ORDER = ['demo-read', 'demo-spanish', 'demo-guitar', 'demo-piano', 'demo-stretch'];
+const stampOf = (id) => `2026-01-01T01:0${CREATION_ORDER.indexOf(id)}:00.000Z`;
 
 /** DESIGN 7.8.8 goal table: id, names, why per locale, target, period. */
 export const DEMO_GOALS = [
@@ -62,7 +67,7 @@ export function demoMinutes(goalId, date) {
 const entryId = (goalId, date) => `e-${goalId}-${date.replace(/-/g, '')}`;
 
 export function buildDemoBackup(locale) {
-  const goals = DEMO_GOALS.map((g, index) => ({
+  const goals = DEMO_GOALS.map((g) => ({
     id: g.id,
     name: g.name[locale],
     why: g.why[locale],
@@ -71,8 +76,8 @@ export function buildDemoBackup(locale) {
     startDate: g.startDate,
     endDate: g.endDate,
     archived: false,
-    createdAt: stampOf(index),
-    updatedAt: stampOf(index),
+    createdAt: stampOf(g.id),
+    updatedAt: stampOf(g.id),
   }));
   const entries = [];
   for (const g of DEMO_GOALS) {

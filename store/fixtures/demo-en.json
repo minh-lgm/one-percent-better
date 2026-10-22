@@ -24,8 +24,8 @@
       "startDate": "2026-08-01",
       "endDate": "2026-12-31",
       "archived": false,
-      "createdAt": "2026-01-01T01:01:00.000Z",
-      "updatedAt": "2026-01-01T01:01:00.000Z"
+      "createdAt": "2026-01-01T01:02:00.000Z",
+      "updatedAt": "2026-01-01T01:02:00.000Z"
     },
     {
       "id": "demo-spanish",
@@ -36,8 +36,8 @@
       "startDate": "2026-06-01",
       "endDate": null,
       "archived": false,
-      "createdAt": "2026-01-01T01:02:00.000Z",
-      "updatedAt": "2026-01-01T01:02:00.000Z"
+      "createdAt": "2026-01-01T01:01:00.000Z",
+      "updatedAt": "2026-01-01T01:01:00.000Z"
     },
     {
       "id": "demo-piano",

@@ -37,20 +37,21 @@ function allActiveGoalsReached(goals: readonly Goal[], today: ISODate, progress:
 
 /**
  * Dates to schedule, ascending. Rules (ARCH §5.6 v5.0): nothing when reminders are off; a day is skipped when no
- * unarchived goal is active on it; today is skipped when the reminder time has already passed (`hh:mm(now) >
- * reminderTime`, equal keeps it) or when every active goal has already met its target today.
+ * unarchived goal is active on it; today is skipped when its reminder instant is already in the past (M15-D2: the
+ * plugin delivers a past `at` immediately, so `20:00:30` with a 20:00 reminder must not re-fire on every replan;
+ * exactly 20:00:00 still keeps today) or when every active goal has already met its target today.
  */
 export function planReminderDates({ now, reminderEnabled, reminderTime, goals, todayProgress, days = REMINDER_PLAN_DAYS }: ReminderPlanInput): ISODate[] {
   if (!reminderEnabled) return [];
   const target = reminderTimeToMinutes(reminderTime);
   if (target === null) return [];
   const today = toISODate(now);
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const todayAt = reminderDateTime(today, reminderTime).getTime();
   const out: ISODate[] = [];
   for (let i = 0; i < days; i += 1) {
     const date = addDays(today, i);
     if (!hasActiveGoal(goals, date)) continue;
-    if (i === 0 && (nowMinutes > target || allActiveGoalsReached(goals, today, todayProgress))) continue;
+    if (i === 0 && (todayAt < now.getTime() || allActiveGoalsReached(goals, today, todayProgress))) continue;
     out.push(date);
   }
   return out;

@@ -28,10 +28,17 @@ describe('planReminderDates (M15-AC1)', () => {
     expect(REMINDER_PLAN_DAYS).toBe(14);
   });
 
-  it('exactly at the reminder time (20:00:00) today is still planned; one minute later it is dropped (13 days)', () => {
+  it('exactly at the reminder time (20:00:00) today is still planned; one second later it is dropped (13 days) — M15-D2', () => {
+    expect(plan(s1(), at('19:59:59'))).toEqual(range('2026-10-09', 14));
     expect(plan(s1(), at('20:00:00'))).toEqual(range('2026-10-09', 14));
-    expect(plan(s1(), at('20:00:59'))).toEqual(range('2026-10-09', 14));
+    // A past `at` would be delivered immediately by the plugin on every replan inside that minute (M15-D2).
+    expect(plan(s1(), at('20:00:01'))).toEqual(range('2026-10-10', 13));
+    expect(plan(s1(), at('20:00:30'))).toEqual(range('2026-10-10', 13));
+    expect(plan(s1(), at('20:00:59'))).toEqual(range('2026-10-10', 13));
     expect(plan(s1(), at('20:01:00'))).toEqual(range('2026-10-10', 13));
+    // Every planned instant lies in the future (or is now).
+    const now = at('20:00:00');
+    for (const d of plan(s1(), now)) expect(reminderDateTime(d, '20:00').getTime()).toBeGreaterThanOrEqual(now.getTime());
   });
 
   it('every active goal already on target today → the plan starts tomorrow', () => {
