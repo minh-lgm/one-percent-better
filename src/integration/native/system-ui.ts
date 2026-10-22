@@ -40,6 +40,11 @@ export function prefersColorSchemeSource(matchMedia: (query: string) => MediaQue
   };
 }
 
+/** M15 (QC M14 §9, DESIGN 8.3 "Reduce Motion"): no fade when the user asked for reduced motion; the plugin default (200 ms) otherwise. */
+export function splashHideOptions(reducedMotion: boolean): { fadeOutDuration: number } {
+  return { fadeOutDuration: reducedMotion ? 0 : 200 };
+}
+
 /** DESIGN "Native shell" 3: dark background → light status-bar text (`Style.Dark`), light background → `Style.Light`. */
 export function statusBarStyleFor(theme: EffectiveTheme): Style {
   return theme === 'dark' ? Style.Dark : Style.Light;
@@ -47,7 +52,7 @@ export function statusBarStyleFor(theme: EffectiveTheme): Style {
 
 const defaultDeps = (): SystemUiDeps => ({
   setStatusBarStyle: (style) => StatusBar.setStyle({ style }),
-  hideSplash: () => SplashScreen.hide(),
+  hideSplash: () => SplashScreen.hide(splashHideOptions(typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)),
   // Two calls instead of one: the plugin's `addListener` overloads do not accept a union event name.
   addKeyboardListener: (event, cb) => (event === 'keyboardWillShow' ? Keyboard.addListener('keyboardWillShow', cb) : Keyboard.addListener('keyboardWillHide', cb)),
   body: typeof document === 'undefined' ? null : document.body,

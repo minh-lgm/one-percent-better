@@ -10,7 +10,7 @@ import { Keyboard } from '@capacitor/keyboard';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import type { EffectiveTheme, ThemeSource } from '../platform';
-import { createSystemUi, KEYBOARD_OPEN_CLASS, prefersColorSchemeSource, statusBarStyleFor, type SystemUiDeps } from './system-ui';
+import { createSystemUi, KEYBOARD_OPEN_CLASS, prefersColorSchemeSource, splashHideOptions, statusBarStyleFor, type SystemUiDeps } from './system-ui';
 
 function fakeTheme(initial: EffectiveTheme): ThemeSource & { set(t: EffectiveTheme): void; listeners: number } {
   let current = initial;
@@ -170,5 +170,13 @@ describe('prefersColorSchemeSource', () => {
     off();
     expect(query.removeEventListener).toHaveBeenCalledTimes(1);
     expect(listener).toBeNull();
+  });
+});
+
+
+describe('splashHideOptions (M15, reduced motion)', () => {
+  it('no fade with prefers-reduced-motion, the plugin default otherwise', () => {
+    expect(splashHideOptions(true)).toEqual({ fadeOutDuration: 0 });
+    expect(splashHideOptions(false)).toEqual({ fadeOutDuration: 200 });
   });
 });
