@@ -232,7 +232,8 @@ test.describe('M14-AC6 vi-VN, a11y, 360 px', () => {
     await expectAxeClean(page);
     await d.getByTestId('delete-account-confirm').click();
     await expect(accountCard(page)).toHaveAttribute('data-state', 'signed-out', { timeout: 15_000 });
-    await expect(toast(page)).toHaveText(VI.toast.accountDeletedKept);
+    // The dialog was reopened, so the choice is back to the default (Remove).
+    await expect(toast(page)).toHaveText(VI.toast.accountDeletedRemoved);
     await expectNoViLeaks(page);
     await expectNoHorizontalScroll(page);
   });
