@@ -2,7 +2,7 @@
 // Written from the PRD/TASKS rule only, with plain UTC Date arithmetic and EXACT rational arithmetic (BigInt fractions); it shares
 // no code with src/domain/curve.ts or stats.ts. M5's oracle (1.01^n, n = days on target) was superseded by the user's decision of
 // 2026-10-13 (TASKS "Test cũ bị thay thế").
-//   ideal(d)  = 1.01^k  (k = ordinal of d in the period, startDate = 1)               (unchanged)
+//   ideal(d)  = 1.01^(k-1)  (k = ordinal of d in the period, startDate = 1; day 1 = +0%, user decision 2026-10-22)
 //   m(d)      = total minutes of all entries of the goal on d, only d in [startDate, min(today, endDate)]
 //   logged day: m(d) > 0; baseline f = first logged day; each logged day after f multiplies the line by m(d)/m(previous logged day);
 //   days without time keep the line flat; before f the line is 1. Compounded here as a real running product of fractions.
@@ -82,7 +82,7 @@ interface Oracle {
 function oracle(g: Goal, entries: LogEntry[], today: string): Oracle {
   const days = diff(g.startDate, endOf(g)) + 1;
   const ideal = [];
-  for (let k = 1; k <= days; k++) ideal.push({ date: add(g.startDate, k - 1), v: pow101(k) });
+  for (let k = 1; k <= days; k++) ideal.push({ date: add(g.startDate, k - 1), v: pow101(k - 1) });
   const actual: OPoint[] = [];
   const last = today < g.startDate ? null : today < endOf(g) ? today : endOf(g);
   let line: Frac = frac(1, 1);
@@ -141,7 +141,7 @@ function expectMatches(g: Goal, entries: LogEntry[], today: string) {
 }
 
 describe('M9 QC oracle: curve (FR-27 v3.0)', () => {
-  it('S1 G1 at 2026-10-09: 30 min every day 10-01..10-08 -> the line stays at +0.0% (headline 0, M5 was 8.3); ideal still +9.4%', () => {
+  it('S1 G1 at 2026-10-09: 30 min every day 10-01..10-08 -> the line stays at +0.0% (headline 0, M5 was 8.3); ideal still +8.3%', () => {
     const g1 = goal({ id: 'g1', name: 'Read', startDate: '2026-10-01', endDate: '2026-10-31' });
     const entries = Array.from({ length: 8 }, (_, i) => entry('g1', add('2026-10-01', i), 30));
     const { c } = expectMatches(g1, entries, '2026-10-09');
@@ -149,9 +149,9 @@ describe('M9 QC oracle: curve (FR-27 v3.0)', () => {
     expect(c.actual).toHaveLength(9);
     expect(c.actual.map((p) => p.value)).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1]);
     expect(c.actual.map((p) => p.changePercent)).toEqual([null, 0, 0, 0, 0, 0, 0, 0, null]);
-    expect(c.ideal[8].value).toBeCloseTo(1.0937, 4);
+    expect(c.ideal[8].value).toBeCloseTo(1.0829, 4);
     expect(Object.is(c.headlinePercent, 0)).toBe(true);
-    expect(c.idealPercent).toBe(9.4);
+    expect(c.idealPercent).toBe(8.3);
     expect(c.elapsedDays).toBe(9);
     expect(c.loggedDays).toBe(8);
   });
@@ -165,7 +165,7 @@ describe('M9 QC oracle: curve (FR-27 v3.0)', () => {
     expect(c.headlinePercent).toBe(440);
     expect(c.periodDays).toBe(83);
     expect(c.latestChangePercent).toBe(92.9);
-    expect(c.idealPercent).toBe(4.1);
+    expect(c.idealPercent).toBe(3);
     // A-42: the daily target plays no part
     expect(curve({ ...g, targetMinutes: 1 }, r1, '2026-10-13')).toEqual(c);
     expect(curve({ ...g, targetType: 'total', targetMinutes: 99999 }, r1, '2026-10-13')).toEqual(c);

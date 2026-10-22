@@ -346,7 +346,7 @@ Thay đổi schema sau này: tăng `db.version(n)` kèm `upgrade()`; tăng `sche
 - `pace` = tổng phút tới hôm nay − `dailyTarget × số ngày đã trôi qua (startDate → min(today, endDate), tính cả hai đầu, tức là gồm cả hôm nay)`; dương = đi trước. Goal `upcoming`: pace = 0.
 - Timer: số phút điền sẵn khi Stop = `clamp(round(elapsedMs / 60000), 1, 1440)` (làm tròn tới phút gần nhất, 30 s làm tròn lên; tối thiểu 1, tối đa 1440).
 - Mức heatmap một goal: 0 = 0 phút; 1 = >0 và <50% `dailyTarget`; 2 = 50–<100%; 3 = 100–<200%; 4 = ≥200%. "All goals" theo tổng phút: 0 = 0; 1 = 1–29; 2 = 30–59; 3 = 60–119; 4 = ≥120. Ngày ngoài khoảng goal: trạng thái `outside`.
-- Đường cong: với mỗi ngày d trong khoảng goal, `k` = thứ tự ngày (startDate là 1), `ideal = 1.01^k`. ~~Với d ≤ today, `n(d)` = số ngày đạt từ startDate tới d, `actual = 1.01^n(d)`. Headline: `(1.01^n(today) − 1) × 100`, 1 chữ số thập phân.~~ **v3.0 (M9):** `actual(d)` = phút ngày có ghi gần nhất ≤ d / phút ngày đầu tiên có ghi; công thức đầy đủ, làm tròn, ví dụ, contract và thang Y ở **§4.5**.
+- Đường cong: với mỗi ngày d trong khoảng goal, `k` = thứ tự ngày (startDate là 1), `ideal = 1.01^k` (**v5.1:** `1.01^(k−1)`, ngày đầu +0%). ~~Với d ≤ today, `n(d)` = số ngày đạt từ startDate tới d, `actual = 1.01^n(d)`. Headline: `(1.01^n(today) − 1) × 100`, 1 chữ số thập phân.~~ **v3.0 (M9):** `actual(d)` = phút ngày có ghi gần nhất ≤ d / phút ngày đầu tiên có ghi; công thức đầy đủ, làm tròn, ví dụ, contract và thang Y ở **§4.5**.
 - **v4.0 (M11) — goal không thời hạn (`endDate = null`):** mọi giá trị trên được tính với "ngày cuối" = **hôm nay**; quy tắc đầy đủ, hàm domain mới và bảng oracle ở **§4.6**. Với goal có `endDate`, mọi công thức trên giữ nguyên từng chữ.
 
 ### 4.1 Kiểu domain ở phase 2 (v2.0)
@@ -609,12 +609,12 @@ Thay toàn bộ quy tắc "thực tế = 1.01^n (n = số ngày đạt chỉ ti�
 
 | Đại lượng | Định nghĩa |
 | :- | :- |
-| `ideal(d)` (không đổi) | `1.01^k`, k = thứ tự ngày trong khoảng (startDate = 1), cho **mọi** ngày của khoảng |
+| `ideal(d)` | ~~`1.01^k`~~ **v5.1 (2026-10-22): `1.01^(k−1)`**, k = thứ tự ngày trong khoảng (startDate = 1), cho **mọi** ngày của khoảng — ngày đầu = 1 (+0%) |
 | `actual(d)`, d ∈ D | `1` nếu chưa có `f` hoặc `d < f`; ngược lại `m(p(d)) / m(f)` |
 | `changePercent(d)` | d có ghi và d > f: `pct(m(d), m(prev(d)))`; ngày baseline và ngày không ghi: `null` |
 | `headlinePercent` | có `f`: `pct(m(p(last)), m(f))`; không có: `0` |
 | `actualFactor` | `actual(last)` (1 khi chưa có ghi hoặc upcoming) |
-| `idealPercent`, `idealFactor` (không đổi) | `growthPercent(1.01^elapsedDays)`, `1.01^elapsedDays` |
+| `idealPercent`, `idealFactor` | **v5.1:** `growthPercent(1.01^(elapsedDays−1))`, `1.01^(elapsedDays−1)` (1 khi upcoming hoặc ngày đầu) |
 
 Cách đọc theo lời user: ngày đầu có ghi = +0%; mỗi ngày có ghi sau đó nhân giá trị với `m(hôm nay) / m(ngày có ghi trước)`; ngày 0 phút đi ngang (giữ giá trị, không trừ). Vì tích các tỉ lệ rút gọn (telescoping), giá trị = `m(ngày có ghi gần nhất) / m(ngày đầu có ghi)`. **Code phải tính bằng tỉ số trực tiếp** như bảng trên, không nhân dồn số thực (tránh sai số tích luỹ qua 1827 ngày).
 
@@ -1897,6 +1897,8 @@ Bối cảnh: UI đã thiết kế cho 360–1440 px; app một người dùng; 
 Bối cảnh: Google Play là lựa chọn (OQ-13); máy Windows build được Android nhưng ưu tiên CI cho lặp lại được; Play yêu cầu target API 36 cho app mới từ 2026-08-31, lần tải lên đầu phải làm tay, tài khoản cá nhân mới phải closed testing. Lựa chọn: `@capacitor/android` 8.5.3 (minSdk 24, target/compile 36), cùng adapter native (không Apple), nút Back qua `lifecycle.onBackButton`; `android.yml` trên `ubuntu-latest` + Temurin 21 ký AAB bằng upload key (secret) và xuất artifact; Play App Signing do Google giữ khoá ký app. Phương án đã loại: tự động upload qua Play Developer API ngay từ đầu (lần đầu không được; thêm service account); TWA (Trusted Web Activity — không dùng được plugin native như notification/đăng nhập native một cách thống nhất với iOS). Hệ quả: Google Sign-In Android cần Android OAuth client với SHA-1 của cả upload key và app signing key (U28); URL yêu cầu xoá tài khoản trên web bắt buộc cho Play (privacy.html#delete-account).
 
 ## Changelog
+
+- 2026-10-22 — v5.1: §4.5 đường lý tưởng `1.01^(k−1)` thay `1.01^k` (ngày đầu của khoảng +0%, quyết định user 2026-10-22); `idealFactor`/`idealPercent` theo `elapsedDays − 1`. Chữ ký `curve()`, contract `CurveData`, đường "Bạn", thang Y không đổi.
 
 - 2026-10-09 — v1, tạo mới (mode `new`).
 - 2026-10-09 — v1.1 (khi viết TASKS.md): làm rõ `pace` tính cả hôm nay; thêm quy tắc số phút điền sẵn của timer (1–1440); ghi rõ EntryService validate mọi ngày từ M1 (timer qua nửa đêm ở M2) và xoá goal thì xoá `activeTimer` liên quan; thêm mã lỗi `GOAL_TIMER_RUNNING` (M5); thay `react/no-danger` (plugin không có trong stack) bằng `no-restricted-syntax`.

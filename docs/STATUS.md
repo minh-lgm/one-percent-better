@@ -5,6 +5,7 @@
 **Next step:** developer M14 build → qc M14 r1. Chờ user: OK push main (M13 + QC); U14…U18 Apple → orchestrator Run workflow lane testflight (NV-12) → user U19 TestFlight (NV-13/19). 2026-10-21 user "push đi" → đã push main tới b1da925 (M12 + QC), Pages run 39619328149 success, site 200. **NV-12 PASS**: user bấm Run workflow lane simulator, run 39624708770 success trên macos-26 (job 2 phút 30: npm ci → Select Xcode 26 → build:native → cap sync → xcodebuild Simulator unsigned, mọi step success). Chờ user: U14 Apple Developer. Còn tồn: U13. User nên làm U14 (đăng ký Apple Developer) ngay. Còn tồn: user làm U13 (laptop tạo goal không thời hạn → Sync; điện thoại cập nhật bản mới → Sync → thấy goal "từ {ngày}"; thử đổi sang Total hours không lưu được) rồi báo để đóng NV-10/NV-11. Quyết định sản phẩm còn mở: M11-D1 (cận dưới startDate goal không hạn), OQ-D21 (Ideal lấn át "Bạn" khi goal chạy lâu). Figma chưa cập nhật v4.0
 
 ## Quyết định của user
+- 2026-10-22 — Đường lý tưởng trên Goal detail: ngày đầu phải là 0% → đổi `1.01^k` thành `1.01^(k−1)` (PRD/ARCH/DESIGN v5.1), cập nhật test unit/e2e/QC
 - 2026-10-09 — Nền tảng? → Web app (PWA, mở được trên điện thoại)
 - 2026-10-09 — Stack? → Để planner chọn
 - 2026-10-09 — Dữ liệu/tài khoản MVP? → 1 user, lưu cục bộ trên thiết bị, không đăng nhập, có export/import JSON

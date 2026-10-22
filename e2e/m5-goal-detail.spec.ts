@@ -46,13 +46,13 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
     await expect(headline(page)).toHaveText('+0.0% better');
     await expect(page.getByTestId('headline-day')).toHaveText('Day 9 of 31');
     await expect(page.getByTestId('headline-sub')).toHaveText('Last logged Oct 8: 30 min, +0.0% vs Oct 7 (30 min). ×1 since Oct 1 (30 min).');
-    await expect(page.getByTestId('curve-summary')).toHaveText('Day 9 of 31: your line is +0.0% compared with your first logged day. The ideal line is +9.4%.');
+    await expect(page.getByTestId('curve-summary')).toHaveText('Day 9 of 31: your line is +0.0% compared with your first logged day. The ideal line is +8.3%.');
     const chart = page.getByTestId('curve-chart');
     await expect(chart).toBeVisible();
     await expect(chart.locator('.recharts-line')).toHaveCount(2);
     await expect(chart.locator('.recharts-line-curve[stroke-dasharray]')).toHaveCount(1);
     await expect(chart.locator('.recharts-reference-dot')).toHaveCount(2);
-    await expect(chart).toContainText('Ideal +9.4%');
+    await expect(chart).toContainText('Ideal +8.3%');
     await expect(chart).toContainText('You +0.0%');
     await expect(page.getByTestId('curve-legend')).toContainText(EN.goal.detail.legendIdeal);
     await expect(page.getByTestId('curve-legend')).toContainText(EN.goal.detail.legendYou);
@@ -82,15 +82,15 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
     await chart.focus();
     await page.keyboard.press('ArrowRight');
     // M5-AC2 superseded by M9-AC4 (FR-27 v3.0): tooltip variants (flat day / change vs previous logged day).
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 9 · Nothing logged, the line stays flat · You +0.0% · Ideal +9.4%');
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 9 · Nothing logged, the line stays flat · You +0.0% · Ideal +8.3%');
     await page.keyboard.press('ArrowLeft');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 8 · 30 min, +0.0% vs previous logged day · You +0.0% since your first day · Ideal +8.3%');
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 8 · 30 min, +0.0% vs previous logged day · You +0.0% since your first day · Ideal +7.2%');
     await page.keyboard.press('End');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 31 · Ideal +36.1%');
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 31 · Ideal +34.8%');
     await page.getByText(EN.goal.detail.showTable).click();
     await expect(page.getByTestId('curve-table').locator('tbody tr')).toHaveCount(31);
-    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(8).locator('td')).toHaveText(['+9.4%', '+0.0%', '0', '—']);
-    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(7).locator('td')).toHaveText(['+8.3%', '+0.0%', '30', '+0.0%']);
+    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(8).locator('td')).toHaveText(['+8.3%', '+0.0%', '0', '—']);
+    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(7).locator('td')).toHaveText(['+7.2%', '+0.0%', '30', '+0.0%']);
     await expect(page.getByTestId('curve-table').locator('tbody tr').nth(30)).toContainText('—');
     await page.getByRole('radio', { name: EN.goal.detail.rangeSoFar }).check();
     await expect(page.getByTestId('curve-table').locator('tbody tr')).toHaveCount(9);
