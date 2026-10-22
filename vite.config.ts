@@ -94,7 +94,8 @@ export default defineConfig(({ mode }) => {
             name: 'node',
             environment: 'node',
             // v5.0 (M14): the Edge Function's pure modules (handler.ts, apple.ts) are tested here on Node 22.
-            include: ['src/**/*.test.ts', 'tests/qc/**/*.test.ts', 'scripts/**/*.test.mjs', 'supabase/functions/**/*.test.ts'],
+            // M15 (M14-D9): the mock Supabase has its own Node tests (`e2e/mock-supabase/*.test.mjs`).
+            include: ['src/**/*.test.ts', 'tests/qc/**/*.test.ts', 'scripts/**/*.test.mjs', 'supabase/functions/**/*.test.ts', 'e2e/mock-supabase/*.test.mjs'],
           },
         },
         {

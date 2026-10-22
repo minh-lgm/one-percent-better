@@ -58,10 +58,18 @@ export function DeleteAccountDialog({ open, email, appleNote = false, busy = fal
   }, [onCancel, busy]);
 
   // After a failure the user is still on the confirm button (they pressed it); make sure focus is there (DESIGN 8.3)
-  // and that the Alert is not hidden behind the sticky button row on small screens (M14-D6).
+  // and that the Alert is not hidden behind the sticky button row on small screens (M14-D6). `block: 'nearest'` did
+  // nothing: the Alert already sits inside the dialog's scroll box, only *under* the sticky row. So the Alert gets a
+  // scroll margin as tall as that row (measured, it depends on the viewport / safe area) and is aligned to the end of
+  // the scroll box, which puts its bottom edge right above the buttons (QC M14 r2).
   useEffect(() => {
     if (!open || !error || busy) return;
-    errorRef.current?.scrollIntoView?.({ block: 'nearest' });
+    const alert = errorRef.current;
+    if (alert) {
+      const actions = alert.closest('form')?.querySelector<HTMLElement>('.actions');
+      alert.style.scrollMarginBottom = `${(actions?.offsetHeight ?? 0) + 12}px`;
+      alert.scrollIntoView?.({ block: 'end' });
+    }
     confirmRef.current?.focus({ preventScroll: true });
   }, [open, error, busy]);
 

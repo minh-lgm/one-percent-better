@@ -61,6 +61,8 @@ const ms = (v) => {
 const userKeyOf = (id) => Object.keys(USERS).find((k) => USERS[k].id === id) ?? null;
 /** Rows are kept under `u1` / `u2` for the fixed users and under the user id for accounts created by `id_token`. */
 const keyFor = (user) => userKeyOf(user.id) ?? user.id;
+/** The auth user id behind a row key: the fixed users' ids for `u1` / `u2`; for accounts created by `id_token` the key IS the id (M14-D9). */
+const userIdOf = (userKey) => USERS[userKey]?.id ?? userKey;
 const sha256Hex = (s) => createHash('sha256').update(String(s)).digest('hex');
 
 /** v5.0 (M14): an ID token "from Google/Apple" for tests — same HS256 secret as the sessions, so the mock can verify it. */
@@ -337,7 +339,7 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
   function upsertRow(state, table, userKey, incoming) {
     const columns = table === 'goals' ? GOAL_COLUMNS : ENTRY_COLUMNS;
     const rows = userRows(state, table, userKey);
-    const row = pick({ ...incoming, user_id: USERS[userKey].id }, columns);
+    const row = pick({ ...incoming, user_id: userIdOf(userKey) }, columns);
     const old = rows.get(String(row.id));
     if (old) {
       if (ms(row.updated_at) <= ms(old.updated_at)) return null;
@@ -352,7 +354,7 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
 
   /** `settings_before_write`: per-group LWW; a `null` group keeps the stored values; nothing newer → row untouched (null). */
   function upsertSettings(state, userKey, incoming) {
-    const row = pick({ ...incoming, user_id: USERS[userKey].id }, SETTINGS_COLUMNS);
+    const row = pick({ ...incoming, user_id: userIdOf(userKey) }, SETTINGS_COLUMNS);
     const rows = state.rows.settings;
     const old = rows.get(userKey);
     if (!old) {
@@ -695,9 +697,9 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
     if (pathname === '/__test/seed' && req.method === 'POST') {
       // Rows may be given in domain (camelCase) or cloud (snake_case) shape; they bypass LWW and get a server stamp.
       const userKey = body?.user ?? 'u1';
-      if (Array.isArray(body?.goals)) for (const r of body.goals) userRows(state, 'goals', userKey).set(String(r.id), { ...pick({ ...toSnakeGoal(r), user_id: USERS[userKey].id }, GOAL_COLUMNS), server_updated_at: r.server_updated_at ?? serverStamp(state) });
-      if (Array.isArray(body?.entries)) for (const r of body.entries) userRows(state, 'entries', userKey).set(String(r.id), { ...pick({ ...toSnakeEntry(r), user_id: USERS[userKey].id }, ENTRY_COLUMNS), server_updated_at: r.server_updated_at ?? serverStamp(state) });
-      if (Array.isArray(body?.settings)) for (const r of body.settings) state.rows.settings.set(userKey, { ...pick({ ...r, user_id: USERS[userKey].id }, SETTINGS_COLUMNS), server_updated_at: serverStamp(state) });
+      if (Array.isArray(body?.goals)) for (const r of body.goals) userRows(state, 'goals', userKey).set(String(r.id), { ...pick({ ...toSnakeGoal(r), user_id: userIdOf(userKey) }, GOAL_COLUMNS), server_updated_at: r.server_updated_at ?? serverStamp(state) });
+      if (Array.isArray(body?.entries)) for (const r of body.entries) userRows(state, 'entries', userKey).set(String(r.id), { ...pick({ ...toSnakeEntry(r), user_id: userIdOf(userKey) }, ENTRY_COLUMNS), server_updated_at: r.server_updated_at ?? serverStamp(state) });
+      if (Array.isArray(body?.settings)) for (const r of body.settings) state.rows.settings.set(userKey, { ...pick({ ...r, user_id: userIdOf(userKey) }, SETTINGS_COLUMNS), server_updated_at: serverStamp(state) });
       return send(res, 200, { ok: true });
     }
     if (pathname === '/__test/rows') {
