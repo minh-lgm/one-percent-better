@@ -1,11 +1,14 @@
-// QC round 1 (M5), re-targeted in M9 round 1 (FR-27 v3.0, ARCH 4.5): Goal detail and the 1% curve in a real browser, checked against an
-// oracle that does not use app code. The M5 1.01^n assertions are superseded (TASKS "Test cũ bị thay thế"); S1 G1/G3/G5 now read +0.0%.
-// Data always comes in through the real Import UI (TASKS section 0).
+// QC round 1 (M5), re-targeted in M9 round 1 (v3.0) and again for the v6.0 burn-up (FR-27 v6.0, ARCH 4.5; user decision 2026-11-02):
+// Goal detail and the 1% curve in a real browser, checked against an oracle that does not use app code.
+// Ideal(k) = T₀·(1.01^k − 1)/0.01 minutes (T₀ = minutes per day), You = minutes logged added up (flat on unlogged days, never down),
+// headline = signed % of You vs Ideal on the last elapsed day. The M5 (1.01^n) and M9 v3 (ratio to the first logged day) assertions
+// are superseded (TASKS "Test cũ bị thay thế"). Data always comes in through the real Import UI (TASKS section 0).
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { EN, expectAxeClean, expectNoHorizontalScroll, expectNoViLeaks, fixturePath, freezeClock, gotoHash, importBackup, VI } from '../../e2e/helpers/app';
 
 const ORIGIN = 'http://localhost:4173';
+const MINUS = '−';
 
 function watch(page: Page) {
   const problems: string[] = [];
@@ -35,7 +38,16 @@ async function importContent(page: Page, content: unknown, copy: typeof EN | typ
 
 const D = (s: string) => new Date(`${s}T00:00:00Z`);
 const add = (s: string, n: number) => new Date(D(s).getTime() + n * 86_400_000).toISOString().slice(0, 10);
-const pct = (n: number) => `+${(((1.01 ** n) - 1) * 100).toFixed(1)}%`; // the IDEAL line is unchanged (1.01^k)
+// Oracle (v6.0, FR-27 / ARCH 4.5): the ideal line adds up a daily target that starts at T₀ and grows 1 % a day:
+// ideal(k) = T₀·(1.01^k − 1)/0.01 (closed form, same operation order as src/domain/plan.ts so the float rounds the same way).
+const ideal = (t0: number, k: number) => (t0 * (1.01 ** k - 1)) / 0.01;
+/** `1,084` — en grouping, whole minutes (format.ts `number`). */
+const grouped = (n: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n);
+/** Whole-minute gap with an explicit sign: `+0`, `−41` (format.ts `signed0`: round, then U+2212 / `+`; `Math.abs` so a rounded −0 prints `+0`). */
+const signed0 = (n: number) => {
+  const r = Math.round(n);
+  return r < 0 ? `${MINUS}${grouped(-r)}` : `+${grouped(Math.abs(r))}`;
+};
 
 function goalAt(id: string, p: Record<string, unknown>) {
   return { id, name: id, why: '', targetType: 'daily', targetMinutes: 30, startDate: '2026-10-01', endDate: '2026-10-31', archived: false, createdAt: '2026-09-30T01:00:00.000Z', updatedAt: '2026-09-30T01:00:00.000Z', ...p };
@@ -49,90 +61,100 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('M5 curve in the browser', () => {
-  test('S1 Read: every table row (Whole period 31, So far 9) equals the brute-force oracle (M9: You flat at +0.0%, minutes, change); headline, dots', async ({ page }) => {
+  test('S1 Read: every table row (Whole period 31, So far 9) equals the brute-force oracle in minutes (ideal(k), You added up, that day, signed gap); headline −14.6%, dots', async ({ page }) => {
     const problems = watch(page);
     await importBackup(page);
     await gotoHash(page, '/goals/g1');
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% better');
+    // 240 min logged (30 × 8) vs ideal(9) = 30·(1.01^9 − 1)/0.01 = 281.06 → (240 − 281.06)/281.06 = −14.6 %.
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}14.6% vs. ideal`);
     await expect(page.getByTestId('curve-chart')).toBeVisible();
     await page.getByText(EN.goal.detail.showTable).click();
     const rows = page.getByTestId('curve-table').locator('tbody tr');
     await expect(rows).toHaveCount(31);
-    // oracle (M9): G1 logged 30 min on 10-01..10-08, nothing on 10-09 (today); future days show em dashes
+    // oracle: G1 logged 30 min on 10-01..10-08, nothing on 10-09 (today); future days show em dashes in the You columns
     for (let i = 0; i < 31; i++) {
       const cells = await rows.nth(i).locator('th,td').allInnerTexts();
-      const date = `2026-10-${String(i + 1).padStart(2, "0")}`;
+      const date = `2026-10-${String(i + 1).padStart(2, '0')}`;
+      const you = i < 8 ? 30 * (i + 1) : 240;
       expect(cells[0], `row ${i}`).toBe(date);
-      expect(cells[1], `ideal ${i}`).toBe(pct(i));
-      expect(cells[2], `you ${i}`).toBe(i <= 8 ? '+0.0%' : '—');
+      expect(cells[1], `ideal ${i}`).toBe(grouped(ideal(30, i + 1)));
+      expect(cells[2], `you ${i}`).toBe(i <= 8 ? grouped(you) : '—');
       expect(cells[3], `minutes ${i}`).toBe(i < 8 ? '30' : i === 8 ? '0' : '—');
-      expect(cells[4], `change ${i}`).toBe(i >= 1 && i <= 7 ? '+0.0%' : '—');
+      expect(cells[4], `gap ${i}`).toBe(i <= 8 ? signed0(you - ideal(30, i + 1)) : '—');
     }
+    // spot checks of the oracle itself against the PRD examples: 10-01 = 30 / 30 / 30 / +0, 10-08 = 249 / 240 / 30 / −9, 10-09 = 281 / 240 / 0 / −41
+    await expect(rows.nth(0).locator('td')).toHaveText(['30', '30', '30', '+0']);
+    await expect(rows.nth(7).locator('td')).toHaveText(['249', '240', '30', `${MINUS}9`]);
+    await expect(rows.nth(8).locator('td')).toHaveText(['281', '240', '0', `${MINUS}41`]);
     await page.getByRole('radio', { name: EN.goal.detail.rangeSoFar }).check();
     await expect(rows).toHaveCount(9);
     await page.getByRole('radio', { name: EN.goal.detail.rangeWhole }).check();
     await expect(rows).toHaveCount(31);
 
-    // pixel oracle for the two marker dots: y(+8.3%) and y(+0.0%) on the rendered y axis
+    // pixel oracle for the two marker dots: y(281.06 min) and y(240 min) on the rendered y axis (plain minutes, from 0)
     const geo = await page.evaluate(() => {
-      const labels = Array.from(document.querySelectorAll('.curve-chart .recharts-yAxis-tick-labels text, .curve-chart .recharts-yAxis text')).map((t) => t.textContent ?? '');
       const grid = Array.from(document.querySelectorAll('.curve-chart .recharts-cartesian-grid-horizontal line')).map((l) => Number(l.getAttribute('y1')));
       const dots = Array.from(document.querySelectorAll('.curve-chart .recharts-reference-dot circle')).map((c) => ({ cy: Number(c.getAttribute('cy')), cx: Number(c.getAttribute('cx')) }));
-      return { labels, grid, dots };
+      return { grid, dots };
     });
     expect(geo.dots).toHaveLength(2);
     expect(geo.grid.length).toBeGreaterThanOrEqual(3);
-    // bottom grid line = 0%, top grid line = the largest y label (labels appear in a separate layer: collect all '0%' / '+N%' texts)
+    // bottom grid line = 0 min, top grid line = the largest y label (plain grouped minutes, never signed, never %)
     const yLabels = await page.locator('.curve-chart text').evaluateAll((els) => els.map((e) => e.textContent ?? ''));
-    const yValues = yLabels.map((t) => /^(?:0|\+(\d+(?:\.\d+)?))%$/.exec(t.trim())).filter((m): m is RegExpExecArray => m !== null).map((m) => Number(m[1] ?? 0));
+    const yValues = yLabels.map((t) => t.trim()).filter((t) => /^[\d,]+$/.test(t)).map((t) => Number(t.replace(/,/g, '')));
+    expect(yLabels.some((t) => /%|^[+−-]/.test(t.trim())), JSON.stringify(yLabels)).toBe(false);
     const yTop = Math.max(...yValues);
     const yBottom = Math.max(...geo.grid);
     const yTopPx = Math.min(...geo.grid);
-    expect(yTop, JSON.stringify(yLabels)).toBeGreaterThanOrEqual(8.3);
+    // the whole-period ideal (1,084 min on Oct 31) sets the scale: top tick ≥ 1,084
+    expect(yTop, JSON.stringify(yLabels)).toBeGreaterThanOrEqual(1084);
     const yOf = (v: number) => yBottom - (v / yTop) * (yBottom - yTopPx);
-    const [dotIdeal, dotYou] = geo.dots.sort((p, q) => p.cy - q.cy);
-    expect(Math.abs(dotIdeal.cy - yOf(((1.01 ** 8) - 1) * 100)), `ideal dot cy ${dotIdeal.cy}`).toBeLessThan(2);
-    expect(Math.abs(dotYou.cy - yOf(0)), `you dot cy ${dotYou.cy}`).toBeLessThan(2); // M9: You = +0.0% -> on the 0% line
+    const [dotIdeal, dotYou] = geo.dots.sort((p, q) => p.cy - q.cy); // Ideal (281) is above You (240)
+    expect(Math.abs(dotIdeal.cy - yOf(ideal(30, 9))), `ideal dot cy ${dotIdeal.cy}`).toBeLessThan(2);
+    expect(Math.abs(dotYou.cy - yOf(240)), `you dot cy ${dotYou.cy}`).toBeLessThan(2);
     expect(dotIdeal.cx).toBeCloseTo(dotYou.cx, 0);
     // the two series: ideal polyline has 31 vertices, you has a step shape (horizontal + vertical segments) ending at day 9
     const paths = await page.evaluate(() => Array.from(document.querySelectorAll('.curve-chart .recharts-line-curve')).map((p) => ({ dash: p.getAttribute('stroke-dasharray'), d: p.getAttribute('d') ?? '' })));
     expect(paths).toHaveLength(2);
-    const ideal = paths.find((p) => p.dash)!;
+    const idealPath = paths.find((p) => p.dash)!;
     const you = paths.find((p) => !p.dash)!;
-    expect((ideal.d.match(/[ML]/g) ?? []).length).toBe(31);
+    expect((idealPath.d.match(/[ML]/g) ?? []).length).toBe(31);
     expect((you.d.match(/[ML]/g) ?? []).length).toBeGreaterThanOrEqual(9);
-    // step: every second vertex shares x with the previous one or y with the previous one
+    // step: every vertex shares x with the previous one or y with the previous one; You never goes down (y never grows along the path)
     const pts = (you.d.match(/[ML]\s*[-\d.]+[ ,][-\d.]+/g) ?? []).map((s) => s.slice(1).trim().split(/[ ,]/).map(Number));
-    for (let i = 1; i < pts.length; i++) expect(pts[i][0] === pts[i - 1][0] || Math.abs(pts[i][1] - pts[i - 1][1]) < 0.01, `step shape at ${i}: ${pts[i - 1]} -> ${pts[i]}`).toBe(true);
+    for (let i = 1; i < pts.length; i++) {
+      expect(pts[i][0] === pts[i - 1][0] || Math.abs(pts[i][1] - pts[i - 1][1]) < 0.01, `step shape at ${i}: ${pts[i - 1]} -> ${pts[i]}`).toBe(true);
+      expect(pts[i][1] <= pts[i - 1][1] + 0.01, `You goes down at ${i}: ${pts[i - 1]} -> ${pts[i]}`).toBe(true);
+    }
     expect(problems).toEqual([]);
   });
 
-  test('keyboard: Tab reaches the chart, arrows/Home/End/Escape read points through the live region, blur clears; Range radios work from the keyboard', async ({ page }) => {
+  test('keyboard: Tab reaches the chart, arrows/Home/End/Escape read points (minutes that day + both totals) through the live region, blur clears; Range radios work from the keyboard', async ({ page }) => {
     await importBackup(page);
     await gotoHash(page, '/goals/g1');
     const chart = page.getByTestId('curve-chart');
     await expect(chart).toBeVisible();
     await expect(chart).toHaveAttribute('role', 'img');
-    await expect(chart).toHaveAttribute('aria-label', 'Day 9 of 31: your line is +0.0% compared with your first logged day. The ideal line is +8.3%.');
+    await expect(chart).toHaveAttribute('aria-label', 'Day 9 of 31: you have logged 240 min in total. The ideal line is at 281 min.');
     await expect(page.getByTestId('curve-reading')).toHaveAttribute('aria-live', 'polite');
     // reach by Tab from the Range control
     await page.getByRole('radio', { name: EN.goal.detail.rangeWhole }).focus();
     await page.keyboard.press('Tab');
     const focusedOnChart = await page.evaluate(() => document.activeElement?.getAttribute('data-testid'));
     expect(focusedOnChart).toBe('curve-chart');
-    await page.keyboard.press('ArrowLeft');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 9 · Nothing logged, the line stays flat · You +0.0% · Ideal +8.3%');
+    await page.keyboard.press('ArrowLeft'); // first press reads today's point
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 9 · Nothing logged · Total 240 min · Ideal 281 min');
     await page.keyboard.press('Home');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 1 · 30 min, your first logged day · You +0.0% · Ideal +0.0%');
-    await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 2 · 30 min, +0.0% vs previous logged day · You +0.0% since your first day · Ideal +1.0%');
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 1 · 30 min this day · Total 30 min · Ideal 30 min');
+    await page.keyboard.press('ArrowRight'); // ideal(2) = 30 + 30.3 = 60.3 → 60
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 2 · 30 min this day · Total 60 min · Ideal 60 min');
     await page.keyboard.press('Home');
     await page.keyboard.press('ArrowLeft'); // clamps at the first point
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 1 · 30 min, your first logged day · You +0.0% · Ideal +0.0%');
-    await page.keyboard.press('End');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 31 · Ideal +34.8%');
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 1 · 30 min this day · Total 30 min · Ideal 30 min');
+    await page.keyboard.press('End'); // future day: Ideal only, ideal(31) = 1,084
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 31 · Ideal 1,084 min');
     await page.keyboard.press('ArrowRight'); // clamps at the last point
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 31 · Ideal +34.8%');
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 31 · Ideal 1,084 min');
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('curve-reading')).toHaveText('');
     await page.keyboard.press('ArrowRight');
@@ -145,7 +167,7 @@ test.describe('M5 curve in the browser', () => {
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeSoFar })).toBeChecked();
     await chart.focus();
     await page.keyboard.press('End');
-    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 9 · Nothing logged, the line stays flat · You +0.0% · Ideal +8.3%');
+    await expect(page.getByTestId('curve-reading')).toHaveText('Oct 9 · Nothing logged · Total 240 min · Ideal 281 min');
   });
 
   test('range default: 31-day goal whole period, 365-day goal "So far"; ended goal; upcoming has no Range; long goal table not mounted until opened', async ({ page }) => {
@@ -156,7 +178,8 @@ test.describe('M5 curve in the browser', () => {
     const entries = Array.from({ length: 282 }, (_, i) => entryAt(`y${i}`, 'y365', add('2026-01-01', i)));
     await importContent(page, { ...base, goals: [yearGoal, exactly120, d121, ...(base.goals.slice(3) as Array<Record<string, unknown>>)], entries: [...entries, ...(base.entries.filter((e) => e.goalId === 'g5') as Array<Record<string, unknown>>)] });
     await gotoHash(page, '/goals/y365');
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% better'); // M5 +1,620.2% superseded: 30 min on each of 282 days = no change
+    // 30 min on each of 282 days = 8,460 min vs ideal(282) = 30·(1.01^282 − 1)/0.01 = 46,630.5 → −81.9 % (the flat 30 falls ever further behind the compounding target)
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}81.9% vs. ideal`);
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeSoFar })).toBeChecked();
     await expect(page.getByTestId('curve-table')).toHaveCount(0);
     await page.getByText(EN.goal.detail.showTable).click();
@@ -168,28 +191,30 @@ test.describe('M5 curve in the browser', () => {
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeWhole })).toBeChecked();
     await gotoHash(page, '/goals/d121');
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeSoFar })).toBeChecked();
-    // ended: G5 Old course, actual stops at endDate, headline from the single entry
+    // ended: G5 Old course, actual stops at endDate; 15 min vs ideal(181) = 15·(1.01^181 − 1)/0.01 = 7,583.6 → −99.8 %
     await gotoHash(page, '/goals/g5');
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% better'); // M5 +1.0% superseded (single entry = the baseline)
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}99.8% vs. ideal`);
     await expect(page.getByTestId('headline-day')).toHaveText('Day 181 of 181');
     await expect(page.getByText(EN.goal.status.ended, { exact: true })).toBeVisible();
-    // upcoming: G4
+    // upcoming: G4 — nothing elapsed, headline 0 (positive variant), Ideal only
     await gotoHash(page, '/goals/g4');
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% better');
+    await expect(page.getByTestId('headline')).toHaveText('+0.0% ahead of ideal');
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeWhole })).toHaveCount(0);
     await expect(page.getByTestId('headline-sub')).toContainText('Starts');
     await expect(page.getByTestId('curve-chart').locator('.recharts-reference-dot')).toHaveCount(0);
   });
 
-  test('empty goal (no entries): +0.0%, only the Ideal line, empty.detail.curve and empty history', async ({ page }) => {
+  test('empty goal (no entries): −100.0%, You drawn flat at 0 min under the Ideal line, empty.detail.curve and empty history', async ({ page }) => {
     const base = await sampleFile();
     await importContent(page, { ...base, goals: [goalAt('e1', { name: 'Empty' })], entries: [] });
     await gotoHash(page, '/goals/e1');
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% better');
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}100.0% vs. ideal`); // 0 min vs ideal(9) = 281 → −100 %
     await expect(page.getByTestId('headline-sub')).toHaveText(EN.empty.detail.curve); // M9: curve-empty merged into headline-sub (dev deviation D2)
     await expect(page.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'empty');
     await expect(page.getByRole('heading', { name: EN.empty.detail.history })).toBeVisible();
-    await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(1); // Ideal only
+    await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2); // v6: You exists from day 1 (flat at 0 min)
+    await expect(page.getByTestId('curve-chart')).toContainText('You 0 min');
+    await expect(page.getByTestId('curve-chart')).toContainText('Ideal 281 min');
     await expectAxeClean(page);
   });
 
@@ -202,11 +227,14 @@ test.describe('M5 curve in the browser', () => {
       entries: [entryAt('o1', 'one', '2026-10-09')],
     });
     await gotoHash(page, '/goals/one');
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% better');
+    // 30 min vs ideal(1) = 30 → exactly on the line: +0.0 % (positive variant)
+    await expect(page.getByTestId('headline')).toHaveText('+0.0% ahead of ideal');
+    await expect(page.getByTestId('headline-sub')).toHaveText('Today: 30 min. Total 30 min, ideal 30 min (+0 min).');
     const text = await page.locator('main').innerText();
     expect(text).not.toMatch(/NaN|Infinity|undefined|\[object/);
     await page.getByText(EN.goal.detail.showTable).click();
     await expect(page.getByTestId('curve-table').locator('tbody tr')).toHaveCount(1);
+    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(0).locator('td')).toHaveText(['30', '30', '30', '+0']);
     await expectAxeClean(page);
     expect(problems).toEqual([]);
   });
@@ -237,7 +265,9 @@ test.describe('M5 curve in the browser', () => {
     await page.clock.setFixedTime(new Date('2026-10-10T00:01:00+07:00'));
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await expect(page.getByTestId('headline-day')).toHaveText('Day 10 of 31');
-    await expect(page.getByTestId('headline-sub')).toContainText('Last logged Oct 8: 30 min'); // M9: flat through the unlogged days
+    // the total keeps 240 min while the ideal grows to ideal(10) = 30·(1.01^10 − 1)/0.01 = 313.9 → 314, gap 240 − 313.9 = −74
+    await expect(page.getByTestId('headline-sub')).toHaveText(`Last logged Oct 8: 30 min. Total 240 min, ideal 314 min (${MINUS}74 min).`);
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}23.5% vs. ideal`); // (240 − 313.87)/313.87 = −23.5 %
     await expect(page.getByTestId('curve-chart')).toHaveAttribute('aria-label', /Day 10 of 31/);
   });
 
@@ -274,15 +304,17 @@ test.describe('M5 curve in the browser', () => {
     const problems = watch(page);
     await importBackupVi(page);
     await gotoHash(page, '/goals/g1');
-    await expect(page.getByTestId('headline')).toHaveText(VI.goal.detail.headline.replace('{{value}}', '+0,0'));
-    await expect(page.getByTestId('headline-sub')).toHaveText('Lần ghi gần nhất 8 thg 10: 30 phút, +0,0% so với 7 thg 10 (30 phút). ×1 kể từ 1 thg 10 (30 phút).');
-    await expect(page.getByTestId('curve-chart')).toContainText('Lý tưởng +8,3%');
-    await expect(page.getByTestId('curve-chart')).toContainText('Bạn +0,0%');
+    await expect(page.getByTestId('headline')).toHaveText(VI.goal.detail.headlineDown.replace('{{value}}', `${MINUS}14,6`));
+    await expect(page.getByTestId('headline-sub')).toHaveText(`Lần ghi gần nhất 8 thg 10: 30 phút. Tổng 240 phút, lý tưởng 281 phút (${MINUS}41 phút).`);
+    await expect(page.getByTestId('curve-chart')).toContainText('Lý tưởng 281 phút');
+    await expect(page.getByTestId('curve-chart')).toContainText('Bạn 240 phút');
     await page.getByTestId('curve-chart').focus();
-    await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('curve-reading')).toContainText('+8,3%');
+    await page.keyboard.press('ArrowRight'); // today (9 thg 10): nothing logged
+    await expect(page.getByTestId('curve-reading')).toContainText('Không ghi · Tổng 240 phút · Lý tưởng 281 phút');
+    await page.keyboard.press('Escape'); // clear the multi-line reading before clicking below the chart (M9-D1)
+    await expect(page.getByTestId('curve-reading')).toHaveText('');
     await page.getByText(VI.goal.detail.showTable).click();
-    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(8)).toContainText('+0,0%');
+    await expect(page.getByTestId('curve-table').locator('tbody tr').nth(8).locator('td')).toHaveText(['281', '240', '0', `${MINUS}41`]);
     await expectNoViLeaks(page);
     await expectNoHorizontalScroll(page);
     for (const id of ['g4', 'g5', 'g3']) {

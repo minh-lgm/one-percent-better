@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildGoal, datasetO1, datasetS1, datasetS1O1 } from '../test/builders';
-import { activeGoals, byCreatedAt, byId, dailyTarget, daysElapsed, entriesOutsidePeriod, goalStatus, groupGoals, isOpenEnded, isWithinGoal, periodDays, totalTarget, validateGoalInput, type GoalInput } from './goal';
+import { activeGoals, byCreatedAt, byId, dailyTarget, daysElapsed, entriesOutsidePeriod, goalStatus, groupGoals, isOpenEnded, isWithinGoal, periodDays, plannedMinutes, planStartOf, totalTarget, validateGoalInput, type GoalInput } from './goal';
 import type { Goal } from './types';
 
 const valid: GoalInput = {
@@ -87,11 +87,35 @@ describe('derived values (M1-AC4)', () => {
     expect(dailyTarget({ targetType: 'total', targetMinutes: 60, startDate: '2026-10-01', endDate: '2026-10-07' })).toBe(9);
   });
 
-  it('periodDays / totalTarget', () => {
+  // v6.1 (ADR-47): expected/total follow the +1 % plan — totalTarget is the plan added up over the period
+  // (30 × (1.01^31 − 1) / 0.01 = 1083.98 → 1084, was 30 × 31 = 930); a total goal gives back exactly its total.
+  it('periodDays / totalTarget (v6.1: the +1 % plan added up; was dailyTarget × days)', () => {
     const g = buildGoal({ targetType: 'daily', targetMinutes: 30, startDate: '2026-10-01', endDate: '2026-10-31' });
     expect(periodDays(g)).toBe(31);
-    expect(totalTarget(g)).toBe(930);
+    expect(totalTarget(g)).toBe(1084);
     expect(totalTarget({ targetType: 'total', targetMinutes: 6000, startDate: '2026-01-01', endDate: '2026-12-31' })).toBe(6000);
+    const { goals } = datasetS1();
+    expect(goals.map((x) => totalTarget(x))).toEqual([1084, 4733, 6000, 1565, 7584]);
+  });
+
+  it('planStartOf / plannedMinutes (v6.1, ADR-47): T₀ = minutes per day for a daily goal, the scaled start for a total goal; whole minutes, 0 for k ≤ 0', () => {
+    const g = buildGoal({ targetType: 'daily', targetMinutes: 30, startDate: '2026-10-01', endDate: '2026-10-31' });
+    expect(planStartOf(g)).toBe(30);
+    expect(plannedMinutes(g, 0)).toBe(0);
+    expect(plannedMinutes(g, -1)).toBe(0);
+    expect(plannedMinutes(g, 1)).toBe(30);
+    expect(plannedMinutes(g, 2)).toBe(60); // 60.3
+    expect(plannedMinutes(g, 9)).toBe(281); // 281.06
+    expect(plannedMinutes(g, 31)).toBe(totalTarget(g));
+    const total = { targetType: 'total' as const, targetMinutes: 6000, startDate: '2026-01-01', endDate: '2026-12-31' };
+    expect(planStartOf(total)).toBeCloseTo(1.631169, 6); // 6000 × 0.01 / (1.01^365 − 1)
+    expect(plannedMinutes(total, 365)).toBe(6000);
+    expect(plannedMinutes(total, 282)).toBe(2535);
+    expect(plannedMinutes(total, 1)).toBe(2);
+    // Open-ended goal: T₀ is the daily minutes; the plan is open too.
+    expect(planStartOf({ targetType: 'daily', targetMinutes: 10, startDate: '2026-10-01', endDate: null })).toBe(10);
+    expect(plannedMinutes({ targetType: 'daily', targetMinutes: 10, startDate: '2026-10-01', endDate: null }, 9)).toBe(94);
+    expect(() => planStartOf({ targetType: 'total', targetMinutes: 6000, startDate: '2026-01-01', endDate: null })).toThrow(RangeError);
   });
 });
 
@@ -220,12 +244,14 @@ describe('open-ended goals — helpers and status (M11-AC2, ARCH §4.6 b/c)', ()
     expect(daysElapsed(g1, '2026-12-01')).toBe(31);
   });
 
-  it('totalTarget(o1, today) = dailyTarget × elapsed days; without today it is a programming error (RangeError); finite goals ignore today', () => {
-    expect(totalTarget(o1, '2026-10-09')).toBe(90);
+  it('totalTarget(o1, today) = plannedMinutes(o1, elapsed days) (v6.1 ADR-47: the +1 % plan up to today, was 10 × days); without today it is a programming error (RangeError); finite goals ignore today', () => {
+    expect(totalTarget(o1, '2026-10-09')).toBe(94); // 10 × (1.01^9 − 1) / 0.01 = 93.69 (was 90)
+    expect(totalTarget(o1, '2026-10-01')).toBe(10);
     expect(totalTarget(o1, '2026-09-30')).toBe(0);
+    expect(totalTarget(o1, '2031-10-02')).toBe(79_336_177_010);
     expect(() => totalTarget(o1)).toThrow(RangeError);
-    expect(totalTarget(g1)).toBe(930);
-    expect(totalTarget(g1, '2026-10-09')).toBe(930);
+    expect(totalTarget(g1)).toBe(1084);
+    expect(totalTarget(g1, '2026-10-09')).toBe(1084);
     expect(totalTarget({ targetType: 'total', targetMinutes: 6000, startDate: '2026-01-01', endDate: '2026-12-31' }, '2026-10-09')).toBe(6000);
   });
 

@@ -87,12 +87,20 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('S1 numbers per goal (oracle: mockup 06 script and TASKS table)', () => {
+  // v6.1 (FR-24 v6.1, ADR-47): Progress / Pace follow the +1 %-a-day plan — totalTarget = round(T0 x (1.01^N - 1) / 0.01) for a
+  // daily goal (a total goal: the total itself), expected = the same sum over the elapsed days, pace = logged - expected, shown
+  // through f.duration (< 60 -> "N min", else "H h M min" / "H h"). Numbers from tests/qc/m4-r1-domain.test.ts (exact oracle):
+  //   g1 30/d x 31 d -> 1084; 9 days elapsed -> 281; 240 - 281 = -41 -> "41 min behind"; 240 / 1084 = 22.1 %
+  //   g2 20/d x 122 d -> 4733; 39 elapsed -> 948; 250 - 948 = -698 = 11 h 38 min; 5.3 %
+  //   g3 total 6000; T0 = 6000 x 0.01 / (1.01^365 - 1); 282 elapsed -> 2535; 60 - 2535 = -2475 = 41 h 15 min; 1.0 %
+  //   g4 45/d x 30 d -> 1565; upcoming -> 0 expected, On pace, 0.0 %
+  //   g5 15/d x 181 d -> 7584; ended -> expected 7584; 15 - 7584 = -7569 = 126 h 9 min; 0.2 %
   const expected: Array<{ id: string; name: string; time: string; whole: string; days: string; progress: string; sub: string; pace: string; expectedMin: string; cur: string; longest: string }> = [
-    { id: 'g1', name: 'Read', time: '4.0 h', whole: 'Whole goal: 4.0 h', days: '8', progress: '25.8%', sub: '240 of 930 min', pace: '30 min behind', expectedMin: 'Expected 270 min by today', cur: '8 days', longest: '8 days' },
-    { id: 'g2', name: 'Guitar', time: '4.2 h', whole: 'Whole goal: 4.2 h', days: '12', progress: '10.2%', sub: '250 of 2,440 min', pace: '8 h 50 min behind', expectedMin: 'Expected 780 min by today', cur: '2 days', longest: '10 days' },
-    { id: 'g3', name: 'Spanish', time: '1.0 h', whole: 'Whole goal: 1.0 h', days: '1', progress: '1.0%', sub: '60 of 6,000 min', pace: '78 h 54 min behind', expectedMin: 'Expected 4,794 min by today', cur: '0 days', longest: '1 day' },
-    { id: 'g4', name: 'Marathon prep', time: '0.0 h', whole: 'Whole goal: 0.0 h', days: '0', progress: '0.0%', sub: '0 of 1,350 min', pace: 'On pace', expectedMin: 'Expected 0 min by today', cur: '0 days', longest: '0 days' },
-    { id: 'g5', name: 'Old course', time: '0.3 h', whole: 'Whole goal: 0.3 h', days: '1', progress: '0.6%', sub: '15 of 2,715 min', pace: '45 h behind', expectedMin: 'Expected 2,715 min by today', cur: '0 days', longest: '1 day' },
+    { id: 'g1', name: 'Read', time: '4.0 h', whole: 'Whole goal: 4.0 h', days: '8', progress: '22.1%', sub: '240 of 1,084 min', pace: '41 min behind', expectedMin: 'Expected 281 min by today', cur: '8 days', longest: '8 days' },
+    { id: 'g2', name: 'Guitar', time: '4.2 h', whole: 'Whole goal: 4.2 h', days: '12', progress: '5.3%', sub: '250 of 4,733 min', pace: '11 h 38 min behind', expectedMin: 'Expected 948 min by today', cur: '2 days', longest: '10 days' },
+    { id: 'g3', name: 'Spanish', time: '1.0 h', whole: 'Whole goal: 1.0 h', days: '1', progress: '1.0%', sub: '60 of 6,000 min', pace: '41 h 15 min behind', expectedMin: 'Expected 2,535 min by today', cur: '0 days', longest: '1 day' },
+    { id: 'g4', name: 'Marathon prep', time: '0.0 h', whole: 'Whole goal: 0.0 h', days: '0', progress: '0.0%', sub: '0 of 1,565 min', pace: 'On pace', expectedMin: 'Expected 0 min by today', cur: '0 days', longest: '0 days' },
+    { id: 'g5', name: 'Old course', time: '0.3 h', whole: 'Whole goal: 0.3 h', days: '1', progress: '0.2%', sub: '15 of 7,584 min', pace: '126 h 9 min behind', expectedMin: 'Expected 7,584 min by today', cur: '0 days', longest: '1 day' },
   ];
   test('every goal: time, days, progress, pace, streaks; year 2025/2027 behaviour', async ({ page }) => {
     const problems = watch(page);
@@ -180,8 +188,9 @@ test.describe('S1 numbers per goal (oracle: mockup 06 script and TASKS table)', 
     await expect(stat(page, 'stat-current')).toContainText('9 days');
     await expect(stat(page, 'stat-longest')).toContainText('9 days');
     await expect(stat(page, 'stat-time')).toContainText('4.5 h');
-    await expect(stat(page, 'stat-pace')).toContainText('On pace'); // 270 of 270
-    await expect(stat(page, 'stat-progress')).toContainText('29.0%');
+    // v6.1: 270 logged vs 281 expected by day 9 (round(30 x (1.01^9 - 1) / 0.01)) -> 11 min behind; 270 / 1084 = 24.9 % (was On pace / 29.0 %)
+    await expect(stat(page, 'stat-pace')).toContainText('11 min behind');
+    await expect(stat(page, 'stat-progress')).toContainText('24.9%');
     await expect(cell(page, '2026-10-09')).toHaveClass(/\bl3\b/);
     await expect(cell(page, '2026-10-09')).toHaveClass(/\btoday\b/);
     await expect(cell(page, '2026-10-09')).toHaveAttribute('aria-label', 'Friday, October 9, 2026: 30 min, target met');
@@ -413,9 +422,10 @@ test.describe('layout, a11y, i18n, dark mode', () => {
     }
     // Vietnamese numbers / pace
     await gotoHash(page, '/review?goal=g2&year=2026');
-    await expect(stat(page, 'stat-pace')).toContainText('Chậm 8 giờ 50 phút');
-    await expect(stat(page, 'stat-progress')).toContainText('10,2%');
-    await expect(stat(page, 'stat-progress')).toContainText('250/2.440 phút');
+    // v6.1: g2 pace -698 min = 11 h 38 min, 250 of 4,733 min = 5.3 % (see the S1 table above)
+    await expect(stat(page, 'stat-pace')).toContainText('Chậm 11 giờ 38 phút');
+    await expect(stat(page, 'stat-progress')).toContainText('5,3%');
+    await expect(stat(page, 'stat-progress')).toContainText('250/4.733 phút');
     await expect(stat(page, 'stat-time')).toContainText('4,2 giờ');
     // Weekday labels start with Monday, 7 of them, Vietnamese
     const days = await page.getByTestId('heatmap-weekday').allTextContents();
@@ -467,7 +477,8 @@ test.describe('security and robustness', () => {
     await importCustom(page, goals, [entry('a1', '2026-10-02', 30)]);
     await gotoHash(page, '/review?goal=a1&year=2026');
     await expect(page.getByRole('combobox', { name: EN.review.goalLabel }).locator('option').nth(1)).toHaveText('Old thing (archived)');
-    await expect(stat(page, 'stat-pace')).toContainText('4 h behind'); // 9 days x 30 = 270 expected, 30 logged -> -240
+    // v6.1: 9 days elapsed -> round(30 x (1.01^9 - 1) / 0.01) = 281 expected, 30 logged -> -251 = 4 h 11 min (was 270 / -240 = 4 h)
+    await expect(stat(page, 'stat-pace')).toContainText('4 h 11 min behind');
   });
 
   // M4-D1 (FIXED in be017d2, verified in round 2): an archived goal that starts in the future must not get negative elapsed days.

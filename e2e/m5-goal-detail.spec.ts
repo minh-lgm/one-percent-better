@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () => {
-  test('M5-AC2: Read (S1) shows why, period, target, 25.8 %, streak 8/8, "−14.6% vs. ideal" (v6), two curve series, 8 history rows; chart chunks only on this page or Review', async ({ page }) => {
+  test('M5-AC2: Read (S1) shows why, period, target, 22.1 % (v6.1 plan), streak 8/8, "−14.6% vs. ideal" (v6), two curve series, 8 history rows; chart chunks only on this page or Review', async ({ page }) => {
     const scripts: string[] = [];
     const external: string[] = [];
     page.on('request', (req) => {
@@ -64,9 +64,11 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
       expect(await seg.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     }
 
-    await expect(page.getByTestId('stat-progress')).toContainText('25.8%');
-    await expect(page.getByTestId('stat-progress')).toContainText('240 of 930 min');
-    await expect(page.getByTestId('stat-pace')).toContainText('30 min behind');
+    // v6.1 (ADR-47): the stat cards follow the same +1 %-a-day plan as the ideal line (240 of 1,084; 240 − 281 = −41).
+    await expect(page.getByTestId('stat-progress')).toContainText('22.1%');
+    await expect(page.getByTestId('stat-progress')).toContainText('240 of 1,084 min');
+    await expect(page.getByTestId('stat-pace')).toContainText('41 min behind');
+    await expect(page.getByTestId('stat-pace')).toContainText('Expected 281 min by today');
     await expect(page.getByTestId('stat-current')).toContainText('8 days');
     await expect(page.getByTestId('stat-longest')).toContainText('8 days');
     await expect(page.getByTestId('history-row')).toHaveCount(8);
@@ -175,7 +177,7 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
 
     await gotoHash(page, '/goals/g3');
     await expect(page.getByText(EN.goal.status.archived, { exact: true })).toBeVisible();
-    await expect(headline(page)).toHaveText('−99.8% vs. ideal'); // v6.0: 60 min vs 26,424 min of cumulative target (17 min/day)
+    await expect(headline(page)).toHaveText('−97.6% vs. ideal'); // v6.1 (ADR-47): total goal 6,000 min → plan starts at 1.63 min/day; 60 min vs 2,535 min planned by Oct 9
     await page.getByRole('button', { name: EN.goals.restore }).click();
     await expect(toast(page)).toHaveText(EN.toast.goalRestored);
     await expect(page.getByText(EN.goal.status.active, { exact: true })).toBeVisible();

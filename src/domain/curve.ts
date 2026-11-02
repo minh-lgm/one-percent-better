@@ -1,11 +1,12 @@
 // The 1% curve v6 — a burn-up of minutes against a compounding target (FR-27 v6.0; ARCHITECTURE
 // §4.5, ADR-46). Pure functions over one goal and its entries; `today` is passed in.
 //
-// Let T = `dailyTarget(goal)` and k = ordinal of the day in the period (startDate = 1).
+// Let T = `planStartOf(goal)` (daily goal: minutes per day; total goal: the start that makes the plan
+// add up to the total, v6.1 ADR-47) and k = ordinal of the day in the period (startDate = 1).
 // target(k) = T × 1.01^(k−1): the daily target starts at T on day 1 and grows 1% a day (user
 // decision 2026-11-02, replacing the "ratio to the first logged day" curve of v3.0, ADR-26).
 // ideal(k)  = Σ_{i≤k} target(i) = T × (1.01^k − 1) / 0.01 — cumulative target minutes (closed form,
-//             never a running float sum).
+//             never a running float sum; `plan.ts`). Progress/Pace use the same plan (`plannedMinutes`).
 // actual(k) = Σ minutes logged on days ≤ k inside the period — cumulative logged minutes.
 // Both lines are in minutes, start at 0 and never go down; days without time keep "You" flat.
 // headlinePercent = pct(actual(last), ideal(last)): signed % of the cumulative target reached
@@ -14,11 +15,11 @@
 // v4.0 (M11, A-52): an open-ended goal (`endDate = null`) has no future days — the ideal line runs
 // startDate → today only (`periodDays` = `elapsedDays`), and before it starts there is nothing to draw.
 import { dayNumber, daysInclusive, isoFromDayNumber } from './dates';
-import { dailyTarget } from './goal';
+import { planStartOf } from './goal';
+import { cumulativeTarget, dayTarget } from './plan';
 import type { Goal, ISODate, LogEntry } from './types';
 
-export const GROWTH_RATE = 0.01;
-export const DAILY_GROWTH = 1 + GROWTH_RATE;
+export { cumulativeTarget, DAILY_GROWTH, dayTarget, GROWTH_RATE, growth, growthPercent } from './plan';
 
 export interface IdealPoint {
   date: ISODate;
@@ -62,8 +63,8 @@ export interface CurveData {
   elapsedDays: number;
   /** Days with time logged inside the elapsed part of the period. */
   loggedDays: number;
-  /** T: the daily target the ideal line starts from (minutes). */
-  dailyTarget: number;
+  /** T: the target of day 1 the ideal line starts from (minutes; `planStartOf(goal)` — not rounded for a total goal). */
+  startTarget: number;
   /** The most recent logged day; null when nothing is logged yet. */
   latest: LoggedDayRef | null;
   /** actual(last): all minutes logged in the elapsed part of the period (0 when upcoming). */
@@ -74,26 +75,6 @@ export interface CurveData {
   gapMinutes: number;
   /** Signed headline percent, one decimal: pct(totalMinutes, idealMinutes); 0 when upcoming. */
   headlinePercent: number;
-}
-
-export function growth(days: number): number {
-  return Math.pow(DAILY_GROWTH, days);
-}
-
-/** `(factor − 1) × 100` rounded to one decimal. */
-export function growthPercent(factor: number): number {
-  return Math.round((factor - 1) * 1000) / 10;
-}
-
-/** target(k) = T × 1.01^(k−1). */
-export function dayTarget(daily: number, k: number): number {
-  return daily * growth(k - 1);
-}
-
-/** ideal(k) = Σ_{i=1..k} target(i) = T × (1.01^k − 1) / 0.01; 0 for k ≤ 0. */
-export function cumulativeTarget(daily: number, k: number): number {
-  if (k <= 0) return 0;
-  return (daily * (growth(k) - 1)) / GROWTH_RATE;
 }
 
 /**
@@ -116,7 +97,7 @@ export function lastElapsedDay(goal: Pick<Goal, 'startDate' | 'endDate'>, today:
 /** Build the ideal and actual series of one goal (`goalEntries` must belong to `goal`). */
 export function curve(goal: Goal, goalEntries: readonly LogEntry[], today: ISODate): CurveData {
   const lastDay = lastElapsedDay(goal, today);
-  const daily = dailyTarget(goal);
+  const daily = planStartOf(goal);
   // Finite goal: the whole period (future days included). Open-ended: startDate → today, nothing before the start.
   const periodDays = goal.endDate !== null ? daysInclusive(goal.startDate, goal.endDate) : lastDay ? daysInclusive(goal.startDate, lastDay) : 0;
   const start = dayNumber(goal.startDate);
@@ -158,7 +139,7 @@ export function curve(goal: Goal, goalEntries: readonly LogEntry[], today: ISODa
     periodDays,
     elapsedDays,
     loggedDays,
-    dailyTarget: daily,
+    startTarget: daily,
     latest,
     totalMinutes: total,
     idealMinutes,

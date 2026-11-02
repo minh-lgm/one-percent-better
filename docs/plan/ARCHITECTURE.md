@@ -140,11 +140,12 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `config/constants.ts` | config | Giới hạn nghiệp vụ (độ dài tên, phút tối đa, kích thước import, ngưỡng heatmap) | — |
 | `domain/types.ts` | logic | Kiểu `Goal`, `LogEntry`, `ActiveTimer`, `Settings`, `ISODate`, `DomainError` | — |
 | `domain/dates.ts` | logic | Ngày cục bộ ↔ `YYYY-MM-DD`, cộng/trừ ngày, khoảng ngày, tuần ISO | date-fns |
-| `domain/goal.ts` | logic | Validate goal, `dailyTarget`, trạng thái goal, kiểm tra đổi khoảng thời gian | dates (v3.1: bỏ zod, ADR-27) |
+| `domain/goal.ts` | logic | Validate goal, `dailyTarget`, trạng thái goal, kiểm tra đổi khoảng thời gian; **v6.1 (ADR-47):** `planStartOf` (T₀ — goal `total` scale để kế hoạch bằng đúng tổng), `plannedMinutes(goal, k)` (phút nguyên), `totalTarget` theo kế hoạch | dates, plan (v3.1: bỏ zod, ADR-27) |
 | `domain/entry.ts` | logic | Validate entry, giới hạn 1440 phút/ngày, quy tắc ngày ghi bù | dates (v3.1: bỏ zod, ADR-27) |
-| `domain/stats.ts` | logic | Tổng theo ngày/tuần/tháng, ngày đạt, streak, tiến độ, đi trước/chậm | dates |
+| `domain/stats.ts` | logic | Tổng theo ngày/tuần/tháng, ngày đạt, streak, tiến độ, đi trước/chậm; **v6.1 (ADR-47):** `expectedMinutes = plannedMinutes(goal, elapsedDays)` — cùng kế hoạch với đường lý tưởng | dates, goal |
 | `domain/heatmap.ts` | logic | Lưới năm (cột tuần, hàng thứ Hai→Chủ nhật), mức màu 0–4 | dates, stats |
-| `domain/curve.ts` | logic | Đường cong 1% **v6 (burn-up phút)**: `dayTarget` `T × 1.01^(k−1)`, `cumulativeTarget` (công thức đóng), "Bạn" = phút đã ghi cộng dồn, `pct`, headline có dấu, thang Y phút (`curveYScale`/`curveYDomain`, yMin = 0). **v6.0 (phase 7):** phụ thuộc `dailyTarget` (§4.5, ADR-46; thay v3.0/ADR-26) | dates, goal |
+| `domain/curve.ts` | logic | Đường cong 1% **v6 (burn-up phút)**: `dayTarget` `T × 1.01^(k−1)`, `cumulativeTarget` (công thức đóng), "Bạn" = phút đã ghi cộng dồn, `pct`, headline có dấu, thang Y phút (`curveYScale`/`curveYDomain`, yMin = 0). **v6.0 (phase 7):** phụ thuộc chỉ tiêu (§4.5, ADR-46; thay v3.0/ADR-26); **v6.1:** `T = planStartOf(goal)`, `CurveData.startTarget` thay `dailyTarget`, số học của kế hoạch chuyển sang `plan.ts` và được re-export | dates, goal, plan |
+| `domain/plan.ts` | logic | **v6.1 (ADR-47, mới):** kế hoạch +1 %/ngày dùng chung cho curve và stats — `GROWTH_RATE`, `DAILY_GROWTH`, `growth`, `growthPercent`, `dayTarget(T₀, k) = T₀ × 1.01^(k−1)`, `cumulativeTarget(T₀, k) = T₀ × (1.01^k − 1) / 0.01` (công thức đóng), `planStart(targetType, targetMinutes, periodDays)` (goal `daily`: `targetMinutes`; goal `total`: `targetMinutes × 0.01 / (1.01^periodDays − 1)`). Thuần số học, không biết kiểu `Goal` | — |
 | `domain/timer.ts` | logic | Thời gian đã chạy, làm tròn phút, ngày quy về | dates |
 | `domain/reminder.ts` | logic | `shouldNotify`, `shouldShowBanner`, dữ liệu nhắc có cấu trúc (`{ pendingCount, items: [{ goalName, minutes, target }] }`) — không sinh chữ; chữ do `ReminderService` dịch | stats |
 | `domain/backup.ts` | logic | Schema file backup (zod), kiểm tra version và toàn vẹn tham chiếu. **v3.1 (ADR-27):** chỉ được nạp bằng `import()` từ `BackupService.parse`; re-export phần của `backup-file.ts` để code/test cũ import từ đây vẫn chạy | zod, entry, backup-file |
@@ -338,12 +339,13 @@ Thay đổi schema sau này: tăng `db.version(n)` kèm `upgrade()`; tăng `sche
 
 - `periodDays(goal)` = số ngày từ `startDate` tới `endDate`, tính cả hai đầu.
 - `dailyTarget(goal)` = `targetType === 'daily' ? targetMinutes : ceil(targetMinutes / periodDays)`. Ví dụ 100 h, 2026-01-01→2026-12-31: `ceil(6000/365) = 17`.
-- `totalTarget(goal)` = `daily ? targetMinutes × periodDays : targetMinutes`.
+- **v6.1 (ADR-47)** `planStartOf(goal)` = T₀ của kế hoạch +1 %/ngày (`domain/plan.ts`): `daily` → `targetMinutes`; `total` → `targetMinutes × 0.01 / (1.01^periodDays − 1)` (số thực, không làm tròn; G3 6000/365: 1,631169). `plannedMinutes(goal, k)` = `round(T₀ × (1.01^k − 1) / 0.01)` (phút nguyên; 0 khi k ≤ 0) — cùng con số với `ideal(k)` của đường cong (§4.5).
+- `totalTarget(goal)` = ~~`daily ? targetMinutes × periodDays : targetMinutes`~~ **v6.1 (ADR-47):** `daily` → `plannedMinutes(goal, periodDays)` (kế hoạch cộng dồn cả khoảng; G1 30 phút × 31 ngày: 1.084, phẳng là 930); `total` → `targetMinutes` (đúng tổng user nhập, vì T₀ đã scale). Goal không thời hạn: §4.6.
 - `status(goal, today)`: `archived` nếu archived; `upcoming` nếu today < startDate; `ended` nếu today > endDate; còn lại `active`.
 - Ngày đạt: tổng phút của goal trong ngày ≥ `dailyTarget`.
 - `currentStreak`: số ngày đạt liên tiếp kết thúc ở hôm nay nếu hôm nay đạt, ngược lại kết thúc ở hôm qua. `longestStreak`: chuỗi dài nhất trong khoảng của goal. Streak tổng: ngày có ≥ 1 goal đạt.
-- `progress%` = tổng phút trong khoảng / `totalTarget` × 100, làm tròn 1 chữ số thập phân, có thể > 100.
-- `pace` = tổng phút tới hôm nay − `dailyTarget × số ngày đã trôi qua (startDate → min(today, endDate), tính cả hai đầu, tức là gồm cả hôm nay)`; dương = đi trước. Goal `upcoming`: pace = 0.
+- `progress%` = tổng phút trong khoảng / `totalTarget` × 100, làm tròn 1 chữ số thập phân, có thể > 100 (v6.1: G1 240/1084 → 22,1 %, trước 25,8 %).
+- `expectedMinutes` **(v6.1, ADR-47)** = `plannedMinutes(goal, số ngày đã trôi qua)` với số ngày đã trôi qua = `startDate → min(today, endDate)`, tính cả hai đầu (tức là gồm cả hôm nay); ~~`dailyTarget × số ngày đã trôi qua`~~ (G1 ngày 9: 281, phẳng 270; dữ liệu thật ngày 14: 448, phẳng 420). `pace` = tổng phút tới hôm nay − `expectedMinutes`; dương = đi trước. Goal `upcoming`: pace = 0.
 - Timer: số phút điền sẵn khi Stop = `clamp(round(elapsedMs / 60000), 1, 1440)` (làm tròn tới phút gần nhất, 30 s làm tròn lên; tối thiểu 1, tối đa 1440).
 - Mức heatmap một goal: 0 = 0 phút; 1 = >0 và <50% `dailyTarget`; 2 = 50–<100%; 3 = 100–<200%; 4 = ≥200%. "All goals" theo tổng phút: 0 = 0; 1 = 1–29; 2 = 30–59; 3 = 60–119; 4 = ≥120. Ngày ngoài khoảng goal: trạng thái `outside`.
 - Đường cong: với mỗi ngày d trong khoảng goal, `k` = thứ tự ngày (startDate là 1), `ideal = 1.01^k` (**v5.1:** `1.01^(k−1)`, ngày đầu +0%). ~~Với d ≤ today, `n(d)` = số ngày đạt từ startDate tới d, `actual = 1.01^n(d)`. Headline: `(1.01^n(today) − 1) × 100`, 1 chữ số thập phân.~~ **v3.0 (M9):** `actual(d)` = phút ngày có ghi gần nhất ≤ d / phút ngày đầu tiên có ghi; công thức đầy đủ, làm tròn, ví dụ, contract và thang Y ở **§4.5**.
@@ -594,15 +596,15 @@ Ghi chú: developer được chỉnh cú pháp cho chạy đúng trên Supabase 
 Áp nhóm `locale` từ cloud: ghi kv `locale` → `LocaleService.watch` phát → container gọi `setLocale(i18n, locale)` ngay (đổi `<html lang>`, `document.title`, toàn app, không reload). Áp nhóm `reminder`: ghi `settings.reminderEnabled/reminderTime` (giữ nguyên các field khác của `settings`) → Settings và scheduler đọc giá trị mới; **không** gọi `Notification.requestPermission()`.
 | Phiên Supabase | `localStorage['opb-auth']` (+ `opb-auth-code-verifier` trong lúc đăng nhập) | — | Do SDK quản lý (A-26) |
 
-### 4.5 Đường cong 1% v6 — burn-up phút so với mục tiêu (phase 7, 2026-11-02; FR-27 v6.0, ADR-46)
+### 4.5 Đường cong 1% v6 — burn-up phút so với mục tiêu (phase 7, 2026-11-02; FR-27 v6.0, ADR-46; v6.1: kế hoạch chung `plan.ts`, ADR-47)
 
-Thay toàn bộ định nghĩa v3.0 "tỉ lệ phút so với ngày có ghi trước, nhân dồn" (ADR-26, nay thay bởi ADR-46). Vẫn là hàm thuần `curve(goal, goalEntries, today): CurveData` trong `src/domain/curve.ts` (chữ ký giữ nguyên); `StatsService.curve(goalId, today)` giữ nguyên chữ ký. Không lưu gì, không đổi schema, backup, sync. Lý do đổi: với dữ liệu thật của user (chỉ tiêu 30 phút/ngày từ 2026-10-20; 22, 24, 24, 53 phút) v3.0 cho headline +140,9% (53/22 = ×2,41) trong khi user hụt mục tiêu rõ rệt — v3.0 chỉ so ngày ghi với ngày ghi trước và bỏ qua chỉ tiêu. v6.0 là **burn-up** (burndown của Jira lật ngược): phút cộng dồn so với mục tiêu cộng dồn.
+Thay toàn bộ định nghĩa v3.0 "tỉ lệ phút so với ngày có ghi trước, nhân dồn" (ADR-26, nay thay bởi ADR-46). Vẫn là hàm thuần `curve(goal, goalEntries, today): CurveData` trong `src/domain/curve.ts` (chữ ký giữ nguyên); `StatsService.curve(goalId, today)` giữ nguyên chữ ký. Không lưu gì, không đổi schema, backup, sync. Lý do đổi: với dữ liệu thật của user (chỉ tiêu 30 phút/ngày từ 2026-10-20; 22, 24, 24, 53 phút) v3.0 cho headline +140,9% (53/22 = ×2,41) trong khi user hụt mục tiêu rõ rệt — v3.0 chỉ so ngày ghi với ngày ghi trước và bỏ qua chỉ tiêu. v6.0 là **burn-up** (burndown của Jira lật ngược): phút cộng dồn so với mục tiêu cộng dồn. **v6.1 (ADR-47, cùng ngày):** số học của kế hoạch (`dayTarget`, `cumulativeTarget`, `planStart`) tách ra `src/domain/plan.ts` và dùng chung với `goalStats` (Progress/Pace, §4 và §4.6), nên ba con số trên Goal detail (headline, Pace, Progress) cùng một kế hoạch; `curve.ts` re-export các helper nên import cũ vẫn chạy.
 
 **Lịch sử.** M5: thực tế = `1.01^n` (n = số ngày đạt chỉ tiêu). v3.0 (M9, ADR-26, 2026-10-13): thực tế = `m(ngày có ghi gần nhất) / m(ngày đầu có ghi)`, không phụ thuộc chỉ tiêu; contract có `baseline`, `previous`, `changePercent`, `actualFactor`, `idealPercent`, formatter `f.factor`, vạch 0% — tất cả bị bỏ ở v6.0. v5.1 (2026-10-22): đường lý tưởng `1.01^(k−1)` thay `1.01^k` (ngày đầu +0%) — v6.0 giữ ý này ở `target(1) = T`.
 
 **Ký hiệu.**
 
-- `T = dailyTarget(goal)` (`domain/goal.ts`): goal `daily` → `targetMinutes`; goal `total` → `ceil(targetMinutes / periodDays)`. Đơn vị phút.
+- `T = planStartOf(goal)` (`domain/goal.ts` → `plan.ts`; **v6.1, ADR-47** — ~~v6.0: `dailyTarget(goal)`~~): goal `daily` → `targetMinutes`; goal `total` → `targetMinutes × 0.01 / (1.01^periodDays − 1)` (số thực, không làm tròn, để `ideal(periodDays) = targetMinutes` đúng tổng user nhập; G3 6000/365 → 1,631169 — ~~`ceil(targetMinutes / periodDays)` = 17~~). Đơn vị phút. `dailyTarget` (ceil) vẫn là chỉ tiêu ngày của Today / ngày đạt / streak (PRD A-73).
 - `last = lastElapsedDay(goal, today)` = `min(today, endDate)` (goal không thời hạn: `today`); `today < startDate` → `null` (upcoming, không có điểm thực tế).
 - `k` = thứ tự ngày trong khoảng, `startDate` = 1. `D` = các ngày `startDate … last` (tính cả hai đầu); `elapsedDays = |D|`.
 - `m(d)` = tổng `minutes` của **mọi** entry còn sống của goal có `date = d`, d ∈ D. Entry ngoài D bị bỏ qua (A-41). Ngày **có ghi**: `m(d) > 0`.
@@ -619,13 +621,13 @@ Thay toàn bộ định nghĩa v3.0 "tỉ lệ phút so với ngày có ghi trư
 | `headlinePercent` | `pct(actual(last), ideal(last))` khi `elapsedDays > 0`; `0` khi upcoming | `−100` khi đã bắt đầu mà chưa ghi gì |
 | `totalMinutes`, `idealMinutes`, `gapMinutes` | `actual(last)`, `ideal(last)`, `actual(last) − ideal(last)` | 0 khi upcoming |
 
-**Chỉ tiêu ngày quyết định đường cong** (đảo ngược PRD A-42 của v3.0): đổi `targetMinutes` (hoặc khoảng của goal `total`) → `T` đổi → đường lý tưởng, `gap`, `percent`, headline đổi; đường "Bạn" không đổi. "+1%" trên Today, ngày đạt, streak, Progress, Pace vẫn tính như cũ trong `goalStats` (xem PRD OQ-21 về chênh lệch giữa "dự kiến" phẳng `T × elapsedDays` và `ideal(k)`).
+**Chỉ tiêu ngày quyết định đường cong** (đảo ngược PRD A-42 của v3.0): đổi `targetMinutes` (hoặc khoảng của goal `total`) → `T` đổi → đường lý tưởng, `gap`, `percent`, headline đổi; đường "Bạn" không đổi. "+1%" trên Today, ngày đạt, streak vẫn tính theo `dailyTarget` như cũ. **v6.1 (ADR-47):** Progress và Pace trong `goalStats` dùng **cùng kế hoạch**: `expectedMinutes = plannedMinutes(goal, elapsedDays) = round(ideal(elapsedDays))`, `totalTarget = plannedMinutes(goal, periodDays)` (goal `total`: `targetMinutes`), nên cũng đổi theo chỉ tiêu (PRD OQ-21 đã chốt: đồng bộ; ~~v6.0: "dự kiến" phẳng `T × elapsedDays`~~).
 
 **Làm tròn `pct(a, b)`** (giữ nguyên v3.0; `b > 0`, kết quả là % có dấu, 1 chữ số thập phân): `y = (a − b) × 1000 / b`; `r = sign(y) × Math.round(|y|)` (nửa làm tròn **xa 0**, đối xứng âm/dương); kết quả `r / 10`; `−0` chuẩn hoá thành `0`. Ví dụ: `pct(17,16) = 6.3`, `pct(15,16) = −6.3`, `pct(56, 121.812) = −54.0`, `pct(0, 30) = −100`. Số phút hiển thị (`idealMinutes`, `ideal(k)` trong bảng/tooltip, `gap`) làm tròn tới phút nguyên **ở lớp hiển thị** (`f.number`, `f.minutes`, `f.signed0`, `f.signedMinutes`), không làm tròn trong domain.
 
-**Phạm vi giá trị.** `actual ≥ 0`, `ideal(k) ≥ T ≥ 1`; `percent ≥ −100`, không có cận trên cố định (R1 với chỉ tiêu 1 phút: +1279,2%; 1 phút rồi 1440 phút với chỉ tiêu 30: +2289,7%). Lý tưởng cộng dồn lớn nhưng không tràn số: T = 30 → ngày 83: 3.851,7; ngày 365: 110.350; ngày 1827: ≈ 2,36·10^11 phút (trục Y dùng `Intl` compact từ 10.000). Không có giá trị âm trên trục Y (hai đường đều ≥ 0). Dữ liệu gộp từ sync có thể vượt 1440/ngày (A-25): công thức giữ nguyên, không cắt.
+**Phạm vi giá trị.** `actual ≥ 0`, `ideal(k) ≥ T > 0` (goal `daily`: T ≥ 1; goal `total` v6.1: T có thể < 1 phút, vd 1 giờ / 1827 ngày); `percent ≥ −100`, không có cận trên cố định (R1 với chỉ tiêu 1 phút: +1279,2%; 1 phút rồi 1440 phút với chỉ tiêu 30: +2289,7%). Lý tưởng cộng dồn lớn nhưng không tràn số: T = 30 → ngày 83: 3.851,7; ngày 365: 110.350; ngày 1827: ≈ 2,36·10^11 phút (trục Y dùng `Intl` compact từ 10.000). Không có giá trị âm trên trục Y (hai đường đều ≥ 0). Dữ liệu gộp từ sync có thể vượt 1440/ngày (A-25): công thức giữ nguyên, không cắt.
 
-**Contract (`src/domain/curve.ts`, v6.0 — chép từ code; `growth`, `growthPercent`, `pct`, `lastElapsedDay`, `GROWTH_RATE`, `DAILY_GROWTH` giữ nguyên; thêm `dayTarget`, `cumulativeTarget`):**
+**Contract (`src/domain/curve.ts`, v6.0 — chép từ code; `growth`, `growthPercent`, `pct`, `lastElapsedDay`, `GROWTH_RATE`, `DAILY_GROWTH` giữ nguyên; thêm `dayTarget`, `cumulativeTarget`). v6.1 (ADR-47): `GROWTH_RATE`, `DAILY_GROWTH`, `growth`, `growthPercent`, `dayTarget`, `cumulativeTarget` định nghĩa trong `src/domain/plan.ts` (thêm `planStart`) và được `curve.ts` re-export; `CurveData.dailyTarget` đổi tên thành `startTarget`; `goal.ts` thêm `planStartOf`, `plannedMinutes`:**
 
 ```ts
 export interface IdealPoint {
@@ -670,8 +672,8 @@ export interface CurveData {
   elapsedDays: number;
   /** Days with time logged inside the elapsed part of the period. */
   loggedDays: number;
-  /** T: the daily target the ideal line starts from (minutes). */
-  dailyTarget: number;
+  /** T: the target of day 1 the ideal line starts from (minutes; `planStartOf(goal)` — not rounded for a total goal). v6.1: was `dailyTarget`. */
+  startTarget: number;
   /** The most recent logged day; null when nothing is logged yet. */
   latest: LoggedDayRef | null;
   /** actual(last): all minutes logged in the elapsed part of the period (0 when upcoming). */
@@ -684,10 +686,29 @@ export interface CurveData {
   headlinePercent: number;
 }
 
-/** target(k) = T × 1.01^(k−1). */
-export function dayTarget(daily: number, k: number): number;
-/** ideal(k) = Σ_{i=1..k} target(i) = T × (1.01^k − 1) / 0.01; 0 for k ≤ 0. */
-export function cumulativeTarget(daily: number, k: number): number;
+// src/domain/plan.ts (v6.1, ADR-47) — số học của kế hoạch, dùng chung cho curve và stats; curve.ts re-export
+export const GROWTH_RATE = 0.01;
+export const DAILY_GROWTH = 1.01;
+/** 1.01^days */
+export function growth(days: number): number;
+/** (factor − 1) × 100, 1 chữ số thập phân */
+export function growthPercent(factor: number): number;
+/** target(k) = T₀ × 1.01^(k−1). */
+export function dayTarget(start: number, k: number): number;
+/** ideal(k) = Σ_{i=1..k} target(i) = T₀ × (1.01^k − 1) / 0.01; 0 for k ≤ 0. */
+export function cumulativeTarget(start: number, k: number): number;
+/** T₀: `daily` → targetMinutes; `total` → targetMinutes × 0.01 / (1.01^periodDays − 1) (periodDays ≥ 1, else RangeError). */
+export function planStart(targetType: 'daily' | 'total', targetMinutes: number, periodDays: number | null): number;
+
+// src/domain/goal.ts (v6.1)
+/** planStart(goal.targetType, goal.targetMinutes, periodDays(goal)) */
+export function planStartOf(goal): number;
+/** Math.round(cumulativeTarget(planStartOf(goal), k)); 0 for k ≤ 0 */
+export function plannedMinutes(goal, k: number): number;
+/** daily có hạn: plannedMinutes(periodDays); total: targetMinutes; không thời hạn: plannedMinutes(daysElapsed(goal, today)) */
+export function totalTarget(goal, today?: ISODate): number;
+
+// src/domain/curve.ts
 export function curve(goal: Goal, goalEntries: readonly LogEntry[], today: ISODate): CurveData;
 
 export interface CurveYScale {
@@ -702,7 +723,7 @@ export function curveYScale(idealValues: readonly number[], youValues: readonly 
 export function curveYDomain(idealValues: readonly number[], youValues: readonly number[]): [number, number];
 ```
 
-Bỏ khỏi contract v3.0: `IdealPoint.value`, `ActualPoint.value`, `ActualPoint.changePercent`, `CurveData.baseline`, `previous`, `latestChangePercent`, `actualFactor`, `idealFactor`, `idealPercent`. Thêm: `IdealPoint.target`, `IdealPoint.cumulative`, `ActualPoint.cumulative`, `ActualPoint.gap`, `CurveData.dailyTarget`, `totalMinutes`, `idealMinutes`, `gapMinutes`. `curveYScale`/`curveYDomain` giữ nguyên code nhưng đơn vị là phút và `yMin` luôn 0. Formatter (`src/i18n/format.ts`): thêm `signedMinutes` (`−66 min` / `−66 phút`: làm tròn phút nguyên, nhóm hàng nghìn, `+`/`−` U+2212, qua `format.minutes`), `signed0` (`−66`, `+12`, `+0`: thân số của `signedMinutes`, cho cột bảng), `axisMinutes` (`0`, `500`, `1,000`; ≥ 10.000 → `Intl` compact `144K` / `144 N`); bỏ `factor`, `axisPercent`; `signed1` giữ cho headline.
+Bỏ khỏi contract v3.0: `IdealPoint.value`, `ActualPoint.value`, `ActualPoint.changePercent`, `CurveData.baseline`, `previous`, `latestChangePercent`, `actualFactor`, `idealFactor`, `idealPercent`. Thêm: `IdealPoint.target`, `IdealPoint.cumulative`, `ActualPoint.cumulative`, `ActualPoint.gap`, `CurveData.startTarget` (v6.0: `dailyTarget`), `totalMinutes`, `idealMinutes`, `gapMinutes`. `curveYScale`/`curveYDomain` giữ nguyên code nhưng đơn vị là phút và `yMin` luôn 0. Formatter (`src/i18n/format.ts`): thêm `signedMinutes` (`−66 min` / `−66 phút`: làm tròn phút nguyên, nhóm hàng nghìn, `+`/`−` U+2212, qua `format.minutes`), `signed0` (`−66`, `+12`, `+0`: thân số của `signedMinutes`, cho cột bảng), `axisMinutes` (`0`, `500`, `1,000`; ≥ 10.000 → `Intl` compact `144K` / `144 N`); bỏ `factor`, `axisPercent`; `signed1` giữ cho headline.
 
 **Ví dụ (oracle cho test).** Phút lý tưởng ghi tối đa 3 chữ số thập phân (domain không làm tròn); `%` theo `pct`.
 
@@ -715,7 +736,7 @@ Bỏ khỏi contract v3.0: `IdealPoint.value`, `ActualPoint.value`, `ActualPoint
 | 2026-10-12 | 3 | 30.603 | 90.903 | 14 | 29 | −61.903 | −68.1 |
 | 2026-10-13 | 4 | 30.909 | 121.812 | 27 | 56 | −65.812 | −54.0 |
 
-→ `headlinePercent = −54`, `totalMinutes = 56`, `idealMinutes = 121.812` (hiển thị `122 min`), `gapMinutes = −65.812` (hiển thị `−66 min`), `latest = {10-13, 27}`, `loggedDays = 4`, `elapsedDays = 4`, `dailyTarget = 30`; `ideal` có 83 điểm, `ideal[82].cumulative = 3851.652`.
+→ `headlinePercent = −54`, `totalMinutes = 56`, `idealMinutes = 121.812` (hiển thị `122 min`), `gapMinutes = −65.812` (hiển thị `−66 min`), `latest = {10-13, 27}`, `loggedDays = 4`, `elapsedDays = 4`, `startTarget = 30`; `ideal` có 83 điểm, `ideal[82].cumulative = 3851.652`. **v6.1** `goalStats(r1, entries, 2026, today)`: `totalTarget 3852` (= `round(ideal[82].cumulative)`; phẳng là 2490), `expectedMinutes 122` (= `round(121.812)`; phẳng 120), `pace −66`, `progressPercent 1.5`.
 
 - R1 với today = 2026-10-14 (chưa ghi): thêm điểm 10-14 `minutes 0, logged false, cumulative 56, gap −97.03, percent −63.4`; headline **−63.4** (giảm vì lý tưởng tăng còn "Bạn" đi ngang); `elapsedDays = 5`, `idealMinutes = 153.03`, `latest` vẫn `{10-13, 27}`.
 - R1 khi 10-13 ghi thành hai entry 20 + 7 phút: kết quả giống hệt.
@@ -739,11 +760,11 @@ Bỏ khỏi contract v3.0: `IdealPoint.value`, `ActualPoint.value`, `ActualPoint
 | 10-08 | 8 | 82.857 | 20 | 55 | −27.857 | −33.6 |
 | 10-09 | 9 | 93.685 | 0 | 55 | −38.685 | −41.3 |
 
-→ `ideal` 9 điểm, `actual` 9 điểm, `periodDays = elapsedDays = 9`, `totalMinutes = 55`, `idealMinutes = 93.685` (hiển thị `94 min`), `gapMinutes = −38.685` (hiển thị `−39 min`), headline **−41.3**, `latest = {10-08, 20}`, `loggedDays = 4`. Ngày 2 là ngày duy nhất vượt lý tưởng (+24.4). O1 với today = 2026-10-20: 20 điểm, `idealMinutes = 220.19`, headline −75.
+→ `ideal` 9 điểm, `actual` 9 điểm, `periodDays = elapsedDays = 9`, `totalMinutes = 55`, `idealMinutes = 93.685` (hiển thị `94 min`), `gapMinutes = −38.685` (hiển thị `−39 min`), headline **−41.3**, `latest = {10-08, 20}`, `loggedDays = 4`, `startTarget = 10`. Ngày 2 là ngày duy nhất vượt lý tưởng (+24.4). **v6.1** `goalStats`: `totalTarget 94` = `expectedMinutes 94` (= `round(93.685)`; phẳng 90), `pace −39`, `progressPercent 58.5` (phẳng: −35, 61.1) — thẻ Pace và dòng "lý tưởng 94 phút" nay cùng con số. O1 với today = 2026-10-20: 20 điểm, `idealMinutes = 220.19`, headline −75.
 
-*S1 tại 2026-10-09 (§0 TASKS):* G1 "Read" (30 phút/ngày, 10-01 … 10-31; 30 phút mỗi ngày 10-01 … 10-08): `elapsedDays = 9`, `loggedDays = 8`, `totalMinutes = 240`, `idealMinutes = 281.056` (hiển thị `281 min`), headline **−14.6** (v3.0 là 0.0), `latest = {10-08, 30}`. G2 "Guitar" (20 phút/ngày, 09-01 … 12-31; 250 phút trong 13 ngày): `elapsedDays = 39`, `idealMinutes = 948.245`, headline **−73.6**. G3 "Spanish" (`total` 6000 phút cả năm → T = 17; một entry 60 phút 03-02): `elapsedDays = 282`, `idealMinutes = 26423.951`, headline **−99.8**. G4 "Marathon prep" upcoming: `actual = []`, headline 0. G5 "Old course" (15 phút/ngày, 01-01 … 06-30; một entry 15 phút 06-30): `elapsedDays = 181`, headline **−99.8**.
+*S1 tại 2026-10-09 (§0 TASKS):* G1 "Read" (30 phút/ngày, 10-01 … 10-31; 30 phút mỗi ngày 10-01 … 10-08): `elapsedDays = 9`, `loggedDays = 8`, `totalMinutes = 240`, `idealMinutes = 281.056` (hiển thị `281 min`), headline **−14.6** (v3.0 là 0.0), `latest = {10-08, 30}`; **v6.1** `goalStats`: `totalTarget 1084` (phẳng 930), `expectedMinutes 281` (phẳng 270), `pace −41` (phẳng −30), `progressPercent 22.1` (phẳng 25.8). G2 "Guitar" (20 phút/ngày, 09-01 … 12-31; 250 phút trong 13 ngày): `elapsedDays = 39`, `idealMinutes = 948.245`, headline **−73.6**; v6.1 `goalStats`: 4733 / 948 / −698 (`11 h 38 min behind`) / 5.3. G3 "Spanish" (`total` 6000 phút cả năm, 01-01 … 12-31 = 365 ngày → **v6.1** `T = planStartOf = 1.631169` — ~~v6.0: `dailyTarget` = 17~~; `dailyTarget` vẫn 17 cho ngày đạt; một entry 60 phút 03-02): `elapsedDays = 282`, `idealMinutes = 2535.408`, headline **−97.6** (~~v6.0: 26423.951, −99.8~~); `ideal[364].cumulative = 6000` (đúng tổng user nhập), `ideal[364].target ≈ 61.021`; ngày 03-02 (k = 61): `cumulative 60`, `ideal 136.18`, `percent −55.9`; v6.1 `goalStats`: `totalTarget 6000` (không đổi), `expectedMinutes 2535`, `pace −2475`, `progressPercent 1.0`. G4 "Marathon prep" upcoming: `actual = []`, headline 0; v6.1 `goalStats`: `totalTarget 1565`, `expectedMinutes 0`, `pace 0`. G5 "Old course" (15 phút/ngày, 01-01 … 06-30; một entry 15 phút 06-30): `elapsedDays = 181`, headline **−99.8**; v6.1 `goalStats`: 7584 / 7584 / −7569 / 0.2.
 
-*Dữ liệu thật của user (lý do đổi):* 30 phút/ngày từ 2026-10-20; 22, 24, 24, 53 phút ngày 10-20, 10-21, 10-28, 11-01; today 2026-11-02 (k = 14): `totalMinutes = 123`, `idealMinutes = 448.423`, `gapMinutes = −325.423`, headline **−72.6** (v3.0: +140.9). Ngày 10-21: `cumulative 46`, `ideal 60.3`, `percent −23.7`; ngày 11-01: `cumulative 123`, `ideal 414.28`, `percent −70.3`.
+*Dữ liệu thật của user (lý do đổi):* 30 phút/ngày từ 2026-10-20; 22, 24, 24, 53 phút ngày 10-20, 10-21, 10-28, 11-01; today 2026-11-02 (k = 14): `totalMinutes = 123`, `idealMinutes = 448.423`, `gapMinutes = −325.423`, headline **−72.6** (v3.0: +140.9). Ngày 10-21: `cumulative 46`, `ideal 60.3`, `percent −23.7`; ngày 11-01: `cumulative 123`, `ideal 414.28`, `percent −70.3`. **v6.1** `goalStats` (khoảng 10-20 … 12-31 = 73 ngày): `expectedMinutes 448` (phẳng 420), `pace −325` (`Chậm 5 giờ 25 phút`; phẳng −297), `totalTarget 3203` (phẳng 2190), `progressPercent 3.8` (phẳng 5.6).
 
 **Hiển thị (copy do designer chốt ở DESIGN.md S4 / 7.6.4; đây là dữ liệu bắt buộc cho `GoalDetail`/`CurveChart`).**
 
@@ -756,7 +777,7 @@ Bỏ khỏi contract v3.0: `IdealPoint.value`, `ActualPoint.value`, `ActualPoint
 - Legend 2 mục (`legendIdeal`, `legendYou`); mục "vạch 0%" (`legendZero`) bị xoá.
 - Đường "Bạn": `stepAfter`, vẽ từ ngày 1 (0 phút) ngay khi goal bắt đầu, kể cả chưa có entry; chấm nhỏ ở ngày có ghi; không bao giờ đi xuống.
 
-**Thang Y (giữ control Range của A-D4).** Tuyến tính, **đơn vị phút**. `curveYScale(ideal.cumulative[], you.cumulative[])` trên các điểm đang hiển thị (sau Range): `yMin = min(0, min You) = 0` (không có giá trị âm nên không bao giờ nới đầu dưới), `yMax = max(1, max Ideal, max You)` nới 5 % rồi làm tròn ra ngoài tới bội số "đẹp" (1, 2, 5 × 10^n, ≥ 1 phút); `ticks` luôn chứa 0. Nhãn trục `f.axisMinutes`: phút nguyên không dấu, không đơn vị, nhóm hàng nghìn; ≥ 10.000 → `Intl` compact (`144K` / `144 N`). Không còn đường tham chiếu 0%. Hệ quả chấp nhận: goal dài mặc định "So far" để lý tưởng của ngày tương lai không nuốt thang; khi hụt nhiều (G3: 60 so với 26.424 phút) đường "Bạn" nằm sát trục 0 — đúng thực tế, giá trị đọc ở nhãn trực tiếp, tooltip, bảng. Thang log: Later.
+**Thang Y (giữ control Range của A-D4).** Tuyến tính, **đơn vị phút**. `curveYScale(ideal.cumulative[], you.cumulative[])` trên các điểm đang hiển thị (sau Range): `yMin = min(0, min You) = 0` (không có giá trị âm nên không bao giờ nới đầu dưới), `yMax = max(1, max Ideal, max You)` nới 5 % rồi làm tròn ra ngoài tới bội số "đẹp" (1, 2, 5 × 10^n, ≥ 1 phút); `ticks` luôn chứa 0. Nhãn trục `f.axisMinutes`: phút nguyên không dấu, không đơn vị, nhóm hàng nghìn; ≥ 10.000 → `Intl` compact (`144K` / `144 N`). Không còn đường tham chiếu 0%. Hệ quả chấp nhận: goal dài mặc định "So far" để lý tưởng của ngày tương lai không nuốt thang; khi hụt nhiều (G3: 60 so với 2.535 phút) đường "Bạn" nằm sát trục 0 — đúng thực tế, giá trị đọc ở nhãn trực tiếp, tooltip, bảng. Thang log: Later.
 
 **v4.0 (M11):** với `endDate = null`, mọi chỗ "khoảng của goal" ở mục này đọc là `startDate → lastElapsedDay`; `ideal` chỉ có ngày đã trôi qua (`periodDays = elapsedDays`), chưa bắt đầu → `ideal = []`, `actual = []`; chi tiết ở §4.6 (c). Công thức `target`, `ideal`, `actual`, `pct`, `curveYScale` không đổi.
 
@@ -772,10 +793,11 @@ Bỏ khỏi contract v3.0: `IdealPoint.value`, `ActualPoint.value`, `ActualPoint
 | `isWithinGoal(date, goal)` (mới; thay mọi `isWithin(d, g.startDate, g.endDate)` trong `entry.ts`, `stats.isDayMet`, `heatmap.ts`, `backup.ts` integrity, `Day.tsx`, `goal-service`) | `start ≤ date ≤ end` | `date ≥ start` |
 | `periodDays(goal)` | số ngày `start → end` | **`null`** (kiểu trả `number \| null`; nơi gọi xử lý) |
 | `dailyTarget(goal)` | như cũ | `targetMinutes` (chỉ `daily`) |
+| `planStartOf(goal)`, `plannedMinutes(goal, k)` (mới v6.1, ADR-47) | T₀ theo loại goal (`total`: scale); `round(cumulativeTarget(T₀, k))` | `targetMinutes`; như goal có hạn |
 | `elapsedDays(goal, today)` | `start → min(today, end)`, 0 khi chưa bắt đầu | `start → today`, 0 khi chưa bắt đầu |
-| `totalTarget(goal, today?)` | như cũ, bỏ qua `today` | `dailyTarget × elapsedDays(goal, today)`; thiếu `today` → ném `RangeError` (lỗi lập trình) |
+| `totalTarget(goal, today?)` | bỏ qua `today`; **v6.1:** `daily` → `plannedMinutes(goal, periodDays)`, `total` → `targetMinutes` | **v6.1 (ADR-47):** `plannedMinutes(goal, elapsedDays(goal, today))` (~~v4.0: `dailyTarget × elapsedDays`~~); thiếu `today` → ném `RangeError` (lỗi lập trình) |
 | `goalStatus(goal, today)` | như cũ | `archived` / `upcoming` (today < start) / `active`; **không bao giờ** `ended` |
-| `goalStats(...)` | như cũ | `totalTarget` như trên; `progressPercent = totalTarget === 0 ? 0 : round1(minutesTotal / totalTarget × 100)`; `pace` công thức cũ; `outsideYear = yearOf(startDate) > year` |
+| `goalStats(...)` | như cũ; **v6.1:** `expectedMinutes = plannedMinutes(goal, elapsedDays)`, `pace = elapsedDays === 0 ? 0 : minutesTotal − expectedMinutes` | `totalTarget` như trên; `progressPercent = totalTarget === 0 ? 0 : round1(minutesTotal / totalTarget × 100)`; `expectedMinutes`/`pace` cùng kế hoạch (v6.1; với goal không thời hạn `expectedMinutes = totalTarget` vì cùng tới hôm nay); `outsideYear = yearOf(startDate) > year` |
 | `lastElapsedDay(goal, today)` (`curve.ts`) | `min(today, end)`, `null` khi chưa bắt đầu | `today`, `null` khi chưa bắt đầu |
 | `entriesOutsidePeriod(dates, start, end)` | như cũ | `end: ISODate \| null`; `null` → chỉ ngày < `start` |
 | `validateEntryDate(date, goal, today)` | như cũ | `DATE_IN_FUTURE` nếu > today; `DATE_OUTSIDE_GOAL_PERIOD` nếu < start, `params.end = null` (UI chọn câu không có ngày cuối — key do designer chốt) |
@@ -791,11 +813,11 @@ Bỏ khỏi contract v3.0: `IdealPoint.value`, `ActualPoint.value`, `ActualPoint
 | :- | :- |
 | `goalStatus` | 2026-09-30 `upcoming`; 2026-10-01, 2026-10-09, 2031-10-02 `active` |
 | `periodDays(o1)` | `null` |
-| `dailyTarget`, `elapsedDays`, `totalTarget(o1, today)` | 10, 9, 90 |
-| `goalStats(o1, entries, 2026, today)` | `minutesTotal 55`, `progressPercent 61.1`, `expectedMinutes 90`, `pace −35`, `daysOnTarget 4`, `daysLogged 4`, `currentStreak 1`, `longestStreak 2`, `outsideYear false` (2025 → `true`) |
-| `curve(o1, entries, today)` | **v6.0:** `ideal` 9 điểm, `actual` 9 điểm, `periodDays 9`, `elapsedDays 9`; `cumulative` (Bạn) `[10, 25, 25, 25, 35, 35, 35, 55, 55]`; `ideal.cumulative` `[10, 20.1, 30.301, 40.604, 51.01, 61.52, 72.135, 82.857, 93.685]`; `percent` `[0, 24.4, −17.5, −38.4, −31.4, −43.1, −51.5, −33.6, −41.3]`; `headlinePercent −41.3`, `totalMinutes 55`, `idealMinutes 93.685`, `gapMinutes −38.685`, `dailyTarget 10`, `latest {10-08, 20}`, `loggedDays 4` (bảng đầy đủ ở §4.5) |
+| `dailyTarget`, `elapsedDays`, `totalTarget(o1, today)` | 10, 9, **94** (v6.1: `round(93.685)`; ~~v4.0: 90~~) |
+| `goalStats(o1, entries, 2026, today)` | `minutesTotal 55`, `progressPercent 58.5`, `expectedMinutes 94`, `pace −39` (v6.1; ~~v4.0: 61.1 / 90 / −35~~), `daysOnTarget 4`, `daysLogged 4`, `currentStreak 1`, `longestStreak 2`, `outsideYear false` (2025 → `true`) |
+| `curve(o1, entries, today)` | **v6.0:** `ideal` 9 điểm, `actual` 9 điểm, `periodDays 9`, `elapsedDays 9`; `cumulative` (Bạn) `[10, 25, 25, 25, 35, 35, 35, 55, 55]`; `ideal.cumulative` `[10, 20.1, 30.301, 40.604, 51.01, 61.52, 72.135, 82.857, 93.685]`; `percent` `[0, 24.4, −17.5, −38.4, −31.4, −43.1, −51.5, −33.6, −41.3]`; `headlinePercent −41.3`, `totalMinutes 55`, `idealMinutes 93.685`, `gapMinutes −38.685`, `startTarget 10` (v6.0: `dailyTarget`), `latest {10-08, 20}`, `loggedDays 4` (bảng đầy đủ ở §4.5) |
 | `curve(o1, entries, '2026-10-20')` | `ideal` 20 điểm, `actual` 20 điểm, `idealMinutes 220.19`, headline −75 (v6.0) |
-| `curve(o1, entries, '2031-10-02')` | `elapsedDays 1828` (> 1827), `ideal` 1828 điểm |
+| `curve(o1, entries, '2031-10-02')` | `elapsedDays 1828` (> 1827), `ideal` 1828 điểm; v6.1 `totalTarget(o1, '2031-10-02')` = `expectedMinutes` = 79.336.177.010 (số nguyên an toàn, không tràn) |
 | O1 với `startDate 2026-11-01` (upcoming), không entry | `ideal []`, `actual []`, headline 0 |
 | `validateEntryDate` (today 2026-10-09) | 10-09 ok; 10-10 `DATE_IN_FUTURE`; 09-30 `DATE_OUTSIDE_GOAL_PERIOD`; today 2031-10-02, ngày 2031-10-02 ok |
 | Heatmap goal O1 năm 2026 | 2026-09-30 `outside`; 2026-10-09 không `outside` |
@@ -1603,7 +1625,7 @@ Unit/integration test đặt cạnh file nguồn (`*.test.ts(x)`).
 ├── public/support.html                 # M15 (privacy.html sửa ở M14, M15)
 ├── src/
 │   ├── app/                            # + capabilities.ts
-│   ├── domain/                         # + reminder-plan.ts (M15)
+│   ├── domain/                         # + reminder-plan.ts (M15); + plan.ts (v6.1, ADR-47)
 │   ├── services/                       # + file-export-port.ts, id-token-port.ts, account-deletion-port.ts
 │   ├── integration/
 │   │   ├── platform.ts                 # điểm import() duy nhất vào native/
@@ -1661,7 +1683,7 @@ Biến dùng trong script npm (đặt sẵn bằng `cross-env`, không cần `.e
 
 | Loại | Công cụ | Phạm vi | Lệnh |
 | :- | :- | :- | :- |
-| Unit | Vitest (env `node`) | Toàn bộ `src/domain` (validate, dailyTarget, streak, heatmap, curve, timer, reminder, backup schema, ics). Coverage dòng `src/domain` ≥ 90% | `npm test`, `npm run test:coverage` |
+| Unit | Vitest (env `node`) | Toàn bộ `src/domain` (validate, dailyTarget, plan/plannedMinutes (v6.1), streak, heatmap, curve, timer, reminder, backup schema, ics). Coverage dòng `src/domain` ≥ 90% | `npm test`, `npm run test:coverage` |
 | Integration | Vitest + `fake-indexeddb` | Repository Dexie (cascade, transaction, rollback), service với repository thật | `npm test` |
 | Component | Vitest (env `jsdom`) + Testing Library | Form validate, Today, TimerCard (fake timers), Settings | `npm test` |
 | E2E | Playwright Chromium, chạy trên bản build qua `vite preview` port 4173, `timezoneId: 'Asia/Ho_Chi_Minh'`, `locale: 'en-US'` mặc định (spec song ngữ dùng `test.use({ locale: 'vi-VN' })`) | Luồng chính mỗi milestone; `page.clock` cho timer/nhắc; `context.setOffline` cho offline; `grantPermissions(['notifications'])`; tải/nạp file backup; axe a11y; luồng chính chạy lại ở `vi-VN` + quét DOM | `npm run test:e2e` |
@@ -1968,10 +1990,14 @@ Bối cảnh: UI đã thiết kế cho 360–1440 px; app một người dùng; 
 Bối cảnh: Google Play là lựa chọn (OQ-13); máy Windows build được Android nhưng ưu tiên CI cho lặp lại được; Play yêu cầu target API 36 cho app mới từ 2026-08-31, lần tải lên đầu phải làm tay, tài khoản cá nhân mới phải closed testing. Lựa chọn: `@capacitor/android` 8.5.3 (minSdk 24, target/compile 36), cùng adapter native (không Apple), nút Back qua `lifecycle.onBackButton`; `android.yml` trên `ubuntu-latest` + Temurin 21 ký AAB bằng upload key (secret) và xuất artifact; Play App Signing do Google giữ khoá ký app. Phương án đã loại: tự động upload qua Play Developer API ngay từ đầu (lần đầu không được; thêm service account); TWA (Trusted Web Activity — không dùng được plugin native như notification/đăng nhập native một cách thống nhất với iOS). Hệ quả: Google Sign-In Android cần Android OAuth client với SHA-1 của cả upload key và app signing key (U28); URL yêu cầu xoá tài khoản trên web bắt buộc cho Play (privacy.html#delete-account).
 
 **ADR-46 — Đường cong 1% = burn-up phút cộng dồn so với chỉ tiêu ngày (+1%/ngày) cộng dồn, phụ thuộc `dailyTarget` (v6.0, phase 7, 2026-11-02). Thay ADR-26.**
-Bối cảnh: user xem goal thật (30 phút/ngày từ 2026-10-20; 22, 24, 24, 53 phút) thấy headline +140,9% dù hụt mục tiêu rõ rệt: v3.0 so mỗi ngày ghi với ngày ghi trước, nhân dồn từ ngày ghi đầu (53/22 = ×2,41) và bỏ qua chỉ tiêu, nên vài ngày ghi dư làm con số nhảy còn các ngày bỏ trống không được tính. User chọn burn-up (burndown của Jira lật ngược): phút cộng dồn so với mục tiêu cộng dồn, tooltip mỗi ngày nêu phút ngày đó + tổng. Lựa chọn: `target(k) = T × 1.01^(k−1)` (giữ ý "ngày đầu = chỉ tiêu gốc" của v5.1), `ideal(k) = T × (1.01^k − 1) / 0.01` công thức đóng; `actual(k) = Σ m(d)` từ ngày 1 (0 phút khi chưa ghi, không bao giờ giảm); `headlinePercent = pct(actual, ideal)` (−100 khi chưa ghi); contract `CurveData` đổi field (§4.5); thang Y chuyển sang phút với `yMin = 0`, bỏ vạch 0%; formatter `factor`/`axisPercent` thay bằng `signedMinutes`/`signed0`/`axisMinutes`; `pct`, `curveYScale`, Range (A-D4), goal không thời hạn (§4.6) giữ nguyên. Phương án đã loại: (1) **từng ngày so với mục tiêu** (cột phút mỗi ngày cạnh chỉ tiêu ngày, không cộng dồn) — không trả lời "tổng thể hụt bao nhiêu", một ngày ghi dư vẫn làm con số nhảy, ngày trống chỉ là cột rỗng; (2) **burndown phút còn lại** (`tổng mục tiêu − đã ghi`, đi xuống về 0) — cần `endDate` để biết tổng nên không áp dụng cho goal không thời hạn (v4.0); có thể làm sau như một chế độ xem thêm; (3) giữ v3.0 và chỉ thêm chỉ tiêu vào tooltip — không sửa được headline sai ý. Hệ quả: đường cong **phụ thuộc** chỉ tiêu ngày (PRD A-42 đảo ngược: đổi chỉ tiêu → đường lý tưởng và headline đổi); headline hầu như âm với người ghi dưới chỉ tiêu (dữ liệu thật: −72,6%) — đúng thực tế, copy trung tính (`vs. ideal`); đường "Bạn" không bao giờ đi xuống nên các trạng thái "đi xuống", "một ngày có ghi", vạch 0%, `legendZero`, `subStart`, `tooltipBase`/`tooltipChange` bị bỏ (DESIGN v6.0: 1 key mới, 21 key sửa, 4 key bỏ); thẻ Pace/Progress vẫn dùng chỉ tiêu phẳng `T × ngày` nên lệch nhẹ với `ideal(k)` (PRD OQ-21, chưa quyết); test v3.0 về giá trị đường cong (unit, E2E, QC M9) phải viết lại theo oracle §4.5; không đổi schema, sync, backup, route, mã lỗi.
+Bối cảnh: user xem goal thật (30 phút/ngày từ 2026-10-20; 22, 24, 24, 53 phút) thấy headline +140,9% dù hụt mục tiêu rõ rệt: v3.0 so mỗi ngày ghi với ngày ghi trước, nhân dồn từ ngày ghi đầu (53/22 = ×2,41) và bỏ qua chỉ tiêu, nên vài ngày ghi dư làm con số nhảy còn các ngày bỏ trống không được tính. User chọn burn-up (burndown của Jira lật ngược): phút cộng dồn so với mục tiêu cộng dồn, tooltip mỗi ngày nêu phút ngày đó + tổng. Lựa chọn: `target(k) = T × 1.01^(k−1)` (giữ ý "ngày đầu = chỉ tiêu gốc" của v5.1), `ideal(k) = T × (1.01^k − 1) / 0.01` công thức đóng; `actual(k) = Σ m(d)` từ ngày 1 (0 phút khi chưa ghi, không bao giờ giảm); `headlinePercent = pct(actual, ideal)` (−100 khi chưa ghi); contract `CurveData` đổi field (§4.5); thang Y chuyển sang phút với `yMin = 0`, bỏ vạch 0%; formatter `factor`/`axisPercent` thay bằng `signedMinutes`/`signed0`/`axisMinutes`; `pct`, `curveYScale`, Range (A-D4), goal không thời hạn (§4.6) giữ nguyên. Phương án đã loại: (1) **từng ngày so với mục tiêu** (cột phút mỗi ngày cạnh chỉ tiêu ngày, không cộng dồn) — không trả lời "tổng thể hụt bao nhiêu", một ngày ghi dư vẫn làm con số nhảy, ngày trống chỉ là cột rỗng; (2) **burndown phút còn lại** (`tổng mục tiêu − đã ghi`, đi xuống về 0) — cần `endDate` để biết tổng nên không áp dụng cho goal không thời hạn (v4.0); có thể làm sau như một chế độ xem thêm; (3) giữ v3.0 và chỉ thêm chỉ tiêu vào tooltip — không sửa được headline sai ý. Hệ quả: đường cong **phụ thuộc** chỉ tiêu ngày (PRD A-42 đảo ngược: đổi chỉ tiêu → đường lý tưởng và headline đổi); headline hầu như âm với người ghi dưới chỉ tiêu (dữ liệu thật: −72,6%) — đúng thực tế, copy trung tính (`vs. ideal`); đường "Bạn" không bao giờ đi xuống nên các trạng thái "đi xuống", "một ngày có ghi", vạch 0%, `legendZero`, `subStart`, `tooltipBase`/`tooltipChange` bị bỏ (DESIGN v6.0: 1 key mới, 21 key sửa, 4 key bỏ); thẻ Pace/Progress lúc đầu vẫn dùng chỉ tiêu phẳng `T × ngày` nên lệch nhẹ với `ideal(k)` (PRD OQ-21 — chốt cùng ngày bằng **ADR-47**: đồng bộ); test v3.0 về giá trị đường cong (unit, E2E, QC M9) phải viết lại theo oracle §4.5; không đổi schema, sync, backup, route, mã lỗi.
+
+**ADR-47 — Một kế hoạch +1 %/ngày dùng chung cho đường lý tưởng, Tiến độ và Nhịp độ (`domain/plan.ts`); goal `total` scale T₀ để kế hoạch bằng đúng tổng (v6.1, phase 7, 2026-11-02; chốt PRD OQ-21). Bổ sung ADR-46.**
+Bối cảnh: ngay sau v6.0, cùng một trang Goal detail hiện hai con số "dự kiến" khác nhau — thẻ Pace `Expected 420 min by today` (chỉ tiêu phẳng `dailyTarget × 14`) cạnh đường lý tưởng 448 phút (chỉ tiêu +1 %/ngày cộng dồn) với dữ liệu thật của user; R1 ngày 4: 120 so với 121,8. User chọn đồng bộ (OQ-21). Lựa chọn: tách số học của kế hoạch ra `src/domain/plan.ts` (`dayTarget`, `cumulativeTarget` công thức đóng, `planStart`), `goal.ts` thêm `planStartOf` và `plannedMinutes(goal, k) = round(cumulativeTarget(T₀, k))`, `totalTarget` viết lại (goal `daily` có hạn: `plannedMinutes(periodDays)`; goal `total`: `targetMinutes`; goal không thời hạn: `plannedMinutes(daysElapsed)`), `stats.ts` `expectedMinutes = plannedMinutes(goal, elapsedDays)`, `curve.ts` dùng `planStartOf` và đổi `CurveData.dailyTarget` → `startTarget`. Goal `total`: T₀ = `targetMinutes × 0.01 / (1.01^periodDays − 1)` (số thực) để `cumulativeTarget(T₀, periodDays) = targetMinutes` — đường lý tưởng kết thúc đúng ở tổng user nhập (G3: 6.000), còn `dailyTarget = ceil(total / N)` giữ nguyên cho ngày đạt, streak, "+1%" và tiến độ ngày trên Today (PRD A-73). Phương án đã loại: (1) **giữ phẳng** cho Pace/Progress — hai con số lệch nhau trên cùng trang, lệch tăng theo thời gian (ngày 365: 10.950 so với 110.350); (2) **chỉ sửa câu chữ** của thẻ ("tối thiểu" / "thử thách +1%") — thêm copy, vẫn hai con số; (3) goal `total` dùng `ceil(total / N)` làm T₀ rồi cộng dồn — kế hoạch ≠ tổng user nhập (G3: 6.355 ≠ 6.000), Progress có thể vượt 100 % trước khi đạt tổng hoặc ngược lại. Hệ quả: Progress/Pace đổi số (G1: 22,1 % thay 25,8 %; `41 min behind` thay 30; O1: 58,5 %, 94, −39), Review đổi theo vì dùng chung `goalStats`, Today không đổi, copy không đổi; `totalTarget` của goal `daily` dài lớn hơn nhiều so với phẳng (30 phút/1827 ngày: ≈ 2,36·10^11 — cùng hệ quả với đường lý tưởng, DESIGN OQ-D21; số nguyên an toàn); test unit/E2E/QC về `goalStats`, `totalTarget`, `CurveData.dailyTarget` đổi số/tên theo oracle §4, §4.5, §4.6; không đổi schema, sync, backup, route, mã lỗi, chữ ký `goalStats`/`curve`.
 
 ## Changelog
 
+- 2026-11-02 — v6.1 (mode `revise`, phase 7, quyết định user 2026-11-02 ngay sau v6.0: Nhịp độ/Tiến độ theo cùng kế hoạch +1 %/ngày với đường lý tưởng; PRD v6.1 FR-24, A-73, OQ-21 chốt). §3 thêm hàng **`domain/plan.ts`**, sửa hàng `domain/goal.ts` (`planStartOf`, `plannedMinutes`, `totalTarget`; phụ thuộc plan), `domain/stats.ts` (`expectedMinutes`; phụ thuộc goal), `domain/curve.ts` (`startTarget`, re-export từ plan); §4 "Giá trị suy ra" (`planStartOf`, `plannedMinutes`, `totalTarget` theo kế hoạch, `expectedMinutes`/`pace`, ví dụ G1 và dữ liệu thật); **§4.5** (`T = planStartOf(goal)`, goal `total` scale T₀; đoạn "Chỉ tiêu ngày quyết định đường cong" — Progress/Pace cùng kế hoạch; phạm vi `T > 0`; contract: khối `plan.ts`/`goal.ts`, `CurveData.startTarget` thay `dailyTarget`; oracle R1/O1/S1 thêm số `goalStats`, G3 đổi theo T₀ = 1,631169: `idealMinutes 2535.408`, headline −97,6, `ideal[364].cumulative = 6000`, 03-02 −55,9; dữ liệu thật: 448 / −325 / 3.203 / 3,8 %); **§4.6** (bảng hàm: hàng `planStartOf`/`plannedMinutes` mới, `totalTarget`, `goalStats`; oracle O1: 94 / 58,5 / −39, `startTarget`, 2031 = 79.336.177.010); §6 cây thư mục; §8 unit; §11 ADR-46 ghi chú, thêm **ADR-47** (bối cảnh 420 vs 448; lựa chọn một kế hoạch chung + scale T₀; phương án đã loại: giữ phẳng / chỉ sửa chữ / ceil rồi cộng dồn 6.355 ≠ 6.000; hệ quả). Không đổi schema, sync, backup, route, mã lỗi, copy.
 - 2026-11-02 — v6.0 (mode `revise`, phase 7: đường cong 1% thành **burn-up phút so với mục tiêu**, quyết định user 2026-11-02; FR-27 v6.0). §3 sửa hàng `domain/curve.ts` (phụ thuộc `dailyTarget`); **§4.5 viết lại** (ký hiệu; bảng công thức `target`/`ideal`/`actual`/`gap`/`percent`/headline; đoạn "Lịch sử" M5 → v3.0/ADR-26 → v5.1; `pct` giữ nguyên; phạm vi giá trị; contract chép từ `src/domain/curve.ts` — `IdealPoint.target/cumulative`, `ActualPoint.cumulative/gap/percent`, `CurveData.dailyTarget/totalMinutes/idealMinutes/gapMinutes/headlinePercent`, bỏ `value`/`changePercent`/`baseline`/`previous`/`latestChangePercent`/`actualFactor`/`idealFactor`/`idealPercent`; `dayTarget`, `cumulativeTarget`, `curveYScale`; oracle R1/R3/R4/O1/S1 + dữ liệu thật của user; yêu cầu hiển thị; thang Y phút, yMin = 0; formatter `signedMinutes`/`signed0`/`axisMinutes`, bỏ `factor`/`axisPercent`); §4.6 (c) và hai hàng oracle O1 cập nhật theo v6; §11 ADR-26 ghi "thay bởi ADR-46", thêm **ADR-46** (bối cảnh, lựa chọn, phương án đã loại: từng ngày so với mục tiêu / burndown phút còn lại / giữ v3.0, hệ quả). Không đổi schema, sync, backup, route, mã lỗi.
 - 2026-10-22 — v5.1: §4.5 đường lý tưởng `1.01^(k−1)` thay `1.01^k` (ngày đầu của khoảng +0%, quyết định user 2026-10-22); `idealFactor`/`idealPercent` theo `elapsedDays − 1`. Chữ ký `curve()`, contract `CurveData`, đường "Bạn", thang Y không đổi.
 

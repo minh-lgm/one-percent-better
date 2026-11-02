@@ -8,6 +8,7 @@ import {
   TOTAL_HOURS_MIN,
 } from '../config/constants';
 import { daysInclusive, isValidISODate } from './dates';
+import { cumulativeTarget, planStart } from './plan';
 import { charLength } from './text';
 import { fail, ok, type DomainError, type Goal, type GoalStatus, type ISODate, type Result, type TargetType } from './types';
 
@@ -75,16 +76,30 @@ export function dailyTarget(goal: Pick<Goal, 'targetType' | 'targetMinutes' | 's
   return Math.ceil(goal.targetMinutes / days);
 }
 
+/** T₀ of the goal's +1 %-a-day plan (`plan.ts`): minutes per day for a daily goal, the scaled start for a total goal. */
+export function planStartOf(goal: Pick<Goal, 'targetType' | 'targetMinutes' | 'startDate' | 'endDate'>): number {
+  return planStart(goal.targetType, goal.targetMinutes, periodDays(goal));
+}
+
 /**
- * Total minutes the goal asks for. Finite goals ignore `today` (whole period); an open-ended goal
- * (v4.0, A-51) is measured up to `today` — `dailyTarget × daysElapsed` — so `today` is required there.
+ * Minutes the +1 %-a-day plan asks for from day 1 to day `k` of the goal, rounded to whole minutes
+ * (v6.1, ADR-47): `cumulativeTarget(planStartOf(goal), k)`. 0 for k ≤ 0.
+ */
+export function plannedMinutes(goal: Pick<Goal, 'targetType' | 'targetMinutes' | 'startDate' | 'endDate'>, k: number): number {
+  return Math.round(cumulativeTarget(planStartOf(goal), k));
+}
+
+/**
+ * Total minutes the goal asks for (v6.1, ADR-47: the +1 %-a-day plan added up). Finite goals ignore
+ * `today` (whole period — a total goal gives back exactly `targetMinutes`); an open-ended goal (v4.0,
+ * A-51) is measured up to `today` — `plannedMinutes(goal, daysElapsed)` — so `today` is required there.
  */
 export function totalTarget(goal: Pick<Goal, 'targetType' | 'targetMinutes' | 'startDate' | 'endDate'>, today?: ISODate): number {
   if (goal.targetType !== 'daily') return goal.targetMinutes;
   const days = periodDays(goal);
-  if (days !== null) return goal.targetMinutes * days;
+  if (days !== null) return plannedMinutes(goal, days);
   if (today === undefined) throw new RangeError('totalTarget of an open-ended goal needs `today`');
-  return goal.targetMinutes * daysElapsed(goal, today);
+  return plannedMinutes(goal, daysElapsed(goal, today));
 }
 
 /** v4.0: an open-ended goal is never `ended` (A-50); only archive/delete removes it from Active. */

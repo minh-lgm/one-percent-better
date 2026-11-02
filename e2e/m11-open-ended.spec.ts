@@ -91,7 +91,7 @@ test.describe('M11 — No end date (en)', () => {
     expect(external).toEqual([]);
   });
 
-  test('M11-AC10 / M11-AC5: O1 at 2026-10-09 on Goals, Goal detail (Day 9, +100.0%, no Range, 9 rows, 61.1 %), Review, Day; 2031-10-02 still Active with +1%; Export writes "endDate": null with schemaVersion 1', async ({ page }) => {
+  test('M11-AC10 / M11-AC5: O1 at 2026-10-09 on Goals, Goal detail (Day 9, +100.0%, no Range, 9 rows, 58.5 %), Review, Day; 2031-10-02 still Active with +1%; Export writes "endDate": null with schemaVersion 1', async ({ page }) => {
     const external = trackExternal(page);
     await freezeClock(page);
     await importBackup(page, 'o1-open-ended-backup.json');
@@ -126,19 +126,20 @@ test.describe('M11 — No end date (en)', () => {
     await expect(rows).toHaveCount(9);
     await expect(rows.last().locator('th')).toHaveText('2026-10-09');
     await expect(rows.nth(7).locator('td')).toHaveText(['83', '55', '20', '−28']);
-    await expect(page.getByTestId('stat-progress')).toContainText('61.1%');
-    await expect(page.getByTestId('stat-progress')).toContainText('55 of 90 min expected so far');
-    await expect(page.getByTestId('stat-pace')).toContainText('35 min behind');
-    await expect(page.getByTestId('stat-pace')).toContainText('Expected 90 min by today');
+    // v6.1 (ADR-47): expected so far = round(10·(1.01^9 − 1)/0.01) = 94 (= the ideal line), 55/94 = 58.5 %, 55 − 94 = −39.
+    await expect(page.getByTestId('stat-progress')).toContainText('58.5%');
+    await expect(page.getByTestId('stat-progress')).toContainText('55 of 94 min expected so far');
+    await expect(page.getByTestId('stat-pace')).toContainText('39 min behind');
+    await expect(page.getByTestId('stat-pace')).toContainText('Expected 94 min by today');
     await expect(page.getByTestId('stat-current')).toContainText('1 day');
     await expect(page.getByTestId('stat-longest')).toContainText('2 days');
     await expectAxeClean(page);
 
     // Review
     await gotoHash(page, '/review?goal=o1&year=2026');
-    await expect(page.getByTestId('stat-progress')).toContainText('61.1%');
-    await expect(page.getByTestId('stat-progress')).toContainText('55 of 90 min expected so far');
-    await expect(page.getByTestId('stat-pace')).toContainText('35 min behind');
+    await expect(page.getByTestId('stat-progress')).toContainText('58.5%');
+    await expect(page.getByTestId('stat-progress')).toContainText('55 of 94 min expected so far');
+    await expect(page.getByTestId('stat-pace')).toContainText('39 min behind');
     await expect(page.getByTestId('stats-note')).toHaveText(EN.review.progressNoteOpen);
     const outside = page.locator('[data-date="2026-09-30"]');
     await expect(outside).toHaveAttribute('aria-disabled', 'true');
@@ -209,7 +210,7 @@ test.describe('M11 — No end date (en)', () => {
 test.describe('M11 — Không có thời hạn (vi, 360 px)', () => {
   test.use({ locale: 'vi-VN', viewport: { width: 360, height: 740 } });
 
-  test('M11-AC11: form (both Target states, no horizontal scroll), Goals row, Goal detail +100,0% / 61,1%, Review — no English leaks, axe clean', async ({ page }) => {
+  test('M11-AC11: form (both Target states, no horizontal scroll), Goals row, Goal detail +100,0% / 58,5%, Review — no English leaks, axe clean', async ({ page }) => {
     await freezeClock(page);
     await gotoHash(page, '/goals/new');
     await expect(page.getByRole('heading', { level: 1, name: VI.goal.form.titleNew })).toBeVisible();
@@ -246,16 +247,16 @@ test.describe('M11 — Không có thời hạn (vi, 360 px)', () => {
     await expect(page.getByTestId('headline-day')).toHaveText('Ngày 9');
     await expect(page.getByTestId('curve-summary')).toHaveText('Ngày 9: bạn đã ghi tổng cộng 55 phút. Đường lý tưởng ở mức 94 phút.');
     await expect(page.getByRole('radio', { name: VI.goal.detail.rangeWhole })).toHaveCount(0);
-    await expect(page.getByTestId('stat-progress')).toContainText('61,1%');
-    await expect(page.getByTestId('stat-progress')).toContainText('55/90 phút dự kiến đến nay');
-    await expect(page.getByTestId('stat-pace')).toContainText('Chậm 35 phút');
+    await expect(page.getByTestId('stat-progress')).toContainText('58,5%');
+    await expect(page.getByTestId('stat-progress')).toContainText('55/94 phút dự kiến đến nay');
+    await expect(page.getByTestId('stat-pace')).toContainText('Chậm 39 phút');
     await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
     await expectNoViLeaks(page);
     await expectNoHorizontalScroll(page);
     await expectAxeClean(page);
 
     await gotoHash(page, '/review?goal=o1&year=2026');
-    await expect(page.getByTestId('stat-progress')).toContainText('61,1%');
+    await expect(page.getByTestId('stat-progress')).toContainText('58,5%');
     await expect(page.getByTestId('stats-note')).toHaveText(VI.review.progressNoteOpen);
     await expect(page.getByTestId('chart-monthly')).toBeVisible();
     await expectNoViLeaks(page);

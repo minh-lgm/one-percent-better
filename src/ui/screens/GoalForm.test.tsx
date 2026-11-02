@@ -29,7 +29,8 @@ describe('GoalForm (M1-AC2, M1-AC3, M1-AC8)', () => {
     expect(screen.getByLabelText(/^Start date/)).toHaveValue('2026-10-09');
     expect(screen.getByRole('radio', { name: 'This year — ends 2026-12-31' })).toBeChecked();
     await fillValidGoal(user);
-    expect(screen.getByText("That's 2,520 min (42.0 h) over 84 days.")).toBeInTheDocument();
+    // v6.1 (ADR-47): the hint follows the +1 % plan — 30 × (1.01^84 − 1) / 0.01 = 3,920 (was 30 × 84 = 2,520).
+    expect(screen.getByText("That's 3,920 min (65.3 h) over 84 days.")).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: en.goal.form.save }));
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: en.goals.title })).toBeInTheDocument());
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.goalCreated));
@@ -155,7 +156,7 @@ describe('GoalForm (M1-AC2, M1-AC3, M1-AC8)', () => {
     await tc.container.db.entries.put(buildEntry({ goalId: created.value.id, date: '2026-10-01', minutes: 30 }));
     await app.router.navigate(`/goals/${created.value.id}/edit`);
     await waitFor(() => expect(screen.getByRole('textbox', { name: /^Tên/ })).toHaveValue('Read'));
-    expect(screen.getByText('Tổng cộng 930 phút (15,5 giờ) trong 31 ngày.')).toBeInTheDocument();
+    expect(screen.getByText('Tổng cộng 1.084 phút (18,1 giờ) trong 31 ngày.')).toBeInTheDocument(); // v6.1 (ADR-47): +1 % plan, was 930
     expect(screen.getByText(/01\/10\/2026/)).toBeInTheDocument();
     const start = screen.getByLabelText(/^Ngày bắt đầu/);
     fireEvent.change(start, { target: { value: '2026-10-02' } });
@@ -183,7 +184,7 @@ describe('GoalForm — No end date (M11-AC9, FR-01, FR-03, FR-56)', () => {
     await user.type(screen.getByRole('textbox', { name: /^Name/ }), 'Meditate');
     await user.type(screen.getByRole('textbox', { name: /^Minutes per day/ }), '10');
     fireEvent.change(screen.getByLabelText(/^Start date/), { target: { value: '2026-10-01' } });
-    expect(screen.getByText("That's 920 min (15.3 h) over 92 days.")).toBeInTheDocument();
+    expect(screen.getByText("That's 1,498 min (25.0 h) over 92 days.")).toBeInTheDocument(); // v6.1 (ADR-47): +1 % plan, was 920
     await user.click(never());
     expect(never()).toBeChecked();
     expect(screen.queryByLabelText(/^End date/)).toBeNull();

@@ -26,10 +26,10 @@ test.describe('M4-AC11: Review in Vietnamese', () => {
     await page.getByRole('combobox', { name: VI.review.goalLabel }).selectOption('g1');
     await expect(page).toHaveURL(/#\/review\?goal=g1&year=2026$/);
     await expect(stat(page, 'stat-time')).toContainText('4,0 giờ');
-    await expect(stat(page, 'stat-progress')).toContainText('25,8%');
-    await expect(stat(page, 'stat-progress')).toContainText('240/930 phút');
-    await expect(stat(page, 'stat-pace')).toContainText('Chậm 30 phút');
-    await expect(stat(page, 'stat-pace')).toContainText('Dự kiến 270 phút tính đến hôm nay');
+    await expect(stat(page, 'stat-progress')).toContainText('22,1%');
+    await expect(stat(page, 'stat-progress')).toContainText('240/1.084 phút');
+    await expect(stat(page, 'stat-pace')).toContainText('Chậm 41 phút');
+    await expect(stat(page, 'stat-pace')).toContainText('Dự kiến 281 phút tính đến hôm nay');
     await expect(page.getByRole('grid', { name: 'Biểu đồ nhiệt hoạt động năm 2026, Read' })).toBeVisible();
     await expect(cell(page, '2026-10-07')).toHaveAttribute('aria-label', /7 tháng 10.*2026: 30 phút, đã đạt chỉ tiêu/);
     await expect(page.getByTestId('heatmap-weekday').first()).toHaveText(/^(Th(ứ)? 2|T2)$/);
@@ -60,7 +60,7 @@ test.describe('M4-AC11: Review in Vietnamese', () => {
 
     // Switch to English in Settings and come back: the same goal/year URL, everything English, no reload.
     await gotoHash(page, '/review?goal=g1&year=2026');
-    await expect(stat(page, 'stat-pace')).toContainText('Chậm 30 phút');
+    await expect(stat(page, 'stat-pace')).toContainText('Chậm 41 phút');
     await page.evaluate(() => {
       (window as unknown as { __noReload?: boolean }).__noReload = true;
     });
@@ -70,7 +70,7 @@ test.describe('M4-AC11: Review in Vietnamese', () => {
     await page.goBack();
     await expect(page).toHaveURL(/#\/review\?goal=g1&year=2026$/);
     await expect(page.getByRole('heading', { level: 1, name: EN.review.title })).toBeVisible();
-    await expect(stat(page, 'stat-pace')).toContainText('30 min behind');
+    await expect(stat(page, 'stat-pace')).toContainText('41 min behind');
     await expect(stat(page, 'stat-time')).toContainText('4.0 h');
     await expect(page.getByRole('grid', { name: 'Activity heatmap for 2026, Read' })).toBeVisible();
     await expect(page.getByTestId('heatmap-month').nth(9)).toHaveText('Oct');

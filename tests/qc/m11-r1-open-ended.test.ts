@@ -87,18 +87,21 @@ describe('M11 QC oracle: open-ended goal on random data (stats, status, curve, h
         expect(goalStatus(goal, today)).toBe(started ? 'active' : 'upcoming');
         expect(goalStatus(goal, add(today, 4000))).toBe(started ? 'active' : add(today, 4000) >= goal.startDate ? 'active' : 'upcoming');
         expect(goalStatus({ ...goal, archived: true }, today)).toBe('archived');
-        // stats
+        // stats (v6.1, ADR-47): an open-ended goal is measured up to today, so totalTarget = expected = the +1 %-a-day plan
+        // added up over the elapsed days: round(T * (1.01^elapsed - 1) / 0.01), T = minutes per day (was T * elapsed)
         const elapsed = started ? diff(goal.startDate, today) + 1 : 0;
         const total = entries.reduce((a, e) => a + e.minutes, 0);
-        const target = goal.targetMinutes * elapsed;
+        const target = elapsed === 0 ? 0 : Math.round((goal.targetMinutes * (Math.pow(1.01, elapsed) - 1)) / 0.01);
+        expect(target).toBeGreaterThanOrEqual(goal.targetMinutes * elapsed); // the plan never asks for less than the flat T x days
         for (const year of [Number(today.slice(0, 4)), Number(today.slice(0, 4)) - 1, Number(goal.startDate.slice(0, 4)) - 1]) {
           const s = goalStats(goal, entries, year, today);
           expect(s.elapsedDays).toBe(elapsed);
-          expect(s.totalTarget).toBe(target);
+          expect(s.totalTarget, `totalTarget elapsed ${elapsed}`).toBe(target);
           expect(s.minutesTotal).toBe(total);
-          expect(s.expectedMinutes).toBe(target);
+          expect(s.expectedMinutes, `expectedMinutes elapsed ${elapsed}`).toBe(target);
           expect(s.pace).toBe(elapsed === 0 ? 0 : total - target);
           expect(s.progressPercent).toBeCloseTo(target === 0 ? 0 : Math.round((total / target) * 1000) / 10, 9);
+          expect(s.dailyTarget).toBe(goal.targetMinutes); // the met-day threshold is still the flat minutes per day
           expect(s.outsideYear).toBe(Number(goal.startDate.slice(0, 4)) > year);
           const met = (d: string) => d >= goal.startDate && d <= today && minutesOn(entries, d) >= goal.targetMinutes && minutesOn(entries, d) > 0;
           if (year === Number(today.slice(0, 4))) {
@@ -112,7 +115,7 @@ describe('M11 QC oracle: open-ended goal on random data (stats, status, curve, h
         expect(c.ideal).toHaveLength(elapsed);
         expect(c.actual).toHaveLength(elapsed);
         expect(c.elapsedDays).toBe(elapsed);
-        expect(c.dailyTarget).toBe(goal.targetMinutes);
+        expect(c.startTarget).toBe(goal.targetMinutes); // v6.1: `startTarget` (was `dailyTarget`) = T for a daily goal
         if (elapsed > 0) {
           expect(c.ideal[0]!.date).toBe(goal.startDate);
           expect(c.ideal[elapsed - 1]!.date).toBe(today);
@@ -123,6 +126,8 @@ describe('M11 QC oracle: open-ended goal on random data (stats, status, curve, h
           // ideal(elapsed) = T * (1.01^elapsed - 1) / 0.01; headline = pct(total, ideal), -100 while nothing is logged
           const idealMinutes = (goal.targetMinutes * (Math.pow(1.01, elapsed) - 1)) / 0.01;
           expect(c.idealMinutes).toBeCloseTo(idealMinutes, 6);
+          // v6.1: the stats' totalTarget / expected is this very ideal(elapsed), rounded to whole minutes
+          expect(Math.round(c.idealMinutes)).toBe(target);
           expect(c.ideal[elapsed - 1]!.cumulative).toBe(c.idealMinutes);
           expect(c.gapMinutes).toBeCloseTo(total - idealMinutes, 6);
           const exact = ((total - idealMinutes) * 1000) / idealMinutes;
@@ -173,6 +178,25 @@ describe('M11 QC oracle: open-ended goal on random data (stats, status, curve, h
       });
     }
   }
+
+  it('O1 (10 min/day from 2026-10-01, 55 min logged): totalTarget = expected = 94 at 10-09 (progress 58.5 %, pace -39), 220 at 10-20 (25.0 %, -165), 79,336,177,010 at 2031-10-02', () => {
+    const { goals, entries } = datasetO1();
+    const o1 = goals[0]!;
+    // round(10 x (1.01^9 - 1) / 0.01) = round(93.685) = 94; 10-20: round(10 x (1.01^20 - 1) / 0.01) = round(220.19) = 220
+    expect(goalStats(o1, entries, 2026, '2026-10-09')).toMatchObject({ elapsedDays: 9, minutesTotal: 55, totalTarget: 94, expectedMinutes: 94, pace: -39, progressPercent: 58.5, dailyTarget: 10 });
+    expect(goalStats(o1, entries, 2026, '2026-10-20')).toMatchObject({ elapsedDays: 20, totalTarget: 220, expectedMinutes: 220, pace: -165, progressPercent: 25 });
+    // 2031-10-02 = day 1828: round(10 x (1.01^1828 - 1) / 0.01) = 79,336,177,010 -- finite, an integer, no overflow
+    const far = goalStats(o1, entries, 2031, '2031-10-02');
+    expect(far.elapsedDays).toBe(1828);
+    expect(far.totalTarget).toBe(79_336_177_010);
+    expect(far.totalTarget).toBe(Math.round((10 * (Math.pow(1.01, 1828) - 1)) / 0.01));
+    expect(far.expectedMinutes).toBe(far.totalTarget);
+    expect(far.pace).toBe(55 - far.totalTarget);
+    expect(Number.isSafeInteger(far.totalTarget)).toBe(true);
+    // before the start: nothing expected, nothing to divide by
+    expect(goalStats(o1, [], 2026, '2026-09-30')).toMatchObject({ elapsedDays: 0, totalTarget: 0, expectedMinutes: 0, pace: 0, progressPercent: 0 });
+    expect(curve(o1, entries, '2026-10-09').startTarget).toBe(10);
+  });
 
   it('groupGoals: an open-ended goal that ran for 6 years is still Active and never Ended', () => {
     const { goals } = datasetS1O1();

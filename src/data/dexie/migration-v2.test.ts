@@ -85,7 +85,8 @@ describe('v1 → v2 upgrade (M7-AC1, NFR-14)', () => {
     expect(data.entries).toHaveLength(23);
     expect(StatsService.currentStreak(data, TODAY)).toBe(8);
     const g1 = (await stats.goalStats('g1', 2026, TODAY))!;
-    expect(g1).toMatchObject({ minutesTotal: 240, totalTarget: 930, progressPercent: 25.8, pace: -30, currentStreak: 8, longestStreak: 8 });
+    // v6.1 (ADR-47): expected/total follow the +1 % plan — 1084 / 22.1 % / −41 (was 930 / 25.8 / −30).
+    expect(g1).toMatchObject({ minutesTotal: 240, totalTarget: 1084, progressPercent: 22.1, pace: -41, currentStreak: 8, longestStreak: 8 });
     db.close();
   });
 

@@ -61,8 +61,8 @@ test.describe('M11 r1 explore: dates and lists', () => {
     await logTime(page, 'Meditate', 30);
     await expect(goalCard(page, 'Meditate').locator('.amount')).toContainText('30/10');
     await gotoHash(page, '/goals/o1');
-    // Progress: (55 + 30) of 90 expected so far = 94.4 %
-    await expect(page.getByText('94.4%').first()).toBeVisible();
+    // Progress (v6.1, ADR-47): expected so far = round(10 x (1.01^9 - 1) / 0.01) = 94 (was 10 x 9 = 90); (55 + 30) / 94 = 90.4 %
+    await expect(page.getByText('90.4%').first()).toBeVisible();
   });
 
   test('Review All goals with S1 + O1: overall totals = S1 totals + O1 55 min; no NaN anywhere', async ({ page }) => {
@@ -76,7 +76,7 @@ test.describe('M11 r1 explore: dates and lists', () => {
     expect(all).not.toMatch(/Infinity|NaN|undefined/);
     // Single-goal view for the open-ended one keeps its Progress sub-line and the note.
     await gotoHash(page, '/review?goal=o1&year=2026');
-    await expect(page.getByText('55 of 90 min expected so far')).toBeVisible();
+    await expect(page.getByText('55 of 94 min expected so far')).toBeVisible(); // v6.1: 94 = round(10 x (1.01^9 - 1) / 0.01), was 90
     await expect(page.getByText(EN.review.progressNoteOpen)).toBeVisible();
     // A finite goal in the same data keeps the old note (not the open-ended variant).
     await gotoHash(page, '/review?goal=g1&year=2026');

@@ -78,7 +78,9 @@ describe('Review (M4-AC5, AC6, AC7, AC8)', () => {
     expect(screen.getByTestId('chart-monthly')).toHaveAttribute('data-stub', 'bar-chart');
   });
 
-  it('selecting Read updates the URL and shows 6 cards: 4.0 h, 25.8 %, 30 min behind (M4-AC5, AC7)', async () => {
+  // v6.1 (ADR-47): expected/total follow the +1 % plan — Read 240 of 1,084 min (22.1 %), expected 281 → 41 min behind
+  // (was 930 / 25.8 % / 270 / 30 min); Guitar 11 h 38 min behind (was 8 h 50 min); Spanish 41 h 15 min (was 78 h 54 min).
+  it('selecting Read updates the URL and shows 6 cards: 4.0 h, 22.1 %, 41 min behind (M4-AC5, AC7; v6.1 ADR-47)', async () => {
     const user = userEvent.setup();
     await withS1();
     const app = await renderApp({ route: '/review', container: tc });
@@ -89,11 +91,11 @@ describe('Review (M4-AC5, AC6, AC7, AC8)', () => {
     expect(stat('stat-time')).toHaveTextContent('In 2026 · Whole goal: 4.0 h'); // M4-D4: real space around the dot
     expect(stat('stat-days')).toHaveTextContent('8');
     expect(stat('stat-days')).toHaveTextContent(en.stat.daysOnTargetSub);
-    expect(stat('stat-progress')).toHaveTextContent('25.8%');
-    expect(stat('stat-progress')).toHaveTextContent('240 of 930 min');
-    expect(within(stat('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '25.8');
-    expect(stat('stat-pace')).toHaveTextContent('30 min behind');
-    expect(stat('stat-pace')).toHaveTextContent('Expected 270 min by today');
+    expect(stat('stat-progress')).toHaveTextContent('22.1%');
+    expect(stat('stat-progress')).toHaveTextContent('240 of 1,084 min');
+    expect(within(stat('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '22.1');
+    expect(stat('stat-pace')).toHaveTextContent('41 min behind');
+    expect(stat('stat-pace')).toHaveTextContent('Expected 281 min by today');
     expect(stat('stat-current')).toHaveTextContent('8 days');
     expect(stat('stat-longest')).toHaveTextContent('8 days');
     expect(screen.getByTestId('stats-note')).toHaveTextContent(en.review.progressNote);
@@ -102,11 +104,14 @@ describe('Review (M4-AC5, AC6, AC7, AC8)', () => {
     expect(screen.getByTestId('heatmap-summary')).toHaveTextContent('In 2026 you logged time on 8 days and hit your target on 8 days. Longest streak: 8 days.');
 
     await user.selectOptions(screen.getByRole('combobox', { name: en.review.goalLabel }), 'g2');
-    await waitFor(() => expect(stat('stat-pace')).toHaveTextContent('8 h 50 min behind'));
-    expect(stat('stat-progress')).toHaveTextContent('10.2%');
+    await waitFor(() => expect(stat('stat-pace')).toHaveTextContent('11 h 38 min behind'));
+    expect(stat('stat-progress')).toHaveTextContent('5.3%');
+    expect(stat('stat-progress')).toHaveTextContent('250 of 4,733 min');
     await user.selectOptions(screen.getByRole('combobox', { name: en.review.goalLabel }), 'g3');
     await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('1.0%'));
-    expect(stat('stat-pace')).toHaveTextContent('78 h 54 min behind');
+    expect(stat('stat-progress')).toHaveTextContent('60 of 6,000 min'); // a total goal keeps its total as the denominator
+    expect(stat('stat-pace')).toHaveTextContent('41 h 15 min behind');
+    expect(stat('stat-pace')).toHaveTextContent('Expected 2,535 min by today');
     await user.selectOptions(screen.getByRole('combobox', { name: en.review.goalLabel }), 'g4');
     await waitFor(() => expect(stat('stat-pace')).toHaveTextContent(en.stat.paceOnTrack));
     expect(stat('stat-time')).toHaveTextContent('0.0 h');
@@ -173,14 +178,14 @@ describe('Review (M4-AC5, AC6, AC7, AC8)', () => {
 });
 
 describe('Review in vi (M4-AC11)', () => {
-  it('Read: 4,0 giờ, 25,8%, Chậm 30 phút; vi labels for heatmap and charts; scan clean', async () => {
+  it('Read: 4,0 giờ, 22,1%, Chậm 41 phút (v6.1 ADR-47; was 25,8% / 30 phút); vi labels for heatmap and charts; scan clean', async () => {
     await withS1('vi');
     await renderApp({ route: '/review?goal=g1&year=2026', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: vi.review.title })).toBeInTheDocument();
     await waitFor(() => expect(stat('stat-time')).toHaveTextContent('4,0 giờ'), SLOW);
-    expect(stat('stat-progress')).toHaveTextContent('25,8%');
-    expect(stat('stat-pace')).toHaveTextContent('Chậm 30 phút');
-    expect(stat('stat-pace')).toHaveTextContent('Dự kiến 270 phút tính đến hôm nay');
+    expect(stat('stat-progress')).toHaveTextContent('22,1%');
+    expect(stat('stat-pace')).toHaveTextContent('Chậm 41 phút');
+    expect(stat('stat-pace')).toHaveTextContent('Dự kiến 281 phút tính đến hôm nay');
     expect(stat('stat-current')).toHaveTextContent('8 ngày');
     expect(screen.getByRole('grid', { name: 'Biểu đồ nhiệt hoạt động năm 2026, Read' })).toBeInTheDocument();
     const monthVi = (m: number) => new Intl.DateTimeFormat('vi-VN', { month: 'short' }).format(new Date(2026, m, 1));
@@ -237,7 +242,8 @@ describe('Review in vi (M4-AC11)', () => {
 });
 
 // ---- v4.0 (M11-AC10, DESIGN S6): Progress / note measured up to today for an open-ended goal ----
-describe('Review — open-ended goal O1 (M11-AC10, FR-24, A-51)', () => {
+// v6.1 (ADR-47): expected/total follow the +1 % plan — O1 at day 9: 94 min expected (was 90), 58.5 %, 39 min behind.
+describe('Review — open-ended goal O1 (M11-AC10, FR-24, A-51; v6.1 ADR-47)', () => {
   async function withS1O1(locale: 'en' | 'vi' = 'en') {
     await withS1(locale);
     const o1 = datasetO1();
@@ -246,15 +252,15 @@ describe('Review — open-ended goal O1 (M11-AC10, FR-24, A-51)', () => {
     return tc!;
   }
 
-  it('o1 / 2026: Progress 61.1 % "55 of 90 min expected so far", Pace 35 min behind, streaks 1 / 2, note "measured up to today", 09-30 outside, 10-01 not', async () => {
+  it('o1 / 2026: Progress 58.5 % "55 of 94 min expected so far", Pace 39 min behind, streaks 1 / 2, note "measured up to today", 09-30 outside, 10-01 not', async () => {
     await withS1O1();
     await renderApp({ route: '/review?goal=o1&year=2026', container: tc });
     await screen.findByRole('heading', { level: 1, name: en.review.title });
-    await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('61.1%'), SLOW);
-    expect(stat('stat-progress')).toHaveTextContent('55 of 90 min expected so far');
-    expect(within(stat('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '61.1');
-    expect(stat('stat-pace')).toHaveTextContent('35 min behind');
-    expect(stat('stat-pace')).toHaveTextContent('Expected 90 min by today');
+    await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('58.5%'), SLOW);
+    expect(stat('stat-progress')).toHaveTextContent('55 of 94 min expected so far');
+    expect(within(stat('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '58.5');
+    expect(stat('stat-pace')).toHaveTextContent('39 min behind');
+    expect(stat('stat-pace')).toHaveTextContent('Expected 94 min by today');
     expect(stat('stat-current')).toHaveTextContent('1 day');
     expect(stat('stat-longest')).toHaveTextContent('2 days');
     expect(stat('stat-time')).toHaveTextContent('0.9 h');
@@ -267,11 +273,11 @@ describe('Review — open-ended goal O1 (M11-AC10, FR-24, A-51)', () => {
     // A finite goal keeps the old copy.
     const user = userEvent.setup();
     await user.selectOptions(screen.getByRole('combobox', { name: en.review.goalLabel }), 'g1');
-    await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('240 of 930 min'));
+    await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('240 of 1,084 min'));
     expect(screen.getByTestId('stats-note')).toHaveTextContent(en.review.progressNote);
   });
 
-  it('year 2025 for o1: outside-year note wins; vi copy "55/90 phút dự kiến đến nay" and the vi note, no leaks', async () => {
+  it('year 2025 for o1: outside-year note wins; vi copy "55/94 phút dự kiến đến nay" and the vi note, no leaks', async () => {
     await withS1O1();
     const app = await renderApp({ route: '/review?goal=o1&year=2025', container: tc });
     await screen.findByRole('heading', { level: 1, name: en.review.title });
@@ -280,9 +286,9 @@ describe('Review — open-ended goal O1 (M11-AC10, FR-24, A-51)', () => {
     await tc!.dispose();
     await withS1O1('vi');
     await renderApp({ route: '/review?goal=o1&year=2026', container: tc });
-    await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('61,1%'), SLOW);
-    expect(stat('stat-progress')).toHaveTextContent('55/90 phút dự kiến đến nay');
-    expect(stat('stat-pace')).toHaveTextContent('Chậm 35 phút');
+    await waitFor(() => expect(stat('stat-progress')).toHaveTextContent('58,5%'), SLOW);
+    expect(stat('stat-progress')).toHaveTextContent('55/94 phút dự kiến đến nay');
+    expect(stat('stat-pace')).toHaveTextContent('Chậm 39 phút');
     expect(screen.getByTestId('stats-note')).toHaveTextContent(vi.review.progressNoteOpen);
     await chartsReady();
     expect(scanVi()).toEqual([]);

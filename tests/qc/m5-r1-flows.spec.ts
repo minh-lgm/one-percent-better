@@ -230,7 +230,9 @@ test.describe('M5-AC4 archive: extra scenarios', () => {
     const g = (await idbAll(page, 'goals')).find((x) => x.id === 'g1')!;
     expect(g.archived).toBe(false);
     await gotoHash(page, '/goals/g1');
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% better'); // M5 +8.3% superseded by M9-AC2 (S1 G1 = +0.0%)
+    // v6.0 burn-up (FR-27 v6.0): S1 G1 = 240 min logged vs ideal(9) = 30·(1.01^9 − 1)/0.01 = 281.06 → −14.6 % (was +8.3 % in M5, +0.0 % in M9 v3)
+    await expect(page.getByTestId('headline')).toHaveText('−14.6% vs. ideal');
+    await expect(page.getByTestId('headline-sub')).toHaveText('Last logged Oct 8: 30 min. Total 240 min, ideal 281 min (−41 min).');
   });
 
   test('archive is double-click safe and the Goals list order of the Archived group is updatedAt descending', async ({ page }) => {
@@ -517,7 +519,8 @@ test.describe('Offline (service worker precache)', () => {
     for (const [hash, check] of [
       ['/goals/g1', async () => expect(fresh.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2)],
       ['/review', async () => expect(fresh.getByTestId('heatmap')).toBeVisible()],
-      ['/goals/g3', async () => expect(fresh.getByTestId('headline')).toHaveText('+0.0% better')], // M5 +1.0% superseded by M9-AC2 (S1 G3 single entry = +0.0%)
+      // v6.1 (ADR-47): S1 G3 is a total goal (6,000 min over 365 days) → T₀ = 6000·0.01/(1.01^365 − 1) = 1.63 min; 60 min vs ideal(282) = 2,535 min → −97.6 % (was +1.0 % in M5, +0.0 % in M9 v3)
+      ['/goals/g3', async () => expect(fresh.getByTestId('headline')).toHaveText('−97.6% vs. ideal')],
       ['/goals', async () => expect(fresh.getByTestId('goal-row').first()).toBeVisible()],
       ['/settings', async () => expect(fresh.getByRole('heading', { level: 1, name: EN.settings.title })).toBeVisible()],
       ['/day/2026-10-08', async () => expect(fresh.getByRole('heading', { level: 1 })).toBeVisible()],

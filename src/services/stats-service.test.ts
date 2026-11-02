@@ -32,15 +32,15 @@ async function seedS1() {
   await db.entries.bulkPut(entries);
 }
 
-describe('StatsService (M4-T3, M4-AC4, M4-AC5)', () => {
-  it('goalStats / overallStats with S1 at 2026-10-09 return the expected numbers (TASKS §0)', async () => {
+describe('StatsService (M4-T3, M4-AC4, M4-AC5; v6.1 ADR-47: expected/total follow the +1 % plan)', () => {
+  it('goalStats / overallStats with S1 at 2026-10-09 return the expected numbers (TASKS §0; v6.1: G1 1084 / 22.1 / −41, G2 5.3 / −698, G3 1.0 / −2475)', async () => {
     await seedS1();
     const g1 = (await service.goalStats('g1', 2026, TODAY))!;
-    expect(g1).toMatchObject({ minutesTotal: 240, totalTarget: 930, progressPercent: 25.8, pace: -30, currentStreak: 8, longestStreak: 8, daysOnTarget: 8 });
+    expect(g1).toMatchObject({ minutesTotal: 240, totalTarget: 1084, progressPercent: 22.1, expectedMinutes: 281, pace: -41, currentStreak: 8, longestStreak: 8, daysOnTarget: 8 });
     const g2 = (await service.goalStats('g2', 2026, TODAY))!;
-    expect(g2).toMatchObject({ minutesTotal: 250, progressPercent: 10.2, pace: -530, currentStreak: 2, longestStreak: 10 });
+    expect(g2).toMatchObject({ minutesTotal: 250, totalTarget: 4733, progressPercent: 5.3, expectedMinutes: 948, pace: -698, currentStreak: 2, longestStreak: 10 });
     const g3 = (await service.goalStats('g3', 2026, TODAY))!;
-    expect(g3).toMatchObject({ minutesTotal: 60, progressPercent: 1, pace: -4734 });
+    expect(g3).toMatchObject({ minutesTotal: 60, totalTarget: 6000, progressPercent: 1, expectedMinutes: 2535, pace: -2475 });
     expect((await service.goalStats('g4', 2026, TODAY))!.pace).toBe(0);
     expect(await service.goalStats('nope', 2026, TODAY)).toBeUndefined();
     const all = await service.overallStats(2026, TODAY);
@@ -171,7 +171,11 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
       points = c.ideal.length;
       expect(c.actual).toHaveLength(3650);
       expect(s.elapsedDays).toBe(3650);
-      expect(s.totalTarget).toBe(36_500);
+      // v6.1 (ADR-47): the +1 % plan over 3,650 days — 10 × (1.01^3650 − 1) / 0.01 ≈ 5.93e18 (finite; was 36,500 = 10 × 3650).
+      expect(Number.isFinite(s.totalTarget)).toBe(true);
+      expect(s.totalTarget / 1e18).toBeCloseTo(5.9294, 3);
+      expect(s.expectedMinutes).toBe(s.totalTarget);
+      expect(s.progressPercent).toBe(0);
     }
     expect(points).toBe(3650);
     console.log(`[bench] open-ended goal curve (3,650 days) + goalStats: median ${median(times).toFixed(1)} ms, runs ${times.map((t) => t.toFixed(1)).join(' / ')}`);
@@ -220,7 +224,7 @@ describe('StatsService.curve (M9-T1; v6.0)', () => {
     expect(c.headlinePercent).toBe(-14.6);
     expect(c.totalMinutes).toBe(240);
     expect(c.idealMinutes).toBeCloseTo(281.0558, 3);
-    expect(c.dailyTarget).toBe(30);
+    expect(c.startTarget).toBe(30);
     expect(c.loggedDays).toBe(8);
     expect(c.latest).toEqual({ date: '2026-10-08', minutes: 30 });
     expect(await service.curve('nope', TODAY)).toBeUndefined();
@@ -243,7 +247,8 @@ describe('StatsService with S1 + O1 (M11-AC2)', () => {
     expect(data.goals).toHaveLength(6);
     expect(data.entries).toHaveLength(27);
     const o1 = (await service.goalStats('o1', 2026, TODAY))!;
-    expect(o1).toMatchObject({ minutesTotal: 55, totalTarget: 90, progressPercent: 61.1, pace: -35, currentStreak: 1, longestStreak: 2 });
+    // v6.1 (ADR-47): expected/total follow the +1 % plan — 10 × (1.01^9 − 1) / 0.01 → 94 (was 90).
+    expect(o1).toMatchObject({ minutesTotal: 55, totalTarget: 94, progressPercent: 58.5, expectedMinutes: 94, pace: -39, currentStreak: 1, longestStreak: 2 });
     const c = (await service.curve('o1', TODAY))!;
     expect(c.ideal).toHaveLength(9);
     expect(c.headlinePercent).toBe(-41.3);

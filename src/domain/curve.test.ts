@@ -1,6 +1,9 @@
 // M9-AC1 / M9-AC2 (FR-27 v3.0, ratio to the first logged day) superseded by the v6.0 burn-up
 // (FR-27 v6.0, user decision 2026-11-02; ARCH §4.5, ADR-46): "Ideal" = the daily target growing
 // 1 % a day, added up; "You" = minutes logged, added up; headline = signed % vs the ideal line.
+// v6.1 (ADR-47): expected/total follow the +1 % plan — the ideal line starts at `startTarget` =
+// `planStartOf(goal)`: the minutes per day of a daily goal, or for a total goal the start that makes
+// the plan add up to exactly the total (no longer ceil(total / days)).
 import { describe, expect, it } from 'vitest';
 import { addDays } from './dates';
 import { buildEntry, buildGoal, datasetO1, datasetR1, datasetR3, datasetR4, datasetS1, TODAY, TODAY_R1 } from '../test/builders';
@@ -46,7 +49,7 @@ describe('curve — R1, the user\'s real data (ARCH §4.5 oracle, v6.0)', () => 
     expect(c.totalMinutes).toBe(56);
     expect(c.idealMinutes).toBeCloseTo(121.81203, 9);
     expect(c.gapMinutes).toBeCloseTo(-65.81203, 9);
-    expect(c.dailyTarget).toBe(30);
+    expect(c.startTarget).toBe(30);
     expect(c.latest).toEqual({ date: '2026-10-13', minutes: 27 });
     expect(c.loggedDays).toBe(4);
     expect(c.elapsedDays).toBe(4);
@@ -55,7 +58,7 @@ describe('curve — R1, the user\'s real data (ARCH §4.5 oracle, v6.0)', () => 
 
   it('the daily target drives the ideal line (A-42 reversed): targetMinutes 1 → ideal 1.0303/4.0604, headline +1279.2', () => {
     const t1 = curve({ ...r1.goals[0], targetMinutes: 1 }, r1.entries, TODAY_R1);
-    expect(t1.dailyTarget).toBe(1);
+    expect(t1.startTarget).toBe(1);
     expect(t1.ideal[3].target).toBeCloseTo(1.030301, 9);
     expect(t1.idealMinutes).toBeCloseTo(4.060401, 9);
     expect(t1.headlinePercent).toBe(1279.2);
@@ -171,19 +174,58 @@ describe('curve — S1 at 2026-10-09 and boundary rules', () => {
     for (let i = 1; i < c.ideal.length; i++) expect(c.ideal[i].cumulative).toBeGreaterThan(c.ideal[i - 1].cumulative);
   });
 
-  it('G3 "Spanish" (total 6000 min over 365 days → daily target 17, one entry of 60): 282 points, headline −99.8, latest = 03-02', () => {
+  it('G3 "Spanish" (total 6000 min over 365 days, one entry of 60; v6.1 ADR-47): startTarget 1.631169 = 6000 × 0.01 / (1.01^365 − 1), ideal ends at exactly 6000, 282 points, headline −97.6 (was −99.8 with a 17-min start), latest = 03-02', () => {
     const c = curve(goalOf('g3'), entriesOf('g3'), TODAY);
-    expect(c.dailyTarget).toBe(17);
-    expect(c.ideal[0].target).toBe(17);
+    expect(c.startTarget).toBeCloseTo(1.631169, 6);
+    expect(c.ideal[0].target).toBeCloseTo(1.6312, 4);
+    expect(c.ideal[0].cumulative).toBeCloseTo(1.6312, 4);
+    expect(c.ideal[60]).toMatchObject({ date: '2026-03-02', k: 61 });
+    expect(c.ideal[60].target).toBeCloseTo(2.9633, 4);
+    expect(c.ideal[60].cumulative).toBeCloseTo(136.1804, 4);
+    expect(c.ideal).toHaveLength(365);
+    expect(c.ideal.at(-1)!.cumulative).toBeCloseTo(6000, 6);
     expect(c.actual).toHaveLength(282);
     expect(c.periodDays).toBe(365);
     expect(c.totalMinutes).toBe(60);
-    expect(c.actual[60]).toMatchObject({ date: '2026-03-02', k: 61, minutes: 60, cumulative: 60, percent: -95.8 });
+    expect(c.actual[60]).toMatchObject({ date: '2026-03-02', k: 61, minutes: 60, cumulative: 60, percent: -55.9 });
     expect(c.actual[59]).toMatchObject({ cumulative: 0, percent: -100 });
-    expect(c.headlinePercent).toBe(-99.8);
-    expect(c.idealMinutes).toBeCloseTo(26423.9507, 3);
+    expect(c.actual[281]).toMatchObject({ date: TODAY, k: 282, cumulative: 60, percent: -97.6 });
+    expect(c.headlinePercent).toBe(-97.6);
+    expect(c.idealMinutes).toBeCloseTo(2535.408, 3);
+    expect(c.gapMinutes).toBeCloseTo(60 - 2535.408, 3);
     expect(c.latest).toEqual({ date: '2026-03-02', minutes: 60 });
     expect(c.loggedDays).toBe(1);
+  });
+
+  it('v6.1 (ADR-47): the ideal line of a total goal starts at the scaled T₀ and ends exactly at the total (600 min over 7 days; 1 day; 1827 days); a daily goal still starts at its minutes per day', () => {
+    const week = buildGoal({ id: 'tw', targetType: 'total', targetMinutes: 600, startDate: '2026-10-01', endDate: '2026-10-07' });
+    const cw = curve(week, [], TODAY);
+    const t0 = (600 * 0.01) / (Math.pow(1.01, 7) - 1);
+    expect(cw.startTarget).toBeCloseTo(t0, 9);
+    expect(cw.startTarget).toBeCloseTo(83.177, 3);
+    expect(cw.startTarget).toBeLessThan(600 / 7); // below the flat average: the line catches up by growing
+    expect(cw.ideal[0].target).toBeCloseTo(t0, 9);
+    expect(cw.ideal[0].cumulative).toBeCloseTo(t0, 9);
+    expect(cw.ideal).toHaveLength(7);
+    expect(cw.ideal.at(-1)!.cumulative).toBeCloseTo(600, 9);
+    expect(cw.ideal.map((p) => p.target).reduce((a, b) => a + b, 0)).toBeCloseTo(600, 9);
+    expect(cw.idealMinutes).toBeCloseTo(600, 9); // the whole week has elapsed by 10-09
+    expect(cw.headlinePercent).toBe(-100);
+
+    const one = curve(buildGoal({ id: 't1', targetType: 'total', targetMinutes: 90, startDate: '2026-10-09', endDate: '2026-10-09' }), [], TODAY);
+    expect(one.startTarget).toBeCloseTo(90, 9);
+    expect(one.ideal).toHaveLength(1);
+    expect(one.ideal[0].cumulative).toBeCloseTo(90, 9);
+
+    const max = curve(buildGoal({ id: 'tm', targetType: 'total', targetMinutes: 60_000, startDate: '2026-01-01', endDate: '2031-01-01' }), [], '2031-01-01');
+    expect(max.ideal).toHaveLength(1827);
+    expect(max.startTarget).toBeCloseTo((60_000 * 0.01) / (Math.pow(1.01, 1827) - 1), 12);
+    expect(max.ideal.at(-1)!.cumulative).toBeCloseTo(60_000, 6);
+    expect(max.idealMinutes).toBeCloseTo(60_000, 6);
+
+    const dailyGoal = curve(buildGoal({ id: 'd', targetType: 'daily', targetMinutes: 30, startDate: '2026-10-01', endDate: '2026-10-07' }), [], TODAY);
+    expect(dailyGoal.startTarget).toBe(30);
+    expect(dailyGoal.ideal.at(-1)!.cumulative).toBeCloseTo(cumulativeTarget(30, 7), 9);
   });
 
   it('G5 "Old course" (ended): 181 points ending 06-30, headline −99.8; G4 upcoming: actual [], 30 ideal points, headline 0, totals 0, latest null', () => {

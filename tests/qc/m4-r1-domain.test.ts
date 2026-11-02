@@ -22,6 +22,28 @@ const endOf = (g: Goal): string => {
 function dailyOf(g: Goal): number {
   return g.targetType === 'daily' ? g.targetMinutes : Math.ceil(g.targetMinutes / (diff(g.startDate, endOf(g)) + 1));
 }
+/**
+ * v6.1 (FR-24 v6.1, ADR-47): minutes the "+1 % a day" plan asks for from day 1 to day k, EXACT rational arithmetic
+ * (BigInt), rounded half up to whole minutes (Math.round semantics for a positive value). The plan starts at T₀ and
+ * grows 1 % a day, so cumulative(k) = T₀ × (1.01^k − 1) / 0.01 = T₀ × (101^k − 100^k) / 100^(k−1).
+ *   daily goal: T₀ = targetMinutes
+ *   total goal: T₀ = targetMinutes × 0.01 / (1.01^N − 1) = targetMinutes × 100^(N−1) / (101^N − 100^N), N = period days,
+ *               so that cumulative(N) = targetMinutes exactly.
+ */
+function plannedOf(g: Goal, k: number): number {
+  if (k <= 0) return 0;
+  const pow = (b: bigint, e: number): bigint => b ** BigInt(e);
+  const grown = pow(101n, k) - pow(100n, k);
+  const scale = pow(100n, k - 1);
+  let n = BigInt(g.targetMinutes) * grown;
+  let d = scale;
+  if (g.targetType === 'total') {
+    const N = diff(g.startDate, endOf(g)) + 1;
+    n *= pow(100n, N - 1);
+    d *= pow(101n, N) - pow(100n, N);
+  }
+  return Number((2n * n + d) / (2n * d));
+}
 function minutesOf(entries: LogEntry[], goalId: string | null, date: string): number {
   return entries.filter((e) => e.date === date && (goalId === null || e.goalId === goalId)).reduce((a, e) => a + e.minutes, 0);
 }
@@ -123,13 +145,17 @@ describe('M4 QC oracle: per-goal and overall stats on random datasets (year/leap
             const r = runs((d) => metOnGoal(g, entries, d), g.startDate, endOf(g) > today ? today : endOf(g), today);
             expect({ c: s.currentStreak, l: s.longestStreak }, `${g.id} streak`).toEqual({ c: r.cur, l: r.longest });
             const total = ge.reduce((a, e) => a + e.minutes, 0);
-            const totalTarget = g.targetType === 'daily' ? g.targetMinutes * (diff(g.startDate, endOf(g)) + 1) : g.targetMinutes;
+            // v6.1 (ADR-47): the whole-period target is the plan added up over the period (a total goal: exactly targetMinutes)
+            const totalTarget = g.targetType === 'daily' ? plannedOf(g, diff(g.startDate, endOf(g)) + 1) : g.targetMinutes;
             expect(s.minutesTotal).toBe(total);
-            expect(s.totalTarget).toBe(totalTarget);
+            expect(s.totalTarget, `${g.id} totalTarget`).toBe(totalTarget);
             expect(s.progressPercent).toBeCloseTo(Math.round((total / totalTarget) * 1000) / 10, 9);
             const elapsed = today < g.startDate ? 0 : diff(g.startDate, today < endOf(g) ? today : endOf(g)) + 1;
             expect(s.elapsedDays).toBe(elapsed);
-            expect(s.pace).toBe(elapsed === 0 ? 0 : total - dailyOf(g) * elapsed);
+            // v6.1: "expected by today" = the plan added up to the elapsed days; pace = logged − expected (0 before the start)
+            const expected = plannedOf(g, elapsed);
+            expect(s.expectedMinutes, `${g.id} expectedMinutes`).toBe(expected);
+            expect(s.pace, `${g.id} pace`).toBe(elapsed === 0 ? 0 : total - expected);
             const inYear = ge.filter((e) => e.date.startsWith(`${year}-`));
             expect(s.minutesInYear).toBe(inYear.reduce((a, e) => a + e.minutes, 0));
           }
@@ -213,10 +239,20 @@ describe('M4 QC: S1 numbers from the fixture file', () => {
     const sample = JSON.parse(readFileSync(new URL('../../e2e/fixtures/sample-backup.json', import.meta.url), 'utf8')) as { goals: Goal[]; entries: LogEntry[] };
     const today = '2026-10-09';
     const all = StatsService.allGoalStats({ goals: sample.goals, entries: sample.entries }, 2026, today);
-    expect(all.get('g1')).toMatchObject({ minutesInYear: 240, minutesTotal: 240, totalTarget: 930, progressPercent: 25.8, pace: -30, currentStreak: 8, longestStreak: 8, daysOnTarget: 8 });
-    expect(all.get('g2')).toMatchObject({ minutesTotal: 250, progressPercent: 10.2, pace: -530, currentStreak: 2, longestStreak: 10 });
-    expect(all.get('g3')).toMatchObject({ minutesTotal: 60, progressPercent: 1, pace: -4734 });
-    expect(all.get('g4')).toMatchObject({ minutesTotal: 0, pace: 0 });
+    // v6.1 (ADR-47): totalTarget / expected follow the +1 %-a-day plan (TASKS v6.1 table, re-derived with plannedOf above):
+    //   g1 30/d × 31 d → 1084, 9 days elapsed → 281 expected, 240 − 281 = −41, 240 / 1084 = 22.1 %
+    //   g2 20/d × 122 d → 4733, 39 elapsed → 948, 250 − 948 = −698, 5.3 %
+    //   g3 total 6000 → 6000, T₀ = 6000 × 0.01 / (1.01^365 − 1) ≈ 1.6312, 282 elapsed → 2535, 60 − 2535 = −2475, 1.0 %
+    //   g4 45/d × 30 d → 1565, upcoming → 0 / 0 / 0.0 %
+    //   g5 15/d × 181 d → 7584, ended → expected 7584, 15 − 7584 = −7569, 0.2 %
+    expect(all.get('g1')).toMatchObject({ minutesInYear: 240, minutesTotal: 240, totalTarget: 1084, progressPercent: 22.1, expectedMinutes: 281, pace: -41, currentStreak: 8, longestStreak: 8, daysOnTarget: 8 });
+    expect(all.get('g2')).toMatchObject({ minutesTotal: 250, totalTarget: 4733, progressPercent: 5.3, expectedMinutes: 948, pace: -698, currentStreak: 2, longestStreak: 10 });
+    expect(all.get('g3')).toMatchObject({ minutesTotal: 60, totalTarget: 6000, progressPercent: 1, expectedMinutes: 2535, pace: -2475 });
+    expect(all.get('g4')).toMatchObject({ minutesTotal: 0, totalTarget: 1565, progressPercent: 0, expectedMinutes: 0, pace: 0 });
+    expect(all.get('g5')).toMatchObject({ minutesTotal: 15, totalTarget: 7584, progressPercent: 0.2, expectedMinutes: 7584, pace: -7569 });
+    const sampleGoal = (id: string) => sample.goals.find((g) => g.id === id)!;
+    expect([1084, 281, 4733, 948, 2535, 1565, 7584]).toEqual([plannedOf(sampleGoal('g1'), 31), plannedOf(sampleGoal('g1'), 9), plannedOf(sampleGoal('g2'), 122), plannedOf(sampleGoal('g2'), 39), plannedOf(sampleGoal('g3'), 282), plannedOf(sampleGoal('g4'), 30), plannedOf(sampleGoal('g5'), 181)]);
+    expect(plannedOf(sampleGoal('g3'), 365), 'a total goal: the plan adds up to exactly the total').toBe(6000);
     const o = overallStats(sample.goals, sample.entries, 2026, today);
     expect(o).toMatchObject({ currentStreak: 8, longestStreak: 10, daysOnTarget: 20, daysLogged: 21 });
     expect(availableYears(sample.goals, sample.entries, 2026)).toEqual([2026]);

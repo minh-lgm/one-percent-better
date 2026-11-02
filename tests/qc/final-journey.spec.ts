@@ -3,7 +3,7 @@
  * en-US and vi-VN, at 360 px and 1440 px. First launch in a clean context →
  * create 2 goals (daily + total) → manual entry → timer across a reload →
  * reminder on (banner + one notification) → back-fill yesterday → Review →
- * Goal detail (+X% better) → archive → export JSON → delete all goals →
+ * Goal detail (v6.0 burn-up: −78.7% vs. ideal) → archive → export JSON → delete all goals →
  * import the file → everything restored → offline reload of every route.
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -45,6 +45,13 @@ const CONFIGS = [
 ] as const;
 
 const READ = { name: 'Read', why: 'Be smarter', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' };
+// Goal detail of Read on 2026-10-09 (v6.0 burn-up, FR-27 v6.0 / v6.1 ADR-47): 30 min on 10-08 (back-fill) + 20 + 10 min on 10-09 = 60 min logged,
+// day 9 of 31; ideal(9) = 30·(1.01^9 − 1)/0.01 = 281.06 → headline (60 − 281.06)/281.06 = −78.7 %, gap 60 − 281 = −221 min = 3 h 41 min behind;
+// plan total = round(30·(1.01^31 − 1)/0.01) = 1,084 → progress 60/1,084 = 5.5 %. Same numbers as e2e/m5-i18n.spec.ts.
+const DETAIL = {
+  en: { headline: '−78.7% vs. ideal', sub: 'Today: 30 min. Total 60 min, ideal 281 min (−221 min).', progress: '5.5%', progressSub: '60 of 1,084 min', pace: '3 h 41 min behind', expected: 'Expected 281 min by today' },
+  vi: { headline: '−78,7% so với lý tưởng', sub: 'Hôm nay: 30 phút. Tổng 60 phút, lý tưởng 281 phút (−221 phút).', progress: '5,5%', progressSub: '60/1.084 phút', pace: 'Chậm 3 giờ 41 phút', expected: 'Dự kiến 281 phút tính đến hôm nay' },
+} as const;
 // Total 100 h over the whole of 2026 => dailyTarget 17 min.
 const SPANISH = { name: 'Spanish', why: 'Talk to family', targetType: 'total' as const, targetValue: 100, startDate: '2026-01-01', endDate: '2026-12-31' };
 
@@ -207,10 +214,19 @@ for (const cfg of CONFIGS) {
       await check();
       await page.screenshot({ path: testInfo.outputPath(`review-${cfg.name}.png`), fullPage: true });
 
-      // ---- 8. Goal detail: curve with 2 lines, +0.0% better (M9 FR-27 v3.0), history of 3
+      // ---- 8. Goal detail: curve with 2 lines, −78.7% vs. ideal (v6.0 burn-up, see DETAIL), stats on the same plan, history of 3
+      const detail = DETAIL[lang];
       await gotoHash(page, `/goals/${readId}`);
-      await expect(page.getByTestId('headline')).toHaveText(/\+0[.,]0%/); // M5-AC7 superseded by M9-AC7 (FR-27 v3.0): 30 min then 30 min = first day, no change -> +0.0%
+      await expect(page.getByTestId('headline')).toHaveText(detail.headline); // M5-AC7 / M9-AC7 (v3.0 +0.0%) superseded by FR-27 v6.0
+      await expect(page.getByTestId('headline')).toHaveAttribute('data-sign', 'negative');
+      await expect(page.getByTestId('headline-sub')).toHaveText(detail.sub);
       await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
+      await expect(page.getByTestId('curve-chart').locator('.recharts-reference-line.zero-line')).toHaveCount(0);
+      await expect(page.getByTestId('curve-legend').locator('li')).toHaveCount(2);
+      await expect(page.getByTestId('stat-progress')).toContainText(detail.progress);
+      await expect(page.getByTestId('stat-progress')).toContainText(detail.progressSub);
+      await expect(page.getByTestId('stat-pace')).toContainText(detail.pace);
+      await expect(page.getByTestId('stat-pace')).toContainText(detail.expected);
       await expect(page.getByTestId('history-row')).toHaveCount(3);
       await expect(page.getByTestId('history-row').filter({ hasText: copy.entry.source.timer })).toHaveCount(1);
       await check();
@@ -282,7 +298,9 @@ for (const cfg of CONFIGS) {
       expect(await goalIdOf(page, 'Read')).toBe(readId);
       expect(await goalIdOf(page, 'Spanish')).toBe(spanishId);
       await gotoHash(page, `/goals/${readId}`);
-      await expect(page.getByTestId('headline')).toHaveText(/\+0[.,]0%/); // M5-AC7 superseded by M9-AC7 (FR-27 v3.0): 30 min then 30 min = first day, no change -> +0.0%
+      await expect(page.getByTestId('headline')).toHaveText(detail.headline); // the imported data gives the same v6.0 numbers
+      await expect(page.getByTestId('headline-sub')).toHaveText(detail.sub);
+      await expect(page.getByTestId('stat-progress')).toContainText(detail.progressSub);
       await expect(page.getByTestId('history-row')).toHaveCount(3);
       await expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
       await check();

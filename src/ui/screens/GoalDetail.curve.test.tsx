@@ -57,7 +57,7 @@ async function openTable(user: ReturnType<typeof userEvent.setup>, copy: typeof 
 const cellsOf = (row: HTMLElement) => within(row).getAllByRole('cell').map((c) => norm(c.textContent));
 
 describe('Goal detail — burn-up with R1, the user\'s real data (v6.0)', () => {
-  it('R1 at 2026-10-13: "−54.0% vs. ideal", Day 4 of 83, "Today: 27 min. Total 56 min, ideal 122 min (−66 min).", summary, 2 legend items, Whole period, Progress 2.2 %, streak 0', async () => {
+  it('R1 at 2026-10-13: "−54.0% vs. ideal", Day 4 of 83, "Today: 27 min. Total 56 min, ideal 122 min (−66 min).", summary, 2 legend items, Whole period, Progress 1.5 % of 3,852 (v6.1 ADR-47), 66 min behind, streak 0', async () => {
     await withR1();
     await renderApp({ route: '/goals/r1', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: 'Đọc sách' })).toBeInTheDocument();
@@ -75,9 +75,12 @@ describe('Goal detail — burn-up with R1, the user\'s real data (v6.0)', () => 
     expect(chart).toHaveAccessibleName('Day 4 of 83: you have logged 56 min in total. The ideal line is at 122 min.');
     expect(chart).toHaveAttribute('data-ideal', '83');
     expect(chart).toHaveAttribute('data-actual', '4');
-    // Stat cards keep the M4 rules: the 30-minute target is never met.
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('2.2%');
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('56 of 2,490 min');
+    // Stat cards — v6.1 (ADR-47): expected/total follow the +1 % plan, so Progress and Pace agree with the
+    // chart (3,852 = last ideal row, 122 = ideal today; was 56 of 2,490 = 30 × 83). The 30-minute target is never met.
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('1.5%');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('56 of 3,852 min');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('1 h 6 min behind'); // pace −66, shown in hours
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Expected 122 min by today');
     expect(screen.getByTestId('stat-current')).toHaveTextContent('0 days');
     expect(screen.getByTestId('stat-longest')).toHaveTextContent('0 days');
     expect(screen.getAllByTestId('history-row')).toHaveLength(4);
@@ -164,7 +167,7 @@ describe('Goal detail — burn-up with R1, the user\'s real data (v6.0)', () => 
 });
 
 describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest, M5-AC4; v6.0 copy)', () => {
-  it('Read (S1): "−14.6% vs. ideal", Day 9 of 31, "Last logged Oct 8: 30 min. Total 240 min, ideal 281 min (−41 min).", stats 25.8 % / 8 days, 8 history rows', async () => {
+  it('Read (S1): "−14.6% vs. ideal", Day 9 of 31, "Last logged Oct 8: 30 min. Total 240 min, ideal 281 min (−41 min).", stats 22.1 % / 41 min behind (v6.1 ADR-47) / 8 days, 8 history rows', async () => {
     await withS1();
     await renderApp({ route: '/goals/g1', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: 'Read' })).toBeInTheDocument();
@@ -183,12 +186,13 @@ describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest
     expect(chart).toHaveAttribute('data-ideal', '31');
     expect(chart).toHaveAttribute('data-actual', '9');
     expect(screen.getByRole('figure', { name: en.goal.detail.chartCaption })).toBeInTheDocument();
-    // Stats (M4 rules, unchanged by the curve): progress 25.8 %, 30 min behind (flat 30 × 9 expected), streak 8/8.
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('25.8%');
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('240 of 930 min');
-    expect(within(screen.getByTestId('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '25.8');
-    expect(screen.getByTestId('stat-pace')).toHaveTextContent('30 min behind');
-    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Expected 270 min by today');
+    // Stats — v6.1 (ADR-47): expected/total follow the +1 % plan: 240 of 1,084 (22.1 %), expected 281 = the ideal
+    // line today → 41 min behind, the same −41 as the headline (was 930 / 25.8 % / flat 30 × 9 = 270 / 30 min). Streak 8/8.
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('22.1%');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('240 of 1,084 min');
+    expect(within(screen.getByTestId('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '22.1');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('41 min behind');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Expected 281 min by today');
     expect(screen.getByTestId('stat-current')).toHaveTextContent('8 days');
     expect(screen.getByTestId('stat-longest')).toHaveTextContent('8 days');
     expect(screen.getAllByTestId('history-row')).toHaveLength(8);
@@ -288,8 +292,12 @@ describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(en.toast.goalArchived));
     expect((await tc!.container.db.goals.get('g3'))?.archived).toBe(true);
     expect(screen.queryByRole('button', { name: en.goals.archive })).toBeNull();
-    // Data is kept: headline and history unchanged (total goal 6,000 min / 365 days → 17 min/day target).
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}99.8% vs. ideal`), SLOW);
+    // Data is kept: headline and history unchanged (total goal 6,000 min / 365 days; v6.1 ADR-47: the ideal line
+    // starts at the scaled 1.63 min and ends at 6,000 → −97.6 %, was −99.8 % with a 17 min/day start).
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}97.6% vs. ideal`), SLOW);
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('60 of 6,000 min');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('41 h 15 min behind');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Expected 2,535 min by today');
     expect(screen.getAllByTestId('history-row')).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: en.goals.restore }));
     await waitFor(() => expect(screen.getByText(en.goal.status.active)).toBeInTheDocument());
@@ -341,7 +349,8 @@ describe('Goal detail — Vietnamese (v6.0 copy)', () => {
     expect(screen.getByRole('figure', { name: vi.goal.detail.chartCaption })).toBeInTheDocument();
     const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
     expect(chart).toHaveAccessibleName('Ngày 4/83: bạn đã ghi tổng cộng 56 phút. Đường lý tưởng ở mức 122 phút.');
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('2,2%');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('1,5%'); // v6.1 (ADR-47): 56 of 3,852
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Chậm 1 giờ 6 phút');
     const table = await openTable(user, vi);
     expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual([vi.goal.detail.tableDate, vi.goal.detail.tableIdeal, vi.goal.detail.tableYou, vi.goal.detail.tableMinutes, vi.goal.detail.tableChange]);
     const rows = within(table).getAllByRole('row').slice(1);
@@ -432,7 +441,7 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     return tc;
   }
 
-  it('at 2026-10-09: info "from 2026-10-01, no end date", "−41.3% vs. ideal", "Day 9" (no total), "Last logged Oct 8: 20 min. Total 55 min, ideal 94 min (−39 min).", open summary, NO Range, 9 + 9 points, 9 table rows ending today, stats 61.1 % / 35 min behind / 1 / 2', async () => {
+  it('at 2026-10-09: info "from 2026-10-01, no end date", "−41.3% vs. ideal", "Day 9" (no total), "Last logged Oct 8: 20 min. Total 55 min, ideal 94 min (−39 min).", open summary, NO Range, 9 + 9 points, 9 table rows ending today, stats 58.5 % / 39 min behind (v6.1 ADR-47) / 1 / 2', async () => {
     const user = userEvent.setup();
     await withO1();
     await renderApp({ route: '/goals/o1', container: tc });
@@ -464,11 +473,12 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     expect(cellsOf(rows[4])).toEqual(['51', '35', '10', `${MINUS}16`]);
     expect(cellsOf(rows[7])).toEqual(['83', '55', '20', `${MINUS}28`]);
     expect(cellsOf(rows[8])).toEqual(['94', '55', '0', `${MINUS}39`]);
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('61.1%');
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('55 of 90 min expected so far');
-    expect(within(screen.getByTestId('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '61.1');
-    expect(screen.getByTestId('stat-pace')).toHaveTextContent('35 min behind');
-    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Expected 90 min by today');
+    // v6.1 (ADR-47): expected/total follow the +1 % plan — 94 min expected (= the ideal row of today), was 90 = 10 × 9.
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('58.5%');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('55 of 94 min expected so far');
+    expect(within(screen.getByTestId('stat-progress')).getByRole('progressbar', { name: en.stat.progress })).toHaveAttribute('aria-valuenow', '58.5');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('39 min behind');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Expected 94 min by today');
     expect(screen.getByTestId('stat-current')).toHaveTextContent('1 day');
     expect(screen.getByTestId('stat-longest')).toHaveTextContent('2 days');
     expect(screen.getAllByTestId('history-row')).toHaveLength(4);
@@ -528,11 +538,13 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
     expect(chart).toHaveAttribute('data-ideal', '1828');
     expect(chart).toHaveAttribute('data-actual', '1828');
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('55 of 18,280 min expected so far');
+    // v6.1 (ADR-47): the +1 % plan over 1,828 days — 79,336,177,010 min (was 18,280 = 10 × 1828).
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('55 of 79,336,177,010 min expected so far');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('0.0%');
     expect(screen.queryByRole('radio', { name: en.goal.detail.rangeSoFar })).toBeNull();
   });
 
-  it('vi: "−41,3% so với lý tưởng", "Ngày 9", summary and Progress "55/90 phút dự kiến đến nay", "Chậm 35 phút", info row, no Range, no English leaks (also upcoming)', async () => {
+  it('vi: "−41,3% so với lý tưởng", "Ngày 9", summary and Progress "55/94 phút dự kiến đến nay", "Chậm 39 phút" (v6.1 ADR-47), info row, no Range, no English leaks (also upcoming)', async () => {
     await withO1('vi');
     const app = await renderApp({ route: '/goals/o1', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Meditate' });
@@ -542,9 +554,9 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     expect(norm(screen.getByTestId('headline-sub').textContent)).toMatch(new RegExp(`^Lần ghi gần nhất .+: 20 phút\\. Tổng 55 phút, lý tưởng 94 phút \\(${MINUS}39 phút\\)\\.$`));
     expect(screen.getByTestId('curve-summary')).toHaveTextContent('Ngày 9: bạn đã ghi tổng cộng 55 phút. Đường lý tưởng ở mức 94 phút.');
     expect(screen.queryByRole('radio', { name: vi.goal.detail.rangeWhole })).toBeNull();
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('61,1%');
-    expect(screen.getByTestId('stat-progress')).toHaveTextContent('55/90 phút dự kiến đến nay');
-    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Chậm 35 phút');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('58,5%');
+    expect(screen.getByTestId('stat-progress')).toHaveTextContent('55/94 phút dự kiến đến nay');
+    expect(screen.getByTestId('stat-pace')).toHaveTextContent('Chậm 39 phút');
     await screen.findByTestId('curve-chart', undefined, SLOW);
     expect(scanVi()).toEqual([]);
     app.unmount();

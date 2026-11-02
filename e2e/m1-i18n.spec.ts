@@ -162,7 +162,8 @@ test.describe('M1-AC17 + M1-AC18: main flow in vi-VN', () => {
     await page.getByLabel(/^Ngày bắt đầu/).fill('2026-10-01');
     await page.getByRole('radio', { name: VI.goal.form.endsSpecific }).check();
     await page.getByLabel(/^Ngày kết thúc/).fill('2026-10-31');
-    await expect(page.getByText('Tổng cộng 930 phút (15,5 giờ) trong 31 ngày.')).toBeVisible();
+    // v6.1 (ADR-47): the hint shows the +1 %-a-day plan total, 30 × (1.01^31 − 1)/0.01 = 1,084 min, not 30 × 31.
+    await expect(page.getByText('Tổng cộng 1.084 phút (18,1 giờ) trong 31 ngày.')).toBeVisible();
     await expectNoViLeaks(page);
     await page.getByRole('button', { name: VI.goal.form.save }).click();
     await expect(page.getByRole('heading', { level: 1, name: VI.goals.title })).toBeVisible();

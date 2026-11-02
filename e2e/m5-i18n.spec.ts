@@ -54,26 +54,30 @@ test.describe('M5-AC12: full journey, offline and every screen in Vietnamese', (
     await expectNoViLeaks(page);
 
     await gotoHash(page, `/goals/${id}`);
-    // M5-AC12 (curve copy) superseded by M9-AC5 / M9-AC7 (FR-27 v3.0): two days with 30 minutes → +0,0%.
-    await expect(page.getByTestId('headline')).toHaveText('Tốt hơn +0,0%');
+    // M9-AC5 / M9-AC7 (FR-27 v3.0) superseded by the v6.0 burn-up: 60 min logged vs 281 min planned by day 9 → −78,7 %.
+    await expect(page.getByTestId('headline')).toHaveText('−78,7% so với lý tưởng');
     await expect(page.getByTestId('headline-day')).toHaveText('Ngày 9/31');
-    await expect(page.getByTestId('headline-sub')).toHaveText(/^Hôm nay: 30 phút, \+0,0% so với .+ \(30 phút\)\. ×1 kể từ .+ \(30 phút\)\.$/);
+    await expect(page.getByTestId('headline-sub')).toHaveText('Hôm nay: 30 phút. Tổng 60 phút, lý tưởng 281 phút (−221 phút).');
     await expect(page.getByTestId('headline-sub')).toContainText('30');
-    await expect(page.getByTestId('curve-summary')).toHaveText('Ngày 9/31: đường của bạn ở mức +0,0% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức +8,3%.');
+    await expect(page.getByTestId('curve-summary')).toHaveText('Ngày 9/31: bạn đã ghi tổng cộng 60 phút. Đường lý tưởng ở mức 281 phút.');
     await expect(page.getByTestId('curve-legend')).toContainText(VI.goal.detail.legendIdeal);
     await expect(page.getByRole('radio', { name: VI.goal.detail.rangeWhole })).toBeChecked();
     for (const seg of await page.locator('.seg.range span').all()) expect(await seg.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     const chart = page.getByTestId('curve-chart');
     await expect(chart.locator('.recharts-line')).toHaveCount(2);
-    await expect(chart).toContainText('Lý tưởng +8,3%');
-    await expect(chart).toContainText('Bạn +0,0%');
+    await expect(chart).toContainText('Lý tưởng 281 phút');
+    await expect(chart).toContainText('Bạn 60 phút');
     await chart.focus();
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('curve-reading')).toHaveText(/30 phút, \+0,0% so với ngày có ghi trước · Bạn \+0,0% so với ngày đầu · Lý tưởng \+8,3%$/);
+    await expect(page.getByTestId('curve-reading')).toHaveText(/Ngày này 30 phút · Tổng 60 phút · Lý tưởng 281 phút$/);
     await page.getByText(VI.goal.detail.showTable).click();
     await expect(page.getByTestId('curve-table').locator('tbody tr')).toHaveCount(31);
-    await expect(page.getByTestId('stat-progress')).toContainText('6,5%');
-    await expect(page.getByTestId('stat-pace')).toContainText('Chậm 3 giờ 30 phút');
+    // v6.1 (ADR-47) stats follow the +1 %-a-day plan: 60 min logged (10-08 + 10-09), T₀ = 30, 31-day period,
+    // day 9 → total = round(30·(1.01^31 − 1)/0.01) = 1,084, expected = round(30·(1.01^9 − 1)/0.01) = 281
+    // → progress 60/1,084 = 5,5 % (was 6,5 % of 930), pace 60 − 281 = −221 min = 3 giờ 41 phút (was 3 giờ 30 phút).
+    await expect(page.getByTestId('stat-progress')).toContainText('5,5%');
+    await expect(page.getByTestId('stat-progress')).toContainText('60/1.084 phút');
+    await expect(page.getByTestId('stat-pace')).toContainText('Chậm 3 giờ 41 phút');
     await expect(page.getByTestId('history-row')).toHaveCount(2);
     await expectNoViLeaks(page);
     await expectAxeClean(page);
@@ -108,7 +112,7 @@ test.describe('M5-AC12: full journey, offline and every screen in Vietnamese', (
     await gotoHash(page2, '/today');
     await expectAmount(page2, 'Read', '30/30');
     await gotoHash(page2, `/goals/${id}`);
-    await expect(page2.getByTestId('headline')).toHaveText('Tốt hơn +0,0%'); // M9-AC7
+    await expect(page2.getByTestId('headline')).toHaveText('−78,7% so với lý tưởng'); // M9-AC7 (v6.0 numbers)
     await expectNoViLeaks(page2);
 
     // Offline: every screen opens; switching to English offline persists across an offline reload.
@@ -166,7 +170,7 @@ test.describe('M5-AC12: full journey, offline and every screen in Vietnamese', (
       ['/goals/new', async () => expect(page.getByRole('heading', { level: 1, name: VI.goal.form.titleNew })).toBeVisible()],
       ['/goals/g1', async () => expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2)],
       ['/goals/g3', async () => expect(page.getByText(VI.goal.status.archived, { exact: true })).toBeVisible()],
-      ['/goals/g4', async () => expect(page.getByTestId('headline')).toHaveText('Tốt hơn +0,0%')],
+      ['/goals/g4', async () => expect(page.getByTestId('headline')).toHaveText('Vượt lý tưởng +0,0%')],
       ['/review', async () => expect(page.getByTestId('chart-weekly').locator('svg.recharts-surface')).toBeVisible()],
       ['/day/2026-10-08', async () => expect(goalCard(page, 'Read')).toBeVisible()],
       ['/settings', async () => expect(page.getByRole('heading', { level: 1, name: VI.settings.title })).toBeVisible()],

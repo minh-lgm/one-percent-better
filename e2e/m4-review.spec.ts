@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('M4 Review', () => {
-  test('M4-AC5/AC6/AC7: All goals stats, pick Read → URL + stats 4.0 h / 25.8% / 30 min behind, charts with 12 columns, axe, no external requests', async ({ page }) => {
+  test('M4-AC5/AC6/AC7: All goals stats, pick Read → URL + stats 4.0 h / 22.1% / 41 min behind (v6.1 plan), charts with 12 columns, axe, no external requests', async ({ page }) => {
     const external: string[] = [];
     page.on('request', (req) => {
       if (!req.url().startsWith(BASE_URL)) external.push(req.url());
@@ -53,10 +53,10 @@ test.describe('M4 Review', () => {
     await expect(stat(page, 'stat-time')).toContainText('4.0 h');
     await expect(stat(page, 'stat-time')).toContainText('Whole goal: 4.0 h');
     await expect(stat(page, 'stat-days')).toContainText('8');
-    await expect(stat(page, 'stat-progress')).toContainText('25.8%');
-    await expect(stat(page, 'stat-progress')).toContainText('240 of 930 min');
-    await expect(stat(page, 'stat-pace')).toContainText('30 min behind');
-    await expect(stat(page, 'stat-pace')).toContainText('Expected 270 min by today');
+    await expect(stat(page, 'stat-progress')).toContainText('22.1%');
+    await expect(stat(page, 'stat-progress')).toContainText('240 of 1,084 min');
+    await expect(stat(page, 'stat-pace')).toContainText('41 min behind');
+    await expect(stat(page, 'stat-pace')).toContainText('Expected 281 min by today');
     await expect(stat(page, 'stat-current')).toContainText('8 days');
     await expect(stat(page, 'stat-longest')).toContainText('8 days');
     await expect(page.getByTestId('stats-note')).toHaveText(EN.review.progressNote);
@@ -66,12 +66,16 @@ test.describe('M4 Review', () => {
     await expect(page.getByRole('table', { name: 'Months of 2026' }).locator('tbody tr').nth(9)).toContainText('4 h');
     await expectAxeClean(page);
 
-    // Guitar: pace in hours; Marathon prep (upcoming): on pace.
+    // Guitar: pace in hours (v6.1: 250 − 948 = −698 min); Marathon prep (upcoming): on pace.
     await page.getByRole('combobox', { name: EN.review.goalLabel }).selectOption('g2');
-    await expect(stat(page, 'stat-pace')).toContainText('8 h 50 min behind');
-    await expect(stat(page, 'stat-progress')).toContainText('10.2%');
+    await expect(stat(page, 'stat-pace')).toContainText('11 h 38 min behind');
+    await expect(stat(page, 'stat-progress')).toContainText('5.3%');
+    await expect(stat(page, 'stat-progress')).toContainText('250 of 4,733 min');
+    await expect(stat(page, 'stat-pace')).toContainText('Expected 948 min by today');
     await page.getByRole('combobox', { name: EN.review.goalLabel }).selectOption('g4');
     await expect(stat(page, 'stat-pace')).toContainText(EN.stat.paceOnTrack);
+    await expect(stat(page, 'stat-progress')).toContainText('0 of 1,565 min');
+    await expect(stat(page, 'stat-pace')).toContainText('Expected 0 min by today');
     await expect(page.getByTestId('heatmap-summary')).toHaveText('No time logged in 2026 yet.');
 
     // Reload keeps the selection from the URL.

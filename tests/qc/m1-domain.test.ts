@@ -68,7 +68,12 @@ describe('M1-AC4/AC5 derived values and status', () => {
     expect(dailyTarget(g({ targetType: 'total', targetMinutes: 6000, startDate: '2028-01-01', endDate: '2028-12-31' }))).toBe(17); // leap year, 366 days
     expect(dailyTarget(g({ targetType: 'daily', targetMinutes: 30 }))).toBe(30);
     expect(dailyTarget(g({ targetType: 'total', targetMinutes: 60, startDate: '2026-10-01', endDate: '2026-10-07' }))).toBe(9);
-    expect(totalTarget(g({ targetType: 'daily', targetMinutes: 30 }))).toBe(930);
+    // v6.1 (ADR-47): totalTarget is the +1 %-a-day plan added up: round(30 × (1.01^31 − 1) / 0.01) = 1084 (was 30 × 31 = 930).
+    expect(totalTarget(g({ targetType: 'daily', targetMinutes: 30 }))).toBe(1084);
+    expect(totalTarget(g({ targetType: 'daily', targetMinutes: 30 }))).toBe(Math.round((30 * (1.01 ** 31 - 1)) / 0.01));
+    // a total goal: the plan is scaled so that it adds up to exactly the minutes the user typed
+    expect(totalTarget(g({ targetType: 'total', targetMinutes: 6000, startDate: '2026-01-01', endDate: '2026-12-31' }))).toBe(6000);
+    expect(totalTarget(g({ targetType: 'total', targetMinutes: 60, startDate: '2026-10-01', endDate: '2026-10-07' }))).toBe(60);
   });
   it('status on 2026-10-09 incl. boundaries', () => {
     const today = '2026-10-09';

@@ -3,7 +3,9 @@
 // Written from the PRD/TASKS rule only, with plain UTC Date arithmetic and EXACT rational arithmetic (BigInt fractions); it shares
 // no code with src/domain/curve.ts, goal.ts or stats.ts. The v3 oracle (ratio to the first logged day, compounded) was superseded by
 // the user's decision of 2026-11-02 (TASKS, "superseded tests" section).
-//   T          = daily target: targetMinutes for a daily goal, ceil(targetMinutes / periodDays) for a total goal
+//   T          = plan start (v6.1, ADR-47): targetMinutes for a daily goal; for a total goal the EXACT fraction
+//                targetMinutes * (1/100) / ((101/100)^N - 1) = targetMinutes * 100^(N-1) / (101^N - 100^N), N = period days,
+//                so that ideal(N) equals the total the user typed exactly (was ceil(targetMinutes / N) in v6.0)
 //   target(k)  = T * (101/100)^(k-1)            (k = ordinal of the day in the period, startDate = 1)
 //   ideal(k)   = T * sum_{i<k} (101/100)^i = T * (101^k - 100^k) / 100^(k-1)   -- exact fraction, never a float running sum
 //   m(d)       = total minutes of all entries of the goal on d, only d in [startDate, min(today, endDate)]
@@ -53,8 +55,12 @@ function pctOfFrac(f: Frac): number {
 }
 /** pct(a, ideal) with an integer a and an exact ideal fraction: (a * d) / n. */
 const pctVs = (a: number, ideal: Frac): number => pctOfFrac({ n: BigInt(a) * ideal.d, d: ideal.n });
-/** ceil(a / b) for positive integers. */
-const ceilDiv = (a: number, b: number) => Number((BigInt(a) + BigInt(b) - 1n) / BigInt(b));
+/** a/b * c/d, unreduced. */
+const mul = (a: Frac, b: Frac): Frac => ({ n: a.n * b.n, d: a.d * b.d });
+/** True when the fraction equals the integer `v` exactly. */
+const equalsInt = (f: Frac, v: number): boolean => f.n === BigInt(v) * f.d;
+/** 101^N - 100^N. */
+const grown = (N: number): bigint => 101n ** BigInt(N) - 100n ** BigInt(N);
 
 // ---------- oracle ----------
 interface OIdeal {
@@ -78,7 +84,8 @@ interface Oracle {
   periodDays: number;
   elapsedDays: number;
   loggedDays: number;
-  dailyTarget: number;
+  /** T, the plan start (exact; an integer for a daily goal). */
+  startTarget: Frac;
   latest: Ref | null;
   totalMinutes: number;
   idealMinutes: Frac;
@@ -86,13 +93,14 @@ interface Oracle {
 }
 function oracle(g: Goal, entries: LogEntry[], today: string): Oracle {
   const days = diff(g.startDate, endOf(g)) + 1;
-  const T = g.targetType === 'daily' ? g.targetMinutes : ceilDiv(g.targetMinutes, days);
+  // v6.1: T = targetMinutes (daily) or targetMinutes * 100^(N-1) / (101^N - 100^N) (total) -- exact
+  const T: Frac = g.targetType === 'daily' ? frac(g.targetMinutes, 1) : frac(BigInt(g.targetMinutes) * 100n ** BigInt(days - 1), grown(days));
   const ideal: OIdeal[] = [];
   let p101 = 1n; // 101^(k-1)
   let p100 = 1n; // 100^(k-1)
   for (let k = 1; k <= days; k++) {
-    const target = frac(BigInt(T) * p101, p100);
-    const cumulative = frac(BigInt(T) * (p101 * 101n - p100 * 100n), p100); // T * (101^k - 100^k) / 100^(k-1)
+    const target = mul(T, frac(p101, p100));
+    const cumulative = mul(T, frac(p101 * 101n - p100 * 100n, p100)); // T * (101^k - 100^k) / 100^(k-1)
     ideal.push({ date: add(g.startDate, k - 1), target, cumulative });
     p101 *= 101n;
     p100 *= 100n;
@@ -121,7 +129,7 @@ function oracle(g: Goal, entries: LogEntry[], today: string): Oracle {
     periodDays: days,
     elapsedDays,
     loggedDays,
-    dailyTarget: T,
+    startTarget: T,
     latest,
     totalMinutes: sum,
     idealMinutes,
@@ -142,7 +150,14 @@ function expectMatches(g: Goal, entries: LogEntry[], today: string) {
   expect(c.actual).toHaveLength(o.actual.length);
   expect(c.periodDays).toBe(o.periodDays);
   expect(c.elapsedDays).toBe(o.elapsedDays);
-  expect(c.dailyTarget).toBe(o.dailyTarget);
+  closeRel(c.startTarget, toNum(o.startTarget), 'startTarget');
+  if (g.targetType === 'daily') expect(c.startTarget).toBe(g.targetMinutes);
+  else {
+    // v6.1 (ADR-47): a total goal's plan adds up to exactly the total -- exact in the oracle, within float tolerance in src
+    expect(equalsInt(o.ideal[o.ideal.length - 1].cumulative, g.targetMinutes), 'oracle ideal(N) = total exactly').toBe(true);
+    closeRel(c.ideal[c.ideal.length - 1].cumulative, g.targetMinutes, 'ideal(N) = total');
+    expect(c.startTarget).toBeLessThanOrEqual(g.targetMinutes);
+  }
   let prevIdeal = -1;
   c.ideal.forEach((p, i) => {
     const q = o.ideal[i];
@@ -194,7 +209,7 @@ describe('M9 QC oracle: curve (FR-27 v6.0, burn-up of minutes against a compound
     expect(c.headlinePercent).toBe(-14.6);
     expect(c.idealMinutes).toBeCloseTo(281.0558, 4);
     expect(c.totalMinutes).toBe(240);
-    expect(c.dailyTarget).toBe(30);
+    expect(c.startTarget).toBe(30);
     expect(c.elapsedDays).toBe(9);
     expect(c.loggedDays).toBe(8);
     expect(c.ideal[0].target).toBeCloseTo(30, 9);
@@ -217,11 +232,15 @@ describe('M9 QC oracle: curve (FR-27 v6.0, burn-up of minutes against a compound
     // v6: the daily target IS the ideal line (v3 A-42 "the target plays no part" is gone)
     const t1 = expectMatches({ ...g, targetMinutes: 1 }, r1, '2026-10-13').c;
     expect(t1.headlinePercent).toBe(1279.2);
-    expect(t1.dailyTarget).toBe(1);
+    expect(t1.startTarget).toBe(1);
     expect(t1.ideal[0].cumulative).toBeCloseTo(1, 12);
+    // v6.1 (ADR-47): a total goal starts at T = 99999 * 0.01 / (1.01^83 - 1) = 778.878835... (was ceil(99999 / 83) = 1205) and
+    // its ideal line ends at exactly 99999; ideal(4) = 3162.5... -> 56 min is -98.2 (was -98.9)
     const total = expectMatches({ ...g, targetType: 'total', targetMinutes: 99999 }, r1, '2026-10-13').c;
-    expect(total.dailyTarget).toBe(1205); // ceil(99999 / 83)
-    expect(total.headlinePercent).toBe(-98.9);
+    expect(total.startTarget).toBeCloseTo(778.878835, 6);
+    expect(total.ideal[0].cumulative).toBeCloseTo(778.878835, 6);
+    expect(total.ideal[82].cumulative).toBeCloseTo(99999, 6);
+    expect(total.headlinePercent).toBe(-98.2);
     // the 10-12 entry removed: that day stays flat at 15 and 10-13 lands on 42
     const gap = expectMatches(g, r1.filter((e) => e.date !== '2026-10-12'), '2026-10-13').c;
     expect(gap.actual[2]).toMatchObject({ minutes: 0, logged: false, cumulative: 15, percent: -83.5 });
@@ -355,24 +374,29 @@ describe('M9 QC oracle: curve (FR-27 v6.0, burn-up of minutes against a compound
     expect(c.actual[180]).toMatchObject({ cumulative: 15, minutes: 15, logged: true });
   });
 
-  it('total goal: dailyTarget = ceil(targetMinutes / periodDays) (S1 G3 "Spanish" 6000 min / 365 d -> 17); entries outside the period and in the future are ignored; the same day split across entries sums', () => {
+  it('total goal (v6.1): startTarget = targetMinutes * 0.01 / (1.01^N - 1) (S1 G3 "Spanish" 6000 min / 365 d -> 1.631169, ideal(365) = 6000 exactly); entries outside the period and in the future are ignored; the same day split across entries sums', () => {
     const g = goal({ targetType: 'total', targetMinutes: 6000, startDate: '2026-01-01', endDate: '2026-12-31' });
     const spanish = expectMatches(g, [entry('g', '2026-03-02', 60)], '2026-10-09').c;
-    expect(spanish.dailyTarget).toBe(17);
-    expect(spanish.ideal[0].cumulative).toBeCloseTo(17, 9);
+    expect(spanish.startTarget).toBeCloseTo(1.631169, 6);
+    expect(spanish.ideal[0].cumulative).toBeCloseTo(1.631169, 6);
+    expect(spanish.ideal[364].cumulative).toBeCloseTo(6000, 6);
     expect(spanish.actual).toHaveLength(282);
-    expect(spanish.headlinePercent).toBe(-99.8);
+    // ideal(282) = 2535.4076... -> 60 min is -97.6 (v6.0 with T = 17: -99.8); on 03-02 (k = 61) ideal = 136.1... -> -55.9
+    expect(spanish.headlinePercent).toBe(-97.6);
+    expect(spanish.actual[60]).toMatchObject({ date: '2026-03-02', cumulative: 60, percent: -55.9 });
     const entries = [entry('g', '2026-03-02', 10, 'a'), entry('g', '2026-03-02', 7, 'b'), entry('g', '2026-03-03', 16), entry('g', '2025-12-31', 500), entry('g', '2027-01-01', 500), entry('g', '2026-10-10', 900)];
     const { c } = expectMatches(g, entries, '2026-10-09');
     expect(c.loggedDays).toBe(2);
     expect(c.totalMinutes).toBe(33);
     expect(c.latest).toEqual({ date: '2026-03-03', minutes: 16 });
-    expect(c.actual[60]).toMatchObject({ date: '2026-03-02', minutes: 17, cumulative: 17 });
+    expect(c.actual[60]).toMatchObject({ date: '2026-03-02', minutes: 17, cumulative: 17, percent: -87.5 });
     expect(c.actual[0]).toMatchObject({ cumulative: 0, percent: -100 });
-    expect(c.headlinePercent).toBe(-99.9);
-    // exact division is not rounded up: 3650 / 365 = 10
-    expect(expectMatches({ ...g, targetMinutes: 3650 }, [], '2026-10-09').c.dailyTarget).toBe(10);
-    expect(expectMatches({ ...g, targetMinutes: 3651 }, [], '2026-10-09').c.dailyTarget).toBe(11);
+    expect(c.headlinePercent).toBe(-98.7); // 33 vs ideal(282) = 2535.4 (v6.0: -99.9)
+    // the start is NOT rounded (v6.0 used ceil(total / N)): 3650 -> 0.992295, 3651 -> 0.992566, both plans end exactly at the total
+    const t3650 = expectMatches({ ...g, targetMinutes: 3650 }, [], '2026-10-09').c;
+    expect(t3650.startTarget).toBeCloseTo(0.992295, 6);
+    expect(t3650.ideal[364].cumulative).toBeCloseTo(3650, 6);
+    expect(expectMatches({ ...g, targetMinutes: 3651 }, [], '2026-10-09').c.startTarget).toBeCloseTo(0.992566, 6);
   });
 
   it('1827-day maximum period works and is fast; the ideal line is exact (closed form, no accumulated float error)', () => {

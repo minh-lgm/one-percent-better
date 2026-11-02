@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { GOAL_NAME_MAX, GOAL_WHY_MAX } from '../../config/constants';
 import { daysInclusive, endOfYearOf, isValidISODate, toISODate } from '../../domain/dates';
 import type { GoalInput } from '../../domain/goal';
+import { cumulativeTarget } from '../../domain/plan';
 import type { DomainError, Goal, TargetType } from '../../domain/types';
 import { Alert } from '../components/Alert';
 import { Button, LinkButton } from '../components/Button';
@@ -138,7 +139,8 @@ export function GoalForm() {
     const days = daysInclusive(state.startDate, effectiveEnd);
     const daysText = t('format.daysCount', { count: days });
     if (state.targetType === 'daily') {
-      const total = v * days;
+      // v6.1 (ADR-47): the same +1 %-a-day plan as Goal detail's Progress/total target, not v × days.
+      const total = Math.round(cumulativeTarget(v, days));
       return t('goal.form.hintDaily', { total: f.number(total), hours: f.decimal1(total / 60), days: daysText });
     }
     const daily = Math.ceil((v * 60) / days);

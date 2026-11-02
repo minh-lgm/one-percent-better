@@ -112,9 +112,11 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await page.getByRole('radio', { name: EN.goal.detail.rangeSoFar }).check();
     await expect(tableRows(page)).toHaveCount(4);
 
-    // Stat cards still follow the daily target (A-42): 56 of 2490 min, streak 0.
-    await expect(page.getByTestId('stat-progress')).toContainText('2.2%');
-    await expect(page.getByTestId('stat-progress')).toContainText('56 of 2,490 min');
+    // Stat cards follow the +1 %-a-day plan (v6.1, ADR-47): 56 of 3,852 min (= the last Ideal row), expected 122 → 66 min behind, streak 0.
+    await expect(page.getByTestId('stat-progress')).toContainText('1.5%');
+    await expect(page.getByTestId('stat-progress')).toContainText('56 of 3,852 min');
+    await expect(page.getByTestId('stat-pace')).toContainText('1 h 6 min behind');
+    await expect(page.getByTestId('stat-pace')).toContainText('Expected 122 min by today');
     await expect(page.getByTestId('stat-current')).toContainText('0 days');
     await expect(page.getByTestId('history-row')).toHaveCount(4);
     await expectAxeClean(page);
@@ -131,8 +133,8 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await expect(sub(page)).toHaveText(`Last logged Oct 8: 30 min. Total 240 min, ideal 281 min (${MINUS}41 min).`);
     await expect(sub(page)).toHaveAttribute('data-variant', 'earlier');
     await expect(page.getByTestId('curve-summary')).toHaveText('Day 9 of 31: you have logged 240 min in total. The ideal line is at 281 min.');
-    await expect(page.getByTestId('stat-progress')).toContainText('25.8%');
-    await expect(page.getByTestId('stat-pace')).toContainText('30 min behind');
+    await expect(page.getByTestId('stat-progress')).toContainText('22.1%');
+    await expect(page.getByTestId('stat-pace')).toContainText('41 min behind');
     await expect(page.getByTestId('stat-current')).toContainText('8 days');
     await expect(page.getByTestId('stat-longest')).toContainText('8 days');
     await expect(page.getByTestId('history-row')).toHaveCount(8);
@@ -393,7 +395,8 @@ test.describe('M9-AC5 — Vietnamese Goal detail at 360 px', () => {
     await expect(tableRows(page).nth(2).locator('td')).toHaveText(['91', '29', '14', `${MINUS}62`]);
     await expect(tableRows(page).nth(82).locator('td')).toHaveText(['3.852', '—', '—', '—']);
     await expect(page.getByTestId('curve-table')).not.toContainText('%');
-    await expect(page.getByTestId('stat-progress')).toContainText('2,2%');
+    await expect(page.getByTestId('stat-progress')).toContainText('1,5%');
+    await expect(page.getByTestId('stat-progress')).toContainText('56/3.852 phút');
     await expectNoViLeaks(page);
     await expectNoHorizontalScroll(page);
     await expectAxeClean(page);

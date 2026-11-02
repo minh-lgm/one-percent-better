@@ -2,7 +2,7 @@
 // over goals + entries; no dates from the clock (callers pass `today`).
 // Hot paths use integer day numbers instead of date parsing (NFR-03).
 import { dayNumber, isoFromDayNumber, yearOf } from './dates';
-import { dailyTarget, daysElapsed, isWithinGoal, totalTarget } from './goal';
+import { dailyTarget, daysElapsed, isWithinGoal, plannedMinutes, totalTarget } from './goal';
 import type { Goal, ISODate, LogEntry } from './types';
 
 /** Minutes per day for the given entries (all goals mixed). */
@@ -112,7 +112,7 @@ export interface GoalStats {
   progressPercent: number;
   /** Elapsed days of the period up to today (0 for upcoming goals). */
   elapsedDays: number;
-  /** `dailyTarget × elapsedDays`. */
+  /** v6.1 (ADR-47): the +1 %-a-day plan added up to today — `plannedMinutes(goal, elapsedDays)`, whole minutes (was `dailyTarget × elapsedDays`). */
   expectedMinutes: number;
   /** `minutesTotal − expectedMinutes`; positive = ahead. 0 for upcoming goals. */
   pace: number;
@@ -148,7 +148,8 @@ export function goalStats(goal: Goal, goalEntries: readonly LogEntry[], year: nu
   const total = totalTarget(goal, today);
   const minutesTotal = sumMinutes(goalEntries);
   const elapsed = elapsedDays(goal, today);
-  const expected = daily * elapsed;
+  // v6.1 (ADR-47): "expected" follows the same +1 %-a-day plan as the ideal line of the curve.
+  const expected = plannedMinutes(goal, elapsed);
   return {
     goalId: goal.id,
     year,
