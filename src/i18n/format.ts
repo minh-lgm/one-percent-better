@@ -47,10 +47,15 @@ export interface Formatters {
    * The `%` comes from the surrounding copy (`{{value}}%`).
    */
   signed1(n: number): string;
-  /** `×N` factor body (ARCH §4.5): ≥ 1 → at most 2 decimals without trailing zeros (`5.4`, `1,440`); < 1 → 2 significant digits (`0.6`, `0.00069`). */
-  factor(n: number): string;
-  /** CurveChart Y-axis label: `0%`, `+500%`, `−50%`, `+1,000%`; |v| ≥ 10,000 → Intl compact (`+144K%` / `+144 N%`). */
-  axisPercent(n: number): string;
+  /**
+   * v6 curve gap in minutes with an explicit sign (DESIGN §7.1): rounded to a whole number, grouped,
+   * `+` when ≥ 0, `−` (U+2212) when < 0, through `format.minutes`: `+12 min`, `−325 min` / `−325 phút`.
+   */
+  signedMinutes(n: number): string;
+  /** Whole number with an explicit sign (`+12`, `−325`, `+0`; grouped) — the table body of `signedMinutes`. */
+  signed0(n: number): string;
+  /** CurveChart Y-axis label (minutes, no unit): `0`, `500`, `1,000`; v ≥ 10,000 → Intl compact (`12K` / `12 N`). */
+  axisMinutes(n: number): string;
   /** `20 min` / `20 phút`. */
   minutes(n: number): string;
   /** `2 h 40 min`, `2 h`, `45 min`. */
@@ -132,6 +137,7 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
   // Intl prints an ASCII hyphen-minus; the curve copy uses U+2212 so it reads as "minus" and lines up with "+".
   const signed = (n: number, body: (abs: number) => string) => (n < 0 ? `${MINUS}${body(-n)}` : `+${body(Math.abs(n))}`); // Math.abs: −0 → 0
   const signed1 = (n: number) => signed(n, decimal1);
+  const signed0 = (n: number) => signed(Math.round(n), number);
   const dateShort = (date: string | Date) => {
     const d = isoToLocalDate(date);
     if (locale === 'en') return toIso(d);
@@ -178,13 +184,13 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
       return t('format.percent', { value: decimal1(n) });
     },
     signed1,
-    factor(n) {
-      return n >= 1 ? nf(tag, { maximumFractionDigits: 2 }).format(n) : nf(tag, { maximumSignificantDigits: 2 }).format(n);
+    signedMinutes(n) {
+      return t('format.minutes', { n: signed0(n) });
     },
-    axisPercent(n) {
-      if (n === 0) return t('format.percent', { value: '0' });
-      const body = (abs: number) => (abs >= 10_000 ? nf(tag, { notation: 'compact', maximumFractionDigits: 0 }).format(abs) : number(abs));
-      return t('format.percent', { value: signed(n, body) });
+    signed0,
+    axisMinutes(n) {
+      const v = n === 0 ? 0 : n; // −0 → 0 (Intl would print "-0")
+      return v >= 10_000 ? nf(tag, { notation: 'compact', maximumFractionDigits: 0 }).format(v) : number(v);
     },
     minutes(n) {
       return t('format.minutes', { n: number(n) });

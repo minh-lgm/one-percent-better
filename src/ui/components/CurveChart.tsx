@@ -1,17 +1,18 @@
-// Recharts line chart for the 1% curve v3 (FR-27 v3.0; DESIGN S4 "Biểu đồ v3", §5 CurveChart,
-// §8). Loaded only through `lazy(() => import(...))` from the Goal detail screen, so Recharts
-// stays out of the initial bundle (ADR-10, NFR-03). The data table and the text summary live
-// in the screen (no chart dependency); this component only draws the SVG, the hover tooltip
-// and the keyboard "reading" of one point.
+// Recharts line chart for the 1% curve v6 — a burn-up in minutes (FR-27 v6.0; DESIGN S4 "Biểu đồ
+// v6", §5 CurveChart, §8). Loaded only through `lazy(() => import(...))` from the Goal detail
+// screen, so Recharts stays out of the initial bundle (ADR-10, NFR-03). The data table and the
+// text summary live in the screen (no chart dependency); this component only draws the SVG, the
+// hover tooltip and the keyboard "reading" of one point.
 //
-// "You" is `ActualPoint.percent` drawn as steps (`stepAfter`): flat over days without time,
-// down when a day has less than the previous logged day; not drawn at all before the first
-// logged day exists. The Y domain comes from `curveYScale` over the points on screen, with a
-// solid 0 % reference line (= the first logged day).
+// "Ideal" is `IdealPoint.cumulative` (the +1 %-a-day target, added up); "You" is
+// `ActualPoint.cumulative` (minutes logged, added up) drawn as steps (`stepAfter`): flat over days
+// without time, up on logged days, never down; drawn from day 1 (at 0 min) as soon as the goal has
+// started. The Y domain (minutes, from 0) comes from `curveYScale` over the points on screen. The
+// tooltip of a day shows the minutes of that day and both running totals.
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { CartesianGrid, Line, LineChart, ReferenceDot, ReferenceLine, Tooltip, XAxis, YAxis, type TooltipContentProps } from 'recharts';
 import type { ActualPoint, IdealPoint } from '../../domain/curve';
-import { curveYScale, growthPercent } from '../../domain/curve';
+import { curveYScale } from '../../domain/curve';
 import { useElementWidth } from '../hooks/useRechartsWidth';
 import { useFormat } from '../hooks/useFormat';
 import { useT } from '../hooks/useT';
@@ -29,13 +30,13 @@ export interface CurveChartProps {
 interface ChartPoint {
   date: string;
   k: number;
-  /** Ideal %, one decimal. */
+  /** Ideal: cumulative target minutes (not rounded). */
   ideal: number;
-  /** You %; undefined on future days and when nothing has been logged yet. */
+  /** You: cumulative logged minutes; undefined on future days. */
   you?: number;
+  /** Minutes logged on that day. */
   minutes: number;
   logged: boolean;
-  change: number | null;
 }
 
 const MARGIN = { top: 28, right: 24, bottom: 4, left: 0 };
@@ -125,19 +126,19 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
     };
   }
 
-  // No baseline yet → no You line, no You label, Ideal-only tooltips (DESIGN A-D37).
-  const hasYou = actual.some((p) => p.logged);
+  // The You line exists from the first elapsed day (0 min until something is logged); only an
+  // upcoming goal has no You line, no You label and Ideal-only tooltips.
   const shown = Math.min(actual.length, ideal.length);
+  const hasYou = shown > 0;
   const data: ChartPoint[] = ideal.map((p, i) => {
     const a = i < shown ? actual[i] : undefined;
     return {
       date: p.date,
       k: p.k,
-      ideal: growthPercent(p.value),
-      you: hasYou && a ? a.percent : undefined,
+      ideal: p.cumulative,
+      you: a ? a.cumulative : undefined,
       minutes: a?.minutes ?? 0,
       logged: a?.logged ?? false,
-      change: a?.changePercent ?? null,
     };
   });
   const todayPoint = shown > 0 ? data[shown - 1] : null;
@@ -149,7 +150,7 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
     hasYou ? data.slice(0, shown).map((p) => p.you ?? 0) : [],
   );
   const [lo, hi] = scale.domain;
-  const longestTick = Math.max(...scale.ticks.map((v) => f.axisPercent(v).length));
+  const longestTick = Math.max(...scale.ticks.map((v) => f.axisMinutes(v).length));
   const yAxisWidth = Math.max(44, Math.round(6.6 * longestTick + 14));
   // v4.0 (DESIGN S4 rule 6, A-D59): an open-ended goal on its first day has one point per line — centre it
   // horizontally instead of pinning it to the left edge (no fake point for tomorrow).
@@ -184,13 +185,13 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
     }
   }
 
+  // Minutes of the day + both running totals (user request 2026-11-02); totals are whole minutes.
   const tipText = (p: ChartPoint) => {
-    const base = { date: f.dateMonthDay(p.date), ideal: f.signed1(p.ideal) };
+    const base = { date: f.dateMonthDay(p.date), ideal: f.minutes(p.ideal) };
     if (p.you === undefined) return t('goal.detail.tooltipIdeal', base);
-    const you = { ...base, you: f.signed1(p.you), minutes: f.minutes(p.minutes) };
+    const you = { ...base, total: f.minutes(p.you) };
     if (!p.logged) return t('goal.detail.tooltipFlat', you);
-    if (p.change === null) return t('goal.detail.tooltipBase', you);
-    return t('goal.detail.tooltipChange', { ...you, change: f.signed1(p.change) });
+    return t('goal.detail.tooltipLogged', { ...you, minutes: f.minutes(p.minutes) });
   };
 
   const renderTooltip = ({ active, payload }: TooltipContentProps) => {
@@ -256,17 +257,16 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
           <LineChart width={width} height={height} data={data} margin={MARGIN} accessibilityLayer={false}>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="date" height={X_AXIS_HEIGHT} padding={xPadding} tickFormatter={(d: string) => f.dateMonthDay(d)} interval="preserveStartEnd" minTickGap={48} tickLine={false} axisLine={{ stroke: 'var(--border)' }} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-            <YAxis width={yAxisWidth} tickLine={false} axisLine={false} domain={scale.domain} ticks={scale.ticks} interval={0} tickFormatter={(v: number) => f.axisPercent(v)} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-            <ReferenceLine y={0} className="zero-line" stroke="var(--chart-zero)" strokeWidth={1.5} ifOverflow="extendDomain" />
+            <YAxis width={yAxisWidth} tickLine={false} axisLine={false} domain={scale.domain} ticks={scale.ticks} interval={0} tickFormatter={(v: number) => f.axisMinutes(v)} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
             <Tooltip content={renderTooltip} cursor={{ stroke: 'var(--text-muted)', strokeDasharray: '2 3' }} isAnimationActive={false} active={reading !== null ? true : undefined} defaultIndex={reading ?? undefined} />
             <Line type="linear" dataKey="ideal" stroke="var(--chart-ideal)" strokeWidth={2} strokeDasharray="6 5" dot={false} activeDot={{ r: 4, fill: 'var(--surface)', stroke: 'var(--text-muted)' }} isAnimationActive={false} />
             {hasYou ? <Line type="stepAfter" dataKey="you" stroke="var(--chart-actual)" strokeWidth={3.5} dot={loggedDot} activeDot={{ r: 5, fill: 'var(--primary)', stroke: 'var(--surface)' }} isAnimationActive={false} connectNulls={false} /> : null}
             {todayPoint ? (
               <>
                 <ReferenceLine x={todayPoint.date} stroke="var(--text-muted)" strokeDasharray="2 3" />
-                <ReferenceDot x={todayPoint.date} y={todayPoint.ideal} r={4.5} fill="var(--surface)" stroke="var(--text-muted)" strokeWidth={2} label={{ value: t('goal.detail.labelIdeal', { value: f.signed1(todayPoint.ideal) }), position: labelOnLeft ? 'left' : 'right', fill: 'var(--text-muted)', fontSize: 12, fontWeight: 600, dy: idealDy }} />
+                <ReferenceDot x={todayPoint.date} y={todayPoint.ideal} r={4.5} fill="var(--surface)" stroke="var(--text-muted)" strokeWidth={2} label={{ value: t('goal.detail.labelIdeal', { value: f.minutes(todayPoint.ideal) }), position: labelOnLeft ? 'left' : 'right', fill: 'var(--text-muted)', fontSize: 12, fontWeight: 600, dy: idealDy }} />
                 {todayPoint.you !== undefined ? (
-                  <ReferenceDot x={todayPoint.date} y={todayPoint.you} r={5.5} fill="var(--primary)" stroke="var(--surface)" strokeWidth={2} label={{ value: t('goal.detail.labelYou', { value: f.signed1(todayPoint.you) }), position: labelOnLeft ? 'left' : 'right', fill: 'var(--primary)', fontSize: 12, fontWeight: 700, dy: youDy }} />
+                  <ReferenceDot x={todayPoint.date} y={todayPoint.you} r={5.5} fill="var(--primary)" stroke="var(--surface)" strokeWidth={2} label={{ value: t('goal.detail.labelYou', { value: f.minutes(todayPoint.you) }), position: labelOnLeft ? 'left' : 'right', fill: 'var(--primary)', fontSize: 12, fontWeight: 700, dy: youDy }} />
                 ) : null}
               </>
             ) : null}

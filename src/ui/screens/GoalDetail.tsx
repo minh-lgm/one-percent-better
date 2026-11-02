@@ -1,6 +1,6 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { curve, growthPercent } from '../../domain/curve';
+import { curve } from '../../domain/curve';
 import { toISODate, yearOf } from '../../domain/dates';
 import { dailyTarget, goalStatus } from '../../domain/goal';
 import { goalStats } from '../../domain/stats';
@@ -174,36 +174,31 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
     // Open-ended: the period IS the elapsed part (no future days), so Range would offer the same data twice (A-D55).
     const visibleCount = range === 'sofar' && !upcoming && !openEnded ? c.elapsedDays : c.periodDays;
     const ideal = c.ideal.slice(0, visibleCount);
-    // v3 (FR-27, DESIGN S4 / 7.6.4 "Biến thể nào dùng khi nào"): every % goes through the signed formatter.
+    // v6 (FR-27 v6.0, DESIGN S4 / 7.6.4): headline = signed % vs the ideal line; totals are whole minutes.
     const down = c.headlinePercent < 0;
     const headline = t(down ? 'goal.detail.headlineDown' : 'goal.detail.headline', { value: f.signed1(c.headlinePercent) });
     const dayOf = { k: f.number(c.elapsedDays), total: f.number(c.periodDays) };
     const dayLine = openEnded ? t('goal.detail.subDayOpen', { k: dayOf.k }) : t('goal.detail.subDay', dayOf);
+    const totals = { x: f.minutes(c.totalMinutes), y: f.minutes(c.idealMinutes) };
     const summary = upcoming
       ? t('goal.detail.upcoming', { date: f.dateShort(goal.startDate) })
-      : c.baseline === null
-        ? t(openEnded ? 'goal.detail.chartSummaryEmptyOpen' : 'goal.detail.chartSummaryEmpty', { ...dayOf, y: f.signed1(c.idealPercent) })
-        : t(openEnded ? 'goal.detail.chartSummaryOpen' : 'goal.detail.chartSummary', { ...dayOf, x: f.signed1(c.headlinePercent), y: f.signed1(c.idealPercent) });
-    let subVariant: 'upcoming' | 'empty' | 'start' | 'today' | 'earlier';
+      : c.loggedDays === 0
+        ? t(openEnded ? 'goal.detail.chartSummaryEmptyOpen' : 'goal.detail.chartSummaryEmpty', { ...dayOf, y: totals.y })
+        : t(openEnded ? 'goal.detail.chartSummaryOpen' : 'goal.detail.chartSummary', { ...dayOf, ...totals });
+    let subVariant: 'upcoming' | 'empty' | 'today' | 'earlier';
     let subText: string;
     if (upcoming) {
       subVariant = 'upcoming';
       subText = t('goal.detail.upcoming', { date: f.dateShort(goal.startDate) });
-    } else if (!c.baseline || !c.latest) {
+    } else if (!c.latest) {
       subVariant = 'empty';
       subText = t('empty.detail.curve');
-    } else if (!c.previous || c.latestChangePercent === null) {
-      subVariant = 'start';
-      subText = t('goal.detail.subStart', { minutes: f.minutes(c.baseline.minutes), date: f.dateMonthDay(c.baseline.date) });
     } else {
       const params = {
         minutes: f.minutes(c.latest.minutes),
-        change: f.signed1(c.latestChangePercent),
-        prevDate: f.dateMonthDay(c.previous.date),
-        prevMinutes: f.minutes(c.previous.minutes),
-        factor: f.factor(c.actualFactor),
-        firstDate: f.dateMonthDay(c.baseline.date),
-        firstMinutes: f.minutes(c.baseline.minutes),
+        total: f.minutes(c.totalMinutes),
+        ideal: f.minutes(c.idealMinutes),
+        gap: f.signedMinutes(c.gapMinutes),
       };
       if (c.latest.date === today) {
         subVariant = 'today';
@@ -278,12 +273,6 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
               </svg>
               {t('goal.detail.legendYou')}
             </li>
-            <li>
-              <svg width="34" height="10" aria-hidden="true" focusable="false">
-                <line x1="1" y1="5" x2="33" y2="5" className="line-zero" />
-              </svg>
-              {t('goal.detail.legendZero')}
-            </li>
           </ul>
           <p className="curve-summary num" data-testid="curve-summary">
             {summary}
@@ -308,15 +297,15 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
                   </thead>
                   <tbody>
                     {ideal.map((p, i) => {
-                      // Future days and the "nothing logged yet" state show "—" in the You columns (DESIGN S4).
-                      const a = c.baseline ? c.actual[i] : undefined;
+                      // Future days show "—" in the You columns (DESIGN S4); all cells are whole minutes.
+                      const a = c.actual[i] as (typeof c.actual)[number] | undefined;
                       return (
                         <tr key={p.date}>
                           <th scope="row">{f.dateShort(p.date)}</th>
-                          <td>{t('format.percent', { value: f.signed1(growthPercent(p.value)) })}</td>
-                          <td>{a ? t('format.percent', { value: f.signed1(a.percent) }) : dash}</td>
+                          <td>{f.number(p.cumulative)}</td>
+                          <td>{a ? f.number(a.cumulative) : dash}</td>
                           <td>{a ? f.number(a.minutes) : dash}</td>
-                          <td>{a && a.changePercent !== null ? t('format.percent', { value: f.signed1(a.changePercent) }) : dash}</td>
+                          <td>{a ? f.signed0(a.gap) : dash}</td>
                         </tr>
                       );
                     })}

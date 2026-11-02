@@ -210,17 +210,18 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
   });
 });
 
-// M5-AC1 superseded by M9-AC1 / M9-AC2 (FR-27 v3.0): headline = minutes of the last logged day vs the first.
-describe('StatsService.curve (M9-T1, M9-AC1/AC2)', () => {
-  it('returns the S1 "Read" curve: 31 ideal points, 9 actual points, headline 0 (30 min every logged day), loggedDays 8; unknown goal → undefined', async () => {
+// M9 (FR-27 v3.0) superseded by the v6.0 burn-up: headline = total minutes vs the cumulative +1 %-a-day target.
+describe('StatsService.curve (M9-T1; v6.0)', () => {
+  it('returns the S1 "Read" curve: 31 ideal points, 9 actual points, total 240 vs ideal 281.06 → headline −14.6, loggedDays 8; unknown goal → undefined', async () => {
     await seedS1();
     const c = (await service.curve('g1', TODAY))!;
     expect(c.ideal).toHaveLength(31);
     expect(c.actual).toHaveLength(9);
-    expect(c.headlinePercent).toBe(0);
-    expect(c.idealPercent).toBe(8.3);
+    expect(c.headlinePercent).toBe(-14.6);
+    expect(c.totalMinutes).toBe(240);
+    expect(c.idealMinutes).toBeCloseTo(281.0558, 3);
+    expect(c.dailyTarget).toBe(30);
     expect(c.loggedDays).toBe(8);
-    expect(c.baseline).toEqual({ date: '2026-10-01', minutes: 30 });
     expect(c.latest).toEqual({ date: '2026-10-08', minutes: 30 });
     expect(await service.curve('nope', TODAY)).toBeUndefined();
     const g4 = (await service.curve('g4', TODAY))!;
@@ -245,7 +246,8 @@ describe('StatsService with S1 + O1 (M11-AC2)', () => {
     expect(o1).toMatchObject({ minutesTotal: 55, totalTarget: 90, progressPercent: 61.1, pace: -35, currentStreak: 1, longestStreak: 2 });
     const c = (await service.curve('o1', TODAY))!;
     expect(c.ideal).toHaveLength(9);
-    expect(c.headlinePercent).toBe(100);
+    expect(c.headlinePercent).toBe(-41.3);
+    expect(c.totalMinutes).toBe(55);
     // Nothing with the sentinel ever reaches storage: only the goals' own dates are stored.
     expect((await db.goals.toArray()).map((g) => g.endDate)).not.toContain(OPEN_END_QUERY_MAX);
   });

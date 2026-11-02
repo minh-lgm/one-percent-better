@@ -106,30 +106,49 @@ describe('M11 QC oracle: open-ended goal on random data (stats, status, curve, h
             expect({ c: s.currentStreak, l: s.longestStreak }).toEqual({ c: o.cur, l: o.longest });
           }
         }
-        // curve: only startDate .. today, nothing in the future, nothing before the start
+        // curve (v6 burn-up): only startDate .. today, nothing in the future, nothing before the start
         const c = curve(goal, entries, today);
         expect(c.periodDays).toBe(elapsed);
         expect(c.ideal).toHaveLength(elapsed);
         expect(c.actual).toHaveLength(elapsed);
         expect(c.elapsedDays).toBe(elapsed);
+        expect(c.dailyTarget).toBe(goal.targetMinutes);
         if (elapsed > 0) {
           expect(c.ideal[0]!.date).toBe(goal.startDate);
           expect(c.ideal[elapsed - 1]!.date).toBe(today);
           expect(c.actual.every((p) => p.date <= today && p.date >= goal.startDate)).toBe(true);
           const logged = [...new Set(entries.map((e) => e.date))].sort();
           expect(c.loggedDays).toBe(logged.length);
-          if (logged.length > 0) {
-            const first = minutesOn(entries, logged[0]!);
-            const last = minutesOn(entries, logged[logged.length - 1]!);
-            const exact = ((last - first) * 1000) / first;
-            const headline = (Math.sign(exact) * Math.round(Math.abs(exact))) / 10;
-            expect(c.headlinePercent).toBeCloseTo(headline === 0 ? 0 : headline, 9);
-          } else expect(c.headlinePercent).toBe(0);
+          expect(c.totalMinutes).toBe(total);
+          // ideal(elapsed) = T * (1.01^elapsed - 1) / 0.01; headline = pct(total, ideal), -100 while nothing is logged
+          const idealMinutes = (goal.targetMinutes * (Math.pow(1.01, elapsed) - 1)) / 0.01;
+          expect(c.idealMinutes).toBeCloseTo(idealMinutes, 6);
+          expect(c.ideal[elapsed - 1]!.cumulative).toBe(c.idealMinutes);
+          expect(c.gapMinutes).toBeCloseTo(total - idealMinutes, 6);
+          const exact = ((total - idealMinutes) * 1000) / idealMinutes;
+          const headline = (Math.sign(exact) * Math.round(Math.abs(exact))) / 10;
+          expect(c.headlinePercent).toBeCloseTo(headline === 0 ? 0 : headline, 9);
+          if (logged.length === 0) expect(c.headlinePercent).toBe(-100);
+          expect(Object.is(c.headlinePercent, -0)).toBe(false);
+          // ideal strictly increasing, you non-decreasing and equal to the running sum
+          let run = 0;
+          for (let i = 0; i < elapsed; i++) {
+            if (i > 0) {
+              expect(c.ideal[i]!.cumulative).toBeGreaterThan(c.ideal[i - 1]!.cumulative);
+              expect(c.actual[i]!.cumulative).toBeGreaterThanOrEqual(c.actual[i - 1]!.cumulative);
+            }
+            run += minutesOn(entries, c.actual[i]!.date);
+            expect(c.actual[i]!.cumulative).toBe(run);
+            expect(c.actual[i]!.minutes).toBe(minutesOn(entries, c.actual[i]!.date));
+          }
+          expect(c.ideal[0]!.cumulative).toBeCloseTo(goal.targetMinutes, 9);
         } else {
           expect(c.ideal).toEqual([]);
           expect(c.actual).toEqual([]);
           expect(c.headlinePercent).toBe(0);
-          expect(c.idealPercent).toBe(0);
+          expect(c.idealMinutes).toBe(0);
+          expect(c.totalMinutes).toBe(0);
+          expect(c.gapMinutes).toBe(0);
         }
         // entry dates: start..today valid, outside refused with end null, future refused as DATE_IN_FUTURE
         expect(validateEntryDate(goal.startDate, goal, goal.startDate)).toBeNull();

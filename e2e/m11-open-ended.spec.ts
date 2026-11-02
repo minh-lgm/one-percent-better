@@ -110,22 +110,22 @@ test.describe('M11 — No end date (en)', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Meditate' })).toBeVisible();
     await expect(page.locator('.gd-head')).toContainText(OPEN_ROW_EN);
     await expect(page.locator('.gd-head')).not.toContainText('–');
-    await expect(page.getByTestId('headline')).toHaveText('+100.0% better');
+    await expect(page.getByTestId('headline')).toHaveText('−41.3% vs. ideal');
     await expect(page.getByTestId('headline-day')).toHaveText('Day 9');
-    await expect(page.getByTestId('headline-sub')).toHaveText('Last logged Oct 8: 20 min, +100.0% vs Oct 5 (10 min). ×2 since Oct 1 (10 min).');
-    await expect(page.getByTestId('curve-summary')).toHaveText('Day 9: your line is +100.0% compared with your first logged day. The ideal line is +8.3%.');
+    await expect(page.getByTestId('headline-sub')).toHaveText('Last logged Oct 8: 20 min. Total 55 min, ideal 94 min (−39 min).');
+    await expect(page.getByTestId('curve-summary')).toHaveText('Day 9: you have logged 55 min in total. The ideal line is at 94 min.');
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeWhole })).toHaveCount(0);
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeSoFar })).toHaveCount(0);
     const chart = page.getByTestId('curve-chart');
     await expect(chart.locator('.recharts-line')).toHaveCount(2);
     await expect(chart.locator('.curve-dot')).toHaveCount(4);
-    await expect(chart).toContainText('You +100.0%');
-    await expect(chart).toContainText('Ideal +8.3%');
+    await expect(chart).toContainText('You 55 min');
+    await expect(chart).toContainText('Ideal 94 min');
     await page.getByText(EN.goal.detail.showTable).click();
     const rows = page.getByTestId('curve-table').locator('tbody tr');
     await expect(rows).toHaveCount(9);
     await expect(rows.last().locator('th')).toHaveText('2026-10-09');
-    await expect(rows.nth(7).locator('td')).toHaveText(['+7.2%', '+100.0%', '20', '+100.0%']);
+    await expect(rows.nth(7).locator('td')).toHaveText(['83', '55', '20', '−28']);
     await expect(page.getByTestId('stat-progress')).toContainText('61.1%');
     await expect(page.getByTestId('stat-progress')).toContainText('55 of 90 min expected so far');
     await expect(page.getByTestId('stat-pace')).toContainText('35 min behind');
@@ -194,7 +194,7 @@ test.describe('M11 — No end date (en)', () => {
     await expect(row(page, 'Piano').getByText(EN.goal.status.upcoming)).toBeVisible();
     await expect(row(page, 'Piano')).toContainText('Starts 2026-11-01');
     await row(page, 'Piano').getByRole('link', { name: 'Piano' }).click();
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% better');
+    await expect(page.getByTestId('headline')).toHaveText('+0.0% ahead of ideal');
     await expect(page.getByTestId('headline-sub')).toHaveText('Starts 2026-11-01. Your line will appear once the goal begins.');
     await expect(page.getByTestId('headline-day')).toHaveCount(0);
     await expect(page.getByRole('heading', { level: 2, name: EN.goal.detail.chartTitle })).toHaveCount(0);
@@ -242,9 +242,9 @@ test.describe('M11 — Không có thời hạn (vi, 360 px)', () => {
     await expectNoHorizontalScroll(page);
 
     await gotoHash(page, '/goals/o1');
-    await expect(page.getByTestId('headline')).toHaveText('Tốt hơn +100,0%');
+    await expect(page.getByTestId('headline')).toHaveText('−41,3% so với lý tưởng');
     await expect(page.getByTestId('headline-day')).toHaveText('Ngày 9');
-    await expect(page.getByTestId('curve-summary')).toHaveText('Ngày 9: đường của bạn ở mức +100,0% so với ngày có ghi đầu tiên. Đường lý tưởng ở mức +8,3%.');
+    await expect(page.getByTestId('curve-summary')).toHaveText('Ngày 9: bạn đã ghi tổng cộng 55 phút. Đường lý tưởng ở mức 94 phút.');
     await expect(page.getByRole('radio', { name: VI.goal.detail.rangeWhole })).toHaveCount(0);
     await expect(page.getByTestId('stat-progress')).toContainText('61,1%');
     await expect(page.getByTestId('stat-progress')).toContainText('55/90 phút dự kiến đến nay');
@@ -270,7 +270,7 @@ test.describe('M11 — desktop width', () => {
     await freezeClock(page);
     await importBackup(page, 'o1-open-ended-backup.json');
     await gotoHash(page, '/goals/o1');
-    await expect(page.getByTestId('headline')).toHaveText('+100.0% better');
+    await expect(page.getByTestId('headline')).toHaveText('−41.3% vs. ideal');
     await expect(page.locator('.chart-head').getByRole('radio')).toHaveCount(0);
     await expect(page.locator('.chart-head').getByRole('heading', { level: 2, name: EN.goal.detail.chartTitle })).toBeVisible();
     await expect(page.getByTestId('curve-chart').locator('.recharts-reference-dot')).toHaveCount(2);

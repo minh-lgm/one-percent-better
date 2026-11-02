@@ -1,29 +1,33 @@
-// The 1% curve (FR-27 v3.0; ARCHITECTURE §4.5, ADR-26). Pure functions over one
-// goal and its entries; `today` is passed in.
+// The 1% curve v6 — a burn-up of minutes against a compounding target (FR-27 v6.0; ARCHITECTURE
+// §4.5, ADR-46). Pure functions over one goal and its entries; `today` is passed in.
 //
-// For day d of the period with ordinal k (startDate = 1): ideal(d) = 1.01^(k−1) — the first day
-// of the goal is the +0% starting point and each later day is +1% on the previous one (user
-// decision 2026-10-22; before that it was 1.01^k, which drew day 1 at +1%).
-// "You": m(d) = minutes logged on d. f = first logged day (baseline), p(d) = last
-// logged day ≤ d. actual(d) = m(p(d)) / m(f) (1 before the baseline). Each logged
-// day is compared with the previous logged day and the ratios compound, which
-// telescopes to that direct ratio — so it is computed as one division, never as a
-// running product of floats. Days without time keep the line flat; the line can
-// go down. The daily target plays no part here (A-42).
+// Let T = `dailyTarget(goal)` and k = ordinal of the day in the period (startDate = 1).
+// target(k) = T × 1.01^(k−1): the daily target starts at T on day 1 and grows 1% a day (user
+// decision 2026-11-02, replacing the "ratio to the first logged day" curve of v3.0, ADR-26).
+// ideal(k)  = Σ_{i≤k} target(i) = T × (1.01^k − 1) / 0.01 — cumulative target minutes (closed form,
+//             never a running float sum).
+// actual(k) = Σ minutes logged on days ≤ k inside the period — cumulative logged minutes.
+// Both lines are in minutes, start at 0 and never go down; days without time keep "You" flat.
+// headlinePercent = pct(actual(last), ideal(last)): signed % of the cumulative target reached
+// minus 100 (−100 while nothing is logged; 0 when the goal has not started).
 //
 // v4.0 (M11, A-52): an open-ended goal (`endDate = null`) has no future days — the ideal line runs
 // startDate → today only (`periodDays` = `elapsedDays`), and before it starts there is nothing to draw.
 import { dayNumber, daysInclusive, isoFromDayNumber } from './dates';
+import { dailyTarget } from './goal';
 import type { Goal, ISODate, LogEntry } from './types';
 
-export const DAILY_GROWTH = 1.01;
+export const GROWTH_RATE = 0.01;
+export const DAILY_GROWTH = 1 + GROWTH_RATE;
 
 export interface IdealPoint {
   date: ISODate;
   /** Ordinal of the day in the period, 1-based. */
   k: number;
-  /** `1.01^(k−1)` (1 on the first day of the period) */
-  value: number;
+  /** target(k) = T × 1.01^(k−1): the target of that one day, in minutes (not rounded). */
+  target: number;
+  /** ideal(k): cumulative target minutes from day 1 to k (not rounded). */
+  cumulative: number;
 }
 
 export interface ActualPoint {
@@ -34,12 +38,12 @@ export interface ActualPoint {
   minutes: number;
   /** m(d) > 0 */
   logged: boolean;
-  /** actual(d): factor relative to the baseline (1 before/at the baseline). */
-  value: number;
-  /** Signed percent of `value`, one decimal (`pct`); 0 before the baseline. */
+  /** actual(k): cumulative logged minutes from day 1 to k. */
+  cumulative: number;
+  /** `cumulative − ideal(k)`, minutes (negative = behind the ideal line). */
+  gap: number;
+  /** `pct(cumulative, ideal(k))`: signed % vs the ideal line, one decimal (−100 while nothing is logged). */
   percent: number;
-  /** Percent vs the previous logged day; null on unlogged days and on the baseline. */
-  changePercent: number | null;
 }
 
 export interface LoggedDayRef {
@@ -58,22 +62,18 @@ export interface CurveData {
   elapsedDays: number;
   /** Days with time logged inside the elapsed part of the period. */
   loggedDays: number;
-  /** f: the first logged day. */
-  baseline: LoggedDayRef | null;
-  /** p(last): the most recent logged day. */
+  /** T: the daily target the ideal line starts from (minutes). */
+  dailyTarget: number;
+  /** The most recent logged day; null when nothing is logged yet. */
   latest: LoggedDayRef | null;
-  /** The logged day before `latest`. */
-  previous: LoggedDayRef | null;
-  /** pct(latest, previous); null when there is no previous. */
-  latestChangePercent: number | null;
-  /** actual(last): 1 when nothing is logged or the goal is upcoming. */
-  actualFactor: number;
-  /** `1.01^(elapsedDays − 1)` (1 when upcoming or on the first day) */
-  idealFactor: number;
-  /** Signed headline percent, one decimal: pct(m(p(last)), m(f)); 0 without a baseline. */
+  /** actual(last): all minutes logged in the elapsed part of the period (0 when upcoming). */
+  totalMinutes: number;
+  /** ideal(last): cumulative target minutes up to the last elapsed day (0 when upcoming). */
+  idealMinutes: number;
+  /** `totalMinutes − idealMinutes` (0 when upcoming). */
+  gapMinutes: number;
+  /** Signed headline percent, one decimal: pct(totalMinutes, idealMinutes); 0 when upcoming. */
   headlinePercent: number;
-  /** `(1.01^(elapsedDays − 1) − 1) × 100`, rounded to 1 decimal; 0 on the first day. */
-  idealPercent: number;
 }
 
 export function growth(days: number): number {
@@ -85,10 +85,20 @@ export function growthPercent(factor: number): number {
   return Math.round((factor - 1) * 1000) / 10;
 }
 
+/** target(k) = T × 1.01^(k−1). */
+export function dayTarget(daily: number, k: number): number {
+  return daily * growth(k - 1);
+}
+
+/** ideal(k) = Σ_{i=1..k} target(i) = T × (1.01^k − 1) / 0.01; 0 for k ≤ 0. */
+export function cumulativeTarget(daily: number, k: number): number {
+  if (k <= 0) return 0;
+  return (daily * (growth(k) - 1)) / GROWTH_RATE;
+}
+
 /**
- * Signed percent change from `b` to `a` (both positive minute totals), one decimal,
- * rounded half away from zero so gains and losses round symmetrically; −0 → 0.
- * `pct(17, 16) = 6.3`, `pct(15, 16) = −6.3`, `pct(27, 14) = 92.9`.
+ * Signed percent change from `b` to `a` (`b` > 0), one decimal, rounded half away from zero so
+ * gains and losses round symmetrically; −0 → 0. `pct(17, 16) = 6.3`, `pct(15, 16) = −6.3`, `pct(27, 14) = 92.9`.
  */
 export function pct(a: number, b: number): number {
   const y = ((a - b) * 1000) / b;
@@ -106,19 +116,20 @@ export function lastElapsedDay(goal: Pick<Goal, 'startDate' | 'endDate'>, today:
 /** Build the ideal and actual series of one goal (`goalEntries` must belong to `goal`). */
 export function curve(goal: Goal, goalEntries: readonly LogEntry[], today: ISODate): CurveData {
   const lastDay = lastElapsedDay(goal, today);
+  const daily = dailyTarget(goal);
   // Finite goal: the whole period (future days included). Open-ended: startDate → today, nothing before the start.
   const periodDays = goal.endDate !== null ? daysInclusive(goal.startDate, goal.endDate) : lastDay ? daysInclusive(goal.startDate, lastDay) : 0;
   const start = dayNumber(goal.startDate);
   const ideal: IdealPoint[] = new Array(periodDays);
   for (let i = 0; i < periodDays; i++) {
-    ideal[i] = { date: isoFromDayNumber(start + i), k: i + 1, value: growth(i) };
+    const k = i + 1;
+    ideal[i] = { date: isoFromDayNumber(start + i), k, target: dayTarget(daily, k), cumulative: cumulativeTarget(daily, k) };
   }
 
   const actual: ActualPoint[] = [];
-  let baseline: LoggedDayRef | null = null;
   let latest: LoggedDayRef | null = null;
-  let previous: LoggedDayRef | null = null;
   let loggedDays = 0;
+  let total = 0;
   if (lastDay) {
     const elapsed = daysInclusive(goal.startDate, lastDay);
     // m(d) for the elapsed days only; entries outside the window are ignored (A-41).
@@ -128,43 +139,35 @@ export function curve(goal: Goal, goalEntries: readonly LogEntry[], today: ISODa
       minutesByDay.set(e.date, (minutesByDay.get(e.date) ?? 0) + e.minutes);
     }
     for (let i = 0; i < elapsed; i++) {
-      const date = ideal[i].date;
+      const { date, k, cumulative: idealCum } = ideal[i];
       const minutes = minutesByDay.get(date) ?? 0;
       const logged = minutes > 0;
-      let changePercent: number | null = null;
       if (logged) {
         loggedDays++;
-        if (!baseline) baseline = { date, minutes };
-        else if (latest) changePercent = pct(minutes, latest.minutes);
-        previous = latest;
         latest = { date, minutes };
       }
-      const value = baseline && latest ? latest.minutes / baseline.minutes : 1;
-      const percent = baseline && latest ? pct(latest.minutes, baseline.minutes) : 0;
-      actual.push({ date, k: i + 1, minutes, logged, value, percent, changePercent });
+      total += minutes;
+      actual.push({ date, k, minutes, logged, cumulative: total, gap: total - idealCum, percent: pct(total, idealCum) });
     }
   }
   const elapsedDays = actual.length;
-  const actualFactor = baseline && latest ? latest.minutes / baseline.minutes : 1;
-  const idealFactor = elapsedDays > 0 ? growth(elapsedDays - 1) : 1;
+  const idealMinutes = elapsedDays > 0 ? ideal[elapsedDays - 1].cumulative : 0;
   return {
     ideal,
     actual,
     periodDays,
     elapsedDays,
     loggedDays,
-    baseline,
+    dailyTarget: daily,
     latest,
-    previous,
-    latestChangePercent: latest && previous ? pct(latest.minutes, previous.minutes) : null,
-    actualFactor,
-    idealFactor,
-    headlinePercent: baseline && latest ? pct(latest.minutes, baseline.minutes) : 0,
-    idealPercent: growthPercent(idealFactor),
+    totalMinutes: total,
+    idealMinutes,
+    gapMinutes: total - idealMinutes,
+    headlinePercent: elapsedDays > 0 ? pct(total, idealMinutes) : 0,
   };
 }
 
-/** Round `x` up to the next "nice" step (1, 2, 5 × 10^n), never below 1 (whole-percent ticks). */
+/** Round `x` up to the next "nice" step (1, 2, 5 × 10^n), never below 1 (whole-minute ticks). */
 function niceStep(x: number): number {
   if (!(x > 0)) return 1;
   const p = Math.pow(10, Math.floor(Math.log10(x)));
@@ -181,19 +184,19 @@ export interface CurveYScale {
 }
 
 /**
- * Linear Y scale (unit: %) for the points on screen, after the Range filter (ARCH §4.5,
- * DESIGN S4 "Biểu đồ v3" rule 3). `yMin = min(0, min You)`, `yMax = max(1, max Ideal, max You)`;
- * 5 % padding on the top and — only when something is negative — on the bottom (OQ-D17), then
- * both ends are rounded outwards to a multiple of a nice step (1, 2, 5 × 10^n, ≥ 1).
+ * Linear Y scale (unit: minutes) for the points on screen, after the Range filter (ARCH §4.5,
+ * DESIGN S4 "Biểu đồ v6" rule 3). `yMin = min(0, min You)`, `yMax = max(1, max Ideal, max You)`;
+ * 5 % padding on the top and — only when something is negative (never, for cumulative minutes) —
+ * on the bottom, then both ends are rounded outwards to a multiple of a nice step (1, 2, 5 × 10^n, ≥ 1).
  */
-export function curveYScale(idealPercents: readonly number[], youPercents: readonly number[]): CurveYScale {
+export function curveYScale(idealValues: readonly number[], youValues: readonly number[]): CurveYScale {
   let min = 0;
   let max = 1;
-  for (const v of youPercents) {
+  for (const v of youValues) {
     if (v < min) min = v;
     if (v > max) max = v;
   }
-  for (const v of idealPercents) if (v > max) max = v;
+  for (const v of idealValues) if (v > max) max = v;
   const pad = (max - min) * 0.05;
   const lo = min < 0 ? min - pad : 0;
   const hi = max + pad;
@@ -204,7 +207,7 @@ export function curveYScale(idealPercents: readonly number[], youPercents: reado
   return { domain, ticks, step };
 }
 
-/** Y domain (unit: %) for the points on screen; see `curveYScale`. */
-export function curveYDomain(idealPercents: readonly number[], youPercents: readonly number[]): [number, number] {
-  return curveYScale(idealPercents, youPercents).domain;
+/** Y domain (unit: minutes) for the points on screen; see `curveYScale`. */
+export function curveYDomain(idealValues: readonly number[], youValues: readonly number[]): [number, number] {
+  return curveYScale(idealValues, youValues).domain;
 }

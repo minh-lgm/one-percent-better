@@ -110,7 +110,7 @@ describe('v2 sync time formats (DESIGN §7.1)', () => {
   });
 });
 
-describe('M9 (FR-27 v3.0, DESIGN §7.1): signed1, factor, axisPercent', () => {
+describe('M9 / v6 (FR-27, DESIGN §7.1): signed1, signedMinutes, axisMinutes', () => {
   const en = formatters('en');
   const vi = formatters('vi');
   const MINUS = '−';
@@ -129,34 +129,33 @@ describe('M9 (FR-27 v3.0, DESIGN §7.1): signed1, factor, axisPercent', () => {
     expect(en.signed1(-40)).not.toContain('-');
   });
 
-  it('factor: ≥ 1 → up to 2 decimals without trailing zeros; < 1 → 2 significant digits', () => {
-    expect(en.factor(5.4)).toBe('5.4');
-    expect(en.factor(2.8)).toBe('2.8');
-    expect(en.factor(1)).toBe('1');
-    expect(en.factor(1440)).toBe('1,440');
-    expect(en.factor(1.2345)).toBe('1.23');
-    expect(en.factor(0.6)).toBe('0.6');
-    expect(en.factor(1 / 1440)).toBe('0.00069');
-    expect(vi.factor(5.4)).toBe('5,4');
-    expect(vi.factor(0.6)).toBe('0,6');
-    expect(vi.factor(1440)).toBe('1.440');
+  it('signedMinutes: whole minutes with an explicit sign through format.minutes (+0 for −0 and fractions that round to 0)', () => {
+    expect(en.signedMinutes(12)).toBe('+12 min');
+    expect(en.signedMinutes(-325.4)).toBe(`${MINUS}325 min`);
+    expect(en.signedMinutes(0)).toBe('+0 min');
+    expect(en.signedMinutes(-0.2)).toBe('+0 min');
+    expect(en.signedMinutes(1440)).toBe('+1,440 min');
+    expect(vi.signedMinutes(-325)).toBe(`${MINUS}325 phút`);
+    expect(vi.signedMinutes(1440)).toBe('+1.440 phút');
+    expect(en.signedMinutes(-5)).not.toContain('-');
+    expect(en.signed0(-325.4)).toBe(`${MINUS}325`);
+    expect(en.signed0(0)).toBe('+0');
+    expect(vi.signed0(1440)).toBe('+1.440');
   });
 
-  it('axisPercent: 0% without sign, signed integers with grouping, Intl compact from 10,000, ≤ 8 characters', () => {
-    expect(en.axisPercent(0)).toBe('0%');
-    expect(en.axisPercent(500)).toBe('+500%');
-    expect(en.axisPercent(-50)).toBe(`${MINUS}50%`);
-    expect(en.axisPercent(1000)).toBe('+1,000%');
-    expect(vi.axisPercent(1000)).toBe('+1.000%');
-    expect(vi.axisPercent(-50)).toBe(`${MINUS}50%`);
+  it('axisMinutes: plain grouped integers, Intl compact from 10,000, ≤ 6 characters', () => {
+    expect(en.axisMinutes(0)).toBe('0');
+    expect(en.axisMinutes(500)).toBe('500');
+    expect(en.axisMinutes(1000)).toBe('1,000');
+    expect(vi.axisMinutes(1000)).toBe('1.000');
     const compactEn = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 0 }).format(143900);
     const compactVi = new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 0 }).format(143900);
-    expect(en.axisPercent(143900)).toBe(`+${compactEn}%`);
-    expect(vi.axisPercent(143900)).toBe(`+${compactVi}%`);
-    expect(en.axisPercent(143900)).toMatch(/^\+144K%$/);
-    for (const v of [0, 1, -5, 500, 9999, 10000, 143900, 160000, 79_000_000]) {
-      expect(en.axisPercent(v).length).toBeLessThanOrEqual(8);
-      expect(vi.axisPercent(v).length).toBeLessThanOrEqual(8);
+    expect(en.axisMinutes(143900)).toBe(compactEn);
+    expect(vi.axisMinutes(143900)).toBe(compactVi);
+    expect(en.axisMinutes(143900)).toMatch(/^144K$/);
+    for (const v of [0, 1, 500, 9999, 10000, 143900, 160000, 79_000_000]) {
+      expect(en.axisMinutes(v).length).toBeLessThanOrEqual(6);
+      expect(vi.axisMinutes(v).length).toBeLessThanOrEqual(6);
     }
   });
 });
