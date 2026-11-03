@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         injectManifest: {
-          globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+          globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,woff2}'], // v7: self-hosted fonts must work offline (QC m5 offline flow)
           globIgnores: cloudOn ? [] : ['**/supabase-client-*.js'],
         },
         devOptions: { enabled: false },
