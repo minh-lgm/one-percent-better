@@ -84,7 +84,7 @@ export function GoalCard({ goal, target, minutes, entries, variant = 'today', da
 
   return (
     <li>
-      <article className="card goal" aria-labelledby={`${id}-name`}>
+      <article className={met ? 'card goal met' : 'card goal'} aria-labelledby={`${id}-name`}>
         <div className="row">
           <h2 id={`${id}-name`}>{goal.name}</h2>
           {met ? <PlusOnePill srKey={isDay ? 'goalCard.plusOneSrDay' : 'goalCard.plusOneSrToday'} animate={plusOneAnimate} /> : null}

@@ -1,4 +1,5 @@
-/* Design tokens (DESIGN.md §6). Values match the mockups. */
+/* Design tokens (DESIGN.md §6). Values match the mockups; v6.2 (UI revamp) adds --surface-tint, --surface-glass, --r-xl, --ease and
+   softens --border (light) and --shadow-1. */
 :root {
   color-scheme: light dark;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -6,7 +7,9 @@
   --bg: #f7f6f2;
   --surface: #ffffff;
   --surface-2: #f0eee7;
-  --border: #ddd9ce;
+  --surface-tint: #eef6f1; /* v6.2: hero / met-goal tint */
+  --surface-glass: rgba(255, 255, 255, 0.86); /* v6.2: translucent tab bar */
+  --border: #e3dfd5;
   --border-input: #7f8882;
   --text: #1d2320;
   --text-muted: #5a625d;
@@ -35,7 +38,7 @@
   --chart-bar: var(--heat-3);
   --chart-zero: var(--text-muted); /* v3: 0 % reference line of the curve (DESIGN 6.1) */
   --scrim: rgba(20, 28, 24, 0.5);
-  --shadow-1: 0 1px 2px rgba(20, 30, 25, 0.06);
+  --shadow-1: 0 1px 2px rgba(20, 30, 25, 0.05), 0 2px 6px rgba(20, 30, 25, 0.04);
   --shadow-2: 0 12px 40px rgba(20, 30, 25, 0.22);
   /* v2 (DESIGN 6.1): Google sign-in button, official light theme */
   --google-bg: #ffffff;
@@ -64,6 +67,7 @@
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 16px;
+  --r-xl: 20px; /* v6.2: hero card, dialog */
   --r-full: 999px;
 
   --tap: 44px;
@@ -78,6 +82,7 @@
 
   --dur-fast: 120ms;
   --dur: 200ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* v6.2 */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -85,6 +90,8 @@
     --bg: #121513;
     --surface: #1b1f1c;
     --surface-2: #242925;
+    --surface-tint: #1a2420;
+    --surface-glass: rgba(27, 31, 28, 0.86);
     --border: #343b36;
     --border-input: #7c867f;
     --text: #ecefea;
@@ -110,7 +117,7 @@
     --heat-3: #43a773;
     --heat-4: #7fdda8;
     --scrim: rgba(0, 0, 0, 0.6);
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.3);
     --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.55);
     --google-bg: #131314;
     --google-border: #8e918f;

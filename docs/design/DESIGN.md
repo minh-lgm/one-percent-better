@@ -1317,8 +1317,10 @@ Cài đặt: một file `src/ui/styles/tokens.css` khai báo CSS custom properti
 | :- | :- | :- | :- |
 | `--bg` | `#F7F6F2` | `#121513` | nền trang |
 | `--surface` | `#FFFFFF` | `#1B1F1C` | card, dialog, nav |
-| `--surface-2` | `#F0EEE7` | `#242925` | nền phụ, track progress, skeleton |
-| `--border` | `#DDD9CE` | `#343B36` | viền card, đường kẻ |
+| `--surface-2` | `#F0EEE7` | `#242925` | nền phụ, track progress, skeleton, **(v6.2)** track của SegmentedControl |
+| `--surface-tint` *(v6.2)* | `#EEF6F1` | `#1A2420` | nền tint (gradient về `--surface`) của headline card S4, TimerCard, GoalCard đã đạt chỉ tiêu (`.goal.met`) |
+| `--surface-glass` *(v6.2)* | `rgba(255,255,255,.86)` | `rgba(27,31,28,.86)` | nền tab bar mờ (`backdrop-filter: blur(16px)`; < 1024 px); sidebar ≥ 1024 vẫn `--surface` |
+| `--border` | `#E3DFD5` *(v6.2; trước `#DDD9CE`)* | `#343B36` | viền card, đường kẻ (trang trí, không cần 3:1) |
 | `--border-input` | `#7F8882` | `#7C867F` | viền ô nhập, radio (≥ 3:1) |
 | `--text` | `#1D2320` | `#ECEFEA` | chữ chính |
 | `--text-muted` | `#5A625D` | `#A3ACA5` | chữ phụ |
@@ -1372,11 +1374,11 @@ Font hệ thống (NFR-01: không font ngoài): `--font: system-ui, -apple-syste
 | Nhóm | Token = giá trị |
 | :- | :- |
 | Spacing (4 px) | `--sp-1` 4, `--sp-2` 8, `--sp-3` 12, `--sp-4` 16, `--sp-5` 24, `--sp-6` 32, `--sp-7` 48 |
-| Radius | `--r-sm` 6, `--r-md` 10, `--r-lg` 16, `--r-full` 999 |
-| Shadow | `--shadow-1`: `0 1px 2px rgba(20,30,25,.06)` (card); `--shadow-2`: `0 12px 40px rgba(20,30,25,.22)` (dialog, toast) |
+| Radius | `--r-sm` 6, `--r-md` 10, `--r-lg` 16, **`--r-xl` 20 (v6.2: headline card, dialog)**, `--r-full` 999 |
+| Shadow | `--shadow-1` **(v6.2)**: `0 1px 2px rgba(20,30,25,.05), 0 2px 6px rgba(20,30,25,.04)` sáng / `0 1px 2px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.3)` tối (card, nút primary, segment đang chọn; trước `0 1px 2px rgba(20,30,25,.06)`); `--shadow-2`: `0 12px 40px rgba(20,30,25,.22)` (dialog, toast, tooltip chart/heatmap) |
 | Kích thước | `--tap` 44 (vùng chạm tối thiểu), `--content-max` 960, `--nav-w` 232, `--tabbar-h` 56 |
 | Z-index | nav 20, toast 40, dialog 50 |
-| Motion | `--dur-fast` 120 ms, `--dur` 200 ms, easing `ease-out`; mọi animation tắt (`0.01ms`) khi `prefers-reduced-motion: reduce`. **(v2)** vòng xoay đồng bộ/đăng nhập: `rotate` 1 s `linear infinite`, **tắt hẳn** (không xoay, giữ icon tĩnh) khi reduced-motion |
+| Motion | `--dur-fast` 120 ms, `--dur` 200 ms, easing `ease-out`; **(v6.2)** `--ease` = `cubic-bezier(.2,.7,.2,1)` cho hover/active của nút, segment, tab, switch và `width` của ProgressBar; mọi animation tắt (`0.01ms`) khi `prefers-reduced-motion: reduce`. **(v2)** vòng xoay đồng bộ/đăng nhập: `rotate` 1 s `linear infinite`, **tắt hẳn** (không xoay, giữ icon tĩnh) khi reduced-motion |
 | Kích thước phase 2 *(v2)* | `--chip-h` 32 (chiều cao SyncIndicator), avatar 40, nút Google `min-height` = `--tap` (44), logo G 20 (trong ô 20×20), khoảng logo–chữ 10, radio D4 vùng bấm ≥ 44 |
 | Breakpoint | `sm` 640, `lg` 1024 (xem 3.2) |
 
@@ -2485,6 +2487,8 @@ Mục tiêu WCAG 2.1 AA; kiểm bằng `@axe-core/playwright` (0 vi phạm serio
 | `--info` trên `--info-soft` | ≈ 6.9:1 | > 7:1 |
 | `--border-input` trên `--surface` (non-text, ≥ 3:1) | ≈ 3.6:1 | ≈ 4.4:1 |
 | `--focus` trên `--bg`/`--surface` | ≈ 6:1 | > 8:1 |
+| **(v6.2)** `--text` / `--text-muted` / `--primary` trên `--surface-tint` | ≈ 14.5:1 / 5.7:1 / 4.8:1 | ≈ 13.7:1 / 6.8:1 / 7.8:1 |
+| **(v6.2)** `--primary` (fill ProgressBar) trên `--surface-2` (track, non-text ≥ 3:1) | ≈ 4.6:1 | ≈ 7.2:1 |
 
 Ngoại lệ có chủ đích: các mức nhạt của heatmap (`--heat-0..2`) không đạt 3:1 so với nền (WCAG 1.4.11). Thông tin của từng ô luôn có ở dạng text (accessible name, tooltip chữ, số liệu thống kê, tóm tắt) nên không mất nội dung; ô có viền mảnh 1 px (`rgba` 8 %) để thấy hình dạng.
 
@@ -2809,6 +2813,7 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **OQ-D27 (cho user, sau NV-17, nhỏ, v5.0).** Khi quyền thông báo bị chặn, app chỉ có hướng dẫn bằng chữ (A-D70). Nếu 3 ngày thử (NV-17) thấy khó tìm, đề xuất thêm nút `Open iPhone Settings` (cần kiểm `App.openUrl('app-settings:')` trên máy thật). Không chặn M15.
 - **OQ-D28 (cho developer, thông tin, v5.0).** Glyph Apple trong nút Sign in with Apple phải lấy từ tài nguyên chính thức của Apple (Apple Design Resources / trang hướng dẫn nút); mockup `09-account.html` dùng một glyph thay thế chỉ để dàn trang. Developer M14 không tự vẽ lại logo; nếu chưa có tệp chính thức thì dùng một SVG glyph Apple đơn sắc (đen hoặc trắng, đúng tỉ lệ) và ghi vào handoff để thay bằng tệp chính thức trước khi nộp review (App Review xem nút này). Không tải glyph từ mạng (NFR-01).
 - **OQ-D29 (cho orchestrator/developer, nhỏ, v6.0).** Mockup `docs/design/mockups/07-goal-detail.html` (7 tình huống v3: số liệu %, vạch 0%, `×5.4`) và Figma chưa cập nhật theo v6.0 (burn-up phút); nguồn chốt là S4 + 7.6.4 của tài liệu này và code đã chạy. Cập nhật mockup/Figma ở lần designer revise kế tiếp; không chặn phase 7.
+- **OQ-D30 (cho user, v6.2).** Mockup `docs/design/mockups/*.html` và Figma vẫn theo kiểu v6.1 (viền tab 3 px, segment vuông, card không tint). Có cập nhật mockup/Figma theo UI v6.2 không? Mặc định: chưa, cho tới khi user duyệt bản revamp trên nhánh `feat/ui-revamp-v6.2`.
 - **Phase 6 (v5.0): không phát hiện luồng PRD thiếu.** Lưu ý thông tin: PRD FR-62 nói banner trong app giữ nguyên; trên native pre-M15 và khi quyền bị chặn app vẫn có `ReminderBanner` kiểu web (chỉ khi app mở), thiết kế không đổi.
 - **Không phát hiện luồng PRD thiếu cho FR-56/FR-57.** Lưu ý thông tin (không phải câu hỏi): PRD A-53 nói đổi sang `total` khi đang "không thời hạn" thì form "không cho lưu ở trạng thái đó"; thiết kế thực hiện bằng cách khoá radio + tự chuyển Ends (A-D52, A-D53) nên trạng thái đó không bao giờ tồn tại trong form, `openEndedTotal` chỉ là lớp dự phòng.
 
@@ -2816,6 +2821,16 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 
 ## Changelog
 
+- 2026-11-03 — **v6.2** (mode `revise`, **UI revamp — chỉ lớp hình ảnh**, theo skill `ui-ux-pro-max`: a11y → touch → style → typography; nhánh `feat/ui-revamp-v6.2`). **Không key mới, không key nào đổi chữ, không đổi route/`data-testid`/ARIA/API component**; mọi màn giữ bố cục, chỉ đổi token + CSS + 2 chi tiết markup (dưới).
+  - **§6 token**: thêm `--surface-tint`, `--surface-glass`, `--r-xl`, `--ease`; đổi `--border` sáng `#E3DFD5` (nhẹ hơn) và `--shadow-1` hai lớp. Không đổi `--bg`/`--surface`/`--primary`/… (meta `theme-color`, launch screen, QC brand giữ nguyên).
+  - **Typography**: h1/h2 `letter-spacing` −0,02/−0,01 em; số lớn (amount GoalCard, StatCard, headline, clock) 28/34 hoặc 40/44 với `letter-spacing` −0,02 em; nhãn StatCard, "Today's entries", `th` bảng History và eyebrow headline thành chữ hoa 12 px `letter-spacing` .06 em (chỉ `text-transform`, chuỗi i18n nguyên văn); `font-smoothing` antialiased.
+  - **AppShell**: tab bar < 1024 px nền mờ `--surface-glass` + `backdrop-filter`, tab đang chọn = pill `--primary-soft` sau icon (bỏ viền trên 3 px), chữ `--on-primary-soft`; sidebar ≥ 1024 có hover `--surface-2`.
+  - **Button**: transition hover/active (`--ease`), primary có `--shadow-1`, `:active` dịch 1 px; IconButton tròn. **Input**: hover viền `--text-muted`, focus viền `--focus` (vẫn outline 2 px); `select.input` bỏ mũi tên hệ thống, vẽ chevron SVG (hex = `--text-muted`, hai theme). **SegmentedControl**: track pill `--surface-2` + padding 3 px, segment đang chọn pill `--primary` nổi (`--shadow-1`); padding `6px 14px` của `.seg.range span` giữ nguyên (QC M5-D3). **ProgressBar** 10 px không viền, `transition: width`. **Switch** easing + bóng núm.
+  - **Card**: `--shadow-1` mới, viền nhẹ; **GoalCard** thêm class `met` khi đạt chỉ tiêu (markup, không đổi API) → tint `--surface-tint` + viền ngả primary; **TimerCard** tint thay viền 2 px, clock màu `--primary`; **streak chip** (`.chip`) nền `--primary-soft`.
+  - **S4 Goal detail**: headline card thành hero (`.headline-card`: gradient `--surface-tint`, `--r-xl`, padding 20/24), eyebrow chữ hoa; **CurveChart** đổi `LineChart` → `ComposedChart` và thêm `Area` tô mờ (gradient `--chart-actual` 30 % → 2 %) dưới đường "Bạn" (`tooltipType="none"`, không dot; số `.recharts-line` / reference dot / `.curve-dot` không đổi). StatCard "từ" (`text-value`) dùng cỡ `--text-xl` ở mọi bề rộng; lưới `.stats`: 2 cột từ 640 px, 4 cột từ 1024 px (3 cột khi có 6 thẻ — Review có goal, qua `:has()`).
+  - **Review/Heatmap**: ô và swatch bo 3 px, ô ngoài khoảng (`.cell.out`) mờ hơn; tooltip chart/heatmap bo `--r-md` + `--shadow-2`. **Dialog**: bo `--r-xl`, bottom sheet < 640 px có thanh kéo trang trí (`::before`, không cho `.signout`/`.merge`). **Banner** bo `--r-lg`; **Toast** bo 14 px. **EmptyState** icon trong vòng tròn `--primary-soft`.
+  - §8: thêm cặp tương phản v6.2 (`--surface-tint`, fill ProgressBar); mọi cặp ≥ 4.5:1 (chữ) / ≥ 3:1 (non-text). Reduced-motion: mọi transition mới vẫn bị tắt bởi quy tắc chung `0.01ms`.
+  - Kiểm: vitest, lint, typecheck, Playwright e2e `chromium` (gồm ngân sách cold `#/today` ≤ 230 kB gzip — không thêm dependency; Recharts `Area` chỉ nằm trong chunk CurveChart) — xem `docs/STATUS.md`. Mockup HTML và Figma **chưa** cập nhật theo v6.2 (OQ-D30).
 - 2026-11-02 — **v6.1** (mode `revise`, phase 7, ngay sau v6.0: **Tiến độ và Nhịp độ theo cùng kế hoạch +1 %/ngày với đường lý tưởng**, quyết định user 2026-11-02 chốt PRD OQ-21; PRD v6.1 FR-24 / A-42 / A-51 / A-73, ARCH v6.1 §4 / §4.6 / ADR-47). **Không key mới, không key nào đổi chữ, không đổi layout/token/component**; chỉ đổi số ví dụ và ghi chú cách tính.
   - §3.4: ví dụ StatCard Pace `Chậm 41 phút` / `Dự kiến 281 phút tính đến hôm nay` / `41 min behind` (trước 30 / 270); phụ đề Progress O1 `55/94 phút dự kiến đến nay` (trước 55/90).
   - §S4: "Cách đọc con số" — Pace/Progress cùng kế hoạch (R1 ngày 4: `Expected 122 min by today`, `66 min behind`, `1.5%` / `56 of 3,852 min`); trạng thái 8 (O1: `58.5%`, `55 of 94 min expected so far`, Pace `39 min behind` / `Expected 94 min by today`); Copy Stat (S1 G1: `22.1%` / `240 of 1,084 min`, `41 min behind` / `Expected 281 min by today`; R1) và O1 `en`/`vi` (`58,5%`, `55/94 phút dự kiến đến nay`, `Chậm 39 phút`).

@@ -10,7 +10,7 @@
 // started. The Y domain (minutes, from 0) comes from `curveYScale` over the points on screen. The
 // tooltip of a day shows the minutes of that day and both running totals.
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { CartesianGrid, Line, LineChart, ReferenceDot, ReferenceLine, Tooltip, XAxis, YAxis, type TooltipContentProps } from 'recharts';
+import { Area, CartesianGrid, ComposedChart, Line, ReferenceDot, ReferenceLine, Tooltip, XAxis, YAxis, type TooltipContentProps } from 'recharts';
 import type { ActualPoint, IdealPoint } from '../../domain/curve';
 import { curveYScale } from '../../domain/curve';
 import { useElementWidth } from '../hooks/useRechartsWidth';
@@ -200,6 +200,9 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
     return <div className="chart-tip">{tipText(point)}</div>;
   };
 
+  // v6.2: soft fill under the You line (burn-up area); the id must be a plain CSS identifier.
+  const fillId = `curve-fill-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`;
+
   const withDots = hasYou && shown <= MAX_POINTS_WITH_DOTS;
   const loggedDot = (props: { cx?: number; cy?: number; payload?: unknown }) => {
     const p = props.payload as ChartPoint | undefined;
@@ -254,12 +257,19 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
         onFocus={cancelPendingBlur}
       >
         <div aria-hidden="true">
-          <LineChart width={width} height={height} data={data} margin={MARGIN} accessibilityLayer={false}>
+          <ComposedChart width={width} height={height} data={data} margin={MARGIN} accessibilityLayer={false}>
+            <defs>
+              <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--chart-actual)" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="var(--chart-actual)" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="date" height={X_AXIS_HEIGHT} padding={xPadding} tickFormatter={(d: string) => f.dateMonthDay(d)} interval="preserveStartEnd" minTickGap={48} tickLine={false} axisLine={{ stroke: 'var(--border)' }} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
             <YAxis width={yAxisWidth} tickLine={false} axisLine={false} domain={scale.domain} ticks={scale.ticks} interval={0} tickFormatter={(v: number) => f.axisMinutes(v)} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
             <Tooltip content={renderTooltip} cursor={{ stroke: 'var(--text-muted)', strokeDasharray: '2 3' }} isAnimationActive={false} active={reading !== null ? true : undefined} defaultIndex={reading ?? undefined} />
             <Line type="linear" dataKey="ideal" stroke="var(--chart-ideal)" strokeWidth={2} strokeDasharray="6 5" dot={false} activeDot={{ r: 4, fill: 'var(--surface)', stroke: 'var(--text-muted)' }} isAnimationActive={false} />
+            {hasYou ? <Area type="stepAfter" dataKey="you" stroke="none" fill={`url(#${fillId})`} dot={false} activeDot={false} isAnimationActive={false} connectNulls={false} tooltipType="none" legendType="none" /> : null}
             {hasYou ? <Line type="stepAfter" dataKey="you" stroke="var(--chart-actual)" strokeWidth={3.5} dot={loggedDot} activeDot={{ r: 5, fill: 'var(--primary)', stroke: 'var(--surface)' }} isAnimationActive={false} connectNulls={false} /> : null}
             {todayPoint ? (
               <>
@@ -270,7 +280,7 @@ export default function CurveChart({ ideal, actual, label, testId }: CurveChartP
                 ) : null}
               </>
             ) : null}
-          </LineChart>
+          </ComposedChart>
         </div>
       </div>
       <p id={`${id}-reading`} className="chart-reading muted small num" aria-live="polite" aria-atomic="true" data-testid="curve-reading">
