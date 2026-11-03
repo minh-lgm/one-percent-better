@@ -39,8 +39,8 @@ export default defineConfig(({ mode }) => {
           start_url: base,
           scope: base,
           display: 'standalone',
-          background_color: '#F7F6F2',
-          theme_color: '#1F7A4D',
+          background_color: '#F6F2EA',
+          theme_color: '#D5532A',
           icons: [
             { src: 'icons/pwa-192.png', sizes: '192x192', type: 'image/png' },
             { src: 'icons/pwa-512.png', sizes: '512x512', type: 'image/png' },
@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         injectManifest: {
-          globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+          globPatterns: ['**/*.{js,css,html,svg,png,webmanifest,woff2}'], // v7: self-hosted fonts must work offline (QC m5 offline flow)
           globIgnores: cloudOn ? [] : ['**/supabase-client-*.js'],
         },
         devOptions: { enabled: false },

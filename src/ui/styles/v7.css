@@ -1,0 +1,485 @@
+/* v7.0 redesign — direction A "Tối giản, chữ lớn" (DESIGN v7.0, Figma page "Redesign v7 — review").
+   Loaded after app.css: overrides the v6 look (bordered cards, green accent, system font) with flat sections
+   separated by hairlines, Fraunces display numbers, Manrope text, cream/ink/terracotta tokens (tokens.css).
+   Markup, routes, copy keys, test ids and ARIA are untouched — this file only restyles. */
+
+/* ---- Type ---- */
+body {
+  font: 400 var(--text-base) / 24px var(--font);
+}
+h1 {
+  font: 400 36px / 40px var(--font-display);
+  letter-spacing: -0.01em;
+}
+@media (min-width: 640px) {
+  h1 {
+    font-size: var(--text-display);
+    line-height: 48px;
+  }
+}
+@media (min-width: 1024px) {
+  h1 {
+    font-size: 48px;
+    line-height: 52px;
+  }
+}
+/* Section titles become small tracked eyebrows (the mockups use them for every block label). */
+.eyebrow,
+.card > h2,
+.section > h2,
+.group > h2,
+.sec > h2,
+.sections h2,
+.chart-head h2,
+.entries-title,
+.stat .label,
+.hist th,
+.tbl-wrap th,
+.hl-label,
+.ctl label,
+.field label,
+legend.legend,
+fieldset > legend,
+.sw-text label,
+.dialog .field label {
+  font: 600 var(--text-xs) / 16px var(--font);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.card > h2,
+.section > h2,
+.group > h2,
+.sec > h2,
+.sections h2 {
+  margin-bottom: 12px;
+}
+/* …but a goal's own name stays a real title. */
+.goal h2,
+.timer h2,
+.dialog h2,
+.empty h2,
+.banner h2,
+.error-page h2 {
+  font: 400 22px / 28px var(--font-display);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+.dialog h2 {
+  font-size: 26px;
+  line-height: 32px;
+}
+.gd-head .why,
+.why,
+.quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 25px;
+  color: var(--text-muted);
+}
+.page-head {
+  margin-bottom: 16px;
+  align-items: flex-end;
+}
+.page-head .titles > .muted {
+  margin-top: 4px;
+}
+/* The date line under "Today" reads as an eyebrow above the title (DESIGN S1 v7). */
+.page-head .titles {
+  display: flex;
+  flex-direction: column;
+}
+.page-head .titles > .muted {
+  order: -1;
+  margin: 0 0 6px;
+  font: 600 var(--text-xs) / 16px var(--font);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.page-head .titles > .back {
+  order: -2;
+  margin-bottom: 8px;
+}
+
+/* ---- Surfaces: flat sections, hairlines instead of borders ---- */
+.stack > * + * {
+  margin-top: 0;
+}
+.section {
+  margin-bottom: 0;
+}
+form.card,
+.dialog .card {
+  padding: 8px 0 0;
+  border-bottom: 0;
+}
+.card.timer {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  margin-bottom: 0;
+}
+.card.stat {
+  border-bottom: 0;
+  padding: 0;
+}
+.headline-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 24px 0 8px;
+}
+.banner.neutral {
+  background: var(--surface-2);
+  border: 0;
+}
+
+/* ---- Buttons, chips, pills ---- */
+.btn {
+  border-radius: var(--r-full);
+  padding: 11px 20px;
+  font: 600 15px / 20px var(--font);
+}
+.btn.primary:hover {
+  background: color-mix(in srgb, var(--btn-bg) 85%, var(--primary));
+}
+.btn.secondary {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--text) 25%, transparent);
+  color: var(--text);
+}
+.btn.secondary:hover {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border-color: color-mix(in srgb, var(--text) 45%, transparent);
+}
+.btn.ghost {
+  color: var(--primary);
+}
+.btn.ghost:hover {
+  background: var(--primary-soft);
+}
+.btn.danger-ghost {
+  color: var(--danger);
+}
+.chip,
+.badge {
+  border-radius: var(--r-full);
+  border: 0;
+  font-size: 13px;
+}
+.chip {
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+  font-weight: 600;
+}
+.badge {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.badge.success {
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+}
+.plus {
+  border: 0;
+  background: var(--primary-soft);
+  color: var(--on-primary-soft);
+}
+.progress {
+  height: 6px;
+  background: var(--border);
+}
+
+/* ---- Tab bar / sidebar ---- */
+.nav {
+  background: var(--surface-glass);
+  border-top: 1px solid var(--border);
+}
+.nav .item {
+  font-weight: 500;
+  gap: 5px;
+}
+.nav .ic {
+  padding: 2px 10px;
+  border-radius: 0;
+}
+.nav .item[aria-current='page'] {
+  color: var(--primary);
+  font-weight: 600;
+}
+@media (min-width: 1024px) {
+  .nav {
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+  }
+  .nav .brand {
+    font: 400 18px / 24px var(--font-display);
+    letter-spacing: 0;
+  }
+  .nav .item {
+    border-radius: var(--r-full);
+  }
+  .nav .item:hover {
+    background: var(--surface-2);
+  }
+  .nav .item[aria-current='page'],
+  .nav .item[aria-current='page']:hover {
+    background: var(--primary-soft);
+    color: var(--on-primary-soft);
+  }
+}
+
+/* ---- Forms: underline inputs, eyebrow labels ---- */
+.field label,
+.legend {
+  margin-bottom: 8px;
+}
+.input {
+  border: 0;
+  border-bottom: 1px solid var(--border-input);
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 17px;
+}
+.input:hover {
+  border-bottom-color: var(--text);
+}
+.input:focus-visible {
+  outline: none;
+  border-bottom: 2px solid var(--text);
+  padding-bottom: 7px;
+}
+.input[aria-invalid='true'] {
+  border-bottom-color: var(--danger);
+  box-shadow: none;
+}
+select.input {
+  background-position: right 0 center;
+  padding-right: 28px;
+}
+input.input[type='number'],
+input.input[inputmode='numeric'],
+input.input[inputmode='decimal'],
+.input.time,
+.input.narrow,
+.datenav .input {
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 30px;
+}
+.datenav .input {
+  font-size: 20px;
+  text-align: center;
+}
+textarea.input {
+  font-family: var(--font);
+  font-size: 17px;
+  min-height: 72px;
+}
+.hint {
+  margin-top: 8px;
+}
+.seg span {
+  font-weight: 600;
+}
+.seg input:checked + span,
+.seg input:checked:hover + span {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.radio input {
+  accent-color: var(--primary);
+  width: 22px;
+  height: 22px;
+}
+input.switch {
+  background: var(--border);
+  border-color: var(--border);
+}
+input.switch::after {
+  background: var(--bg);
+}
+input.switch:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+input.switch:checked::after {
+  background: #fff;
+}
+
+/* ---- Today ---- */
+.summary {
+  font: italic 400 17px / 25px var(--font-display);
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.goal .amount {
+  font: 600 44px / 48px var(--font-display);
+  letter-spacing: -0.01em;
+  margin-top: 10px;
+}
+.goal .amount .unit {
+  font: 400 17px / 24px var(--font);
+  color: var(--text-muted);
+}
+/* The first active goal is the hero of the day (DESIGN S1 v7). */
+.stack > li:first-child .goal .amount {
+  font-size: 72px;
+  line-height: 72px;
+}
+@media (min-width: 640px) {
+  .stack > li:first-child .goal .amount {
+    font-size: 88px;
+    line-height: 84px;
+  }
+}
+.goal .progress {
+  margin-top: 14px;
+}
+.goal .actions {
+  margin-top: 16px;
+}
+.timer .clock {
+  font: 600 56px / 60px var(--font-display);
+  letter-spacing: 0;
+  color: var(--primary);
+}
+.entries li {
+  border-bottom-color: var(--border);
+}
+.entries .em {
+  font: 400 20px / 26px var(--font-display);
+}
+
+/* ---- Goals ---- */
+.group + .group {
+  margin-top: 28px;
+}
+.goal-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.goal-row h3 {
+  font: 600 17px / 24px var(--font);
+}
+
+/* ---- Goal detail ---- */
+.gd-head {
+  margin: 4px 0 8px;
+}
+/* The headline string carries its own words ("+94.0% ahead of ideal"), so it is a big serif line, not a
+   lone number: 40 px on phones (two lines at most for the vi copy), 56 px from 640 px. */
+.hl {
+  font: 600 40px / 46px var(--font-display);
+  letter-spacing: -0.015em;
+  color: var(--text);
+  margin: 8px 0 6px;
+  text-wrap: balance;
+}
+@media (min-width: 640px) {
+  .hl {
+    font-size: 56px;
+    line-height: 62px;
+  }
+}
+.hl-day {
+  font-weight: 600;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin: 8px 0 16px;
+}
+.stats:has(> :nth-child(4)) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  row-gap: 20px;
+}
+@media (min-width: 640px) {
+  .stats,
+  .stats:has(> :nth-child(4)),
+  .stats:has(> :nth-child(6)) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .stats:has(> :nth-child(6)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 639px) {
+  .stat.text-value {
+    grid-column: auto;
+  }
+}
+.stat .value {
+  font: 400 26px / 30px var(--font-display);
+  letter-spacing: 0;
+  margin-top: 8px;
+}
+.stat.text-value .value {
+  font-size: 22px;
+  line-height: 28px;
+}
+.stat .progress {
+  margin-top: 10px;
+}
+.line-ideal {
+  stroke: var(--chart-ideal);
+}
+.hist td {
+  font-size: 15px;
+}
+.hist td:nth-child(2) {
+  font: 400 20px / 26px var(--font-display);
+}
+
+/* ---- Day ---- */
+.date-title {
+  font: 400 34px / 38px var(--font-display);
+  margin: 20px 0 6px;
+}
+
+/* ---- Review ---- */
+.review .stats {
+  border: 0;
+  padding: 0;
+}
+.cell {
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+/* ---- Settings ---- */
+.sections > * + * {
+  margin-top: 0;
+}
+.sw-row {
+  margin-top: 8px;
+}
+.sw-text label {
+  font: 600 16px / 24px var(--font);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+.limit {
+  border-left: 0;
+  background: var(--surface-2);
+  border-radius: var(--r-lg);
+}
+
+/* ---- Empty / error / dialog / toast ---- */
+.dialog,
+.sheet {
+  background: var(--surface-raised);
+}
+.dialog {
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border);
+}

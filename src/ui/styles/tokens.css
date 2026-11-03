@@ -1,45 +1,50 @@
-/* Design tokens (DESIGN.md §6). Values match the mockups; v6.2 (UI revamp) adds --surface-tint, --surface-glass, --r-xl, --ease and
-   softens --border (light) and --shadow-1. */
+/* Design tokens (DESIGN.md §6). v7.0 (2026-11-03, redesign "A — Tối giản, chữ lớn"): warm cream / ink / terracotta palette,
+   Fraunces for display numbers and headings, Manrope for everything else, flat sections instead of bordered cards.
+   Variable NAMES are unchanged from v6.x so every component keeps working; only the values and a few additions
+   (--font-display, --surface-raised, --btn-bg, --btn-fg, --eyebrow-*) are new. */
 :root {
   color-scheme: light dark;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
 
-  --bg: #f7f6f2;
-  --surface: #ffffff;
-  --surface-2: #f0eee7;
-  --surface-tint: #eef6f1; /* v6.2: hero / met-goal tint */
-  --surface-glass: rgba(255, 255, 255, 0.86); /* v6.2: translucent tab bar */
-  --border: #e3dfd5;
-  --border-input: #7f8882;
-  --text: #1d2320;
-  --text-muted: #5a625d;
-  --primary: #1f7a4d;
-  --primary-hover: #17613d;
+  --bg: #f6f2ea;
+  --surface: #f6f2ea; /* v7: sections are flat on the page background */
+  --surface-2: #ece6da;
+  --surface-tint: #f6ded3; /* v7: hero / met-goal tint = accent soft */
+  --surface-raised: #ffffff; /* v7: dialogs, toasts, sheets above the page */
+  --surface-glass: rgba(246, 242, 234, 0.92);
+  --border: #e3dcCF;
+  --border-input: #b5ac9a;
+  --text: #17160f;
+  --text-muted: #6f6a5e;
+  --primary: #ad3d1a; /* >= 4.6:1 on every light surface incl. the glass tab bar (axe); pure terracotta #d5532a stays for fills (--heat-3) */
+  --primary-hover: #8f3114;
   --on-primary: #ffffff;
-  --primary-soft: #e3f2e9;
-  --on-primary-soft: #14573a;
-  --plus-bg: #fdf1dc;
-  --plus-text: #8a3f06;
-  --plus-border: #e9c98f;
-  --danger: #b3261e;
+  --primary-soft: #f6ded3;
+  --on-primary-soft: #8a2f12;
+  --btn-bg: #17160f; /* v7: the primary button is ink, not the accent */
+  --btn-fg: #f6f2ea;
+  --plus-bg: #f6ded3;
+  --plus-text: #8a2f12;
+  --plus-border: transparent;
+  --danger: #a32d2d;
   --on-danger: #ffffff;
-  --danger-soft: #fce9e7;
-  --on-danger-soft: #8c1d18;
+  --danger-soft: #f8e1df;
+  --on-danger-soft: #7a1d1d;
   --info: #1d4e9e;
   --info-soft: #e8f0fc;
   --focus: #2457c5;
-  --heat-0: #e7e5dc;
-  --heat-1: #bfe3cc;
-  --heat-2: #82c69c;
-  --heat-3: #3fa06a;
-  --heat-4: #1f7a4d;
-  --chart-ideal: var(--text-muted);
+  --heat-0: #e9e3d6;
+  --heat-1: #f3c9b8;
+  --heat-2: #e8a48c;
+  --heat-3: #d5532a;
+  --heat-4: #9a3a1b;
+  --chart-ideal: #b5ac9a;
   --chart-actual: var(--primary);
-  --chart-bar: var(--heat-3);
-  --chart-zero: var(--text-muted); /* v3: 0 % reference line of the curve (DESIGN 6.1) */
-  --scrim: rgba(20, 28, 24, 0.5);
-  --shadow-1: 0 1px 2px rgba(20, 30, 25, 0.05), 0 2px 6px rgba(20, 30, 25, 0.04);
-  --shadow-2: 0 12px 40px rgba(20, 30, 25, 0.22);
+  --chart-bar: var(--heat-2);
+  --scrim: rgba(23, 22, 15, 0.5);
+  --shadow-1: none;
+  --shadow-2: 0 16px 48px rgba(23, 22, 15, 0.22);
   /* v2 (DESIGN 6.1): Google sign-in button, official light theme */
   --google-bg: #ffffff;
   --google-border: #747775;
@@ -54,7 +59,7 @@
   --text-lg: 18px;
   --text-xl: 20px;
   --text-2xl: 24px;
-  --text-display: 40px;
+  --text-display: 44px;
 
   --sp-1: 4px;
   --sp-2: 8px;
@@ -65,9 +70,9 @@
   --sp-7: 48px;
 
   --r-sm: 6px;
-  --r-md: 10px;
+  --r-md: 12px;
   --r-lg: 16px;
-  --r-xl: 20px; /* v6.2: hero card, dialog */
+  --r-xl: 20px;
   --r-full: 999px;
 
   --tap: 44px;
@@ -82,28 +87,31 @@
 
   --dur-fast: 120ms;
   --dur: 200ms;
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* v6.2 */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121513;
-    --surface: #1b1f1c;
-    --surface-2: #242925;
-    --surface-tint: #1a2420;
-    --surface-glass: rgba(27, 31, 28, 0.86);
-    --border: #343b36;
-    --border-input: #7c867f;
-    --text: #ecefea;
-    --text-muted: #a3aca5;
-    --primary: #5cc98f;
-    --primary-hover: #7ad6a5;
-    --on-primary: #0c2217;
-    --primary-soft: #1e3328;
-    --on-primary-soft: #a8e6c3;
-    --plus-bg: #3a2d14;
-    --plus-text: #f5c97f;
-    --plus-border: #6b5224;
+    --bg: #171512;
+    --surface: #171512;
+    --surface-2: #221f1a;
+    --surface-tint: #3a2419;
+    --surface-raised: #221f1a;
+    --surface-glass: rgba(23, 21, 18, 0.92);
+    --border: #2c2822;
+    --border-input: #6b655a;
+    --text: #f3efe6;
+    --text-muted: #a39c8e;
+    --primary: #e8663c;
+    --primary-hover: #f07d56;
+    --on-primary: #171512;
+    --primary-soft: #3a2419;
+    --on-primary-soft: #f5b9a3;
+    --btn-bg: #f3efe6;
+    --btn-fg: #171512;
+    --plus-bg: #3a2419;
+    --plus-text: #f5b9a3;
+    --plus-border: transparent;
     --danger: #ff8a80;
     --on-danger: #3b0a07;
     --danger-soft: #3d1f1d;
@@ -111,14 +119,15 @@
     --info: #8db4f5;
     --info-soft: #1c2a44;
     --focus: #8db4f5;
-    --heat-0: #2a302c;
-    --heat-1: #24503a;
-    --heat-2: #2f7a55;
-    --heat-3: #43a773;
-    --heat-4: #7fdda8;
+    --heat-0: #242019;
+    --heat-1: #4a2a1c;
+    --heat-2: #7a3a22;
+    --heat-3: #b8492a;
+    --heat-4: #e8663c;
+    --chart-ideal: #6b655a;
     --scrim: rgba(0, 0, 0, 0.6);
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.3);
-    --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.55);
+    --shadow-1: none;
+    --shadow-2: 0 16px 48px rgba(0, 0, 0, 0.6);
     --google-bg: #131314;
     --google-border: #8e918f;
     --google-text: #e3e3e3;

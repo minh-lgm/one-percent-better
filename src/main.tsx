@@ -16,7 +16,17 @@ import { loadNativePlatform } from './integration/platform';
 import { listenForNavigation } from './integration/sw-messages';
 import { registerServiceWorker } from './integration/sw-register';
 import { StorageError } from './ui/screens/StorageError';
+// v7 redesign (DESIGN v7.0): self-hosted Fraunces (display) + Manrope (text), latin + vietnamese subsets, Manrope 400/600 and Fraunces 400/600 only (other weights and italics are synthesised by the browser — bundle budget NFR-03).
+import '@fontsource/manrope/latin-400.css';
+import '@fontsource/manrope/latin-600.css';
+import '@fontsource/manrope/vietnamese-400.css';
+import '@fontsource/manrope/vietnamese-600.css';
+import '@fontsource/fraunces/latin-400.css';
+import '@fontsource/fraunces/latin-600.css';
+import '@fontsource/fraunces/vietnamese-400.css';
+import '@fontsource/fraunces/vietnamese-600.css';
 import './ui/styles/app.css';
+import './ui/styles/v7.css';
 
 const root = createRoot(document.getElementById('root') as HTMLElement);
 
