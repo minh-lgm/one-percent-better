@@ -75,7 +75,7 @@
 
   --tap: 44px;
   --chip-h: 32px;
-  --content-max: 960px;
+  --content-max: 1240px; /* v7.2: Review (main.wide) at >= 1024 px; 1360 px at >= 1440 px (v7.css) */
   --nav-w: 232px;
   --tabbar-h: 56px;
 

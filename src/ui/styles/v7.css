@@ -103,6 +103,26 @@ fieldset > legend,
   margin-bottom: 8px;
 }
 
+/* ---- Content width (v7.2): wider reading column on desktop — 720 px looked cramped on a 1440+ screen ---- */
+@media (min-width: 1024px) {
+  main {
+    max-width: 1040px;
+    padding: 32px 48px 96px;
+  }
+  main.wide {
+    max-width: 1240px;
+  }
+}
+@media (min-width: 1440px) {
+  main {
+    max-width: 1180px;
+    padding: 40px 56px 96px;
+  }
+  main.wide {
+    max-width: 1360px;
+  }
+}
+
 /* ---- Surfaces: flat sections, hairlines instead of borders ---- */
 .stack > * + * {
   margin-top: 0;
