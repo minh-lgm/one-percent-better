@@ -66,7 +66,7 @@ test.describe('M5 curve in the browser', () => {
     await importBackup(page);
     await gotoHash(page, '/goals/g1');
     // 240 min logged (30 × 8) vs ideal(9) = 30·(1.01^9 − 1)/0.01 = 281.06 → (240 − 281.06)/281.06 = −14.6 %.
-    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}14.6% vs. ideal`);
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}14.6%`);
     await expect(page.getByTestId('curve-chart')).toBeVisible();
     await page.getByText(EN.goal.detail.showTable).click();
     const rows = page.getByTestId('curve-table').locator('tbody tr');
@@ -179,7 +179,7 @@ test.describe('M5 curve in the browser', () => {
     await importContent(page, { ...base, goals: [yearGoal, exactly120, d121, ...(base.goals.slice(3) as Array<Record<string, unknown>>)], entries: [...entries, ...(base.entries.filter((e) => e.goalId === 'g5') as Array<Record<string, unknown>>)] });
     await gotoHash(page, '/goals/y365');
     // 30 min on each of 282 days = 8,460 min vs ideal(282) = 30·(1.01^282 − 1)/0.01 = 46,630.5 → −81.9 % (the flat 30 falls ever further behind the compounding target)
-    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}81.9% vs. ideal`);
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}81.9%`);
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeSoFar })).toBeChecked();
     await expect(page.getByTestId('curve-table')).toHaveCount(0);
     await page.getByText(EN.goal.detail.showTable).click();
@@ -193,12 +193,12 @@ test.describe('M5 curve in the browser', () => {
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeSoFar })).toBeChecked();
     // ended: G5 Old course, actual stops at endDate; 15 min vs ideal(181) = 15·(1.01^181 − 1)/0.01 = 7,583.6 → −99.8 %
     await gotoHash(page, '/goals/g5');
-    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}99.8% vs. ideal`);
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}99.8%`);
     await expect(page.getByTestId('headline-day')).toHaveText('Day 181 of 181');
     await expect(page.getByText(EN.goal.status.ended, { exact: true })).toBeVisible();
     // upcoming: G4 — nothing elapsed, headline 0 (positive variant), Ideal only
     await gotoHash(page, '/goals/g4');
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% ahead of ideal');
+    await expect(page.getByTestId('headline')).toHaveText('+0.0%');
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeWhole })).toHaveCount(0);
     await expect(page.getByTestId('headline-sub')).toContainText('Starts');
     await expect(page.getByTestId('curve-chart').locator('.recharts-reference-dot')).toHaveCount(0);
@@ -208,7 +208,7 @@ test.describe('M5 curve in the browser', () => {
     const base = await sampleFile();
     await importContent(page, { ...base, goals: [goalAt('e1', { name: 'Empty' })], entries: [] });
     await gotoHash(page, '/goals/e1');
-    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}100.0% vs. ideal`); // 0 min vs ideal(9) = 281 → −100 %
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}100.0%`); // 0 min vs ideal(9) = 281 → −100 %
     await expect(page.getByTestId('headline-sub')).toHaveText(EN.empty.detail.curve); // M9: curve-empty merged into headline-sub (dev deviation D2)
     await expect(page.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'empty');
     await expect(page.getByRole('heading', { name: EN.empty.detail.history })).toBeVisible();
@@ -228,7 +228,7 @@ test.describe('M5 curve in the browser', () => {
     });
     await gotoHash(page, '/goals/one');
     // 30 min vs ideal(1) = 30 → exactly on the line: +0.0 % (positive variant)
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% ahead of ideal');
+    await expect(page.getByTestId('headline')).toHaveText('+0.0%');
     await expect(page.getByTestId('headline-sub')).toHaveText('Today: 30 min. Total 30 min, ideal 30 min (+0 min).');
     const text = await page.locator('main').innerText();
     expect(text).not.toMatch(/NaN|Infinity|undefined|\[object/);
@@ -267,7 +267,7 @@ test.describe('M5 curve in the browser', () => {
     await expect(page.getByTestId('headline-day')).toHaveText('Day 10 of 31');
     // the total keeps 240 min while the ideal grows to ideal(10) = 30·(1.01^10 − 1)/0.01 = 313.9 → 314, gap 240 − 313.9 = −74
     await expect(page.getByTestId('headline-sub')).toHaveText(`Last logged Oct 8: 30 min. Total 240 min, ideal 314 min (${MINUS}74 min).`);
-    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}23.5% vs. ideal`); // (240 − 313.87)/313.87 = −23.5 %
+    await expect(page.getByTestId('headline')).toHaveText(`${MINUS}23.5%`); // (240 − 313.87)/313.87 = −23.5 %
     await expect(page.getByTestId('curve-chart')).toHaveAttribute('aria-label', /Day 10 of 31/);
   });
 

@@ -283,6 +283,7 @@ export function Today() {
           ) : undefined
         }
       />
+      <p className="tagline">{t('today.tagline')}</p>
       <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="plus-one-live" data-count={plusOneCount}>
         {plusOne ? t('plusone.live', { goal: plusOne.goalName }) : ''}
       </p>

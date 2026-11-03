@@ -110,7 +110,7 @@ test.describe('M11 — No end date (en)', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Meditate' })).toBeVisible();
     await expect(page.locator('.gd-head')).toContainText(OPEN_ROW_EN);
     await expect(page.locator('.gd-head')).not.toContainText('–');
-    await expect(page.getByTestId('headline')).toHaveText('−41.3% vs. ideal');
+    await expect(page.getByTestId('headline')).toHaveText('−41.3%');
     await expect(page.getByTestId('headline-day')).toHaveText('Day 9');
     await expect(page.getByTestId('headline-sub')).toHaveText('Last logged Oct 8: 20 min. Total 55 min, ideal 94 min (−39 min).');
     await expect(page.getByTestId('curve-summary')).toHaveText('Day 9: you have logged 55 min in total. The ideal line is at 94 min.');
@@ -195,7 +195,7 @@ test.describe('M11 — No end date (en)', () => {
     await expect(row(page, 'Piano').getByText(EN.goal.status.upcoming)).toBeVisible();
     await expect(row(page, 'Piano')).toContainText('Starts 2026-11-01');
     await row(page, 'Piano').getByRole('link', { name: 'Piano' }).click();
-    await expect(page.getByTestId('headline')).toHaveText('+0.0% ahead of ideal');
+    await expect(page.getByTestId('headline')).toHaveText('+0.0%');
     await expect(page.getByTestId('headline-sub')).toHaveText('Starts 2026-11-01. Your line will appear once the goal begins.');
     await expect(page.getByTestId('headline-day')).toHaveCount(0);
     await expect(page.getByRole('heading', { level: 2, name: EN.goal.detail.chartTitle })).toHaveCount(0);
@@ -243,7 +243,7 @@ test.describe('M11 — Không có thời hạn (vi, 360 px)', () => {
     await expectNoHorizontalScroll(page);
 
     await gotoHash(page, '/goals/o1');
-    await expect(page.getByTestId('headline')).toHaveText('−41,3% so với lý tưởng');
+    await expect(page.getByTestId('headline')).toHaveText('−41,3%');
     await expect(page.getByTestId('headline-day')).toHaveText('Ngày 9');
     await expect(page.getByTestId('curve-summary')).toHaveText('Ngày 9: bạn đã ghi tổng cộng 55 phút. Đường lý tưởng ở mức 94 phút.');
     await expect(page.getByRole('radio', { name: VI.goal.detail.rangeWhole })).toHaveCount(0);
@@ -271,7 +271,7 @@ test.describe('M11 — desktop width', () => {
     await freezeClock(page);
     await importBackup(page, 'o1-open-ended-backup.json');
     await gotoHash(page, '/goals/o1');
-    await expect(page.getByTestId('headline')).toHaveText('−41.3% vs. ideal');
+    await expect(page.getByTestId('headline')).toHaveText('−41.3%');
     await expect(page.locator('.chart-head').getByRole('radio')).toHaveCount(0);
     await expect(page.locator('.chart-head').getByRole('heading', { level: 2, name: EN.goal.detail.chartTitle })).toBeVisible();
     await expect(page.getByTestId('curve-chart').locator('.recharts-reference-dot')).toHaveCount(2);

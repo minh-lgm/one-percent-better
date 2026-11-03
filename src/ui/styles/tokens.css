@@ -10,7 +10,6 @@
   --bg: #f6f2ea;
   --surface: #f6f2ea; /* v7: sections are flat on the page background */
   --surface-2: #ece6da;
-  --surface-tint: #f6ded3; /* v7: hero / met-goal tint = accent soft */
   --surface-raised: #ffffff; /* v7: dialogs, toasts, sheets above the page */
   --surface-glass: rgba(246, 242, 234, 0.92);
   --border: #e3dcCF;
@@ -26,7 +25,6 @@
   --btn-fg: #f6f2ea;
   --plus-bg: #f6ded3;
   --plus-text: #8a2f12;
-  --plus-border: transparent;
   --danger: #a32d2d;
   --on-danger: #ffffff;
   --danger-soft: #f8e1df;
@@ -95,7 +93,6 @@
     --bg: #171512;
     --surface: #171512;
     --surface-2: #221f1a;
-    --surface-tint: #3a2419;
     --surface-raised: #221f1a;
     --surface-glass: rgba(23, 21, 18, 0.92);
     --border: #2c2822;
@@ -111,7 +108,6 @@
     --btn-fg: #171512;
     --plus-bg: #3a2419;
     --plus-text: #f5b9a3;
-    --plus-border: transparent;
     --danger: #ff8a80;
     --on-danger: #3b0a07;
     --danger-soft: #3d1f1d;

@@ -55,7 +55,7 @@ test.describe('M5-AC12: full journey, offline and every screen in Vietnamese', (
 
     await gotoHash(page, `/goals/${id}`);
     // M9-AC5 / M9-AC7 (FR-27 v3.0) superseded by the v6.0 burn-up: 60 min logged vs 281 min planned by day 9 → −78,7 %.
-    await expect(page.getByTestId('headline')).toHaveText('−78,7% so với lý tưởng');
+    await expect(page.getByTestId('headline')).toHaveText('−78,7%');
     await expect(page.getByTestId('headline-day')).toHaveText('Ngày 9/31');
     await expect(page.getByTestId('headline-sub')).toHaveText('Hôm nay: 30 phút. Tổng 60 phút, lý tưởng 281 phút (−221 phút).');
     await expect(page.getByTestId('headline-sub')).toContainText('30');
@@ -112,7 +112,7 @@ test.describe('M5-AC12: full journey, offline and every screen in Vietnamese', (
     await gotoHash(page2, '/today');
     await expectAmount(page2, 'Read', '30/30');
     await gotoHash(page2, `/goals/${id}`);
-    await expect(page2.getByTestId('headline')).toHaveText('−78,7% so với lý tưởng'); // M9-AC7 (v6.0 numbers)
+    await expect(page2.getByTestId('headline')).toHaveText('−78,7%'); // M9-AC7 (v6.0 numbers)
     await expectNoViLeaks(page2);
 
     // Offline: every screen opens; switching to English offline persists across an offline reload.
@@ -170,7 +170,7 @@ test.describe('M5-AC12: full journey, offline and every screen in Vietnamese', (
       ['/goals/new', async () => expect(page.getByRole('heading', { level: 1, name: VI.goal.form.titleNew })).toBeVisible()],
       ['/goals/g1', async () => expect(page.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2)],
       ['/goals/g3', async () => expect(page.getByText(VI.goal.status.archived, { exact: true })).toBeVisible()],
-      ['/goals/g4', async () => expect(page.getByTestId('headline')).toHaveText('Vượt lý tưởng +0,0%')],
+      ['/goals/g4', async () => expect(page.getByTestId('headline')).toHaveText('+0,0%')],
       ['/review', async () => expect(page.getByTestId('chart-weekly').locator('svg.recharts-surface')).toBeVisible()],
       ['/day/2026-10-08', async () => expect(goalCard(page, 'Read')).toBeVisible()],
       ['/settings', async () => expect(page.getByRole('heading', { level: 1, name: VI.settings.title })).toBeVisible()],

@@ -99,7 +99,7 @@ async function noGarbage(p: Page): Promise<void> {
 // R1 (r1-real-backup.json): 30 min/day from 2026-10-10 to 12-31 (83 days), 5 / 10 / 14 / 27 min on 10-10..10-13, clock 10-13 → day 4.
 // ideal(k) = 30·(1.01^k − 1)/0.01: 30 / 60.3 / 90.9 / 121.8 → table 30 / 60 / 91 / 122; You 5 / 15 / 29 / 56; gaps −25 / −45 / −62 / −66.
 // headline (56 − 121.812)/121.812 = −54.0 %; ideal(11) (Oct 20) = 347.0; ideal(83) = 3,852.
-const R1_HEADLINE = `${MINUS}54.0% vs. ideal`;
+const R1_HEADLINE = `${MINUS}54.0%`;
 const R1_SUB = `Today: 27 min. Total 56 min, ideal 122 min (${MINUS}66 min).`;
 
 test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
@@ -145,7 +145,7 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
     };
     await del('2026-10-10', '5 min'); // total 51; (51 − 121.812)/121.812 = −58.1 %; gap 51 − 121.8 = −71
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}58.1% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}58.1%`);
     await expect(sub(page)).toHaveText(`Today: 27 min. Total 51 min, ideal 122 min (${MINUS}71 min).`);
     await page.getByText(EN.goal.detail.showTable).click();
     await expect(rows(page).nth(0).locator('td')).toHaveText(['30', '0', '0', `${MINUS}30`]); // day 1 unlogged: You starts flat at 0 (never a "baseline")
@@ -155,19 +155,19 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
 
     await del('2026-10-13', '27 min'); // today unlogged → the total stays 24 while the ideal keeps 121.8: (24 − 121.812)/121.812 = −80.3 %, gap −98
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}80.3% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}80.3%`);
     await expect(sub(page)).toHaveText(`Last logged Oct 12: 14 min. Total 24 min, ideal 122 min (${MINUS}98 min).`);
     await expect(sub(page)).toHaveAttribute('data-variant', 'earlier');
 
     await del('2026-10-12', '14 min'); // one logged day left (Oct 11, 10 min): the same "Last logged" sentence, no starting-point variant; (10 − 121.812)/121.812 = −91.8 %
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}91.8% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}91.8%`);
     await expect(sub(page)).toHaveText(`Last logged Oct 11: 10 min. Total 10 min, ideal 122 min (${MINUS}112 min).`);
     await expect(sub(page)).not.toContainText('×');
 
     await del('2026-10-11', '10 min'); // nothing logged: −100 %, empty copy, You still drawn (flat at 0 min) under Ideal
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}100.0% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}100.0%`);
     await expect(sub(page)).toHaveText(EN.empty.detail.curve);
     await expect(sub(page)).toHaveAttribute('data-variant', 'empty');
     await expect(chart(page).locator('.recharts-line')).toHaveCount(2);
@@ -184,9 +184,9 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
     let current = '27 min';
     // total = 5 + 10 + 14 + m; headline = (total − 121.812)/121.812; gap = round(total − 121.812)
     for (const [minutes, total, expected, gap] of [
-      [3, 32, `${MINUS}73.7% vs. ideal`, `${MINUS}90`], // 32 − 121.8
-      [40, 69, `${MINUS}43.4% vs. ideal`, `${MINUS}53`], // 69 − 121.8
-      [5, 34, `${MINUS}72.1% vs. ideal`, `${MINUS}88`], // 34 − 121.8
+      [3, 32, `${MINUS}73.7%`, `${MINUS}90`], // 32 − 121.8
+      [40, 69, `${MINUS}43.4%`, `${MINUS}53`], // 69 − 121.8
+      [5, 34, `${MINUS}72.1%`, `${MINUS}88`], // 34 − 121.8
     ] as const) {
       await gotoHash(page, '/day/2026-10-13');
       const card = goalCard(page, 'Đọc sách');
@@ -232,14 +232,14 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
 
     // ended on 10-12 (3-day period): 5 + 10 + 14 = 29 min vs ideal(3) = 90.903 → (29 − 90.903)/90.903 = −68.1 %, gap −62; 10-13 is after the end: ignored
     await gotoHash(page, '/goals/ended');
-    await expect(headline(page)).toHaveText(`${MINUS}68.1% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}68.1%`);
     await expect(page.getByTestId('headline-day')).toHaveText('Day 3 of 3');
     await expect(sub(page)).toHaveText(`Last logged Oct 12: 14 min. Total 29 min, ideal 91 min (${MINUS}62 min).`);
     await expect(page.getByTestId('curve-summary')).toHaveText('Day 3 of 3: you have logged 29 min in total. The ideal line is at 91 min.');
     await expect(page.getByText(EN.goal.status.ended, { exact: true }).first()).toBeVisible();
 
     await gotoHash(page, '/goals/soon');
-    await expect(headline(page)).toHaveText('+0.0% ahead of ideal');
+    await expect(headline(page)).toHaveText('+0.0%');
     await expect(headline(page)).toHaveAttribute('data-sign', 'positive');
     await expect(sub(page)).toHaveText('Starts 2026-10-20. Your line will appear once the goal begins.');
     await expect(chart(page).locator('.recharts-line')).toHaveCount(1);
@@ -260,11 +260,11 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
     // g1 240 vs ideal(9) = 281.06 → −14.6; g2 250 vs ideal(39) = 948 → −73.6; g3 total 6,000 over 365 d → T₀ = 1.63, 60 vs ideal(282) = 2,535 → −97.6;
     // g4 starts 11-01 → +0.0 (positive variant); g5 15 vs ideal(181) = 7,584 → −99.8.
     for (const [id, expected] of [
-      ['g1', `${MINUS}14.6% vs. ideal`],
-      ['g2', `${MINUS}73.6% vs. ideal`],
-      ['g3', `${MINUS}97.6% vs. ideal`],
-      ['g4', '+0.0% ahead of ideal'],
-      ['g5', `${MINUS}99.8% vs. ideal`],
+      ['g1', `${MINUS}14.6%`],
+      ['g2', `${MINUS}73.6%`],
+      ['g3', `${MINUS}97.6%`],
+      ['g4', '+0.0%'],
+      ['g5', `${MINUS}99.8%`],
     ] as const) {
       await gotoHash(page, `/goals/${id}`);
       await expect(headline(page), id).toHaveText(expected);
@@ -292,7 +292,7 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
     ]);
     // z: 3,000 + 2,999 = 5,999 min vs ideal(4) = 121.812 → (5999 − 121.812)/121.812 = +4,824.8 %; last logged Oct 11; gap +5,877
     await gotoHash(page, '/goals/z');
-    await expect(headline(page)).toHaveText('+4,824.8% ahead of ideal');
+    await expect(headline(page)).toHaveText('+4,824.8%');
     await expect(headline(page)).toHaveAttribute('data-sign', 'positive');
     await expect(sub(page)).toHaveText('Last logged Oct 11: 2,999 min. Total 5,999 min, ideal 122 min (+5,877 min).');
     await page.getByText(EN.goal.detail.showTable).click();
@@ -310,7 +310,7 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
 
     // m: 2,000 + 1,999 = 3,999 min → (3999 − 121.812)/121.812 = +3,182.9 %; v6: You is cumulative so nothing is ever negative on the axis
     await gotoHash(page, '/goals/m');
-    await expect(headline(page)).toHaveText('+3,182.9% ahead of ideal');
+    await expect(headline(page)).toHaveText('+3,182.9%');
     await expect(headline(page)).toHaveAttribute('data-sign', 'positive');
     await expect(sub(page)).toHaveText('Last logged Oct 11: 1,999 min. Total 3,999 min, ideal 122 min (+3,877 min).');
     const ticks = await expectPlainTicks(page);
@@ -319,7 +319,7 @@ test.describe('M9 QC — data edge cases (en, 1440 px)', () => {
 
     // k: the one seeded entry (5 min on 10-10) → the negative variant, (5 − 121.812)/121.812 = −95.9 %
     await gotoHash(page, '/goals/k');
-    await expect(headline(page)).toHaveText(`${MINUS}95.9% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}95.9%`);
     await expect(headline(page)).toHaveAttribute('data-sign', 'negative');
     await expect(sub(page)).toHaveText(`Last logged Oct 10: 5 min. Total 5 min, ideal 122 min (${MINUS}117 min).`);
     expect(problems).toEqual([]);
@@ -339,7 +339,7 @@ test.describe('M9 QC — extreme values and long goals at 360 px', () => {
     await injectEntries(page, big.slice(1)); // 40 x 1440 on one day: only reachable through a sync merge (A-25)
     await gotoHash(page, '/goals/r1');
     // total 1 + 57,600 = 57,601 min vs ideal(2) = 60.3 → (57601 − 60.3)/60.3 = +95,424.0 %; gap 57,601 − 60.3 = +57,541
-    await expect(headline(page)).toHaveText('+95,424.0% ahead of ideal');
+    await expect(headline(page)).toHaveText('+95,424.0%');
     await expect(sub(page)).toHaveText('Today: 57,600 min. Total 57,601 min, ideal 60 min (+57,541 min).');
     await expect(sub(page)).not.toContainText('×');
     // scale: max You 57,601 → top 80,000, step 20,000 → compact ticks `20K` … `80K`
@@ -357,7 +357,7 @@ test.describe('M9 QC — extreme values and long goals at 360 px', () => {
     await gotoHash(page, '/settings');
     await page.getByRole('radio', { name: 'Tiếng Việt' }).check();
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText('Vượt lý tưởng +95.424,0%');
+    await expect(headline(page)).toHaveText('+95.424,0%');
     await expect(sub(page)).toContainText('57.601 phút');
     await expect(sub(page)).toContainText('+57.541 phút');
     for (const t of await expectPlainTicks(page)) expect(t.length).toBeLessThanOrEqual(8);
@@ -376,7 +376,7 @@ test.describe('M9 QC — extreme values and long goals at 360 px', () => {
     await importContent(page, { ...b, goals: [g], entries });
     await gotoHash(page, '/goals/long');
     // 42 min vs ideal(1743) = 30·(1.01^1743 − 1)/0.01 ≈ 1.02 × 10^11 min → rounds to −100.0 %
-    await expect(headline(page)).toHaveText(`${MINUS}100.0% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}100.0%`);
     await expect(sub(page)).toContainText('Last logged Oct 8: 14 min. Total 42 min, ideal 102,158,791,116 min');
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeSoFar })).toBeChecked();
     // So far: the scale tops out above ideal(1743) ≈ 1.02 × 10^11 (next nice step: 1.5 × 10^11); Whole period above ideal(1826) ≈ 2.33 × 10^11 (→ 2.5 × 10^11)
@@ -448,7 +448,7 @@ test.describe('M9 QC — interaction, language, theme', () => {
     await page.getByRole('radio', { name: 'Tiếng Việt' }).check();
     await page.getByRole('link', { name: VI.nav.goals }).click();
     await page.getByRole('link', { name: 'Đọc sách' }).first().click();
-    await expect(headline(page)).toHaveText(`${MINUS}54,0% so với lý tưởng`);
+    await expect(headline(page)).toHaveText(`${MINUS}54,0%`);
     await expect(sub(page)).toHaveText(`Hôm nay: 27 phút. Tổng 56 phút, lý tưởng 122 phút (${MINUS}66 phút).`);
     await expect(page.getByTestId('curve-summary')).toHaveText('Ngày 4/83: bạn đã ghi tổng cộng 56 phút. Đường lý tưởng ở mức 122 phút.');
     expect(await yTicks(page)).toContain('1.000'); // whole period: 0 … 5.000 in steps of 1.000 (ideal(83) = 3,852 → top 5,000)
@@ -469,7 +469,7 @@ test.describe('M9 QC — interaction, language, theme', () => {
     await importBackup(page, 'r3-down-backup.json');
     await gotoHash(page, '/goals/r1');
     // R3: 5 then 3 min on 10-10 / 10-11 → 8 min vs ideal(2) = 60.3 → (8 − 60.3)/60.3 = −86.7 %; You still goes up (5 → 8)
-    await expect(headline(page)).toHaveText(`${MINUS}86.7% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}86.7%`);
     await expect(sub(page)).toHaveText(`Today: 3 min. Total 8 min, ideal 60 min (${MINUS}52 min).`);
     const box = (await chart(page).boundingBox())!;
     const seen = new Set<string>();
@@ -520,7 +520,7 @@ test.describe('M9 QC — interaction, language, theme', () => {
       await freezeClock(page, at('2026-10-11T10:00:00'));
       await importBackup(page, 'r3-down-backup.json');
       await gotoHash(page, '/goals/r1');
-      await expect(headline(page)).toHaveText(`${MINUS}86.7% vs. ideal`);
+      await expect(headline(page)).toHaveText(`${MINUS}86.7%`);
       await expectAxeClean(page);
       await expectNoHorizontalScroll(page);
       await freezeClock(page, CLOCK_R1);
@@ -540,7 +540,7 @@ test.describe('M9-D1 mixed keyboard reading + mouse click (vi, 360 px)', () => {
     await freezeClock(page, CLOCK_R1);
     await importBackup(page, 'r1-real-backup.json', VI);
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}54,0% so với lý tưởng`);
+    await expect(headline(page)).toHaveText(`${MINUS}54,0%`);
     await chart(page).focus();
     await page.keyboard.press('ArrowLeft'); // today (13 thg 10)
     await page.keyboard.press('ArrowLeft'); // 12 thg 10: 14 min that day, totals 29 / 91

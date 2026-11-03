@@ -64,7 +64,7 @@ test.describe('M5 full journey, offline, keyboard, a11y (M5-AC7, M5-AC8, M5-AC11
 
     // Goal detail (v6.0 burn-up): 60 min logged vs 281 min of cumulative +1 %-a-day target by day 9 → −78.7 %.
     await gotoHash(page, `/goals/${id}`);
-    await expect(page.getByTestId('headline')).toHaveText('−78.7% vs. ideal');
+    await expect(page.getByTestId('headline')).toHaveText('−78.7%');
     await expect(page.getByTestId('headline-day')).toHaveText('Day 9 of 31');
     await expect(page.getByTestId('headline-sub')).toHaveText('Today: 30 min. Total 60 min, ideal 281 min (−221 min).');
     await expect(page.getByTestId('headline-sub')).toContainText('30');
@@ -95,7 +95,7 @@ test.describe('M5 full journey, offline, keyboard, a11y (M5-AC7, M5-AC8, M5-AC11
     await expectAmount(page2, 'Read', '30/30');
     await expect(page2.getByTestId('plus-one-live')).toHaveAttribute('data-count', '0'); // plusOneShown travels with the backup
     await gotoHash(page2, `/goals/${id}`);
-    await expect(page2.getByTestId('headline')).toHaveText('−78.7% vs. ideal'); // M9-AC7
+    await expect(page2.getByTestId('headline')).toHaveText('−78.7%'); // M9-AC7
     await expect(page2.getByTestId('history-row')).toHaveCount(2);
 
     // Offline: every screen (including the lazy ones) opens from the precache and logging still works.
@@ -110,7 +110,7 @@ test.describe('M5 full journey, offline, keyboard, a11y (M5-AC7, M5-AC8, M5-AC11
     await gotoHash(page2, '/review');
     await expect(page2.getByTestId('chart-weekly').locator('svg.recharts-surface')).toBeVisible();
     await gotoHash(page2, `/goals/${id}`);
-    await expect(page2.getByTestId('headline')).toHaveText('−78.7% vs. ideal'); // M9-AC7
+    await expect(page2.getByTestId('headline')).toHaveText('−78.7%'); // M9-AC7
     await expect(page2.getByTestId('curve-chart').locator('.recharts-line')).toHaveCount(2);
     await gotoHash(page2, '/today');
     await logTime(page2, 'Read', 5);

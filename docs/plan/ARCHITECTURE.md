@@ -170,7 +170,7 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
 | `integration/storage.ts` | integration | `navigator.storage.persist()`/`persisted()`, phát hiện IndexedDB không dùng được | StorageManager |
 | `app/container.ts` | config (composition root) | Khởi tạo repository + service (truyền `Translator` cho service cần sinh chữ), cung cấp qua `AppContext` | data/dexie, services, integration, i18n |
 | `app/bootstrap.ts` | config | Thứ tự khởi động: init i18n với `detectLocale` → mở DB (lỗi → `StorageError` đã dịch theo ngôn ngữ phát hiện) → `LocaleService.resolve` → `setLocale` → render router | i18n, container |
-| `app/router.tsx` | UI | Khai báo route, lazy-load Review và Goal detail | react-router |
+| `app/router.tsx` | UI | Khai báo route, lazy-load Review, Goal detail, Settings (M14) và **Goals (v7.1 — giữ ngân sách tải lạnh `#/today` ≤ 230 kB sau khi thêm 2 font tự host)** | react-router |
 | `ui/screens/*`, `ui/components/*`, `ui/hooks/*` | UI | Màn hình, component, hook `useSubscribable`, `useNow`, `useT` (bọc `useTranslation`), `useFormat` (formatter theo locale hiện tại), `useDocumentTitle` | services (qua context), i18n |
 | `ui/error-messages.ts` | UI | Ánh xạ `DomainError` (code + biến thể + tham số) → key i18n `errors.*` (thay cho `src/ui/copy.ts` nêu trong DESIGN.md) | i18n/types |
 | `sw.ts` | integration | Precache (workbox), `notificationclick` → focus client hoặc mở `#/today` | workbox-precaching |

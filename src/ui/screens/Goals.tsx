@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
+import { pct } from '../../domain/curve';
 import { toISODate } from '../../domain/dates';
-import { dailyTarget, goalStatus, groupGoals } from '../../domain/goal';
+import { dailyTarget, daysElapsed, goalStatus, groupGoals, planStartOf } from '../../domain/goal';
+import { cumulativeTarget } from '../../domain/plan';
 import type { DomainError, Goal, GoalStatus } from '../../domain/types';
 import { Alert } from '../components/Alert';
 import { Badge, type BadgeTone } from '../components/Badge';
@@ -42,10 +44,13 @@ export function Goals() {
   const { t } = useT();
   const f = useFormat();
   const toast = useToast();
-  const { goalService, timerService } = useServices();
+  const { goalService, timerService, statsService } = useServices();
   const today = toISODate(useNow());
   const [attempt, setAttempt] = useState(0);
   const goals = useSubscribable(() => goalService.watchAll(), [goalService, attempt]);
+  // v7 (DESIGN S2 v7): every started goal shows its headline "% vs. the ideal line" (same number as Goal detail).
+  const stats = useSubscribable(() => statsService.watch(), [statsService, attempt]);
+  const allEntries = stats.data?.entries ?? [];
   const showSkeleton = useDelayed(goals.loading);
   const [pending, setPending] = useState<PendingDelete | null>(null);
   const [busy, setBusy] = useState(false);
@@ -110,6 +115,20 @@ export function Goals() {
     return t('goals.rowTotal', { daily: f.number(dailyTarget(goal)), hours: f.number(goal.targetMinutes / 60), range });
   }
 
+  /**
+   * Headline percent of the goal's 1 % curve — the same number as Goal detail (`curve().headlinePercent`,
+   * ARCH §4.5), computed here without pulling the whole curve module into the eager bundle (NFR-03):
+   * pct(minutes logged in the elapsed period, ideal(elapsedDays)); null before the goal starts.
+   */
+  function vsIdeal(goal: Goal): number | null {
+    const elapsed = daysElapsed(goal, today);
+    if (elapsed === 0) return null;
+    const last = goal.endDate === null || today < goal.endDate ? today : goal.endDate;
+    let total = 0;
+    for (const e of allEntries) if (e.goalId === goal.id && e.date >= goal.startDate && e.date <= last) total += e.minutes;
+    return pct(total, cumulativeTarget(planStartOf(goal), elapsed));
+  }
+
   const archiveErrorText = (goalId: string): string | null => {
     if (!archiveError || archiveError.goalId !== goalId) return null;
     if (archiveError.error === 'write') return t('errors.WRITE_FAILED');
@@ -147,6 +166,7 @@ export function Goals() {
               {section.items.map((goal) => {
                 const status = goalStatus(goal, today);
                 const alert = archiveErrorText(goal.id);
+                const pct = vsIdeal(goal);
                 return (
                   <li key={goal.id} className="card goal-row" data-testid="goal-row">
                     <div className="goal-info">
@@ -161,6 +181,12 @@ export function Goals() {
                       {status === 'ended' && goal.endDate !== null ? <p className="muted small num">{t('goals.endedOn', { date: f.dateShort(goal.endDate) })}</p> : null}
                       {goal.why ? <p className="muted small why">{goal.why}</p> : null}
                     </div>
+                    {pct !== null ? (
+                      <p className={pct < 0 ? 'goal-pct num' : 'goal-pct num ahead'} data-testid="goal-row-pct">
+                        <span className="pct">{t('format.percent', { value: f.signed1(pct) })}</span>
+                        <span className="sub">{t('goals.rowVsIdeal')}</span>
+                      </p>
+                    ) : null}
                     <div className="gr-actions">
                       <LinkButton variant="secondary" to={`/goals/${goal.id}/edit`}>
                         {t('common.edit')}

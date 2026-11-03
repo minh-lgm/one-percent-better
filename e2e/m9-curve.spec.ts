@@ -38,7 +38,7 @@ function trackExternal(page: Page): string[] {
 }
 
 test.describe('M9 Goal detail — curve v6 (en)', () => {
-  test('M9-AC4 / M9-AC3 / M9-AC8: R1 at 2026-10-13 → −54.0% vs. ideal, subtitle in minutes, summary, 2 series, Y axis from 0 in minutes, no 0 % line, tooltip Oct 12, table, Range, Progress 2.2 %, streak 0; axe; no external requests', async ({ page }) => {
+  test('M9-AC4 / M9-AC3 / M9-AC8: R1 at 2026-10-13 → −54.0%, subtitle in minutes, summary, 2 series, Y axis from 0 in minutes, no 0 % line, tooltip Oct 12, table, Range, Progress 2.2 %, streak 0; axe; no external requests', async ({ page }) => {
     const external = trackExternal(page);
     await freezeClock(page, CLOCK_R1);
     await importBackup(page, 'r1-real-backup.json');
@@ -47,7 +47,7 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await expect(page.locator('.gd-head')).toContainText('2026-10-10 – 2026-12-31');
     await expect(page.locator('.gd-head')).toContainText('30 min/day');
 
-    await expect(headline(page)).toHaveText(`${MINUS}54.0% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}54.0%`);
     await expect(headline(page)).toHaveAttribute('data-sign', 'negative');
     await expect(page.getByTestId('headline-day')).toHaveText('Day 4 of 83');
     await expect(sub(page)).toHaveText(`Today: 27 min. Total 56 min, ideal 122 min (${MINUS}66 min).`);
@@ -123,11 +123,11 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     expect(external).toEqual([]);
   });
 
-  test('M9-AC4: S1 at 2026-10-09 → Read −14.6% vs. ideal with the M5 stats and rows 30 / 249 / 281 / 314; Guitar −73.6% defaults to "So far" with 322 / 210 / 10 / −112 on 2026-09-15 and no negative tick', async ({ page }) => {
+  test('M9-AC4: S1 at 2026-10-09 → Read −14.6% with the M5 stats and rows 30 / 249 / 281 / 314; Guitar −73.6% defaults to "So far" with 322 / 210 / 10 / −112 on 2026-09-15 and no negative tick', async ({ page }) => {
     await freezeClock(page);
     await importBackup(page);
     await gotoHash(page, '/goals/g1');
-    await expect(headline(page)).toHaveText(`${MINUS}14.6% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}14.6%`);
     await expect(headline(page)).toHaveAttribute('data-sign', 'negative');
     await expect(page.getByTestId('headline-day')).toHaveText('Day 9 of 31');
     await expect(sub(page)).toHaveText(`Last logged Oct 8: 30 min. Total 240 min, ideal 281 min (${MINUS}41 min).`);
@@ -149,7 +149,7 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await expect(tableRows(page).nth(9).locator('td')).toHaveText(['314', '—', '—', '—']);
 
     await gotoHash(page, '/goals/g2');
-    await expect(headline(page)).toHaveText(`${MINUS}73.6% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}73.6%`);
     await expect(sub(page)).toHaveText(`Last logged Oct 8: 20 min. Total 250 min, ideal 948 min (${MINUS}698 min).`);
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeSoFar })).toBeChecked();
     await expect(chart(page)).toContainText('You 250 min');
@@ -178,7 +178,7 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await freezeClock(page);
     await createGoal(page, { name: 'Read', why: 'Be smarter', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' });
     await page.getByRole('link', { name: 'Read', exact: true }).click();
-    await expect(headline(page)).toHaveText(`${MINUS}100.0% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}100.0%`);
     await expect(headline(page)).toHaveAttribute('data-sign', 'negative');
     await expect(page.getByTestId('headline-day')).toHaveText('Day 9 of 31');
     await expect(sub(page)).toHaveText(EN.empty.detail.curve);
@@ -201,7 +201,7 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await freezeClock(page, CLOCK_R1);
     await importBackup(page, 'r1-first-day-backup.json');
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}95.9% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}95.9%`);
     await expect(page.getByTestId('headline-day')).toHaveText('Day 4 of 83');
     await expect(sub(page)).toHaveText(`Last logged Oct 10: 5 min. Total 5 min, ideal 122 min (${MINUS}117 min).`);
     await expect(sub(page)).toHaveAttribute('data-variant', 'earlier');
@@ -216,7 +216,7 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await freezeClock(page, CLOCK_R3);
     await importBackup(page, 'r3-down-backup.json');
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}86.7% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}86.7%`);
     await expect(headline(page)).toHaveAttribute('data-sign', 'negative');
     await expect(headline(page)).toHaveCSS('color', await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('color').trim()));
     await expect(sub(page)).toHaveText(`Today: 3 min. Total 8 min, ideal 60 min (${MINUS}52 min).`);
@@ -235,7 +235,7 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await freezeClock(page);
     await importBackup(page);
     await gotoHash(page, '/goals/g4');
-    await expect(headline(page)).toHaveText('+0.0% ahead of ideal');
+    await expect(headline(page)).toHaveText('+0.0%');
     await expect(headline(page)).toHaveAttribute('data-sign', 'positive');
     await expect(sub(page)).toHaveText('Starts 2026-11-01. Your line will appear once the goal begins.');
     await expect(sub(page)).toHaveAttribute('data-variant', 'upcoming');
@@ -245,7 +245,7 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await expect(chart(page).locator('.recharts-reference-dot')).toHaveCount(0);
     await expect(chart(page)).not.toContainText('You ');
     await gotoHash(page, '/goals/g5');
-    await expect(headline(page)).toHaveText(`${MINUS}99.8% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}99.8%`);
     await expect(page.getByTestId('headline-day')).toHaveText('Day 181 of 181');
     await expect(sub(page)).toHaveText(`Last logged Jun 30: 15 min. Total 15 min, ideal 7,584 min (${MINUS}7,569 min).`);
     await expect(sub(page)).toHaveAttribute('data-variant', 'earlier');
@@ -261,7 +261,7 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await freezeClock(page, at('2026-10-14T10:00:00'));
     await importBackup(page, 'r1-real-backup.json');
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}63.4% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}63.4%`);
     await expect(page.getByTestId('headline-day')).toHaveText('Day 5 of 83');
     await expect(sub(page)).toHaveText(`Last logged Oct 13: 27 min. Total 56 min, ideal 153 min (${MINUS}97 min).`);
     await expect(sub(page)).toHaveAttribute('data-variant', 'earlier');
@@ -280,7 +280,7 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
     await logTime(page, 'Đọc sách', 3);
     await expectAmount(page, 'Đọc sách', '3/30');
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}61.4% vs. ideal`);
+    await expect(headline(page)).toHaveText(`${MINUS}61.4%`);
     await expect(headline(page)).toContainText('61.4');
     await expect(sub(page)).toHaveText(`Today: 3 min. Total 59 min, ideal 153 min (${MINUS}94 min).`);
     await expect(sub(page)).toHaveAttribute('data-variant', 'today');
@@ -295,11 +295,11 @@ test.describe('M9 Goal detail — curve v6 (en)', () => {
 test.describe('M9-AC3 — extreme values at 360 px', () => {
   test.use({ viewport: { width: 360, height: 740 } });
 
-  test('en: R4 → "+2,289.7% ahead of ideal", plain Y labels in minutes (≤ 6 characters), no horizontal scroll', async ({ page }) => {
+  test('en: R4 → "+2,289.7%", plain Y labels in minutes (≤ 6 characters), no horizontal scroll', async ({ page }) => {
     await freezeClock(page, CLOCK_R3);
     await importBackup(page, 'r4-extreme-backup.json');
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText('+2,289.7% ahead of ideal');
+    await expect(headline(page)).toHaveText('+2,289.7%');
     await expect(headline(page)).toHaveAttribute('data-sign', 'positive');
     await expect(sub(page)).toHaveText('Today: 1,440 min. Total 1,441 min, ideal 60 min (+1,381 min).');
     await expect(sub(page)).not.toContainText('×');
@@ -324,11 +324,11 @@ test.describe('M9-AC3 — extreme values at 360 px', () => {
   test.describe('vi', () => {
     test.use({ locale: 'vi-VN' });
 
-    test('vi: R4 → "Vượt lý tưởng +2.289,7%", plain Y labels, no horizontal scroll', async ({ page }) => {
+    test('vi: R4 → "+2.289,7%", plain Y labels, no horizontal scroll', async ({ page }) => {
       await freezeClock(page, CLOCK_R3);
       await importBackup(page, 'r4-extreme-backup.json', VI);
       await gotoHash(page, '/goals/r1');
-      await expect(headline(page)).toHaveText('Vượt lý tưởng +2.289,7%');
+      await expect(headline(page)).toHaveText('+2.289,7%');
       await expect(sub(page)).toContainText('1.441 phút');
       await expect(sub(page)).toContainText('+1.381 phút');
       await expect(sub(page)).not.toContainText('×');
@@ -353,7 +353,7 @@ test.describe('M9-AC5 — Vietnamese Goal detail at 360 px', () => {
     await freezeClock(page);
     await createGoal(page, { name: 'Read', why: 'Be smarter', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' }, VI);
     await page.getByRole('link', { name: 'Read', exact: true }).click();
-    await expect(headline(page)).toHaveText(`${MINUS}100,0% so với lý tưởng`);
+    await expect(headline(page)).toHaveText(`${MINUS}100,0%`);
     await expect(sub(page)).toHaveText(VI.empty.detail.curve);
     await expect(page.getByTestId('curve-summary')).toHaveText('Ngày 9/31: chưa ghi gì. Đường lý tưởng ở mức 281 phút.');
     await expect(chart(page).locator('.recharts-line')).toHaveCount(2);
@@ -366,7 +366,7 @@ test.describe('M9-AC5 — Vietnamese Goal detail at 360 px', () => {
     await freezeClock(page, CLOCK_R1);
     await importBackup(page, 'r1-real-backup.json', VI);
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}54,0% so với lý tưởng`);
+    await expect(headline(page)).toHaveText(`${MINUS}54,0%`);
     await expect(page.getByTestId('headline-day')).toHaveText('Ngày 4/83');
     await expect(sub(page)).toHaveText(`Hôm nay: 27 phút. Tổng 56 phút, lý tưởng 122 phút (${MINUS}66 phút).`);
     for (const part of ['27 phút', '56 phút', '122 phút', `${MINUS}66 phút`]) await expect(sub(page)).toContainText(part);
@@ -405,7 +405,7 @@ test.describe('M9-AC5 — Vietnamese Goal detail at 360 px', () => {
     await freezeClock(page, CLOCK_R3);
     await importBackup(page, 'r3-down-backup.json', VI);
     await gotoHash(page, '/goals/r1');
-    await expect(headline(page)).toHaveText(`${MINUS}86,7% so với lý tưởng`);
+    await expect(headline(page)).toHaveText(`${MINUS}86,7%`);
     await expect(headline(page)).toContainText('86,7');
     await expect(sub(page)).toHaveText(`Hôm nay: 3 phút. Tổng 8 phút, lý tưởng 60 phút (${MINUS}52 phút).`);
     await expect(sub(page)).toContainText('8 phút');
@@ -427,7 +427,7 @@ test.describe('M9-AC5 — Vietnamese Goal detail at 360 px', () => {
     await freezeClock(page);
     await importBackup(page, 'sample-backup.json', VI);
     await gotoHash(page, '/goals/g2');
-    await expect(headline(page)).toHaveText(`${MINUS}73,6% so với lý tưởng`);
+    await expect(headline(page)).toHaveText(`${MINUS}73,6%`);
     await expect(page.getByRole('radio', { name: VI.goal.detail.rangeSoFar })).toBeChecked();
     await expect(chart(page)).toContainText('Bạn 250 phút');
     await page.getByText(VI.goal.detail.showTable).click();
@@ -439,7 +439,7 @@ test.describe('M9-AC5 — Vietnamese Goal detail at 360 px', () => {
     await expectNoHorizontalScroll(page);
     await expectAxeClean(page);
     await gotoHash(page, '/goals/g4');
-    await expect(headline(page)).toHaveText('Vượt lý tưởng +0,0%');
+    await expect(headline(page)).toHaveText('+0,0%');
     await expect(sub(page)).toHaveText('Bắt đầu 01/11/2026. Đường của bạn sẽ xuất hiện khi mục tiêu bắt đầu.');
     await expect(chart(page).locator('.recharts-line')).toHaveCount(1);
     await expect(chart(page).locator('.recharts-reference-dot')).toHaveCount(0);
