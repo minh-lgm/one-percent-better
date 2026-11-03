@@ -17,8 +17,8 @@
   --border-input: #b5ac9a;
   --text: #17160f;
   --text-muted: #6f6a5e;
-  --primary: #bf451f; /* 4.6:1 on --bg (axe text contrast); the pure terracotta #d5532a stays for fills (--heat-3) */
-  --primary-hover: #a63a18;
+  --primary: #ad3d1a; /* >= 4.6:1 on every light surface incl. the glass tab bar (axe); pure terracotta #d5532a stays for fills (--heat-3) */
+  --primary-hover: #8f3114;
   --on-primary: #ffffff;
   --primary-soft: #f6ded3;
   --on-primary-soft: #8a2f12;
@@ -42,7 +42,6 @@
   --chart-ideal: #b5ac9a;
   --chart-actual: var(--primary);
   --chart-bar: var(--heat-2);
-  --chart-zero: var(--text-muted); /* unused since v6.0, kept for the token sheet */
   --scrim: rgba(23, 22, 15, 0.5);
   --shadow-1: none;
   --shadow-2: 0 16px 48px rgba(23, 22, 15, 0.22);
@@ -61,7 +60,6 @@
   --text-xl: 20px;
   --text-2xl: 24px;
   --text-display: 44px;
-  --text-hero: 84px; /* v7: the one big number of a screen */
 
   --sp-1: 4px;
   --sp-2: 8px;

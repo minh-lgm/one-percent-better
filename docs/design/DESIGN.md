@@ -1327,8 +1327,8 @@ Cài đặt: một file `src/ui/styles/tokens.css` khai báo CSS custom properti
 | `--border-input` | `#B5AC9A` | `#6B655A` | gạch chân ô nhập (focus → 2 px `--text`) |
 | `--text` | `#17160F` | `#F3EFE6` | chữ chính, số lớn, nút primary (nền) |
 | `--text-muted` | `#6F6A5E` | `#A39C8E` | chữ phụ, eyebrow |
-| `--primary` | `#BF451F` (cam đất đậm, 4,6:1 trên `--bg` cho chữ) | `#E8663C` (5,6:1) | nhấn: tab đang chọn, link, progress, đường "Bạn", switch bật, ghost button |
-| `--primary-hover` | `#A63A18` | `#F07D56` | hover |
+| `--primary` | `#AD3D1A` (cam đất đậm; ≥ 4,6:1 trên mọi nền sáng kể cả tab bar mờ, axe) | `#E8663C` (5,6:1) | nhấn: tab đang chọn, link, progress, đường "Bạn", switch bật, ghost button |
+| `--primary-hover` | `#8F3114` | `#F07D56` | hover |
 | `--on-primary` | `#FFFFFF` | `#171512` | chữ trên `--primary` |
 | `--primary-soft` / `--on-primary-soft` | `#F6DED3` / `#8A2F12` | `#3A2419` / `#F5B9A3` | chip chuỗi, badge Active, pill "+1%", sidebar đang chọn, ô "kế hoạch +1%" |
 | `--btn-bg` / `--btn-fg` *(mới)* | `#17160F` / `#F6F2EA` | `#F3EFE6` / `#171512` | nút primary là **mực**, không phải cam |
@@ -1387,7 +1387,7 @@ Quy tắc dùng màu: amber (`--plus-*`) **chỉ** dành cho pill "+1%" (giữ n
 
 ### 6.2 Typography
 
-**v7.0:** hai font tự host (cùng origin, vẫn đạt NFR-01 "0 request tới origin khác"), nạp qua `@fontsource/manrope` + `@fontsource/fraunces`, chỉ subset `latin` + `vietnamese`, `font-display: swap`: `--font: "Manrope", system-ui, …` (400/500/600/700) cho mọi chữ; `--font-display: "Fraunces", Georgia, serif` (400, 400 italic, 600) cho h1, số lớn (`.goal .amount`, `.hl`, `.timer .clock`, giá trị StatCard, số phút trong bảng/lịch sử), câu "why" và tóm tắt Today (italic). Tổng 14 file woff2 ≈ 150 kB, nằm ngoài ngân sách JS 230 kB (NFR-03 đo script). Thang chữ v7 (trong `v7.css`): h1 36/40 (44/48 ≥ 640, 48/52 ≥ 1024) Fraunces 400; eyebrow 12/16 Manrope 600, tracking 0.1em, chữ hoa — dùng cho mọi tiêu đề nhóm/section/cột bảng/nhãn field; tên goal 22/28 Fraunces 400; số hero Today 72/72 (88/84 ≥ 640) Fraunces 600, số goal khác 44/48; headline S4 40/46 (56/62 ≥ 640) Fraunces 600; giá trị StatCard 26/30 Fraunces 400; input 17 px Manrope, input số/ngày 24 px Fraunces.
+**v7.0:** hai font tự host (cùng origin, vẫn đạt NFR-01 "0 request tới origin khác"), nạp qua `@fontsource/manrope` + `@fontsource/fraunces`, chỉ subset `latin` + `vietnamese`, `font-display: swap`: `--font: "Manrope", system-ui, …` (chỉ 400/600; 500/700 do trình duyệt tổng hợp — tiết kiệm ngân sách bundle) cho mọi chữ; `--font-display: "Fraunces", Georgia, serif` (400, 600; italic do trình duyệt nghiêng tổng hợp) cho h1, số lớn (`.goal .amount`, `.hl`, `.timer .clock`, giá trị StatCard, số phút trong bảng/lịch sử), câu "why" và tóm tắt Today (italic). Tổng 8 file woff2 ≈ 100 kB, nằm ngoài ngân sách JS 230 kB (NFR-03 đo script). Thang chữ v7 (trong `v7.css`): h1 36/40 (44/48 ≥ 640, 48/52 ≥ 1024) Fraunces 400; eyebrow 12/16 Manrope 600, tracking 0.1em, chữ hoa — dùng cho mọi tiêu đề nhóm/section/cột bảng/nhãn field; tên goal 22/28 Fraunces 400; số hero Today 72/72 (88/84 ≥ 640) Fraunces 600, số goal khác 44/48; headline S4 40/46 (56/62 ≥ 640) Fraunces 600; giá trị StatCard 26/30 Fraunces 400; input 17 px Manrope, input số/ngày 24 px Fraunces.
 
 ~~Font hệ thống (NFR-01: không font ngoài)~~ *(v1 → v6.2)*: `--font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`. Số dùng `font-variant-numeric: tabular-nums` (timer, tiến độ, stat, bảng).
 

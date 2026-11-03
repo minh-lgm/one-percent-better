@@ -40,7 +40,6 @@ h1 {
 .field label,
 legend.legend,
 fieldset > legend,
-.legend-title,
 .sw-text label,
 .dialog .field label {
   font: 600 var(--text-xs) / 16px var(--font);
@@ -80,16 +79,6 @@ fieldset > legend,
   line-height: 25px;
   color: var(--text-muted);
 }
-.num,
-.hl,
-.stat .value,
-.goal .amount,
-.timer .clock,
-.date-title,
-.hist td.min,
-.entries .em {
-  font-variant-numeric: tabular-nums lining-nums;
-}
 .page-head {
   margin-bottom: 16px;
   align-items: flex-end;
@@ -115,17 +104,6 @@ fieldset > legend,
 }
 
 /* ---- Surfaces: flat sections, hairlines instead of borders ---- */
-.card {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 20px 0 22px;
-  border-bottom: 1px solid var(--border);
-}
-.card:last-child {
-  border-bottom: 0;
-}
 .stack > * + * {
   margin-top: 0;
 }
@@ -143,10 +121,6 @@ form.card,
   background: transparent;
   margin-bottom: 0;
 }
-.goal.met {
-  background: transparent;
-  border-color: var(--border);
-}
 .card.stat {
   border-bottom: 0;
   padding: 0;
@@ -156,12 +130,6 @@ form.card,
   border: 0;
   border-radius: 0;
   padding: 24px 0 8px;
-}
-.banner,
-.limit,
-.hint-box,
-.alert {
-  border-radius: var(--r-lg);
 }
 .banner.neutral {
   background: var(--surface-2);
@@ -173,11 +141,6 @@ form.card,
   border-radius: var(--r-full);
   padding: 11px 20px;
   font: 600 15px / 20px var(--font);
-}
-.btn.primary {
-  background: var(--btn-bg);
-  color: var(--btn-fg);
-  box-shadow: none;
 }
 .btn.primary:hover {
   background: color-mix(in srgb, var(--btn-bg) 85%, var(--primary));
@@ -199,11 +162,6 @@ form.card,
 }
 .btn.danger-ghost {
   color: var(--danger);
-}
-.icon-btn {
-  border: 1px solid var(--border);
-  width: 40px;
-  height: 40px;
 }
 .chip,
 .badge {
@@ -229,17 +187,9 @@ form.card,
   background: var(--primary-soft);
   color: var(--on-primary-soft);
 }
-.offline-chip {
-  border: 0;
-  background: var(--surface-2);
-}
 .progress {
   height: 6px;
   background: var(--border);
-  box-shadow: none;
-}
-.progress > span {
-  background: var(--primary);
 }
 
 /* ---- Tab bar / sidebar ---- */
@@ -257,10 +207,7 @@ form.card,
 }
 .nav .item[aria-current='page'] {
   color: var(--primary);
-  font-weight: 700;
-}
-.nav .item[aria-current='page'] .ic {
-  background: none;
+  font-weight: 600;
 }
 @media (min-width: 1024px) {
   .nav {
@@ -335,19 +282,6 @@ textarea.input {
 .hint {
   margin-top: 8px;
 }
-/* The "that's N min over D days" line becomes a tinted plan box (DESIGN S3 v7). */
-.plan-hint,
-.field .hint.plan {
-  padding: 14px 16px;
-  border-radius: var(--r-lg);
-  background: var(--primary-soft);
-  color: var(--text);
-}
-.seg {
-  background: var(--surface-2);
-  box-shadow: none;
-  padding: 3px;
-}
 .seg span {
   font-weight: 600;
 }
@@ -420,10 +354,6 @@ input.switch:checked::after {
 .entries .em {
   font: 400 20px / 26px var(--font-display);
 }
-.past-day a {
-  color: var(--primary);
-  font-weight: 600;
-}
 
 /* ---- Goals ---- */
 .group + .group {
@@ -455,9 +385,6 @@ input.switch:checked::after {
     font-size: 56px;
     line-height: 62px;
   }
-}
-.hl.hl-down {
-  color: var(--text);
 }
 .hl-day {
   font-weight: 600;
@@ -505,37 +432,17 @@ input.switch:checked::after {
 .line-ideal {
   stroke: var(--chart-ideal);
 }
-.line-you {
-  stroke: var(--primary);
-}
-.curve-summary {
-  font-weight: 500;
-}
-details.curve-table summary {
-  color: var(--primary);
-}
 .hist td {
   font-size: 15px;
 }
-.hist td.min,
 .hist td:nth-child(2) {
   font: 400 20px / 26px var(--font-display);
-}
-.chart-tip,
-.hm-tip {
-  background: var(--text);
-  color: var(--bg);
-  border-radius: var(--r-md);
 }
 
 /* ---- Day ---- */
 .date-title {
   font: 400 34px / 38px var(--font-display);
   margin: 20px 0 6px;
-}
-.datenav .icon-btn,
-.datenav .btn.secondary {
-  border-radius: var(--r-full);
 }
 
 /* ---- Review ---- */
@@ -545,15 +452,6 @@ details.curve-table summary {
 }
 .cell {
   border-radius: 4px;
-  box-shadow: none;
-}
-.cell.today {
-  box-shadow:
-    0 0 0 1px var(--bg),
-    0 0 0 2px var(--text);
-}
-.hm-legend .sw {
-  border-radius: 3px;
   box-shadow: none;
 }
 
@@ -577,10 +475,6 @@ details.curve-table summary {
 }
 
 /* ---- Empty / error / dialog / toast ---- */
-.empty .ic {
-  background: var(--primary-soft);
-  color: var(--on-primary-soft);
-}
 .dialog,
 .sheet {
   background: var(--surface-raised);
@@ -588,7 +482,4 @@ details.curve-table summary {
 .dialog {
   border-radius: var(--r-xl);
   border: 1px solid var(--border);
-}
-.skeleton {
-  background: var(--surface-2);
 }
