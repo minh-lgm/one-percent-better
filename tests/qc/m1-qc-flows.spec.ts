@@ -287,8 +287,9 @@ test.describe('M1 QC vi-VN', () => {
     await page.getByLabel(new RegExp(`^${vi.goal.form.startLabel}`)).fill('2026-10-01');
     await page.getByRole('radio', { name: vi.goal.form.endsSpecific }).check();
     await page.getByLabel(new RegExp(`^${vi.goal.form.endLabel}`)).fill('2026-10-31');
-    await expect(page.locator('.hint').first()).toContainText('930');
-    await expect(page.locator('.hint').first()).toContainText('15,5');
+    // v6.1 (ADR-47): the hint shows the +1 %-a-day plan total, 30 × (1.01^31 − 1)/0.01 = 1.084 phút (18,1 giờ), not 30 × 31.
+    await expect(page.locator('.hint').first()).toContainText('1.084');
+    await expect(page.locator('.hint').first()).toContainText('18,1');
     await page.getByRole('button', { name: vi.goal.form.save }).click();
     await expect(page.getByTestId('goal-row')).toContainText('01/10/2026 – 31/10/2026');
     expect(await viScan(page)).toEqual([]);

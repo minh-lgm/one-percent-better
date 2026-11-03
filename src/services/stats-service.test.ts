@@ -10,6 +10,7 @@ import type { Goal, LogEntry } from '../domain/types';
 import { buildEntry, buildGoal, datasetO1, datasetS1, datasetS1O1, TODAY } from '../test/builders';
 import { OPEN_END_QUERY_MAX } from '../config/constants';
 import { addDays } from '../domain/dates';
+import { PLAN_MAX } from '../domain/plan';
 import { availableYears, goalsDateRange, StatsService, type StatsData } from './stats-service';
 
 let db: AppDatabase;
@@ -171,9 +172,10 @@ describe('NFR-03 benchmark (M4-AC9) — large-backup.json', () => {
       points = c.ideal.length;
       expect(c.actual).toHaveLength(3650);
       expect(s.elapsedDays).toBe(3650);
-      // v6.1 (ADR-47): the +1 % plan over 3,650 days — 10 × (1.01^3650 − 1) / 0.01 ≈ 5.93e18 (finite; was 36,500 = 10 × 3650).
-      expect(Number.isFinite(s.totalTarget)).toBe(true);
-      expect(s.totalTarget / 1e18).toBeCloseTo(5.9294, 3);
+      // v6.1 (ADR-47): the +1 % plan over 3,650 days — 10 × (1.01^3650 − 1) / 0.01 ≈ 5.93e18, above Number.MAX_SAFE_INTEGER,
+      // so the plan saturates at PLAN_MAX (overflow fix 2026-11-03; was 36,500 = 10 × 3650 before v6.1).
+      expect(Number.isSafeInteger(s.totalTarget)).toBe(true);
+      expect(s.totalTarget).toBe(PLAN_MAX);
       expect(s.expectedMinutes).toBe(s.totalTarget);
       expect(s.progressPercent).toBe(0);
     }

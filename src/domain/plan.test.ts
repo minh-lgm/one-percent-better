@@ -2,7 +2,7 @@
 // by the curve (ideal line) and the stats. v6.1 (ADR-47): expected/total follow the +1 % plan, so
 // `planStart` of a total goal is scaled to make the plan add up to exactly the total.
 import { describe, expect, it } from 'vitest';
-import { cumulativeTarget, DAILY_GROWTH, dayTarget, GROWTH_RATE, growth, growthPercent, planStart } from './plan';
+import { cumulativeTarget, DAILY_GROWTH, dayTarget, GROWTH_RATE, growth, growthPercent, PLAN_MAX, planStart } from './plan';
 
 describe('plan — growth', () => {
   it('constants: 1 % a day', () => {
@@ -119,5 +119,22 @@ describe('plan — planStart (v6.1, ADR-47)', () => {
       expect(start).toBeLessThanOrEqual(total / days + 1e-9); // never above the flat average
       expect(dayTarget(start, days)).toBeGreaterThanOrEqual(total / days - 1e-9); // the last day is at or above it
     }
+  });
+});
+
+describe('overflow (A-49 / M11-D1): the plan saturates at PLAN_MAX instead of printing Infinity / NaN', () => {
+  it('1.01^k overflows after ~71,000 days; cumulativeTarget / dayTarget stay finite and monotone', () => {
+    expect(growth(100_000)).toBe(Infinity);
+    expect(cumulativeTarget(10, 100_000)).toBe(PLAN_MAX);
+    expect(dayTarget(10, 100_000)).toBe(PLAN_MAX);
+    expect(Number.isSafeInteger(cumulativeTarget(10, 100_000))).toBe(true);
+    // A goal mistyped to start on 1800-01-01 (≈ 82,800 days): finite everywhere.
+    expect(Number.isFinite(cumulativeTarget(10, 82_800))).toBe(true);
+    expect(cumulativeTarget(10, 82_800)).toBe(PLAN_MAX);
+    // Below the ceiling nothing changes.
+    expect(cumulativeTarget(10, 1828)).toBeCloseTo(79_336_177_009.8, 0);
+    expect(cumulativeTarget(10, 1828)).toBeLessThan(PLAN_MAX);
+    expect(cumulativeTarget(10, 70_000)).toBeLessThanOrEqual(PLAN_MAX);
+    expect(cumulativeTarget(10, 70_001)).toBeGreaterThanOrEqual(cumulativeTarget(10, 70_000));
   });
 });

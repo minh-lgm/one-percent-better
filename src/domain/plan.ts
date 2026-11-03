@@ -9,6 +9,17 @@
 
 export const GROWTH_RATE = 0.01;
 export const DAILY_GROWTH = 1 + GROWTH_RATE;
+/**
+ * Ceiling of every planned amount (minutes). 1.01^k overflows to Infinity after ≈ 71,000 days (an
+ * open-ended goal mistyped to start before ~1830, A-49 / M11-D1); every screen must still print a finite
+ * number, so the plan saturates at the largest exact integer instead (v6.1 fix, 2026-11-03).
+ */
+export const PLAN_MAX = Number.MAX_SAFE_INTEGER;
+
+/** `Math.min(x, PLAN_MAX)`, with Infinity/NaN (overflow) mapped to `PLAN_MAX`. */
+function clamp(x: number): number {
+  return Number.isFinite(x) ? Math.min(x, PLAN_MAX) : PLAN_MAX;
+}
 
 export function growth(days: number): number {
   return Math.pow(DAILY_GROWTH, days);
@@ -19,15 +30,15 @@ export function growthPercent(factor: number): number {
   return Math.round((factor - 1) * 1000) / 10;
 }
 
-/** target(k) = T₀ × 1.01^(k−1). */
+/** target(k) = T₀ × 1.01^(k−1), saturating at `PLAN_MAX`. */
 export function dayTarget(start: number, k: number): number {
-  return start * growth(k - 1);
+  return clamp(start * growth(k - 1));
 }
 
-/** cumulative(k) = T₀ × (1.01^k − 1) / 0.01; 0 for k ≤ 0. */
+/** cumulative(k) = T₀ × (1.01^k − 1) / 0.01; 0 for k ≤ 0; saturating at `PLAN_MAX` (never Infinity/NaN). */
 export function cumulativeTarget(start: number, k: number): number {
   if (k <= 0) return 0;
-  return (start * (growth(k) - 1)) / GROWTH_RATE;
+  return clamp((start * (growth(k) - 1)) / GROWTH_RATE);
 }
 
 /**
