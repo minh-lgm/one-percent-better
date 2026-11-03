@@ -411,8 +411,7 @@ h2 {
   border-radius: var(--r-full);
   background: var(--primary-soft);
   color: var(--on-primary-soft);
-  border: 1px solid transparent;
-  font-size: var(--text-sm);
+  font-size: 13px;
   line-height: 20px;
   font-weight: 600;
 }
@@ -457,8 +456,7 @@ h2 {
   border-radius: var(--r-full);
   background: var(--plus-bg);
   color: var(--plus-text);
-  border: 1px solid var(--plus-border);
-  font-weight: 700;
+  font-weight: 600;
   font-size: var(--text-sm);
   line-height: 20px;
 }
@@ -524,15 +522,11 @@ select.input {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 40px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235a625d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  /* v7: one mid-grey chevron (#8c8a82) readable on both the cream and the dark page. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238c8a82' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 18px 18px;
-}
-@media (prefers-color-scheme: dark) {
-  select.input {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3aca5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  }
 }
 .input[aria-invalid='true'] {
   border-color: var(--danger);

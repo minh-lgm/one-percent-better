@@ -1749,6 +1749,7 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | Key | MS | Ngữ cảnh | `en` | `vi` |
 | :- | :- | :- | :- | :- |
 | `today.title` | M1 | h1 | `Today` | `Hôm nay` |
+| `today.tagline` | v7.1 *(mới)* | câu nghiêng Fraunces dưới h1 (`.tagline`) | `One percent better than yesterday is enough.` | `Thêm 1% so với hôm qua là đủ.` |
 | `today.summary_one` | M1 | tóm tắt khi có đúng 1 goal | `{{n}} of 1 goal on target` | — |
 | `today.summary_other` | M1 | `{{n}}` = số goal đạt, `{{count}}` = tổng | `{{n}} of {{count}} goals on target` | `Đã đạt {{n}}/{{count}} mục tiêu` |
 | `today.allOnTarget_one` | M1 | mọi goal đạt, 1 goal | `Goal on target — a little better than yesterday.` | — |
@@ -1809,6 +1810,7 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `goals.startsOn` | M1 | dòng phụ goal upcoming | `Starts {{date}}` | `Bắt đầu {{date}}` |
 | `goals.endedOn` | M1 | dòng phụ goal ended | `Ended {{date}}` | `Đã kết thúc {{date}}` |
 | `goals.rowDaily` | M1 | `{{range}}` = `format.dateRange` | `{{n}} min/day · {{range}}` | `{{n}} phút/ngày · {{range}}` |
+| `goals.rowVsIdeal` | v7.1 *(mới)* | nhãn nhỏ dưới số `% so với lý tưởng` của mỗi goal đã bắt đầu (`.goal-pct`, `data-testid="goal-row-pct"`; cùng `headlinePercent` với Goal detail) | `vs. ideal` | `so với lý tưởng` |
 | `goals.rowTotal` | M1 | | `{{daily}} min/day ({{hours}} h total) · {{range}}` | `{{daily}} phút/ngày (tổng {{hours}} giờ) · {{range}}` |
 | `goals.rowDailyOpen` | M11 *(mới v4.0)* | hàng goal `daily` không thời hạn, ở Goals **và** dòng khoảng thời gian đầu trang Goal detail; `{{n}}` = `f.number(targetMinutes)`, `{{start}}` = `f.dateShort(startDate)` (`en` `2026-10-01`, `vi` `01/10/2026`). Dùng cho mọi trạng thái (Active/Upcoming/Archived); **không bao giờ** đi cùng `goals.endedOn` | `{{n}} min/day · from {{start}}, no end date` | `{{n}} phút/ngày · từ {{start}}, không có thời hạn` |
 | `goals.archive` | M5 | nút | `Archive` | `Lưu trữ` |
@@ -1839,7 +1841,7 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 | `goal.form.targetLegend` | M1 | legend | `Target` | `Chỉ tiêu` |
 | `goal.form.targetDaily` | M1 | lựa chọn + label field số | `Minutes per day` | `Phút mỗi ngày` |
 | `goal.form.targetTotal` | M1 | lựa chọn + label field số | `Total hours` | `Tổng số giờ` |
-| `goal.form.hintDaily` | M1 *(v6.1: `{{total}}` = `round(cumulativeTarget(v, days))`, kế hoạch +1 %/ngày, không còn `v × days`)* | hint; `{{days}}` = `format.daysCount` | `That's {{total}} min ({{hours}} h) over {{days}}.` | `Tổng cộng {{total}} phút ({{hours}} giờ) trong {{days}}.` |
+| `goal.form.hintDaily` | v7.1 *(sửa chữ; v6.1: `{{total}}` = `round(cumulativeTarget(v, days))`)* | hint dưới field Minutes per day: `{{first}}` = v, `{{last}}` = `round(dayTarget(v, days))`, `{{days}}` = `format.daysCount` | `+1% plan: {{first}} min on day 1, {{last}} min on the last day, {{total}} min ({{hours}} h) over {{days}}.` | `Kế hoạch +1%: ngày đầu {{first}} phút, ngày cuối {{last}} phút, tổng {{total}} phút ({{hours}} giờ) trong {{days}}.` |
 | `goal.form.hintTotal` | M1 | hint | `That's about {{daily}} min per day over {{days}}.` | `Khoảng {{daily}} phút mỗi ngày trong {{days}}.` |
 | `goal.form.startLabel` | M1 | label | `Start date` | `Ngày bắt đầu` |
 | `goal.form.startHint` | M1 | chế độ sửa, goal đã có entry | `Your entries run from {{first}} to {{last}}, so the period must include those dates.` | `Các lần ghi của bạn kéo dài từ {{first}} đến {{last}}, nên khoảng thời gian phải bao gồm các ngày đó.` |
@@ -1858,9 +1860,9 @@ Mọi bảng dưới có cùng cột như 7.2. Dòng `_one` có `vi` = `—` (kh
 
 | Key | MS | Ngữ cảnh | `en` | `vi` |
 | :- | :- | :- | :- | :- |
-| `goal.detail.eyebrow` | M5 | nhãn nhỏ trên headline | `Your 1% curve` | `Đường cong 1% của bạn` |
-| `goal.detail.headline` | v6.0 *(sửa chữ)* | headline khi `headlinePercent` ≥ 0 (kể cả `+0.0`, upcoming); `{{value}}` = % **có dấu** (7.1, `f.signed1`), vd. `+24.4`; màu `--primary` | `{{value}}% ahead of ideal` | `Vượt lý tưởng {{value}}%` |
-| `goal.detail.headlineDown` | v6.0 *(sửa chữ)* | headline khi `headlinePercent` < 0 (kể cả `−100.0` khi chưa ghi); `{{value}}` = % có dấu, vd. `−54.0`; màu `--text` (không đỏ) | `{{value}}% vs. ideal` | `{{value}}% so với lý tưởng` |
+| `goal.detail.eyebrow` | v7.1 *(sửa chữ)* | eyebrow trên headline: nói headline so với gì (v7.1 tách chữ khỏi số) | `Vs. the ideal line` | `So với đường lý tưởng` |
+| `goal.detail.headline` | v7.1 *(sửa chữ: chỉ còn số)* | headline khi `headlinePercent` ≥ 0 (kể cả `+0.0`, upcoming); `{{value}}` = % **có dấu** (7.1, `f.signed1`), vd. `+24.4`; màu `--text`, Fraunces 72/88 px | `{{value}}%` | `{{value}}%` |
+| `goal.detail.headlineDown` | v7.1 *(sửa chữ: chỉ còn số)* | headline khi `headlinePercent` < 0 (kể cả `−100.0` khi chưa ghi); `{{value}}` = % có dấu, vd. `−54.0`; cùng kiểu với `headline` (dấu đã nói lên hướng) | `{{value}}%` | `{{value}}%` |
 | `goal.detail.subDay` | M9 *(mới)* | phụ đề dòng 1 (mọi trạng thái trừ upcoming); `{{k}}` = `elapsedDays`, `{{total}}` = `periodDays` | `Day {{k}} of {{total}}` | `Ngày {{k}}/{{total}}` |
 | `goal.detail.subDayOpen` | M11 *(mới v4.0)* | như `subDay` nhưng cho goal **không thời hạn** (không có tổng); `{{k}}` = `elapsedDays` (đã qua `f.number`, vd. `9`, `1,828`) | `Day {{k}}` | `Ngày {{k}}` |
 | `goal.detail.subToday` | v6.0 *(sửa chữ)* | phụ đề dòng 2: `latest.date` = hôm nay (kể cả khi chỉ có một ngày có ghi). `{{minutes}}` = `format.minutes(latest.minutes)`; `{{total}}` = `format.minutes(totalMinutes)`; `{{ideal}}` = `format.minutes(idealMinutes)` (làm tròn phút); `{{gap}}` = `f.signedMinutes(gapMinutes)` (vd. `−66 min`) | `Today: {{minutes}}. Total {{total}}, ideal {{ideal}} ({{gap}}).` | `Hôm nay: {{minutes}}. Tổng {{total}}, lý tưởng {{ideal}} ({{gap}}).` |
@@ -2854,6 +2856,7 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 
 ## Changelog
 
+- 2026-11-03 — **v7.1** (mode `revise`, 4 chi tiết còn lại của mockup Figma hướng A, đóng OQ-D31 phần copy): `today.tagline` (mới), `goals.rowVsIdeal` (mới, Goals hiện `% so với lý tưởng` mỗi goal đã bắt đầu), `goal.form.hintDaily` nêu ngày đầu / ngày cuối / tổng, `goal.detail.eyebrow` = "So với đường lý tưởng" và `headline`/`headlineDown` chỉ còn `{{value}}%` (số Fraunces 72/88 px). Test/QC/e2e đổi assertion theo. Splash iOS và mockup HTML/Figma "Mobile 360" vẫn v6.x.
 - 2026-11-03 — **v7.0** (mode `revise`, **redesign hướng A "Tối giản, chữ lớn"** — user chọn A giữa hai hướng vẽ trên Figma page "Redesign v7 — review" (frames A1–A7 sáng + A1/A2 tối) rồi duyệt code; nhánh `feat/ui-redesign-v7`). Chỉ lớp hình ảnh: `tokens.css` đổi giá trị (§6.1 v7), file mới `src/ui/styles/v7.css` ghi đè `app.css`, font tự host Fraunces + Manrope (§6.2 v7), `index.html`/manifest `theme-color` mới. **Không đổi key copy, route, test id, ARIA, API component**; vitest/QC/e2e giữ nguyên assertion. Hình thức: section phẳng tách hairline (`.card` hết viền/bóng), nút pill (primary = mực), ô nhập gạch chân với nhãn eyebrow, segment pill, tab bar phẳng với mục đang chọn màu cam đất, sidebar desktop pill, số lớn Fraunces (hero Today 72–88 px, headline S4 40–56 px, StatCard 26 px), hàng stat 3 cột có hairline trên/dưới, heatmap ô bo 4 px không viền. Chưa làm so với mockup Figma (OQ-D31): "% so với lý tưởng" trên hàng Goals, tagline italic dưới "Hôm nay", form "Kế hoạch +1%" nêu ngày 1/ngày cuối, headline tách số khỏi chữ (cần đổi key copy), mockup HTML + Figma "Mobile 360" + splash iOS vẫn v6.x.
 - 2026-11-03 — **v6.2** (mode `revise`, **UI revamp — chỉ lớp hình ảnh**, theo skill `ui-ux-pro-max`: a11y → touch → style → typography; nhánh `feat/ui-revamp-v6.2`). **Không key mới, không key nào đổi chữ, không đổi route/`data-testid`/ARIA/API component**; mọi màn giữ bố cục, chỉ đổi token + CSS + 2 chi tiết markup (dưới).
   - **§6 token**: thêm `--surface-tint`, `--surface-glass`, `--r-xl`, `--ease`; đổi `--border` sáng `#E3DFD5` (nhẹ hơn) và `--shadow-1` hai lớp. Không đổi `--bg`/`--surface`/`--primary`/… (meta `theme-color`, launch screen, QC brand giữ nguyên).

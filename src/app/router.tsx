@@ -3,7 +3,6 @@ import { createHashRouter, createMemoryRouter, Navigate, type RouteObject } from
 import { AppShell } from '../ui/components/AppShell';
 import { Day } from '../ui/screens/Day';
 import { GoalForm } from '../ui/screens/GoalForm';
-import { Goals } from '../ui/screens/Goals';
 import { NotFound } from '../ui/screens/NotFound';
 import { Today } from '../ui/screens/Today';
 import { ViewError } from '../ui/screens/ViewError';
@@ -17,7 +16,7 @@ export interface RouteOptions {
   Settings?: ComponentType;
 }
 
-/** Routes (ARCHITECTURE §5.1). Review, Goal detail and (M14) Settings are lazy-loaded (ADR-10, ADR-27). */
+/** Routes (ARCHITECTURE §5.1). Review, Goal detail, (M14) Settings and (v7.1) Goals are lazy-loaded (ADR-10, ADR-27). */
 export function buildRoutes({ Settings }: RouteOptions = {}): RouteObject[] {
   return [
     {
@@ -28,7 +27,16 @@ export function buildRoutes({ Settings }: RouteOptions = {}): RouteObject[] {
       children: [
         { index: true, element: <Navigate to="/today" replace /> },
         { path: 'today', element: <Today /> },
-        { path: 'goals', element: <Goals /> },
+        {
+          // v7.1: Goals computes each goal's "% vs. ideal" (plan + entries); keeping it off Today's cold-load path
+          // holds the 230 kB budget (NFR-03) now that two typefaces ship with the app.
+          path: 'goals',
+          lazy: async () => {
+            const { Goals } = await import('../ui/screens/Goals');
+            return { Component: Goals };
+          },
+          errorElement: <ViewError />,
+        },
         { path: 'goals/new', element: <GoalForm /> },
         { path: 'goals/:id/edit', element: <GoalForm /> },
         {

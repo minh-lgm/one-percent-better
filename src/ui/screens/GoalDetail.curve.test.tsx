@@ -57,11 +57,11 @@ async function openTable(user: ReturnType<typeof userEvent.setup>, copy: typeof 
 const cellsOf = (row: HTMLElement) => within(row).getAllByRole('cell').map((c) => norm(c.textContent));
 
 describe('Goal detail — burn-up with R1, the user\'s real data (v6.0)', () => {
-  it('R1 at 2026-10-13: "−54.0% vs. ideal", Day 4 of 83, "Today: 27 min. Total 56 min, ideal 122 min (−66 min).", summary, 2 legend items, Whole period, Progress 1.5 % of 3,852 (v6.1 ADR-47), 66 min behind, streak 0', async () => {
+  it('R1 at 2026-10-13: "−54.0%", Day 4 of 83, "Today: 27 min. Total 56 min, ideal 122 min (−66 min).", summary, 2 legend items, Whole period, Progress 1.5 % of 3,852 (v6.1 ADR-47), 66 min behind, streak 0', async () => {
     await withR1();
     await renderApp({ route: '/goals/r1', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: 'Đọc sách' })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}54.0% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}54.0%`), SLOW);
     expect(screen.getByTestId('headline')).toHaveAttribute('data-sign', 'negative');
     expect(screen.getByTestId('headline')).toHaveClass('hl-down');
     expect(screen.getByTestId('headline-day')).toHaveTextContent('Day 4 of 83');
@@ -90,7 +90,7 @@ describe('Goal detail — burn-up with R1, the user\'s real data (v6.0)', () => 
     const user = userEvent.setup();
     await withR1();
     await renderApp({ route: '/goals/r1', container: tc });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}54.0% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}54.0%`), SLOW);
     expect(screen.queryByTestId('curve-table')).toBeNull();
     const table = await openTable(user, en);
     expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual([en.goal.detail.tableDate, en.goal.detail.tableIdeal, en.goal.detail.tableYou, en.goal.detail.tableMinutes, en.goal.detail.tableChange]);
@@ -114,14 +114,14 @@ describe('Goal detail — burn-up with R1, the user\'s real data (v6.0)', () => 
   it('R1 on 2026-10-14 without a new entry: −63.4%, "Last logged Oct 13: …" with the gap grown to −97; then 3 minutes today → −61.4% and "Today: 3 min. …" (A-39)', async () => {
     await withR1('en', new Date('2026-10-14T10:00:00+07:00'));
     await renderApp({ route: '/goals/r1', container: tc });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}63.4% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}63.4%`), SLOW);
     expect(screen.getByTestId('headline-day')).toHaveTextContent('Day 5 of 83');
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe(`Last logged Oct 13: 27 min. Total 56 min, ideal 153 min (${MINUS}97 min).`);
     expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'earlier');
     expect(screen.getByTestId('curve-summary')).toHaveTextContent('Day 5 of 83: you have logged 56 min in total. The ideal line is at 153 min.');
 
     await tc!.container.entryService.add({ goalId: 'r1', date: '2026-10-14', minutes: 3, note: '', source: 'manual' }, new Date('2026-10-14T10:00:00+07:00'));
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}61.4% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}61.4%`), SLOW);
     expect(screen.getByTestId('headline')).toHaveAttribute('data-sign', 'negative');
     expect(screen.getByTestId('headline')).toHaveClass('hl-down');
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe(`Today: 3 min. Total 59 min, ideal 153 min (${MINUS}94 min).`);
@@ -133,7 +133,7 @@ describe('Goal detail — burn-up with R1, the user\'s real data (v6.0)', () => 
     const r1 = datasetR1();
     await withR1('en', FIXED_NOW_R1, { goals: r1.goals, entries: r1.entries.slice(0, 1) });
     await renderApp({ route: '/goals/r1', container: tc });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}95.9% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}95.9%`), SLOW);
     expect(screen.getByTestId('headline-day')).toHaveTextContent('Day 4 of 83');
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe(`Last logged Oct 10: 5 min. Total 5 min, ideal 122 min (${MINUS}117 min).`);
     expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'earlier');
@@ -141,20 +141,20 @@ describe('Goal detail — burn-up with R1, the user\'s real data (v6.0)', () => 
     expect(screen.getByTestId('curve-summary')).toHaveTextContent('Day 4 of 83: you have logged 5 min in total. The ideal line is at 122 min.');
   });
 
-  it('R3 (5 → 3 minutes, 2026-10-11): "−86.7% vs. ideal", "Today: 3 min. Total 8 min, ideal 60 min (−52 min)."', async () => {
+  it('R3 (5 → 3 minutes, 2026-10-11): "−86.7%", "Today: 3 min. Total 8 min, ideal 60 min (−52 min)."', async () => {
     await withR1('en', new Date('2026-10-11T10:00:00+07:00'), datasetR3());
     await renderApp({ route: '/goals/r1', container: tc });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}86.7% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}86.7%`), SLOW);
     expect(screen.getByTestId('headline')).toHaveClass('hl-down');
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe(`Today: 3 min. Total 8 min, ideal 60 min (${MINUS}52 min).`);
   });
 
-  it('ahead of the line (R1 with a 1-minute target): "+1,279.2% ahead of ideal" in the primary colour, gap "+52 min", table gap "+52"', async () => {
+  it('ahead of the line (R1 with a 1-minute target): "+1,279.2%" in the primary colour, gap "+52 min", table gap "+52"', async () => {
     const user = userEvent.setup();
     const r1 = datasetR1();
     await withR1('en', FIXED_NOW_R1, { goals: [{ ...r1.goals[0], targetMinutes: 1 }], entries: r1.entries });
     await renderApp({ route: '/goals/r1', container: tc });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+1,279.2% ahead of ideal'), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+1,279.2%'), SLOW);
     expect(screen.getByTestId('headline')).toHaveAttribute('data-sign', 'positive');
     expect(screen.getByTestId('headline')).not.toHaveClass('hl-down');
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe('Today: 27 min. Total 56 min, ideal 4 min (+52 min).');
@@ -167,14 +167,14 @@ describe('Goal detail — burn-up with R1, the user\'s real data (v6.0)', () => 
 });
 
 describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest, M5-AC4; v6.0 copy)', () => {
-  it('Read (S1): "−14.6% vs. ideal", Day 9 of 31, "Last logged Oct 8: 30 min. Total 240 min, ideal 281 min (−41 min).", stats 22.1 % / 41 min behind (v6.1 ADR-47) / 8 days, 8 history rows', async () => {
+  it('Read (S1): "−14.6%", Day 9 of 31, "Last logged Oct 8: 30 min. Total 240 min, ideal 281 min (−41 min).", stats 22.1 % / 41 min behind (v6.1 ADR-47) / 8 days, 8 history rows', async () => {
     await withS1();
     await renderApp({ route: '/goals/g1', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: 'Read' })).toBeInTheDocument();
     expect(screen.getByText('Be smarter')).toBeInTheDocument();
     expect(screen.getByText('30 min/day · 2026-10-01 – 2026-10-31')).toBeInTheDocument();
     expect(screen.getByText(en.goal.status.active)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}14.6% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}14.6%`), SLOW);
     expect(screen.getByText(en.goal.detail.eyebrow)).toBeInTheDocument();
     expect(screen.getByTestId('headline-day')).toHaveTextContent('Day 9 of 31');
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe(`Last logged Oct 8: 30 min. Total 240 min, ideal 281 min (${MINUS}41 min).`);
@@ -203,7 +203,7 @@ describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest
     const user = userEvent.setup();
     await withS1();
     const app = await renderApp({ route: '/goals/g1', container: tc });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}14.6% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}14.6%`), SLOW);
     let table = await openTable(user, en);
     let rows = within(table).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(31);
@@ -218,7 +218,7 @@ describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest
 
     await renderApp({ route: '/goals/g2', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Guitar' });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}73.6% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}73.6%`), SLOW);
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe(`Last logged Oct 8: 20 min. Total 250 min, ideal 948 min (${MINUS}698 min).`);
     await waitFor(() => expect(screen.getByRole('radio', { name: en.goal.detail.rangeSoFar })).toBeChecked());
     table = await openTable(user, en);
@@ -230,12 +230,12 @@ describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest
     expect(cellsOf(rows[36])).toEqual(['890', '230', '20', `${MINUS}660`]);
   });
 
-  it('a goal without entries: "−100.0% vs. ideal", Day 9 of 31, empty.detail.curve as the subtitle, "nothing logged yet" summary, You at 0 in the table, empty history', async () => {
+  it('a goal without entries: "−100.0%", Day 9 of 31, empty.detail.curve as the subtitle, "nothing logged yet" summary, You at 0 in the table, empty history', async () => {
     const user = userEvent.setup();
     await withS1();
     await renderApp({ route: '/goals/g6', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Stretch' });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}100.0% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}100.0%`), SLOW);
     expect(screen.getByTestId('headline-day')).toHaveTextContent('Day 9 of 31');
     expect(screen.getByTestId('headline-sub')).toHaveTextContent(en.empty.detail.curve);
     expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'empty');
@@ -249,11 +249,11 @@ describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest
     expect(cellsOf(rows[9])).toEqual(['52', '—', '—', '—']);
   });
 
-  it('upcoming goal: "+0.0% ahead of ideal", "Starts 2026-11-01…" without a Day line, no Range control, only the Ideal line', async () => {
+  it('upcoming goal: "+0.0%", "Starts 2026-11-01…" without a Day line, no Range control, only the Ideal line', async () => {
     await withS1();
     await renderApp({ route: '/goals/g4', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Marathon prep' });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+0.0% ahead of ideal'), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+0.0%'), SLOW);
     expect(screen.getByTestId('headline-sub')).toHaveTextContent('Starts 2026-11-01. Your line will appear once the goal begins.');
     expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'upcoming');
     expect(screen.queryByTestId('headline-day')).toBeNull();
@@ -266,12 +266,12 @@ describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest
     expect(screen.getByTestId('stat-pace')).toHaveTextContent(en.stat.paceOnTrack);
   });
 
-  it('ended goal (Old course, one entry on the last day): badge Ended, "−99.8% vs. ideal", Day 181 of 181, "Last logged Jun 30: 15 min. Total 15 min, ideal 7,584 min (−7,569 min).", default range "So far"', async () => {
+  it('ended goal (Old course, one entry on the last day): badge Ended, "−99.8%", Day 181 of 181, "Last logged Jun 30: 15 min. Total 15 min, ideal 7,584 min (−7,569 min).", default range "So far"', async () => {
     await withS1();
     await renderApp({ route: '/goals/g5', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Old course' });
     expect(screen.getByText(en.goal.status.ended)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}99.8% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}99.8%`), SLOW);
     expect(screen.getByTestId('headline-day')).toHaveTextContent('Day 181 of 181');
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe(`Last logged Jun 30: 15 min. Total 15 min, ideal 7,584 min (${MINUS}7,569 min).`);
     expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'earlier');
@@ -294,7 +294,7 @@ describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest
     expect(screen.queryByRole('button', { name: en.goals.archive })).toBeNull();
     // Data is kept: headline and history unchanged (total goal 6,000 min / 365 days; v6.1 ADR-47: the ideal line
     // starts at the scaled 1.63 min and ends at 6,000 → −97.6 %, was −99.8 % with a 17 min/day start).
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}97.6% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}97.6%`), SLOW);
     expect(screen.getByTestId('stat-progress')).toHaveTextContent('60 of 6,000 min');
     expect(screen.getByTestId('stat-pace')).toHaveTextContent('41 h 15 min behind');
     expect(screen.getByTestId('stat-pace')).toHaveTextContent('Expected 2,535 min by today');
@@ -328,17 +328,17 @@ describe('Goal detail — S1 at 2026-10-09, special states, archive (M5-AC2 rest
     expect(error).toHaveTextContent(en.errors.loadViewTitle);
     fail = false;
     await user.click(within(error).getByRole('button', { name: en.common.retry }));
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}14.6% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}14.6%`), SLOW);
   });
 });
 
 describe('Goal detail — Vietnamese (v6.0 copy)', () => {
-  it('vi R1: "−54,0% so với lý tưởng", subtitle "Hôm nay: 27 phút. Tổng 56 phút, lý tưởng 122 phút (−66 phút).", summary, legend, note, table 122 / 56 / 27 / −66; no English leaks', async () => {
+  it('vi R1: "−54,0%", subtitle "Hôm nay: 27 phút. Tổng 56 phút, lý tưởng 122 phút (−66 phút).", summary, legend, note, table 122 / 56 / 27 / −66; no English leaks', async () => {
     const user = userEvent.setup();
     await withR1('vi');
     await renderApp({ route: '/goals/r1', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Đọc sách' });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}54,0% so với lý tưởng`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}54,0%`), SLOW);
     expect(screen.getByTestId('headline-day')).toHaveTextContent('Ngày 4/83');
     const sub = norm(screen.getByTestId('headline-sub').textContent);
     expect(sub).toBe(`Hôm nay: 27 phút. Tổng 56 phút, lý tưởng 122 phút (${MINUS}66 phút).`);
@@ -361,11 +361,11 @@ describe('Goal detail — Vietnamese (v6.0 copy)', () => {
     expect(scanVi()).toEqual([]);
   });
 
-  it('vi: R3 "−86,7% so với lý tưởng"; one logged day, no entries (empty.detail.curve), upcoming ("Vượt lý tưởng +0,0%"), ended, archived and ErrorState have no English leaks', async () => {
+  it('vi: R3 "−86,7%"; one logged day, no entries (empty.detail.curve), upcoming ("+0,0%"), ended, archived and ErrorState have no English leaks', async () => {
     const user = userEvent.setup();
     await withR1('vi', new Date('2026-10-11T10:00:00+07:00'), datasetR3());
     const low = await renderApp({ route: '/goals/r1', container: tc });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}86,7% so với lý tưởng`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}86,7%`), SLOW);
     expect(screen.getByTestId('headline')).toHaveClass('hl-down');
     expect(norm(screen.getByTestId('headline-sub').textContent)).toBe(`Hôm nay: 3 phút. Tổng 8 phút, lý tưởng 60 phút (${MINUS}52 phút).`);
     await screen.findByTestId('curve-chart', undefined, SLOW);
@@ -376,7 +376,7 @@ describe('Goal detail — Vietnamese (v6.0 copy)', () => {
     await tc!.container.db.entries.bulkPut(r1.entries.slice(0, 1));
     vitest.setSystemTime(FIXED_NOW_R1);
     const start = await renderApp({ route: '/goals/r1', container: tc });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}95,9% so với lý tưởng`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}95,9%`), SLOW);
     expect(norm(screen.getByTestId('headline-sub').textContent)).toMatch(new RegExp(`^Lần ghi gần nhất .+: 5 phút\\. Tổng 5 phút, lý tưởng 122 phút \\(${MINUS}117 phút\\)\\.$`));
     expect(scanVi()).toEqual([]);
     start.unmount();
@@ -385,10 +385,10 @@ describe('Goal detail — Vietnamese (v6.0 copy)', () => {
     vitest.setSystemTime(FIXED_NOW);
     await withS1('vi');
     for (const [route, heading, headline, sub] of [
-      ['/goals/g6', 'Stretch', `${MINUS}100,0% so với lý tưởng`, vi.empty.detail.curve],
-      ['/goals/g4', 'Marathon prep', 'Vượt lý tưởng +0,0%', 'Bắt đầu 01/11/2026. Đường của bạn sẽ xuất hiện khi mục tiêu bắt đầu.'],
-      ['/goals/g5', 'Old course', `${MINUS}99,8% so với lý tưởng`, null],
-      ['/goals/g1', 'Read', `${MINUS}14,6% so với lý tưởng`, null],
+      ['/goals/g6', 'Stretch', `${MINUS}100,0%`, vi.empty.detail.curve],
+      ['/goals/g4', 'Marathon prep', '+0,0%', 'Bắt đầu 01/11/2026. Đường của bạn sẽ xuất hiện khi mục tiêu bắt đầu.'],
+      ['/goals/g5', 'Old course', `${MINUS}99,8%`, null],
+      ['/goals/g1', 'Read', `${MINUS}14,6%`, null],
     ] as const) {
       const view = await renderApp({ route, container: tc });
       await screen.findByRole('heading', { level: 1, name: heading });
@@ -441,14 +441,14 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     return tc;
   }
 
-  it('at 2026-10-09: info "from 2026-10-01, no end date", "−41.3% vs. ideal", "Day 9" (no total), "Last logged Oct 8: 20 min. Total 55 min, ideal 94 min (−39 min).", open summary, NO Range, 9 + 9 points, 9 table rows ending today, stats 58.5 % / 39 min behind (v6.1 ADR-47) / 1 / 2', async () => {
+  it('at 2026-10-09: info "from 2026-10-01, no end date", "−41.3%", "Day 9" (no total), "Last logged Oct 8: 20 min. Total 55 min, ideal 94 min (−39 min).", open summary, NO Range, 9 + 9 points, 9 table rows ending today, stats 58.5 % / 39 min behind (v6.1 ADR-47) / 1 / 2', async () => {
     const user = userEvent.setup();
     await withO1();
     await renderApp({ route: '/goals/o1', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: 'Meditate' })).toBeInTheDocument();
     expect(screen.getByText('10 min/day · from 2026-10-01, no end date')).toBeInTheDocument();
     expect(screen.getByText(en.goal.status.active)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}41.3% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}41.3%`), SLOW);
     expect(screen.getByTestId('headline')).toHaveAttribute('data-sign', 'negative');
     expect(screen.getByTestId('headline-day')).toHaveTextContent(/^Day 9$/);
     expect(screen.getByTestId('headline-day').textContent).not.toContain('of');
@@ -484,13 +484,13 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     expect(screen.getAllByTestId('history-row')).toHaveLength(4);
   });
 
-  it('not started yet (start 2026-11-01): badge Upcoming, "+0.0% ahead of ideal", "Starts …" line, NO chart card at all, Progress 0.0% "0 of 0 min expected so far", On pace', async () => {
+  it('not started yet (start 2026-11-01): badge Upcoming, "+0.0%", "Starts …" line, NO chart card at all, Progress 0.0% "0 of 0 min expected so far", On pace', async () => {
     await withO1('en', FIXED_NOW, { startDate: '2026-11-01' }, []);
     await renderApp({ route: '/goals/o1', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Meditate' });
     expect(screen.getByText(en.goal.status.upcoming)).toBeInTheDocument();
     expect(screen.getByText('10 min/day · from 2026-11-01, no end date')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+0.0% ahead of ideal'), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+0.0%'), SLOW);
     expect(screen.getByTestId('headline-sub')).toHaveTextContent('Starts 2026-11-01. Your line will appear once the goal begins.');
     expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'upcoming');
     expect(screen.queryByTestId('headline-day')).toBeNull();
@@ -509,11 +509,11 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     expect(screen.getByRole('heading', { level: 3, name: en.empty.detail.history })).toBeInTheDocument();
   });
 
-  it('first day (start = today, 10 min logged): "Day 1", exactly on the line ("+0.0% ahead of ideal", variant today), one point per line, summary "Day 1: … 10 min … 10 min."', async () => {
+  it('first day (start = today, 10 min logged): "Day 1", exactly on the line ("+0.0%", variant today), one point per line, summary "Day 1: … 10 min … 10 min."', async () => {
     await withO1('en', FIXED_NOW, { startDate: '2026-10-09' }, [buildEntry({ id: 'x', goalId: 'o1', date: '2026-10-09', minutes: 10 })]);
     await renderApp({ route: '/goals/o1', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Meditate' });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+0.0% ahead of ideal'), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+0.0%'), SLOW);
     expect(screen.getByTestId('headline')).toHaveAttribute('data-sign', 'positive');
     expect(screen.getByTestId('headline-day')).toHaveTextContent(/^Day 1$/);
     expect(screen.getByTestId('headline-sub')).toHaveAttribute('data-variant', 'today');
@@ -526,13 +526,13 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     expect(screen.getByTestId('stat-progress')).toHaveTextContent('10 of 10 min expected so far');
   });
 
-  it('five years later (2031-10-02): still Active, "Day 1,828", 1,828 points, "−100.0% vs. ideal", summary without a total; the Progress denominator grows by the day', async () => {
+  it('five years later (2031-10-02): still Active, "Day 1,828", 1,828 points, "−100.0%", summary without a total; the Progress denominator grows by the day', async () => {
     await withO1('en', new Date('2031-10-02T10:00:00+07:00'));
     await renderApp({ route: '/goals/o1', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Meditate' });
     expect(screen.getByText(en.goal.status.active)).toBeInTheDocument();
     expect(screen.queryByText(en.goal.status.ended)).toBeNull();
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}100.0% vs. ideal`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}100.0%`), SLOW);
     expect(screen.getByTestId('headline-day')).toHaveTextContent(/^Day 1,828$/);
     expect(screen.getByTestId('curve-summary').textContent).toMatch(/^Day 1,828: you have logged 55 min in total\. The ideal line is at [\d,]+ min\.$/);
     const chart = await screen.findByTestId('curve-chart', undefined, SLOW);
@@ -544,11 +544,11 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     expect(screen.queryByRole('radio', { name: en.goal.detail.rangeSoFar })).toBeNull();
   });
 
-  it('vi: "−41,3% so với lý tưởng", "Ngày 9", summary and Progress "55/94 phút dự kiến đến nay", "Chậm 39 phút" (v6.1 ADR-47), info row, no Range, no English leaks (also upcoming)', async () => {
+  it('vi: "−41,3%", "Ngày 9", summary and Progress "55/94 phút dự kiến đến nay", "Chậm 39 phút" (v6.1 ADR-47), info row, no Range, no English leaks (also upcoming)', async () => {
     await withO1('vi');
     const app = await renderApp({ route: '/goals/o1', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Meditate' });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}41,3% so với lý tưởng`), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent(`${MINUS}41,3%`), SLOW);
     expect(screen.getByText('10 phút/ngày · từ 01/10/2026, không có thời hạn')).toBeInTheDocument();
     expect(screen.getByTestId('headline-day')).toHaveTextContent(/^Ngày 9$/);
     expect(norm(screen.getByTestId('headline-sub').textContent)).toMatch(new RegExp(`^Lần ghi gần nhất .+: 20 phút\\. Tổng 55 phút, lý tưởng 94 phút \\(${MINUS}39 phút\\)\\.$`));
@@ -564,7 +564,7 @@ describe('Goal detail — open-ended goal O1 (M11-AC10, FR-27 v4.0 + v6.0, FR-56
     await withO1('vi', FIXED_NOW, { startDate: '2026-11-01' }, []);
     await renderApp({ route: '/goals/o1', container: tc });
     await screen.findByRole('heading', { level: 1, name: 'Meditate' });
-    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('Vượt lý tưởng +0,0%'), SLOW);
+    await waitFor(() => expect(screen.getByTestId('headline')).toHaveTextContent('+0,0%'), SLOW);
     expect(screen.queryByTestId('curve-chart')).toBeNull();
     expect(screen.getByTestId('stat-progress')).toHaveTextContent('0/0 phút dự kiến đến nay');
     expect(scanVi()).toEqual([]);

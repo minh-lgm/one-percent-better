@@ -286,8 +286,10 @@ for (const [localeName, copy, locale] of [['en', EN, 'en-US'], ['vi', VI, 'vi-VN
         await showReading(page);
         await page.keyboard.press('Escape');
         await expect(reading(page)).toHaveText('', { timeout: 150 });
-        // long mouse press somewhere harmless, released
-        await page.mouse.move(5, 5);
+        // long mouse press somewhere harmless, released — on the note under the chart (plain text; v7 moved the
+        // "Back to Goals" link into the top-left corner, so (5, 5) is no longer harmless)
+        const note = (await page.getByTestId('curve-note').boundingBox())!;
+        await page.mouse.move(note.x + note.width / 2, note.y + note.height / 2);
         await page.mouse.down();
         await page.waitForTimeout(400);
         await page.mouse.up();

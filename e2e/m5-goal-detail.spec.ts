@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () => {
-  test('M5-AC2: Read (S1) shows why, period, target, 22.1 % (v6.1 plan), streak 8/8, "−14.6% vs. ideal" (v6), two curve series, 8 history rows; chart chunks only on this page or Review', async ({ page }) => {
+  test('M5-AC2: Read (S1) shows why, period, target, 22.1 % (v6.1 plan), streak 8/8, "−14.6%" (v6), two curve series, 8 history rows; chart chunks only on this page or Review', async ({ page }) => {
     const scripts: string[] = [];
     const external: string[] = [];
     page.on('request', (req) => {
@@ -43,7 +43,7 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
     await expect(page.getByText(EN.goal.status.active, { exact: true })).toBeVisible();
 
     // M9-AC4 (FR-27 v3.0) superseded by the v6.0 burn-up: 240 min logged vs 281 min of cumulative target → −14.6 %.
-    await expect(headline(page)).toHaveText('−14.6% vs. ideal');
+    await expect(headline(page)).toHaveText('−14.6%');
     await expect(page.getByTestId('headline-day')).toHaveText('Day 9 of 31');
     await expect(page.getByTestId('headline-sub')).toHaveText('Last logged Oct 8: 30 min. Total 240 min, ideal 281 min (−41 min).');
     await expect(page.getByTestId('curve-summary')).toHaveText('Day 9 of 31: you have logged 240 min in total. The ideal line is at 281 min.');
@@ -177,7 +177,7 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
 
     await gotoHash(page, '/goals/g3');
     await expect(page.getByText(EN.goal.status.archived, { exact: true })).toBeVisible();
-    await expect(headline(page)).toHaveText('−97.6% vs. ideal'); // v6.1 (ADR-47): total goal 6,000 min → plan starts at 1.63 min/day; 60 min vs 2,535 min planned by Oct 9
+    await expect(headline(page)).toHaveText('−97.6%'); // v6.1 (ADR-47): total goal 6,000 min → plan starts at 1.63 min/day; 60 min vs 2,535 min planned by Oct 9
     await page.getByRole('button', { name: EN.goals.restore }).click();
     await expect(toast(page)).toHaveText(EN.toast.goalRestored);
     await expect(page.getByText(EN.goal.status.active, { exact: true })).toBeVisible();
@@ -217,7 +217,7 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
 
     await createGoal(page, { name: 'Read', why: 'Be smarter', targetValue: 30, startDate: '2026-10-01', endDate: '2026-10-31' });
     await page.getByRole('link', { name: 'Read', exact: true }).click();
-    await expect(headline(page)).toHaveText('−100.0% vs. ideal');
+    await expect(headline(page)).toHaveText('−100.0%');
     // v6.0: empty.detail.curve is the subtitle; the You line is drawn flat at 0 min under the Ideal line.
     await expect(page.getByTestId('headline-sub')).toHaveText(EN.empty.detail.curve);
     await expect(page.getByRole('heading', { level: 3, name: EN.empty.detail.history })).toBeVisible();
@@ -227,7 +227,7 @@ test.describe('M5 Goal detail, +1%, archive, empty states, storage error', () =>
     // Upcoming goal: only the ideal line and the "Starts …" line.
     await createGoal(page, { name: 'Later', targetValue: 10, startDate: '2026-11-01', endDate: '2026-11-30' });
     await page.getByRole('link', { name: 'Later', exact: true }).click();
-    await expect(headline(page)).toHaveText('+0.0% ahead of ideal');
+    await expect(headline(page)).toHaveText('+0.0%');
     await expect(page.getByTestId('headline-sub')).toHaveText('Starts 2026-11-01. Your line will appear once the goal begins.');
     await expect(page.getByRole('radio', { name: EN.goal.detail.rangeWhole })).toHaveCount(0);
     await expectAxeClean(page);
