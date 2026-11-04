@@ -330,3 +330,20 @@ describe('vi (M19-AC7)', () => {
     cleanup();
   });
 });
+
+describe('A-83 suggestion at the end of the calendar (M20-D1)', () => {
+  it('the last item ends 9999-12-31 → Add item opens (no crash) with 9999-12-31 – 9999-12-31 instead of a 5-digit year', async () => {
+    const user = userEvent.setup();
+    tc = await createTestContainer({ locale: 'en', clock: () => FIXED_NOW_Q1 });
+    const d = datasetQ1();
+    d.items[20] = { ...d.items[20]!, plannedStart: '9999-12-25', plannedEnd: '9999-12-31' };
+    await tc.container.db.goals.bulkPut(d.goals);
+    await new DexieRoadmapRepository(tc.container.db, { clock: () => FIXED_NOW_Q1 }).putMany({ roadmaps: [d.roadmap], phases: d.phases, items: d.items, checkpoints: d.checkpoints });
+    await renderApp({ route: '/roadmaps/rq/edit', container: tc });
+    await screen.findByRole('heading', { level: 1, name: 'Edit roadmap' });
+    await user.click(screen.getAllByRole('button', { name: 'Add item' })[4]!);
+    const form = within(await screen.findByTestId('item-form-add'));
+    expect(form.getByLabelText(/^Planned start/)).toHaveValue('9999-12-31');
+    expect(form.getByLabelText(/^Planned end/)).toHaveValue('9999-12-31');
+  });
+});

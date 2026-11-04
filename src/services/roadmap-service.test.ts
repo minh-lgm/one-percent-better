@@ -321,6 +321,19 @@ describe('createFromQptTemplate (M20-AC2, FR-76, A-78, A-86)', () => {
     expect(await counts()).toEqual([20, 5, 21, 5]);
   });
 
+  it('M20-D1: start 9999-12-31 or 9999-08-08 (W21 would end in year 10000) → ROADMAP_DATE_INVALID format on startDate, 0 rows; 9999-08-07 → ok, every date a valid ISO date; the A-83 suggestion after 9999-12-31 stays 9999-12-31', async () => {
+    for (const startDate of ['9999-12-31', '9999-08-08']) {
+      expect(expectFail(await service.createFromQptTemplate({ startDate, goalId: null, locale: 'en' }, TODAY_Q1))).toMatchObject({ code: 'ROADMAP_DATE_INVALID', field: 'startDate', params: { variant: 'format' } });
+      expect(await counts()).toEqual([0, 0, 0, 0]);
+    }
+    const r = expectOk(await service.createFromQptTemplate({ startDate: '9999-08-07', goalId: null, locale: 'en' }, TODAY_Q1));
+    const agg = (await repo.getAggregate(r.id))!;
+    const dates = [r.milestoneDate!, ...agg.items.flatMap((i) => [i.plannedStart, i.plannedEnd]), ...agg.checkpoints.map((c) => c.date)];
+    expect(dates.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))).toBe(true);
+    expect(agg.items.map((i) => i.plannedEnd).sort().at(-1)).toBe('9999-12-31');
+    expect(await service.suggestedItemDates(r.id, TODAY_Q1)).toEqual({ plannedStart: '9999-12-31', plannedEnd: '9999-12-31' });
+  });
+
   it('the content is data: vi stays vi whatever the app language does later (A-86); the en roadmap has no Vietnamese text', async () => {
     const vi = expectOk(await service.createFromQptTemplate({ startDate: '2026-10-27', goalId: null, locale: 'vi' }, TODAY_Q1));
     const en = expectOk(await service.createFromQptTemplate({ startDate: '2026-10-27', goalId: null, locale: 'en' }, TODAY_Q1));

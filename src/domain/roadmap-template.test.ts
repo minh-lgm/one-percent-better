@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { daysInclusive } from './dates';
 import { validateCheckpointInput, validateItemInput, validatePhaseInput, validateRoadmapInput } from './roadmap';
 import { roadmapView, roadmapWeekOf } from './roadmap-progress';
-import { buildQptTemplate, QPT_TEMPLATE, qptWeekEnd, qptWeekStart, type TemplateIds } from './roadmap-template';
+import { buildQptTemplate, QPT_TEMPLATE, qptTemplateFits, qptWeekEnd, qptWeekStart, type TemplateIds } from './roadmap-template';
 
 const tracker = readFileSync(new URL('../../docs/plan/ref/qpt-tracker.html', import.meta.url), 'utf8');
 const design = readFileSync(new URL('../../docs/design/DESIGN.md', import.meta.url), 'utf8');
@@ -144,6 +144,18 @@ describe('buildQptTemplate (M20-AC1)', () => {
     expect(t.items.every((i) => daysInclusive(i.plannedStart, i.plannedEnd) === 7)).toBe(true);
     expect(qptWeekStart('2027-12-27', 10)).toBe('2028-02-28');
     expect(qptWeekEnd('2027-12-27', 21)).toBe('2028-05-21');
+  });
+
+  it('M20-D1: a start whose W21 would end after 9999-12-31 does not fit (9999-08-08 … 9999-12-31); 9999-08-07 is the last one; building it throws instead of writing 10000-…', () => {
+    expect(qptTemplateFits('9999-08-07')).toBe(true);
+    expect(qptTemplateFits('9999-08-08')).toBe(false);
+    expect(qptTemplateFits('9999-12-31')).toBe(false);
+    expect(qptTemplateFits('0001-01-01')).toBe(true);
+    expect(qptTemplateFits('')).toBe(false);
+    expect(qptTemplateFits('2026-02-30')).toBe(false);
+    const last = buildQptTemplate('9999-08-07', 'en', ids, NOW);
+    expect(last.items[20]!.plannedEnd).toBe('9999-12-31');
+    expect(() => buildQptTemplate('9999-12-31', 'en', ids, NOW)).toThrow(RangeError);
   });
 
   it('every row passes the domain validation (the same limits as the form, the backup file and the cloud mapper)', () => {

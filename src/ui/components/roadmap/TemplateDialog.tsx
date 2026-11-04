@@ -5,8 +5,7 @@
 // (service chunk) — nothing of it is in this file.
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { addDays, isValidISODate } from '../../../domain/dates';
-import type { Roadmap } from '../../../domain/roadmap';
+import { addDaysOrNull, type Roadmap } from '../../../domain/roadmap';
 import type { DomainError, Goal, Result } from '../../../domain/types';
 import type { RoadmapService } from '../../../services/roadmap-service';
 import { Alert } from '../Alert';
@@ -81,9 +80,22 @@ export function TemplateDialog({ today, goals, onCreate, onCreated, onCancel }: 
     return err ? errorText(err) : undefined;
   };
 
+  // M20-D1: the start date must be a date whose 21 weeks stay within 9999-12-31; otherwise no preview (never "NaN"),
+  // the namespace error under the field, and Create does nothing but show it.
+  const exam = addDaysOrNull(startDate, EXAM_OFFSET_DAYS);
+  const end = addDaysOrNull(startDate, END_OFFSET_DAYS);
+  const fits = exam !== null && end !== null;
+  const outOfRange = startDate !== '' && addDaysOrNull(startDate, 0) !== null && !fits;
+  const startInvalid: DomainError = { code: 'ROADMAP_DATE_INVALID', field: 'startDate', message: 'startDate: format', params: { variant: 'format' } };
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (busyRef.current) return;
+    if (!fits) {
+      setErrors((errs) => [...errs.filter((err) => err.field !== 'startDate'), startInvalid]);
+      setFocusField('startDate');
+      return;
+    }
     busyRef.current = true;
     setBusy(true);
     setTopError(null);
@@ -107,8 +119,7 @@ export function TemplateDialog({ today, goals, onCreate, onCreated, onCancel }: 
     }
   }
 
-  const valid = isValidISODate(startDate);
-  const preview = valid ? t('tpl.preview', { start: f.dateShort(startDate), exam: f.dateShort(addDays(startDate, EXAM_OFFSET_DAYS)), end: f.dateShort(addDays(startDate, END_OFFSET_DAYS)) }) : undefined;
+  const preview = fits ? t('tpl.preview', { start: f.dateShort(startDate), exam: f.dateShort(exam), end: f.dateShort(end) }) : undefined;
   return (
     <dialog ref={ref} className="dialog tpl" aria-labelledby={`${id}-title`} aria-describedby={`${id}-body`} data-testid="template-dialog">
       <form noValidate onSubmit={submit} aria-busy={busy || undefined}>
@@ -129,7 +140,7 @@ export function TemplateDialog({ today, goals, onCreate, onCreated, onCancel }: 
               setErrors((errs) => errs.filter((err) => err.field !== 'startDate'));
             }}
             hint={preview}
-            error={fieldError('startDate')}
+            error={fieldError('startDate') ?? (outOfRange ? errorText(startInvalid) : undefined)}
           />
           <GoalLinkPicker
             id={`${id}-goal`}

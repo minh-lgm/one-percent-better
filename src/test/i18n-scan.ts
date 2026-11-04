@@ -27,16 +27,16 @@ export const scanUntranslated = (root: Element | Document, data: ScanData): Scan
   const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   // Build patterns from en values whose vi value differs.
-  // v8.0 (M20): an en value that is itself a vi string elsewhere is not a leak — the language names are shown in their
-  // own language (`settings.language.option.en` = "English" in vi too), while `roadmap:tpl.languageName` is "English"
-  // only in en.
-  const viValues = new Set(Object.values(data.vi).map((v) => norm(v)));
+  // v8.0 (M20, narrowed in M20 fix r1 per QC §9): explicit keys whose en value is shown verbatim in vi elsewhere. The
+  // template's language name (`roadmap:tpl.languageName` = "English" in en) equals the language option the Settings
+  // screen shows in its own language in vi too (`settings.language.option.en`). Nothing else is masked.
+  const sameAsViElsewhere = ['roadmap.tpl.languageName'];
   const patterns: Array<{ key: string; re: RegExp }> = [];
   for (const key of Object.keys(data.en)) {
     const enValue = data.en[key];
     const base = key.replace(/_(one|other)$/, '');
     const viValue = data.vi[key] ?? data.vi[`${base}_other`];
-    if (viValue === undefined || norm(viValue) === norm(enValue) || viValues.has(norm(enValue))) continue;
+    if (viValue === undefined || norm(viValue) === norm(enValue) || sameAsViElsewhere.includes(key)) continue;
     const source = norm(enValue)
       .split(/\{\{[^}]+\}\}/)
       .map(escapeRe)

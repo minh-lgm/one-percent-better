@@ -32,13 +32,13 @@ describe('scanUntranslated (NFR-11c)', () => {
     expect(scanUntranslated(document.getElementById('x')!, data)).toEqual([]);
   });
 
-  it('(M20) an en value that is a vi string elsewhere is not a leak: "English" as a language name, flagged "Weekly" still is', () => {
+  it('(M20) only roadmap.tpl.languageName is masked: "English" as a language name passes, another en value that happens to be a vi value elsewhere is still caught', () => {
     const langs = {
-      en: { ...data.en, 'settings.language.option.en': 'English', 'roadmap.tpl.languageName': 'English', 'roadmap.x': 'Weekly' },
-      vi: { ...data.vi, 'settings.language.option.en': 'English', 'roadmap.tpl.languageName': 'Tiếng Việt', 'roadmap.x': 'Hằng tuần' },
+      en: { ...data.en, 'settings.language.option.en': 'English', 'roadmap.tpl.languageName': 'English', 'roadmap.x': 'Weekly', 'roadmap.y': 'Mock' },
+      vi: { ...data.vi, 'settings.language.option.en': 'English', 'roadmap.tpl.languageName': 'Tiếng Việt', 'roadmap.x': 'Hằng tuần', 'roadmap.y': 'Thi thử', 'roadmap.z': 'Mock' },
     };
-    document.body.innerHTML = '<div id="x"><label>English</label><label>Tiếng Việt</label><p>Weekly</p></div>';
+    document.body.innerHTML = '<div id="x"><label>English</label><label>Tiếng Việt</label><p>Weekly</p><p>Mock</p></div>';
     document.title = '';
-    expect(scanUntranslated(document.getElementById('x')!, langs).map((h) => h.text)).toEqual(['Weekly']);
+    expect(scanUntranslated(document.getElementById('x')!, langs).map((h) => h.text)).toEqual(['Weekly', 'Mock']);
   });
 });

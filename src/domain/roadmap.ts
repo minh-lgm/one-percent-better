@@ -22,7 +22,7 @@ import {
   WEEKLY_TARGET_MIN,
   WEEKLY_TARGET_STEP,
 } from '../config/constants';
-import { daysInclusive, isValidISODate } from './dates';
+import { addDays, daysInclusive, isValidISODate } from './dates';
 import { charLength } from './text';
 import { fail, ok, type DomainError, type ISODate, type ISODateTime, type Result } from './types';
 
@@ -102,6 +102,19 @@ export interface RoadmapAggregate {
 }
 
 export const isItemDone = (i: Pick<RoadmapItem, 'actualEnd'>): boolean => i.actualEnd !== null;
+
+/** The last date the app can store (ISO dates have 4-digit years). */
+export const LAST_ISO_DATE = '9999-12-31';
+
+/** M20-D1: `date + days`, or `null` when the input is not a date or the result would leave 0001 … 9999. */
+export function addDaysOrNull(date: string, days: number): ISODate | null {
+  if (!isValidISODate(date)) return null;
+  try {
+    return addDays(date, days);
+  } catch {
+    return null;
+  }
+}
 
 export type RoadmapEntityKind = 'roadmap' | 'phase' | 'item' | 'checkpoint';
 

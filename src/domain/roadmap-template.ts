@@ -4,7 +4,7 @@
 // `en` text is the designer's translation in DESIGN §7.9.3. Lazy-only module (ADR-53, eslint ROADMAP_LAZY_RULE): only
 // `RoadmapService` (its own lazy chunk) imports it, so none of this text is on the cold-load path.
 import { addDays } from './dates';
-import type { Roadmap, RoadmapAggregate, RoadmapCheckpoint, RoadmapItem, RoadmapPhase } from './roadmap';
+import { addDaysOrNull, type Roadmap, type RoadmapAggregate, type RoadmapCheckpoint, type RoadmapItem, type RoadmapPhase } from './roadmap';
 import type { ISODate, ISODateTime } from './types';
 
 /** The languages the template ships in (same values as the app `Locale`; the domain does not import i18n). */
@@ -131,7 +131,15 @@ export const QPT_TEMPLATE: Readonly<Record<TemplateLocale, QptTemplateContent>> 
 /** Id for the n-th (1-based) row of a kind; `RoadmapService` passes fresh UUIDs, tests pass readable ids. */
 export type TemplateIds = (kind: 'roadmap' | 'phase' | 'item' | 'checkpoint', n: number) => string;
 
-/** Planned start of week `k` (1-based) for a template starting on `startDate`. */
+/**
+ * M20-D1: whether a template starting on `startDate` fits the storable dates — the latest derived date is the end of
+ * W21 (`start + 146`; checkpoints end at W19, the milestone is the start of W20).
+ */
+export function qptTemplateFits(startDate: string): boolean {
+  return addDaysOrNull(startDate, 7 * QPT_WEEKS - 1) !== null;
+}
+
+/** Planned start of week `k` (1-based) for a template starting on `startDate` (throws past 9999-12-31, see `addDays`). */
 export const qptWeekStart = (startDate: ISODate, k: number): ISODate => addDays(startDate, 7 * (k - 1));
 /** Planned end of week `k` (1-based). */
 export const qptWeekEnd = (startDate: ISODate, k: number): ISODate => addDays(startDate, 7 * k - 1);
@@ -140,7 +148,8 @@ export const qptWeekEnd = (startDate: ISODate, k: number): ISODate => addDays(st
  * The 32 rows of the template (1 roadmap, 5 phases, 21 items, 5 checkpoints; ARCHITECTURE §4.8 e). Item k runs
  * `startDate + 7(k−1)` … `+6`; the milestone is the start of week 20; checkpoints sit on the start date (Diagnostic)
  * and on the planned end of W8 / W16 / W18 / W19. Every row carries `now` as `createdAt` / `updatedAt`; no actual
- * dates, no scores. `startDate` must be a valid ISO date (the service validates it).
+ * dates, no scores. `startDate` must be a valid ISO date that `qptTemplateFits` (the service checks both; otherwise
+ * `addDays` throws a RangeError rather than writing a 5-digit year).
  */
 export function buildQptTemplate(startDate: ISODate, locale: TemplateLocale, ids: TemplateIds, now: ISODateTime): RoadmapAggregate {
   const c = QPT_TEMPLATE[locale];

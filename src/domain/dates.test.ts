@@ -18,6 +18,13 @@ describe('dates', () => {
     expect(isValidISODate('2026-10-09')).toBe(true);
   });
 
+  it('M20-D1: addDays never returns a 5-digit year — past 9999-12-31 it throws a RangeError', () => {
+    expect(addDays('9999-12-30', 1)).toBe('9999-12-31');
+    expect(() => addDays('9999-12-31', 1)).toThrow(RangeError);
+    expect(() => addDays('9999-08-08', 146)).toThrow(/out of range/);
+    expect(() => addDays('2026-02-30', 1)).toThrow(RangeError);
+  });
+
   it('addDays crosses month/year boundaries', () => {
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
     expect(addDays('2028-02-28', 1)).toBe('2028-02-29');

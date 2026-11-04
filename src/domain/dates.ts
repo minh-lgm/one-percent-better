@@ -22,10 +22,13 @@ export function isValidISODate(value: string): value is ISODate {
   return parseISODate(value) !== null;
 }
 
+/** `date + days`. Throws a RangeError for an invalid input and (M20-D1) when the result leaves the 4-digit years. */
 export function addDays(date: ISODate, days: number): ISODate {
   const d = parseISODate(date);
   if (!d) throw new RangeError(`Invalid ISO date: ${date}`);
-  return toISODate(dfAddDays(d, days));
+  const out = toISODate(dfAddDays(d, days));
+  if (!ISO_DATE_RE.test(out)) throw new RangeError(`Date out of range: ${date} + ${days}`);
+  return out;
 }
 
 /** Number of calendar days from `start` to `end`, counting both ends. */

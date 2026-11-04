@@ -2,9 +2,11 @@
 import { describe, expect, it } from 'vitest';
 import { datasetQ1 } from '../test/builders';
 import {
+  addDaysOrNull,
   checkLimit,
   checkRoadmapSpan,
   hasOneDecimal,
+  LAST_ISO_DATE,
   needsRenumber,
   positionBetween,
   sortCheckpoints,
@@ -158,5 +160,15 @@ describe('ordering (ADR-51)', () => {
       { ...q1.checkpoints[0], id: 'w', date: '2027-01-01', createdAt: '2026-01-01T00:00:00.000Z' },
     ]);
     expect(sameDate.map((c) => c.id)).toEqual(['w', 'x', 'y']);
+  });
+});
+
+describe('addDaysOrNull (M20-D1)', () => {
+  it('returns the date, or null for a non-date or a result past 9999-12-31', () => {
+    expect(addDaysOrNull('2026-10-27', 146)).toBe('2027-03-22');
+    expect(addDaysOrNull('9999-08-07', 146)).toBe(LAST_ISO_DATE);
+    expect(addDaysOrNull('9999-08-08', 146)).toBeNull();
+    expect(addDaysOrNull('', 0)).toBeNull();
+    expect(addDaysOrNull('2026-02-30', 0)).toBeNull();
   });
 });

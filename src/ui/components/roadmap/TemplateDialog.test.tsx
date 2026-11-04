@@ -41,7 +41,7 @@ describe('TemplateDialog (D7, M20-AC2)', () => {
     expect(d.getByRole('heading', { level: 2, name: 'Tạo từ mẫu QPT 21 tuần' })).toBeInTheDocument();
     const start = d.getByLabelText(/^Ngày bắt đầu/);
     expect(start).toHaveValue('2026-11-04');
-    expect(start).toHaveFocus();
+    await waitFor(() => expect(start).toHaveFocus());
     expect(start).toHaveAccessibleDescription('Tuần 1: 04/11/2026. Tuần 20 (thi QPT): 17/03/2027. Tuần cuối kết thúc ngày 30/03/2027.');
     fireEvent.change(start, { target: { value: '2026-10-27' } });
     expect(start).toHaveAccessibleDescription('Tuần 1: 27/10/2026. Tuần 20 (thi QPT): 09/03/2027. Tuần cuối kết thúc ngày 22/03/2027.');
@@ -110,7 +110,8 @@ describe('TemplateDialog (D7, M20-AC2)', () => {
     await user.click(d.getByRole('button', { name: 'Create roadmap' }));
     expect(await d.findByText('This goal is already linked to "Spanish B1". Choose another goal, or unlink it there first.')).toBeInTheDocument();
     expect(picker).toHaveAttribute('aria-invalid', 'true');
-    expect(picker).toHaveFocus();
+    // M20-D2: focus moves once the fields are enabled again (after the busy state) — wait for it.
+    await waitFor(() => expect(picker).toHaveFocus());
     expect(app.router.state.location.pathname).toBe('/roadmaps');
     // empty date
     await user.selectOptions(picker, '');
@@ -120,6 +121,7 @@ describe('TemplateDialog (D7, M20-AC2)', () => {
     await user.click(d.getByRole('button', { name: 'Create roadmap' }));
     expect(await d.findByText('Enter a valid date.')).toBeInTheDocument();
     expect(start).toHaveAttribute('aria-invalid', 'true');
+    await waitFor(() => expect(start).toHaveFocus());
     expect(await tc!.container.db.roadmaps.count()).toBe(1);
     // the limit
     const repo = new DexieRoadmapRepository(tc!.container.db, { clock: () => FIXED_NOW_Q1 });
@@ -129,5 +131,28 @@ describe('TemplateDialog (D7, M20-AC2)', () => {
     expect(await d.findByRole('alert')).toHaveTextContent('You can have up to 20 roadmaps. Delete one to add another.');
     expect(start).toHaveValue('2026-10-27');
     expect(await tc!.container.db.roadmapItems.count()).toBe(0);
+  });
+
+  it('M20-D1: a start whose 21 weeks pass 9999-12-31 → no preview (never NaN), "Enter a valid date." under the field at once; Create only focuses the field and writes nothing; 9999-08-07 still previews', async () => {
+    const user = userEvent.setup();
+    await goalOnly('en');
+    const app = await renderApp({ route: '/roadmaps', container: tc });
+    await user.click(await screen.findByRole('button', { name: 'Create from QPT 21-week template' }));
+    const d = within(dialog());
+    const start = d.getByLabelText(/^Start date/);
+    fireEvent.change(start, { target: { value: '9999-12-31' } });
+    expect(dialog()).not.toHaveTextContent('NaN');
+    expect(start).not.toHaveAccessibleDescription(/Week 1/);
+    expect(d.getByText('Enter a valid date.')).toBeInTheDocument();
+    expect(start).toHaveAttribute('aria-invalid', 'true');
+    await user.click(d.getByRole('button', { name: 'Create roadmap' }));
+    await waitFor(() => expect(start).toHaveFocus());
+    expect(screen.getByTestId('template-dialog')).toBeInTheDocument();
+    expect(app.router.state.location.pathname).toBe('/roadmaps');
+    expect(await tc!.container.db.roadmaps.count()).toBe(0);
+    expect(await tc!.container.db.roadmapItems.count()).toBe(0);
+    fireEvent.change(start, { target: { value: '9999-08-07' } });
+    expect(start).toHaveAccessibleDescription('Week 1: 9999-08-07. Week 20 (QPT exam): 9999-12-18. The last week ends 9999-12-31.');
+    expect(d.queryByText('Enter a valid date.')).toBeNull();
   });
 });

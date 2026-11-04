@@ -2,8 +2,9 @@
 // Lazy-only module (ADR-53): the container exposes it through `loadRoadmapService()` (`import()`), so nothing
 // here is on the cold-load path. Every failure is a `Result`; only storage failures throw.
 import type { GoalRepository, RoadmapRepository, Subscribable } from '../data/repositories';
-import { addDays, isValidISODate } from '../domain/dates';
+import { isValidISODate } from '../domain/dates';
 import {
+  addDaysOrNull,
   checkLimit,
   checkRoadmapSpan,
   needsRenumber,
@@ -14,6 +15,7 @@ import {
   validateItemInput,
   validatePhaseInput,
   validateRoadmapInput,
+  LAST_ISO_DATE,
   type CheckpointInput,
   type ItemInput,
   type PhaseInput,
@@ -26,7 +28,7 @@ import {
   type RoadmapPhase,
 } from '../domain/roadmap';
 import { roadmapView, toListRow, type RoadmapListRow, type RoadmapView } from '../domain/roadmap-progress';
-import { buildQptTemplate, type TemplateLocale } from '../domain/roadmap-template';
+import { buildQptTemplate, qptTemplateFits, type TemplateLocale } from '../domain/roadmap-template';
 import { nextUpdatedAt } from '../domain/sync';
 import { fail, ok, type DomainError, type Goal, type ISODate, type Result } from '../domain/types';
 import { randomUuid } from '../domain/uuid';
@@ -36,6 +38,13 @@ export interface RoadmapServiceDeps {
   goals: GoalRepository;
   newId?: () => string;
   clock?: () => Date;
+}
+
+/** Every row of a built template passes the domain validators and the 1827-day span rule. */
+function templateRowsValid(t: RoadmapAggregate, today: ISODate): boolean {
+  const r = t.roadmap;
+  const roadmapOk = validateRoadmapInput({ title: r.title, note: r.note, goalId: null, weeklyTargetHours: r.weeklyTargetMinutes === null ? null : r.weeklyTargetMinutes / 60, milestoneLabel: r.milestoneLabel, milestoneDate: r.milestoneDate }).ok;
+  return roadmapOk && t.phases.every((p) => validatePhaseInput(p).ok) && t.items.every((i) => validateItemInput(i, today).ok) && t.checkpoints.every((c) => validateCheckpointInput(c).ok) && checkRoadmapSpan(t.items) === null;
 }
 
 const notFound = (kind: RoadmapEntityKind, id: string): DomainError => ({ code: 'ROADMAP_NOT_FOUND', message: `${kind} ${id} not found`, params: { kind } });
@@ -108,13 +117,18 @@ export class RoadmapService {
    * afterwards it is plain user data), the goal link checked like any other (A-78), the roadmap limit first. The 32
    * rows go to the repository as ONE batch (`putMany` = one Dexie transaction): a failure leaves no row behind.
    */
-  async createFromQptTemplate(opts: { startDate: ISODate; goalId: string | null; locale: TemplateLocale }, _today: ISODate): Promise<Result<Roadmap>> {
+  async createFromQptTemplate(opts: { startDate: ISODate; goalId: string | null; locale: TemplateLocale }, today: ISODate): Promise<Result<Roadmap>> {
     const limit = checkLimit('roadmap', (await this.roadmaps.listLive()).length);
     if (limit) return fail(limit);
-    if (!isValidISODate(opts.startDate)) return fail({ code: 'ROADMAP_DATE_INVALID', field: 'startDate', message: `startDate ${opts.startDate}: format`, params: { variant: 'format' } });
+    // M20-D1: the start date must be a date AND every derived date (W21 end at the latest) must stay ≤ 9999-12-31.
+    const badStart: DomainError = { code: 'ROADMAP_DATE_INVALID', field: 'startDate', message: `startDate ${opts.startDate}: format`, params: { variant: 'format' } };
+    if (!isValidISODate(opts.startDate) || !qptTemplateFits(opts.startDate)) return fail(badStart);
     const link = await this.checkGoalLink(null, opts.goalId);
     if (link) return fail(link);
     const template = buildQptTemplate(opts.startDate, opts.locale, () => this.newId(), this.stamp());
+    // Defence in depth: every row passes the same validators as the manual forms (and the backup file), so a template
+    // can never write what Import would refuse (FR-77).
+    if (!templateRowsValid(template, today)) return fail(badStart);
     const roadmap: Roadmap = { ...template.roadmap, goalId: opts.goalId };
     await this.roadmaps.putMany({ roadmaps: [roadmap], phases: template.phases, items: template.items, checkpoints: template.checkpoints });
     return ok(roadmap);
@@ -220,8 +234,9 @@ export class RoadmapService {
   async suggestedItemDates(roadmapId: string, today: ISODate): Promise<{ plannedStart: ISODate; plannedEnd: ISODate }> {
     const agg = await this.roadmaps.getAggregate(roadmapId);
     const last = agg ? sortItems(agg.items, agg.phases).at(-1) : undefined;
-    const plannedStart = last ? addDays(last.plannedEnd, 1) : today;
-    return { plannedStart, plannedEnd: addDays(plannedStart, 6) };
+    // M20-D1: never step past 9999-12-31 (the form validates whatever the user then types).
+    const plannedStart = last ? (addDaysOrNull(last.plannedEnd, 1) ?? LAST_ISO_DATE) : today;
+    return { plannedStart, plannedEnd: addDaysOrNull(plannedStart, 6) ?? LAST_ISO_DATE };
   }
 
   async addItem(phaseId: string, input: ItemInput, today: ISODate): Promise<Result<RoadmapItem>> {

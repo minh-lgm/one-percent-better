@@ -4,8 +4,8 @@
 // M20: the Checkpoints section (list in date order, inline CheckpointEditor, D11 delete, 50 cap).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
-import { addDays, toISODate } from '../../domain/dates';
-import { ROADMAP_LIMITS, type RoadmapCheckpoint, type RoadmapItem, type RoadmapPhase } from '../../domain/roadmap';
+import { toISODate } from '../../domain/dates';
+import { addDaysOrNull, LAST_ISO_DATE, ROADMAP_LIMITS, type RoadmapCheckpoint, type RoadmapItem, type RoadmapPhase } from '../../domain/roadmap';
 import type { RoadmapView } from '../../domain/roadmap-progress';
 import type { DomainError, Goal } from '../../domain/types';
 import { Alert } from '../components/Alert';
@@ -181,8 +181,9 @@ function EditorView({ view, today, service, onDeleting }: { view: RoadmapView; t
   // A-83: the 7 days right after the last item of the whole roadmap (today → +6 when there is none). Pure, from the view.
   const suggested = (() => {
     const last = items.at(-1);
-    const start = last ? addDays(last.plannedEnd, 1) : today;
-    return { plannedStart: start, plannedEnd: addDays(start, 6) };
+    // M20-D1: never step past 9999-12-31 (render must not throw; the item form validates the dates on save).
+    const start = last ? (addDaysOrNull(last.plannedEnd, 1) ?? LAST_ISO_DATE) : today;
+    return { plannedStart: start, plannedEnd: addDaysOrNull(start, 6) ?? LAST_ISO_DATE };
   })();
 
   // ---- delete (D8 … D10) ----
