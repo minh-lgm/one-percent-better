@@ -86,6 +86,17 @@ export default defineConfig(({ mode }) => {
                 test: (id: string) => /\/src\/(services\/(sync-service|remote-store)|data\/dexie\/sync-store)\.ts$/.test(id.replace(/\\/g, '/')),
               },
               {
+                // M19 (ADR-53): the four roadmap screens, their components, error mapping and stylesheets form ONE lazy
+                // chunk, `Roadmaps-*.js`, requested on the first `#/roadmaps*` route (list → detail → editor costs no
+                // further JS request; the QC spec m17-r1-explore keeps matching `Roadmaps-*.js`). Note for the budget:
+                // a lazy screen must never import another lazy screen statically (Goals → GoalDetail did, briefly, in
+                // M19): Rolldown then pulls everything the two share with the entry (react-router, Button, the hooks) out
+                // of `index` into a 32 kB common chunk — two more cold-load requests and ≈ 1.5 kB gzip lost.
+                name: 'Roadmaps',
+                includeDependenciesRecursively: false,
+                test: (id: string) => /\/src\/ui\/(screens\/Roadmap[A-Za-z]*\.tsx|components\/roadmap\/[^/]+\.tsx?|roadmap-errors\.ts|styles\/roadmap[a-z-]*\.css)$/.test(id.replace(/\\/g, '/')),
+              },
+              {
                 name: 'core',
                 test: (id: string) => {
                   const p = id.replace(/\\/g, '/');

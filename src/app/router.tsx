@@ -25,6 +25,7 @@ export interface RouteOptions {
 
 /** Routes (ARCHITECTURE §5.1). Review, Goal detail, (M14) Settings, (v7.1) Goals and (v8.0) Big goals are lazy-loaded (ADR-10, ADR-27, ADR-53). */
 export function buildRoutes({ Settings, i18n }: RouteOptions = {}): RouteObject[] {
+  const ns = () => (i18n ? ensureRoadmapNamespace(i18n) : Promise.resolve());
   return [
     {
       path: '/',
@@ -58,8 +59,33 @@ export function buildRoutes({ Settings, i18n }: RouteOptions = {}): RouteObject[
           // v8.0 (M17): screen chunk and the `roadmap` namespace load together; the screen never renders without its strings.
           path: 'roadmaps',
           lazy: async () => {
-            const [{ Roadmaps }] = await Promise.all([import('../ui/screens/Roadmaps'), i18n ? ensureRoadmapNamespace(i18n) : Promise.resolve()]);
+            const [{ Roadmaps }] = await Promise.all([import('../ui/screens/Roadmaps'), ns()]);
             return { Component: Roadmaps };
+          },
+          errorElement: <ViewError />,
+        },
+        // v8.0 (M19, ARCH §5.1 v8.0): create (empty), detail and editor — all lazy, same namespace rule.
+        {
+          path: 'roadmaps/new',
+          lazy: async () => {
+            const [{ RoadmapNew }] = await Promise.all([import('../ui/screens/RoadmapNew'), ns()]);
+            return { Component: RoadmapNew };
+          },
+          errorElement: <ViewError />,
+        },
+        {
+          path: 'roadmaps/:id',
+          lazy: async () => {
+            const [{ RoadmapDetail }] = await Promise.all([import('../ui/screens/RoadmapDetail'), ns()]);
+            return { Component: RoadmapDetail };
+          },
+          errorElement: <ViewError />,
+        },
+        {
+          path: 'roadmaps/:id/edit',
+          lazy: async () => {
+            const [{ RoadmapEditor }] = await Promise.all([import('../ui/screens/RoadmapEditor'), ns()]);
+            return { Component: RoadmapEditor };
           },
           errorElement: <ViewError />,
         },
