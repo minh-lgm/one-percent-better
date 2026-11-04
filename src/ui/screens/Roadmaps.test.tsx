@@ -95,17 +95,19 @@ describe('Roadmaps (S11, M17)', () => {
     expect(r.getByTestId('roadmap-progress')).toHaveTextContent('Done 1/21');
   });
 
-  it('empty: the explanation and the "Create empty roadmap" link (M19; no template button before M20), in both languages', async () => {
+  it('empty: the explanation, the "Create empty roadmap" link and (M20) the "Create from QPT 21-week template" button, in both languages', async () => {
     tc = await createTestContainer({ locale: 'en', clock: () => FIXED_NOW_Q1 });
     await renderApp({ route: '/roadmaps', container: tc });
     const empty = await screen.findByTestId('roadmaps-empty');
     expect(empty).toHaveTextContent('No big goals yet');
     expect(empty).toHaveTextContent('Start empty, or load the 21-week QPT plan.');
-    expect(within(empty).queryByRole('button')).toBeNull();
+    expect(within(empty).getAllByRole('button')).toHaveLength(1);
+    expect(within(empty).getByRole('button', { name: 'Create from QPT 21-week template' })).toBeInTheDocument();
     expect(within(empty).getAllByRole('link')).toHaveLength(1);
     expect(within(empty).getByRole('link', { name: 'Create empty roadmap' })).toHaveAttribute('href', '/roadmaps/new');
     // The header does not repeat the button while the list is empty (DESIGN S11).
     expect(screen.getAllByTestId('roadmap-create')).toHaveLength(1);
+    expect(screen.getAllByTestId('roadmap-create-template')).toHaveLength(1);
     cleanup();
     await tc.dispose();
     tc = await createTestContainer({ locale: 'vi', clock: () => FIXED_NOW_Q1 });

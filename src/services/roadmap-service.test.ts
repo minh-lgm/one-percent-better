@@ -270,6 +270,68 @@ describe('watchDetail / watchList', () => {
   });
 });
 
+describe('createFromQptTemplate (M20-AC2, FR-76, A-78, A-86)', () => {
+  const counts = async () => [await db.roadmaps.count(), await db.roadmapPhases.count(), await db.roadmapItems.count(), await db.roadmapCheckpoints.count()];
+
+  it('S1 + gq, start 2026-10-27, goal gq → 32 rows (1 / 5 / 21 / 5) in one transaction, linked to gq, dirty, one stamp; the detail is the Q1 oracle without actual dates', async () => {
+    const d = datasetQ1();
+    await db.goals.bulkPut(d.goals);
+    await db.entries.bulkPut(d.entries);
+    const before = ids;
+    const r = expectOk(await service.createFromQptTemplate({ startDate: '2026-10-27', goalId: 'gq', locale: 'vi' }, TODAY_Q1));
+    expect(r).toMatchObject({ title: 'QPT 21 tuần', goalId: 'gq', weeklyTargetMinutes: 480, milestoneLabel: 'Thi QPT', milestoneDate: '2027-03-09', createdAt: now.toISOString() });
+    expect(await counts()).toEqual([1, 5, 21, 5]);
+    expect(ids - before).toBe(32); // one fresh id per row
+    expect(await db.roadmapItems.where('dirty').equals(1).count()).toBe(21);
+    const agg = (await repo.getAggregate(r.id))!;
+    expect([agg.roadmap, ...agg.phases, ...agg.items, ...agg.checkpoints].every((row) => row.createdAt === now.toISOString())).toBe(true);
+    expect(agg.items.every((i) => i.roadmapId === r.id && agg.phases.some((p) => p.id === i.phaseId))).toBe(true);
+    const view = await first(service.watchDetail(r.id, TODAY_Q1));
+    expect(view?.overview).toMatchObject({ doneCount: 0, itemCount: 21, weeksElapsed: 2, plannedMinutesToDate: 960 });
+    expect(view?.milestoneDays).toBe(125);
+    expect(view?.linkState).toBe('linked');
+    // no actual dates: 10-27 … 11-01 fall in W1, 11-03 / 11-04 in W2
+    expect(view?.hoursDoneMinutes).toBe(345);
+    // gq is now taken: a second template with gq fails, without writing anything
+    const again = expectFail(await service.createFromQptTemplate({ startDate: '2026-10-27', goalId: 'gq', locale: 'vi' }, TODAY_Q1));
+    expect(again).toMatchObject({ code: 'ROADMAP_GOAL_ALREADY_LINKED', field: 'goalId', params: { title: 'QPT 21 tuần' } });
+    expect(await counts()).toEqual([1, 5, 21, 5]);
+  });
+
+  it('a failing write in the middle of the batch (probe on the checkpoint table) → the transaction rolls back: 0 rows anywhere', async () => {
+    await db.goals.bulkPut(datasetQ1().goals);
+    db.roadmapCheckpoints.hook('creating', () => {
+      throw new Error('probe: disk full');
+    });
+    await expect(service.createFromQptTemplate({ startDate: '2026-10-27', goalId: 'gq', locale: 'vi' }, TODAY_Q1)).rejects.toThrow();
+    expect(await counts()).toEqual([0, 0, 0, 0]);
+  });
+
+  it('no goal → goalId null (hours "—"); unknown goal → GOAL_NOT_FOUND; bad start date → ROADMAP_DATE_INVALID format; 20 live roadmaps → ROADMAP_LIMIT_REACHED — each with 0 rows written', async () => {
+    const r = expectOk(await service.createFromQptTemplate({ startDate: '2026-11-04', goalId: null, locale: 'en' }, TODAY_Q1));
+    expect(r).toMatchObject({ title: 'QPT 21 weeks', goalId: null, milestoneLabel: 'QPT exam', milestoneDate: '2027-03-17' });
+    expect((await first(service.watchDetail(r.id, TODAY_Q1)))?.hoursDoneMinutes).toBeNull();
+    expect(await counts()).toEqual([1, 5, 21, 5]);
+    expect(expectFail(await service.createFromQptTemplate({ startDate: '2026-11-04', goalId: 'nope', locale: 'en' }, TODAY_Q1))).toMatchObject({ code: 'GOAL_NOT_FOUND', field: 'goalId' });
+    expect(expectFail(await service.createFromQptTemplate({ startDate: '2026-02-30', goalId: null, locale: 'en' }, TODAY_Q1))).toMatchObject({ code: 'ROADMAP_DATE_INVALID', field: 'startDate', params: { variant: 'format' } });
+    expect(expectFail(await service.createFromQptTemplate({ startDate: '', goalId: null, locale: 'en' }, TODAY_Q1))).toMatchObject({ code: 'ROADMAP_DATE_INVALID' });
+    expect(await counts()).toEqual([1, 5, 21, 5]);
+    for (let i = 0; i < 19; i += 1) expectOk(await service.create(roadmapInput({ title: `R${i}` })));
+    expect(expectFail(await service.createFromQptTemplate({ startDate: '2026-11-04', goalId: null, locale: 'vi' }, TODAY_Q1))).toMatchObject({ code: 'ROADMAP_LIMIT_REACHED', params: { kind: 'roadmap', max: 20 } });
+    expect(await counts()).toEqual([20, 5, 21, 5]);
+  });
+
+  it('the content is data: vi stays vi whatever the app language does later (A-86); the en roadmap has no Vietnamese text', async () => {
+    const vi = expectOk(await service.createFromQptTemplate({ startDate: '2026-10-27', goalId: null, locale: 'vi' }, TODAY_Q1));
+    const en = expectOk(await service.createFromQptTemplate({ startDate: '2026-10-27', goalId: null, locale: 'en' }, TODAY_Q1));
+    const aggVi = (await repo.getAggregate(vi.id))!;
+    const aggEn = (await repo.getAggregate(en.id))!;
+    expect(aggVi.items.map((i) => i.title)).toContain('Thi QPT chính thức');
+    expect(aggEn.items.map((i) => i.title)).toContain('Official QPT exam');
+    expect(JSON.stringify(aggEn)).not.toMatch(/Lấp lỗ hổng|Thi QPT chính thức|Nhịp học/);
+  });
+});
+
 function first<T>(s: { subscribe(next: (v: T) => void, error?: (e: unknown) => void): () => void }): Promise<T> {
   return new Promise((resolve, reject) => {
     const stop = s.subscribe(

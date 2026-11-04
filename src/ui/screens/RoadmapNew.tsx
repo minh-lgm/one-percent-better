@@ -1,13 +1,17 @@
 // S12 — New roadmap `#/roadmaps/new` (phase 8, M19; DESIGN v8.0 S12; FR-69, FR-70, FR-74). Lazy route (ADR-53).
-// Only the roadmap fields; after `Create roadmap` the editor opens to add phases and items (A-D85).
+// Only the roadmap fields; after `Create roadmap` the editor opens to add phases and items (A-D85). M20: a banner on top
+// offers the QPT template instead (D7).
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { Goal } from '../../domain/types';
-import { LinkButton } from '../components/Button';
+import { toISODate } from '../../domain/dates';
+import { Button, LinkButton } from '../components/Button';
 import { ErrorState } from '../components/ErrorState';
 import { PageHeader } from '../components/PageHeader';
 import { RoadmapFields } from '../components/roadmap/RoadmapFields';
+import { useTemplateDialog } from '../components/roadmap/TemplateDialog';
 import { useRoadmapService } from '../components/roadmap/useRoadmapService';
+import { useNow } from '../hooks/useNow';
 import { useT } from '../hooks/useT';
 import { useToast } from '../hooks/useToast';
 import '../styles/roadmaps.css';
@@ -18,6 +22,7 @@ export function RoadmapNew() {
   const navigate = useNavigate();
   const [attempt, setAttempt] = useState(0);
   const { service, error: loadError } = useRoadmapService(attempt);
+  const template = useTemplateDialog(service, toISODate(useNow()));
   const [goals, setGoals] = useState<Goal[] | undefined>(undefined);
   useEffect(() => {
     if (!service) return;
@@ -39,6 +44,12 @@ export function RoadmapNew() {
   return (
     <div className="re-col">
       <PageHeader title={t('new.title')} back={back} />
+      <p className="re-banner" data-testid="new-template-banner">
+        <span>{t('new.templateHint')}</span>
+        <Button variant="secondary" className="sm" onClick={template.open} disabled={!service} data-testid="roadmap-create-template">
+          {t('list.createTemplate')}
+        </Button>
+      </p>
       {service ? (
         <RoadmapFields
           roadmap={null}
@@ -53,6 +64,7 @@ export function RoadmapNew() {
           }}
         />
       ) : null}
+      {template.dialog}
     </div>
   );
 }

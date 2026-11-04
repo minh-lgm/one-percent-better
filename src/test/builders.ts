@@ -1,6 +1,7 @@
 import type { Goal, LogEntry } from '../domain/types';
-import type { Roadmap, RoadmapAggregate, RoadmapCheckpoint, RoadmapItem, RoadmapPhase } from '../domain/roadmap';
+import type { Roadmap, RoadmapAggregate } from '../domain/roadmap';
 import { addDays } from '../domain/dates';
+import { buildQptTemplate } from '../domain/roadmap-template';
 
 const STAMP = '2026-10-01T03:00:00.000Z';
 
@@ -135,97 +136,14 @@ export const TODAY_Q1 = '2026-11-04';
 const Q1_STAMP = '2026-10-27T01:00:00.000Z';
 
 /**
- * The "QPT 21 tuần" template content, `vi` (DESIGN 7.9.3, verbatim from docs/plan/ref/qpt-tracker.html).
- * M20 replaces this hand-built copy with `buildQptTemplate`; its test must produce the same rows.
+ * The QPT roadmap of ARCH §4.8 e starting `startDate`, built by the real template (`buildQptTemplate`, M20) with the
+ * readable ids `rq` / `pq1…5` / `wq1…21` / `cq1…5`, `vi` content, no actual dates, no scores. (M17 used a hand-built copy
+ * here; M20 moved the content into `domain/roadmap-template.ts` and the rows are byte-identical — `fixtures-q1.test.ts`.)
  */
-export const QPT_VI = {
-  title: 'QPT 21 tuần',
-  milestoneLabel: 'Thi QPT',
-  note: [
-    'Nhịp học mỗi tuần',
-    'Thứ 2–4: 1h/tối · video + ghi chú tay',
-    'Thứ 5: 1h · quiz, ghi câu sai vào sổ lỗi',
-    'Thứ 7: 2h · lab + 10–15 bài tập ngoài',
-    'Chủ nhật: 1h · ôn sổ lỗi, tick tuần',
-    'Thứ 6: Buffer',
-    'Quiz chưa đạt 80% thì chưa sang module mới.',
-  ].join('\n'),
-  phases: [
-    ['Phase 1 · Linear Algebra', 'Course 1 · 34h', 4],
-    ['Phase 2 · Calculus', 'Course 2 · 27h', 4],
-    ['Phase 3 · Probability & Statistics', 'Course 3 · 33h', 4],
-    ['Phase 4 · Differential Equations', 'HKUST · Chasnov', 4],
-    ['Phase 5 · Lấp lỗ hổng & thi QPT', 'Mock + hồ sơ', 5],
-  ] as Array<[title: string, note: string, weeks: number]>,
-  weeks: [
-    'Systems of linear equations: singular vs non-singular, determinant',
-    'Solving systems: elimination, row echelon form, rank',
-    'Vectors & linear transformations: dot product, nhân ma trận, nghịch đảo',
-    'Determinants in depth & eigenvectors: basis, span, eigenvalue, PCA',
-    'Derivatives & optimization một biến',
-    'Gradients & gradient descent (nhiều biến)',
-    "Optimization in neural networks, Newton's method",
-    'Buffer Noel + Checkpoint 1 + bù tích phân',
-    'Probability cơ bản & các phân phối',
-    'Describing distributions: kỳ vọng, phương sai, random vector',
-    'Sampling & point estimation: MLE, MAP',
-    'Confidence interval & hypothesis testing',
-    'First-order ODE: separable, linear, Euler method',
-    'Tết: nghỉ hoặc ôn nhẹ, không giao bài mới',
-    'Second-order ODE, Laplace transform',
-    'Systems of ODE + Checkpoint 2',
-    'Ôn 2 mảng yếu nhất theo Checkpoint 2',
-    'Discrete math + mock QPT lần 1; gom hồ sơ',
-    'Sửa lỗi từ mock 1 + mock QPT lần 2',
-    'Thi QPT chính thức',
-    'Buffer; hoàn tất và nộp hồ sơ trước hạn',
-  ],
-  /** title, week whose planned end is the date (0 = startDate), threshold, note. */
-  checkpoints: [
-    ['Diagnostic', 0, null, ''],
-    ['Checkpoint 1', 8, null, '≥ 3/4 mỗi mảng LA, Calc'],
-    ['Checkpoint 2', 16, 20, ''],
-    ['Mock 1', 18, 24, ''],
-    ['Mock 2', 19, 26, ''],
-  ] as Array<[title: string, week: number, threshold: number | null, note: string]>,
-};
-
-/** Hand-built QPT roadmap (ARCH §4.8 e) starting `startDate`, ids `rq` / `pq1…5` / `wq1…21` / `cq1…5`, no actual dates, no scores. */
 export function buildQptRoadmap(startDate: string, goalId: string | null, stamp = Q1_STAMP): RoadmapAggregate {
-  const roadmap: Roadmap = {
-    id: 'rq',
-    title: QPT_VI.title,
-    note: QPT_VI.note,
-    goalId,
-    weeklyTargetMinutes: 480,
-    milestoneLabel: QPT_VI.milestoneLabel,
-    milestoneDate: addDays(startDate, 19 * 7),
-    createdAt: stamp,
-    updatedAt: stamp,
-  };
-  const phases: RoadmapPhase[] = QPT_VI.phases.map(([title, note], i) => ({ id: `pq${i + 1}`, roadmapId: 'rq', title, note, position: i, createdAt: stamp, updatedAt: stamp }));
-  const items: RoadmapItem[] = [];
-  let week = 0;
-  QPT_VI.phases.forEach(([, , weeks], p) => {
-    for (let k = 0; k < weeks; k += 1) {
-      const plannedStart = addDays(startDate, week * 7);
-      items.push({ id: `wq${week + 1}`, roadmapId: 'rq', phaseId: `pq${p + 1}`, title: QPT_VI.weeks[week], note: '', position: k, plannedStart, plannedEnd: addDays(plannedStart, 6), actualStart: null, actualEnd: null, createdAt: stamp, updatedAt: stamp });
-      week += 1;
-    }
-  });
-  const checkpoints: RoadmapCheckpoint[] = QPT_VI.checkpoints.map(([title, w, threshold, note], i) => ({
-    id: `cq${i + 1}`,
-    roadmapId: 'rq',
-    title,
-    note,
-    date: w === 0 ? startDate : addDays(startDate, w * 7 - 1),
-    maxScore: 32,
-    threshold,
-    score: null,
-    createdAt: stamp,
-    updatedAt: stamp,
-  }));
-  return { roadmap, phases, items, checkpoints };
+  const prefix = { roadmap: 'rq', phase: 'pq', item: 'wq', checkpoint: 'cq' } as const;
+  const agg = buildQptTemplate(startDate, 'vi', (kind, n) => (kind === 'roadmap' ? prefix.roadmap : `${prefix[kind]}${n}`), stamp);
+  return { ...agg, roadmap: { ...agg.roadmap, goalId } };
 }
 
 export type Q1Variant = 'b' | 'c' | 'e';

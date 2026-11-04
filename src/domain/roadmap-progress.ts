@@ -200,6 +200,15 @@ export function checkpointState(c: Pick<RoadmapCheckpoint, 'score' | 'threshold'
   return { kind: c.score >= c.threshold ? 'pass' : 'below', delta };
 }
 
+/**
+ * A-91: the roadmap week ("W8") containing `date` — 7-day blocks from the roadmap start, like `weeksElapsed` — or
+ * `null` when the date is outside [start, end] (the table then shows the full date, e.g. the Diagnostic of Q1).
+ */
+export function roadmapWeekOf(overview: Pick<RoadmapOverview, 'start' | 'end'>, date: ISODate): number | null {
+  if (overview.start === null || overview.end === null || date < overview.start || date > overview.end) return null;
+  return Math.floor(days(overview.start, date) / 7) + 1;
+}
+
 export type ChartScale = 'raw' | 'percent';
 
 /** Raw score axis when every checkpoint shares one `maxScore`, otherwise percent of each maximum. */

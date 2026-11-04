@@ -15,10 +15,12 @@ export interface GoalLinkPickerProps {
   /** The roadmap's current `goalId` when the goal no longer exists (link state `missing`). */
   missing?: boolean;
   error?: string;
+  /** M20 (D7 busy): the select is disabled while the template is being created. */
+  disabled?: boolean;
   onChange: (goalId: string) => void;
 }
 
-export function GoalLinkPicker({ id, value, goals, missing = false, error, onChange }: GoalLinkPickerProps) {
+export function GoalLinkPicker({ id, value, goals, missing = false, error, disabled, onChange }: GoalLinkPickerProps) {
   const { t } = useT('roadmap');
   const loading = goals === undefined;
   const none = !loading && goals.length === 0;
@@ -26,7 +28,7 @@ export function GoalLinkPicker({ id, value, goals, missing = false, error, onCha
   return (
     <div className="field" data-testid="goal-picker">
       <label htmlFor={id}>{t('ed.goalLabel')}</label>
-      <select id={id} className="input" value={value} aria-busy={loading || undefined} aria-invalid={error ? true : undefined} aria-describedby={describedBy} onChange={(e) => onChange(e.target.value)}>
+      <select id={id} className="input" value={value} aria-busy={loading || undefined} aria-invalid={error ? true : undefined} aria-describedby={describedBy} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
         <option value="">{t('ed.goalNone')}</option>
         {(goals ?? []).map((g) => (
           <option key={g.id} value={g.id}>

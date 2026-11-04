@@ -1,15 +1,17 @@
-// S11 — Big goals list (phase 8, M17: rows + empty state; M19: rows are links, "Create empty roadmap"; DESIGN v8.0 S11).
+// S11 — Big goals list (phase 8, M17: rows + empty state; M19: rows are links, "Create empty roadmap"; M20: "Create from
+// QPT 21-week template" opens D7 in place; DESIGN v8.0 S11).
 // Lazy route (ADR-53): the service, the repository and the `roadmap` namespace are loaded by the route's `lazy()`.
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { toISODate } from '../../domain/dates';
 import type { RoadmapListRow } from '../../domain/roadmap-progress';
 import type { SyncStatus } from '../../domain/sync';
-import { LinkButton } from '../components/Button';
+import { Button, LinkButton } from '../components/Button';
 import { ErrorState } from '../components/ErrorState';
 import { Icon } from '../components/Icon';
 import { PageHeader } from '../components/PageHeader';
 import { PaceChip } from '../components/roadmap/PaceChip';
+import { useTemplateDialog } from '../components/roadmap/TemplateDialog';
 import { NEVER, useRoadmapService } from '../components/roadmap/useRoadmapService';
 import { useDelayed } from '../hooks/useDelayed';
 import { useFormat } from '../hooks/useFormat';
@@ -32,6 +34,7 @@ export function Roadmaps() {
   const { syncService } = useServices();
   const sync = useSubscribable<SyncStatus>(() => (syncService ? syncService.watchStatus() : NEVER), [syncService]);
   const roadmapsUnavailable = (sync.data ?? syncService?.current())?.roadmapsUnavailable === true;
+  const template = useTemplateDialog(service, today);
 
   if (loadError !== undefined || rows.error !== undefined) {
     return <ErrorState title={tm('errors.loadViewTitle')} body={tm('errors.loadViewBody')} actionLabel={tm('common.retry')} onAction={() => setAttempt((n) => n + 1)} />;
@@ -40,14 +43,19 @@ export function Roadmaps() {
   // DESIGN S11: the primary action sits in the header only when there are rows; the empty state carries it itself.
   const hasRows = (rows.data?.length ?? 0) > 0;
   const create = (
-    <LinkButton variant="primary" to="/roadmaps/new" icon="plus" data-testid="roadmap-create">
-      {t('list.createBlank')}
-    </LinkButton>
+    <>
+      <LinkButton variant="primary" to="/roadmaps/new" icon="plus" data-testid="roadmap-create">
+        {t('list.createBlank')}
+      </LinkButton>
+      <Button variant="secondary" onClick={template.open} disabled={!service} data-testid="roadmap-create-template">
+        {t('list.createTemplate')}
+      </Button>
+    </>
   );
 
   return (
     <>
-      <PageHeader title={t('list.title')} subtitle={t('list.intro')} actions={hasRows ? create : undefined} />
+      <PageHeader title={t('list.title')} subtitle={t('list.intro')} actions={hasRows ? <div className="rm-actions">{create}</div> : undefined} />
       {roadmapsUnavailable ? (
         <p className="note rm-note" role="status" data-testid="roadmaps-unavailable">
           <Icon name="info" />
@@ -79,6 +87,7 @@ export function Roadmaps() {
           ))}
         </ul>
       )}
+      {template.dialog}
     </>
   );
 }

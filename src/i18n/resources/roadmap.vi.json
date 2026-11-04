@@ -19,7 +19,8 @@
       "hours": "Đã học {{done}} / {{plan}}",
       "hoursOnly": "Đã học {{done}}",
       "hoursNone": "Giờ học: —"
-    }
+    },
+    "createTemplate": "Tạo từ mẫu QPT 21 tuần"
   },
   "notFound": {
     "title": "Không tìm thấy mục tiêu lớn",
@@ -151,7 +152,8 @@
   "new": {
     "title": "Lộ trình mới",
     "srForm": "Biểu mẫu lộ trình mới",
-    "afterCreate": "Sau khi tạo lộ trình, bạn có thể thêm giai đoạn, mục và điểm kiểm tra."
+    "afterCreate": "Sau khi tạo lộ trình, bạn có thể thêm giai đoạn, mục và điểm kiểm tra.",
+    "templateHint": "Muốn dùng kế hoạch dựng sẵn?"
   },
   "ed": {
     "titleEdit": "Sửa lộ trình",
@@ -222,7 +224,25 @@
     "deletePhaseBodyEmpty": "Thao tác này xóa giai đoạn trống. Không thể hoàn tác.",
     "deleteItemTitle": "Xóa \"{{title}}\"?",
     "deleteItemBody": "Thao tác này xóa mục cùng ngày và ghi chú của nó. Không thể hoàn tác.",
-    "deleteItemConfirm": "Xóa mục"
+    "deleteItemConfirm": "Xóa mục",
+    "addCp": "Thêm điểm kiểm tra",
+    "noCheckpoints": "Chưa có điểm kiểm tra nào.",
+    "cpRow": "{{date}} · tối đa {{max}}",
+    "cpRowThreshold": "{{date}} · tối đa {{max}} · ngưỡng {{threshold}}",
+    "editCpAria": "Sửa {{title}}",
+    "deleteCpAria": "Xóa {{title}}",
+    "cpNameLabel": "Tên",
+    "cpDateLabel": "Ngày",
+    "cpMaxLabel": "Điểm tối đa",
+    "cpThresholdLabel": "Ngưỡng đạt (không bắt buộc)",
+    "cpScoreLabel": "Điểm (không bắt buộc)",
+    "cpNoteLabel": "Ghi chú (không bắt buộc)",
+    "cpNoteCounter": "{{n}}/280",
+    "cpNumberHint": "Tối đa một chữ số thập phân.",
+    "saveCp": "Lưu điểm kiểm tra",
+    "deleteCpTitle": "Xóa \"{{title}}\"?",
+    "deleteCpBody": "Thao tác này xóa điểm kiểm tra và điểm đã ghi. Không thể hoàn tác.",
+    "deleteCpConfirm": "Xóa điểm kiểm tra"
   },
   "count": {
     "phases_other": "{{count}} giai đoạn",
@@ -234,7 +254,9 @@
     "saved": "Đã lưu lộ trình",
     "deleted": "Đã xóa lộ trình",
     "phaseDeleted": "Đã xóa giai đoạn",
-    "itemDeleted": "Đã xóa mục"
+    "itemDeleted": "Đã xóa mục",
+    "checkpointDeleted": "Đã xóa điểm kiểm tra",
+    "templateCreated": "Đã tạo lộ trình từ mẫu QPT"
   },
   "errors": {
     "ROADMAP_NOT_FOUND_roadmap": "Lộ trình này không còn nữa. Có thể nó đã bị xóa.",
@@ -260,5 +282,41 @@
     "ROADMAP_LIMIT_REACHED_phase": "Một lộ trình có tối đa {{max}} giai đoạn.",
     "ROADMAP_LIMIT_REACHED_item": "Một lộ trình có tối đa {{max}} mục.",
     "ROADMAP_LIMIT_REACHED_checkpoint": "Một lộ trình có tối đa {{max}} điểm kiểm tra."
+  },
+  "cp": {
+    "title": "Điểm kiểm tra",
+    "colName": "Mốc",
+    "colThreshold": "Ngưỡng",
+    "colScore": "Điểm",
+    "week": "W{{n}}",
+    "threshold": "≥ {{value}}",
+    "outOf": "/ {{max}}",
+    "scoreAria": "Điểm của {{title}} (trên {{max}})",
+    "saved": "Đã lưu điểm của {{title}}",
+    "state": {
+      "pass": "Đạt",
+      "below": "Dưới ngưỡng",
+      "recorded": "Đã ghi",
+      "pending": "Chưa có điểm"
+    },
+    "chartTitle": "Điểm so với ngưỡng",
+    "legendThreshold": "Ngưỡng",
+    "scalePercent": "Điểm được hiển thị theo phần trăm của điểm tối đa mỗi mốc.",
+    "sr": {
+      "intro_other": "{{count}} điểm kiểm tra, theo thứ tự ngày. {{items}}",
+      "pass": "{{title}}: {{score}} trên {{max}}, ngưỡng {{threshold}}, đạt",
+      "below": "{{title}}: {{score}} trên {{max}}, ngưỡng {{threshold}}, dưới ngưỡng",
+      "recorded": "{{title}}: {{score}} trên {{max}}, không có ngưỡng",
+      "pending": "{{title}}: chưa có điểm"
+    }
+  },
+  "tpl": {
+    "title": "Tạo từ mẫu QPT 21 tuần",
+    "body": "Tạo kế hoạch 21 tuần gồm 5 giai đoạn, 21 mục theo tuần, 5 điểm kiểm tra và chỉ tiêu 8 giờ mỗi tuần. Bạn có thể sửa mọi thứ sau đó.",
+    "startLabel": "Ngày bắt đầu",
+    "preview": "Tuần 1: {{start}}. Tuần 20 (thi QPT): {{exam}}. Tuần cuối kết thúc ngày {{end}}.",
+    "languageName": "Tiếng Việt",
+    "langNote": "Tạo bằng {{language}}. Đổi ngôn ngữ app sau này sẽ không dịch lại nội dung này.",
+    "creating": "Đang tạo…"
   }
 }

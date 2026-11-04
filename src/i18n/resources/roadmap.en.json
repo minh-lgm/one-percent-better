@@ -19,7 +19,8 @@
       "hours": "Studied {{done}} of {{plan}}",
       "hoursOnly": "Studied {{done}}",
       "hoursNone": "Study time: —"
-    }
+    },
+    "createTemplate": "Create from QPT 21-week template"
   },
   "notFound": {
     "title": "Big goal not found",
@@ -159,7 +160,8 @@
   "new": {
     "title": "New roadmap",
     "srForm": "New roadmap form",
-    "afterCreate": "After you create the roadmap, you can add phases, items and checkpoints."
+    "afterCreate": "After you create the roadmap, you can add phases, items and checkpoints.",
+    "templateHint": "Prefer a ready-made plan?"
   },
   "ed": {
     "titleEdit": "Edit roadmap",
@@ -232,7 +234,25 @@
     "deletePhaseBodyEmpty": "This deletes the empty phase. This can't be undone.",
     "deleteItemTitle": "Delete \"{{title}}\"?",
     "deleteItemBody": "This deletes the item with its dates and note. This can't be undone.",
-    "deleteItemConfirm": "Delete item"
+    "deleteItemConfirm": "Delete item",
+    "addCp": "Add checkpoint",
+    "noCheckpoints": "No checkpoints yet.",
+    "cpRow": "{{date}} · max {{max}}",
+    "cpRowThreshold": "{{date}} · max {{max}} · threshold {{threshold}}",
+    "editCpAria": "Edit {{title}}",
+    "deleteCpAria": "Delete {{title}}",
+    "cpNameLabel": "Name",
+    "cpDateLabel": "Date",
+    "cpMaxLabel": "Maximum score",
+    "cpThresholdLabel": "Threshold (optional)",
+    "cpScoreLabel": "Score (optional)",
+    "cpNoteLabel": "Note (optional)",
+    "cpNoteCounter": "{{n}}/280",
+    "cpNumberHint": "Up to one decimal place.",
+    "saveCp": "Save checkpoint",
+    "deleteCpTitle": "Delete \"{{title}}\"?",
+    "deleteCpBody": "This deletes the checkpoint and its score. This can't be undone.",
+    "deleteCpConfirm": "Delete checkpoint"
   },
   "count": {
     "phases_one": "{{count}} phase",
@@ -247,7 +267,9 @@
     "saved": "Roadmap saved",
     "deleted": "Roadmap deleted",
     "phaseDeleted": "Phase deleted",
-    "itemDeleted": "Item deleted"
+    "itemDeleted": "Item deleted",
+    "checkpointDeleted": "Checkpoint deleted",
+    "templateCreated": "Roadmap created from the QPT template"
   },
   "errors": {
     "ROADMAP_NOT_FOUND_roadmap": "This roadmap doesn't exist anymore. It may have been deleted.",
@@ -273,5 +295,42 @@
     "ROADMAP_LIMIT_REACHED_phase": "A roadmap can have up to {{max}} phases.",
     "ROADMAP_LIMIT_REACHED_item": "A roadmap can have up to {{max}} items.",
     "ROADMAP_LIMIT_REACHED_checkpoint": "A roadmap can have up to {{max}} checkpoints."
+  },
+  "cp": {
+    "title": "Checkpoints",
+    "colName": "Checkpoint",
+    "colThreshold": "Threshold",
+    "colScore": "Score",
+    "week": "W{{n}}",
+    "threshold": "≥ {{value}}",
+    "outOf": "/ {{max}}",
+    "scoreAria": "Score for {{title}} (out of {{max}})",
+    "saved": "Score saved for {{title}}",
+    "state": {
+      "pass": "Passed",
+      "below": "Below threshold",
+      "recorded": "Recorded",
+      "pending": "No score yet"
+    },
+    "chartTitle": "Scores vs. thresholds",
+    "legendThreshold": "Threshold",
+    "scalePercent": "Scores are shown as a percent of each checkpoint's maximum.",
+    "sr": {
+      "intro_one": "{{count}} checkpoint, in date order. {{items}}",
+      "intro_other": "{{count}} checkpoints, in date order. {{items}}",
+      "pass": "{{title}}: {{score}} of {{max}}, threshold {{threshold}}, passed",
+      "below": "{{title}}: {{score}} of {{max}}, threshold {{threshold}}, below threshold",
+      "recorded": "{{title}}: {{score}} of {{max}}, no threshold",
+      "pending": "{{title}}: no score yet"
+    }
+  },
+  "tpl": {
+    "title": "Create from QPT 21-week template",
+    "body": "Creates a 21-week plan with 5 phases, 21 weekly items, 5 score checkpoints and an 8-hour weekly target. You can edit everything afterwards.",
+    "startLabel": "Start date",
+    "preview": "Week 1: {{start}}. Week 20 (QPT exam): {{exam}}. The last week ends {{end}}.",
+    "languageName": "English",
+    "langNote": "Created in {{language}}. Changing the app language later won't translate it.",
+    "creating": "Creating…"
   }
 }

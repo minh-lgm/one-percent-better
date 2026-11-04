@@ -2,7 +2,7 @@
 // Lazy-only module (ADR-53): the container exposes it through `loadRoadmapService()` (`import()`), so nothing
 // here is on the cold-load path. Every failure is a `Result`; only storage failures throw.
 import type { GoalRepository, RoadmapRepository, Subscribable } from '../data/repositories';
-import { addDays } from '../domain/dates';
+import { addDays, isValidISODate } from '../domain/dates';
 import {
   checkLimit,
   checkRoadmapSpan,
@@ -26,6 +26,7 @@ import {
   type RoadmapPhase,
 } from '../domain/roadmap';
 import { roadmapView, toListRow, type RoadmapListRow, type RoadmapView } from '../domain/roadmap-progress';
+import { buildQptTemplate, type TemplateLocale } from '../domain/roadmap-template';
 import { nextUpdatedAt } from '../domain/sync';
 import { fail, ok, type DomainError, type Goal, type ISODate, type Result } from '../domain/types';
 import { randomUuid } from '../domain/uuid';
@@ -99,6 +100,23 @@ export class RoadmapService {
     const stamp = this.stamp();
     const roadmap: Roadmap = { id: this.newId(), ...validated.value, createdAt: stamp, updatedAt: stamp };
     await this.roadmaps.putRoadmap(roadmap);
+    return ok(roadmap);
+  }
+
+  /**
+   * "QPT 21 weeks" from the template (FR-76, ARCHITECTURE §4.8 e): content in the app language at creation time (A-86;
+   * afterwards it is plain user data), the goal link checked like any other (A-78), the roadmap limit first. The 32
+   * rows go to the repository as ONE batch (`putMany` = one Dexie transaction): a failure leaves no row behind.
+   */
+  async createFromQptTemplate(opts: { startDate: ISODate; goalId: string | null; locale: TemplateLocale }, _today: ISODate): Promise<Result<Roadmap>> {
+    const limit = checkLimit('roadmap', (await this.roadmaps.listLive()).length);
+    if (limit) return fail(limit);
+    if (!isValidISODate(opts.startDate)) return fail({ code: 'ROADMAP_DATE_INVALID', field: 'startDate', message: `startDate ${opts.startDate}: format`, params: { variant: 'format' } });
+    const link = await this.checkGoalLink(null, opts.goalId);
+    if (link) return fail(link);
+    const template = buildQptTemplate(opts.startDate, opts.locale, () => this.newId(), this.stamp());
+    const roadmap: Roadmap = { ...template.roadmap, goalId: opts.goalId };
+    await this.roadmaps.putMany({ roadmaps: [roadmap], phases: template.phases, items: template.items, checkpoints: template.checkpoints });
     return ok(roadmap);
   }
 

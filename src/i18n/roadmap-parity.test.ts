@@ -13,7 +13,7 @@ const EN = flattenMessages(roadmapEn);
 const VI = flattenMessages(roadmapVi);
 
 /** DESIGN §7.0 rule 5: rows marked "(= en)". */
-const SAME_VALUE_ALLOWLIST = ['noValue', 'milestone.line', 'now.eyebrowIndexed'];
+const SAME_VALUE_ALLOWLIST = ['noValue', 'milestone.line', 'now.eyebrowIndexed', 'cp.week'];
 
 function cells(line: string): string[] {
   const out: string[] = [];
@@ -63,15 +63,17 @@ describe('roadmap namespace parity (M17-AC9)', () => {
     }
   });
 
-  it('covers the M17 and M19 rows of 7.9.2 and every errors.* row (M20 rows are not shipped yet)', () => {
+  it('covers every 7.9.2 row of M17, M19 and M20 (M20: cp.*, tpl.*, checkpoint editor, template entry points) — 282 en / 268 vi keys (DESIGN 7.9.4)', () => {
     const section = design.slice(design.indexOf('#### 7.9.2'), design.indexOf('#### 7.9.3'));
     const rows = section.split('\n').filter((l) => /^\| `[a-zA-Z]/.test(l)).map((l) => cells(l));
-    const shipped = rows.filter((c) => c[1] === 'M17' || c[1] === 'M19' || unquote(c[0]).startsWith('errors.')).map((c) => unquote(c[0]));
-    expect(shipped.length).toBeGreaterThan(200);
-    for (const key of shipped) expect(EN[key], `missing ${key}`).toBeDefined();
-    const m20 = rows.filter((c) => c[1] === 'M20' && !unquote(c[0]).startsWith('errors.')).map((c) => unquote(c[0]));
-    expect(m20.length).toBeGreaterThan(20);
-    for (const key of m20) expect(EN[key], `${key} is M20`).toBeUndefined();
+    const keys = rows.map((c) => unquote(c[0]));
+    expect(keys.length).toBeGreaterThan(270);
+    for (const key of keys) expect(EN[key], `missing ${key}`).toBeDefined();
+    const m20 = rows.filter((c) => c[1] === 'M20').map((c) => unquote(c[0]));
+    expect(m20).toEqual(expect.arrayContaining(['list.createTemplate', 'new.templateHint', 'cp.sr.intro_other', 'tpl.preview', 'ed.saveCp', 'toast.templateCreated']));
+    // the two D3 lines moved from 7.9.1 (M17 budget fallback) come on top of the 282 / 268 rows of 7.9.4
+    expect(Object.keys(EN).length - 2).toBe(282);
+    expect(Object.keys(VI).length - 2).toBe(268);
   });
 
   it('(M19, FR-80) goal.detail.roadmapLabel and goal.delete.roadmapNote (7.9.1) are in the main resources verbatim', () => {
