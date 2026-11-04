@@ -123,13 +123,14 @@ test.describe('M18-AC7 roadmaps reach the account and the other device (Demo M18
     await expect(accountCard(page).getByTestId('sync-error')).toHaveCount(0);
     await expect(accountCard(page).getByTestId('remote-invalid')).toHaveCount(0);
     await expect(syncIndicator(page)).toHaveAttribute('data-state', 'pending');
-    await expect(syncIndicator(page)).toHaveText('32 changes waiting');
+    await expect(syncIndicator(page)).toHaveText('32 changes waiting to sync');
     await expect(syncIndicator(page)).not.toHaveText(/Sign in again/);
     await expect(page.getByTestId('last-synced')).not.toHaveText(EN.settings.account.neverSynced);
 
-    // A new goal goes up while the tables are missing (the core group is pushed in its own request).
+    // A new entry goes up while the tables are missing (the core group is pushed in its own request). Under the Q1 clock
+    // (2026-11-04) the S1 goals have ended; the open-ended "QPT study" is the one on Today.
     await gotoHash(page, '/today');
-    await logTime(page, 'Read', 10);
+    await logTime(page, 'QPT study', 10);
     await expect.poll(async () => (await mock.rows('u1')).entries.length, { timeout: 10_000 }).toBe(30);
     await gotoHash(page, '/roadmaps');
     const note = page.getByTestId('roadmaps-unavailable');
