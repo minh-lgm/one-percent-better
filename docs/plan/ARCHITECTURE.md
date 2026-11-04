@@ -1120,7 +1120,7 @@ Ký hiệu: `today` = ngày cục bộ; `E` = entry còn sống của goal liên
 | :- | :- |
 | `linkState` | `goalId = null` → `none`; goal không tồn tại hoặc là tombstone → `missing`; goal `archived` → `archived`; còn lại `linked`. `none`/`missing` → mọi giá trị giờ là `null` (UI "—" + lối vào liên kết goal); `archived` vẫn tính giờ bình thường (A-79) |
 | Cửa sổ mục `[S_i, E_i]` | `E_i = actualEnd ?? (actualStart ? max(plannedEnd, today) : plannedEnd)`; `S_i = actualStart ?? plannedStart`. `E_i < S_i` → cửa sổ rỗng, mục được 0 phút (A-82) |
-| `explicit_i` | `actualStart !== null || actualEnd !== null` |
+| `explicit_i` | `actualStart ≠ null` hoặc `actualEnd ≠ null` |
 | Gán ngày (chồng khoảng) | Với mỗi ngày `d` có entry: tập ứng viên `C(d) = { i : S_i ≤ d ≤ E_i }`. Rỗng → ngày đó **không** thuộc lộ trình. Ngược lại toàn bộ `m(d)` thuộc **một** mục: ưu tiên `explicit` = true; rồi `S_i` lớn hơn (mục bắt đầu gần nhất); rồi `ord(i)` nhỏ hơn. Mỗi entry được đếm đúng một lần (A-80) |
 | `itemMinutes(i)` | Tổng `m(d)` của các ngày gán cho `i` |
 | `hoursDoneMinutes` | `Σ itemMinutes(i)` (= tổng phút các ngày có ít nhất một ứng viên) |
