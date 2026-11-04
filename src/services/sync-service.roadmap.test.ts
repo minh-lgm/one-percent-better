@@ -5,7 +5,7 @@ import { normalizeSyncMeta } from '../data/repositories';
 import { rewindCursor } from '../domain/sync';
 import { datasetQ1 } from '../test/builders';
 import { FakeRemoteServer, unreachableError } from '../test/fake-remote-store';
-import { createDevice, serverSnapshot, U1, U2, type Device } from '../test/two-devices';
+import { createDevice, serverSnapshotAll, U1, U2, type Device } from '../test/two-devices';
 
 const NOW = new Date('2026-11-04T03:00:00.000Z');
 let server: FakeRemoteServer;
@@ -126,7 +126,7 @@ describe('a device that synced before phase 8 (M18-AC3)', () => {
       ['roadmap_items', null],
       ['roadmap_checkpoints', null],
     ]);
-    const snap = await a.snapshot();
+    const snap = await a.snapshotAll();
     expect(snap.roadmaps).toHaveLength(1);
     expect(snap.roadmapItems).toHaveLength(21);
     expect(snap.roadmapItems.find((i) => i.id === 'wq1')).toMatchObject({ actualEnd: '2026-11-01', title: q1.items[0].title });
@@ -167,7 +167,7 @@ describe('merge into another account, sign out (M18-AC5, FR-47, FR-41)', () => {
     await seedQ1(a);
     await a.sync.syncNow('manual');
     expect(await a.store.countDirty()).toBe(0);
-    expect(serverSnapshot(server, U1).roadmapItems).toHaveLength(21);
+    expect(serverSnapshotAll(server, U1).roadmapItems).toHaveLength(21);
     // Another account signs in on this device: D5, then "Add to account".
     a.user.id = U2;
     a.remote = new (await import('../test/fake-remote-store')).FakeRemoteStore(server, U2);
@@ -178,7 +178,7 @@ describe('merge into another account, sign out (M18-AC5, FR-47, FR-41)', () => {
     expect(r).toEqual({ status: 'ran', ok: true });
     expect(markAllDirty).toHaveBeenCalledTimes(1);
     expect(await markAllDirty.mock.results[0].value).toBe(35 + 32);
-    const u2 = serverSnapshot(server, U2);
+    const u2 = serverSnapshotAll(server, U2);
     expect(u2.roadmaps).toHaveLength(1);
     expect(u2.roadmapPhases).toHaveLength(5);
     expect(u2.roadmapItems).toHaveLength(21);
@@ -204,6 +204,6 @@ describe('merge into another account, sign out (M18-AC5, FR-47, FR-41)', () => {
     for (const t of ['roadmaps', 'roadmapPhases', 'roadmapItems', 'roadmapCheckpoints', 'goals', 'entries'] as const) expect(await a.db[t].count()).toBe(0);
     expect(await a.kv.get('sync')).toBeUndefined();
     // The account still has everything (sign-out never deletes in the cloud).
-    expect(serverSnapshot(server, U1).roadmapItems).toHaveLength(21);
+    expect(serverSnapshotAll(server, U1).roadmapItems).toHaveLength(21);
   });
 });

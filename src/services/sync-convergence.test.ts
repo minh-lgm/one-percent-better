@@ -7,7 +7,7 @@ import { toISODate } from '../domain/dates';
 import type { GoalInput } from '../domain/goal';
 import type { RoadmapItem } from '../domain/roadmap';
 import { FakeRemoteServer, offlineError } from '../test/fake-remote-store';
-import { createDevice, serverSnapshot, U1, type Device } from '../test/two-devices';
+import { createDevice, serverSnapshotAll, U1, type Device } from '../test/two-devices';
 import { datasetO1, datasetQ1, datasetS1 } from '../test/builders';
 
 const T = (s: string) => new Date(s);
@@ -43,9 +43,9 @@ async function syncOk(d: Device) {
 }
 
 async function expectConverged(a: Device, b: Device) {
-  const sa = await a.snapshot();
-  const sb = await b.snapshot();
-  const sr = serverSnapshot(server, U1);
+  const sa = await a.snapshotAll();
+  const sb = await b.snapshotAll();
+  const sr = serverSnapshotAll(server, U1);
   expect(sb.goals).toEqual(sa.goals);
   expect(sb.entries).toEqual(sa.entries);
   expect(sr.goals).toEqual(sa.goals);
@@ -594,7 +594,7 @@ describe('roadmaps converge across two devices (M18-AC4)', () => {
     await seedQ1(a);
     await syncOk(a);
     await syncOk(b);
-    const sb = await b.snapshot();
+    const sb = await b.snapshotAll();
     expect(sb.roadmaps).toHaveLength(1);
     expect(sb.roadmapPhases).toHaveLength(5);
     expect(sb.roadmapItems).toHaveLength(21);
@@ -690,7 +690,7 @@ describe('roadmaps converge across two devices (M18-AC4)', () => {
     await syncOk(b);
     for (const d of [a, b]) {
       expect(await d.roadmaps.listLive(), d.name).toEqual([]);
-      expect((await d.snapshot()).roadmapItems, d.name).toEqual([]);
+      expect((await d.snapshotAll()).roadmapItems, d.name).toEqual([]);
     }
     expect(server.live('roadmaps', U1)).toEqual([]);
     expect(server.rows('roadmap_items', U1).every((r) => r.deleted_at !== null)).toBe(true);

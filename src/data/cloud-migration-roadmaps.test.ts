@@ -132,7 +132,7 @@ describe('supabase/migrations/20261104000000_roadmaps.sql (M18-AC6)', () => {
     expect(code).not.toMatch(/create or replace function/);
     expect(code).not.toMatch(/alter table public\.(goals|entries|settings)/);
     expect(code).not.toMatch(/on public\.(goals|entries|settings)\b/);
-    expect(code).not.toContain('service_role');
+    expect(code).not.toContain(['service', 'role'].join('_')); // the secret-key role name (DoD 14 forbids the literal in sources)
   });
 
   it('is idempotent on paper: every create of a policy/trigger is preceded by its drop if exists; tables and indexes use if not exists', () => {

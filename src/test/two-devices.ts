@@ -48,8 +48,10 @@ export interface Device {
   clock: { now: Date };
   online: { value: boolean };
   user: { id: string | null };
-  /** Live rows of the six synced tables as domain objects (what the UI would show), sorted by id. */
-  snapshot(): Promise<Snapshot>;
+  /** Live goals/entries as domain objects (what the UI would show), sorted by id (M7 shape, kept for the QC oracles). */
+  snapshot(): Promise<{ goals: Record<string, unknown>[]; entries: Record<string, unknown>[] }>;
+  /** v8.0: live rows of the six synced tables, sorted by id. */
+  snapshotAll(): Promise<Snapshot>;
   /** v8.0: write a whole roadmap aggregate (template / dataset) as new dirty rows. */
   seedRoadmap(aggregate: RoadmapAggregate): Promise<void>;
   dispose(): Promise<void>;
@@ -130,6 +132,10 @@ export async function createDevice(name: string, server: FakeRemoteServer, optio
     online,
     user,
     async snapshot() {
+      const all = await device.snapshotAll();
+      return { goals: all.goals, entries: all.entries };
+    },
+    async snapshotAll() {
       const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id)) as unknown as Record<string, unknown>[];
       const g = (await goals.getAll()).sort((a, b) => a.id.localeCompare(b.id));
       const range = goalsDateRange(g);
@@ -159,11 +165,17 @@ export async function createDevice(name: string, server: FakeRemoteServer, optio
   return device;
 }
 
+/** What the server holds as live goals/entries, in domain shape, sorted by id (M7 shape, kept for the QC oracles). */
+export function serverSnapshot(server: FakeRemoteServer, userId: string): { goals: Record<string, unknown>[]; entries: Record<string, unknown>[] } {
+  const all = serverSnapshotAll(server, userId);
+  return { goals: all.goals, entries: all.entries };
+}
+
 /**
- * What the server holds as live rows, in domain shape, sorted by id (for convergence checks). Children of a
- * tombstoned parent are left out, like a device's `snapshot()` (they are tombstoned there at the next cycle).
+ * v8.0: what the server holds as live rows of the six tables, in domain shape, sorted by id (for convergence checks).
+ * Children of a tombstoned parent are left out, like a device's `snapshotAll()` (they are tombstoned there at the next cycle).
  */
-export function serverSnapshot(server: FakeRemoteServer, userId: string): Snapshot {
+export function serverSnapshotAll(server: FakeRemoteServer, userId: string): Snapshot {
   const out = {} as Snapshot;
   const liveIds = {} as Record<string, Set<string>>;
   for (const spec of SYNC_TABLES) {
