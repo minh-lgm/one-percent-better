@@ -60,7 +60,7 @@ async function quickActions(page: Page, suffix: string): Promise<void> {
   await expect(item(page, 'wq3').getByTestId('item-label')).toHaveText('Đang học');
   await expect(item(page, 'wq3').getByTestId('item-hours')).toHaveText('0,5 giờ');
   await expect(item(page, 'wq2').getByTestId('item-hours')).toHaveText('0,8 giờ');
-  await expect(ov.getByTestId('hours-value')).toHaveText('5,8 giờ');
+  await expect(ov.getByTestId('hours-value')).toHaveText('6,6 giờ');
   // (4) W3 end 05/11/2026 → DATE_IN_FUTURE from roadmap:errors, nothing saved
   await item(page, 'wq3').getByLabel('Kết thúc thực tế', { exact: true }).fill('2026-11-05');
   await expect(item(page, 'wq3').getByRole('alert')).toHaveText(ROADMAP_VI.errors.DATE_IN_FUTURE);
@@ -106,7 +106,7 @@ test.describe('M19 Big goals — detail, quick actions, editor, goal link', () =
     const ov = overview(page);
     await expect(ov.getByTestId('pace-chip')).toHaveText(ROADMAP_EN.pace.onTrack);
     await expect(ov.getByTestId('pace-sub')).toHaveText(ROADMAP_EN.pace.subOnTrack);
-    await expect(ov.getByTestId('hours-value')).toHaveText('5.8 h');
+    await expect(ov.getByTestId('hours-value')).toHaveText('6.6 h');
     await expect(ov.getByTestId('hours-sub')).toHaveText('Planned through this week: 16 h');
     await expect(ov.getByTestId('milestone-value')).toHaveText('125 days left');
     await expect(ov.getByTestId('metric-milestone')).toContainText('On 2027-03-09');
@@ -353,8 +353,10 @@ test.describe('M19 Big goals — detail, quick actions, editor, goal link', () =
     await expect(toast(page)).toHaveText(ROADMAP_EN.toast.saved);
     await page.getByTestId('editor-done').click();
     await expect(page.getByTestId('detail-goal')).toHaveText('Goal: Spanish');
-    // Spanish's only entry (2026-03-02) lies outside every item: 0 h, 0/480 min this week.
-    await expect(overview(page).getByTestId('hours-value')).toHaveText('0 h');
+    // Spanish's only entry (2026-03-02) lies outside every item: v8.3 the total is still every Spanish minute (1 h, all
+    // of it before the roadmap start), 0/480 min this week, W1 0 h.
+    await expect(overview(page).getByTestId('hours-value')).toHaveText('1 h');
+    await expect(overview(page).getByTestId('hours-outside')).toHaveText("Includes 1 h from before the roadmap's start date.");
     await expect(page.getByTestId('this-week').getByTestId('this-week-minutes')).toHaveText('0/480 min');
     await expect(item(page, 'wq1').getByTestId('item-hours')).toHaveText('0 h');
     // Unlink

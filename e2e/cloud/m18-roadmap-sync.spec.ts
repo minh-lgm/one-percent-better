@@ -36,7 +36,7 @@ test.beforeEach(async ({ mock }) => {
 });
 
 test.describe('M18-AC7 roadmaps reach the account and the other device (Demo M18)', () => {
-  test('A imports Q1 + signs in → 1/5/21/5 rows of u1 on the mock in < 15 s; B syncs → Big goals shows QPT 21 tuần 1/21, 5.8 h; A deletes gq → B shows "No goal linked" and "Study time: —"', async ({ page, mock, device }) => {
+  test('A imports Q1 + signs in → 1/5/21/5 rows of u1 on the mock in < 15 s; B syncs → Big goals shows QPT 21 tuần 1/21, 6.6 h; A deletes gq → B shows "No goal linked" and "Study time: —"', async ({ page, mock, device }) => {
     test.setTimeout(120_000);
     const errors = collectErrors(page);
     const rec = recordRequests(page);
@@ -78,7 +78,7 @@ test.describe('M18-AC7 roadmaps reach the account and the other device (Demo M18
     await expect(row.getByRole('heading', { level: 2 })).toHaveText('QPT 21 tuần');
     await expect(row.getByTestId('roadmap-goal')).toHaveText('Goal: QPT study');
     await expect(row.getByTestId('roadmap-progress')).toHaveText('Done 1/21');
-    await expect(row.getByTestId('roadmap-hours')).toHaveText('Studied 5.8 h of 16 h');
+    await expect(row.getByTestId('roadmap-hours')).toHaveText('Studied 6.6 h of 16 h');
     await expect(row.getByTestId('pace-chip')).toHaveText('On track');
     expect(await storeCount(b.page, 'roadmapItems')).toBe(21);
     await expect(b.page.getByTestId('roadmaps-unavailable')).toHaveCount(0);

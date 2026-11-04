@@ -27,7 +27,7 @@ async function score(page: Page, title: string, value: string): Promise<void> {
 /** The Q1 numbers of the detail (ARCH §4.8 d) after W1 10-27 → 11-01 and Diagnostic 24/09/2026 = 5, in vi. */
 async function expectQ1Vi(page: Page): Promise<void> {
   await expect(ov(page).getByTestId('done-value')).toHaveText('1/21');
-  await expect(ov(page).getByTestId('hours-value')).toHaveText('5,8 giờ');
+  await expect(ov(page).getByTestId('hours-value')).toHaveText('6,6 giờ');
   await expect(ov(page).getByTestId('hours-sub')).toHaveText('Kế hoạch đến hết tuần này: 16 giờ');
   await expect(ov(page).getByTestId('pace-chip')).toHaveText(ROADMAP_VI.pace.onTrack);
   await expect(ov(page).getByTestId('milestone-value')).toContainText('125');

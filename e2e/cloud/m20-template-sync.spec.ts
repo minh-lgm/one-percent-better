@@ -65,7 +65,7 @@ test('M20-AC5: template + CP2 18 on A → B gets the 32 rows and 18; B sets 21 l
   await expect(b.page.getByTestId('roadmap-item')).toHaveCount(21);
   await expect(b.page.getByTestId('phase')).toHaveCount(5);
   await expect(b.page.getByTestId('cp-row')).toHaveCount(5);
-  await expect(b.page.getByTestId('hours-value')).toHaveText('5.8 h');
+  await expect(b.page.getByTestId('hours-value')).toHaveText('6.6 h');
   await expect(cpRow(b.page, 'Checkpoint 2').getByTestId('cp-score')).toHaveValue('18');
   await expect(cpRow(b.page, 'Checkpoint 2').getByTestId('cp-state')).toHaveAttribute('data-state', 'below');
 

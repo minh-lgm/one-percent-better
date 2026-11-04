@@ -21,7 +21,7 @@ test.describe('M17 Big goals — data and list', () => {
     await freezeClock(page, FIXED_TIME_Q1);
   });
 
-  test('M17-AC8/AC7: import Q1 (D3 roadmap line) → 5 nav items, Big goals third → list row QPT 21 tuần 1/21 On track 5.8 h of 16 h 125 days; lazy chunks + namespace requested only then; offline reload keeps it', async ({ page, context }) => {
+  test('M17-AC8/AC7: import Q1 (D3 roadmap line) → 5 nav items, Big goals third → list row QPT 21 tuần 1/21 On track 6.6 h of 16 h 125 days; lazy chunks + namespace requested only then; offline reload keeps it', async ({ page, context }) => {
     const requested: string[] = [];
     page.on('request', (r) => requested.push(r.url()));
     await gotoHash(page, '/today');
@@ -57,7 +57,7 @@ test.describe('M17 Big goals — data and list', () => {
     await expect(row.getByTestId('roadmap-goal')).toHaveText('Goal: QPT study');
     await expect(row.getByTestId('roadmap-progress')).toHaveText('Done 1/21');
     await expect(row.getByTestId('pace-chip')).toHaveText('On track');
-    await expect(row.getByTestId('roadmap-hours')).toHaveText('Studied 5.8 h of 16 h');
+    await expect(row.getByTestId('roadmap-hours')).toHaveText('Studied 6.6 h of 16 h');
     await expect(row.getByTestId('roadmap-milestone')).toHaveText('Thi QPT: 125 days left');
     await expectAxeClean(page);
 
@@ -68,7 +68,7 @@ test.describe('M17 Big goals — data and list', () => {
     await context.setOffline(true);
     await page.reload();
     await expect(page.getByRole('heading', { level: 1, name: ROADMAP_EN.list.title })).toBeVisible();
-    await expect(roadmapRow(page).getByTestId('roadmap-hours')).toHaveText('Studied 5.8 h of 16 h');
+    await expect(roadmapRow(page).getByTestId('roadmap-hours')).toHaveText('Studied 6.6 h of 16 h');
     await context.setOffline(false);
   });
 
@@ -158,7 +158,7 @@ test.describe('M17 Big goals — data and list', () => {
     await expect(row.getByTestId('roadmap-goal')).toHaveText('Mục tiêu: QPT study');
     await expect(row.getByTestId('roadmap-progress')).toHaveText('Xong 1/21');
     await expect(row.getByTestId('pace-chip')).toHaveText(ROADMAP_VI.pace.onTrack);
-    await expect(row.getByTestId('roadmap-hours')).toHaveText('Đã học 5,8 giờ / 16 giờ');
+    await expect(row.getByTestId('roadmap-hours')).toHaveText('Đã học 6,6 giờ / 16 giờ');
     await expect(row.getByTestId('roadmap-milestone')).toHaveText('Thi QPT: còn 125 ngày');
     await expect(page.getByRole('list', { name: ROADMAP_VI.list.listLabel })).toBeVisible();
     await expectNoHorizontalScroll(page);
