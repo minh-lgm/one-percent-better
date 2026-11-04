@@ -30,7 +30,9 @@
     gap: 8px 40px;
     align-items: center;
   }
-  .rm {
+  /* roadmaps.css (imported after this file's rules) makes `.rm` a grid at this width: the link must span the whole row,
+     so beat it on specificity (M20: found when clicking the right half of a row at 1440 px did nothing). */
+  .rm-list > .rm {
     display: block;
   }
 }
@@ -770,6 +772,11 @@ dialog.dialog.tpl::before {
 .cp-chart text.cp-v {
   fill: var(--text);
   font-size: 12px;
+  /* a halo keeps the score readable where it meets a threshold tick */
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 .cp-base {
   stroke: var(--border-input);
