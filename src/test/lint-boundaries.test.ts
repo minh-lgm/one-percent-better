@@ -121,6 +121,23 @@ describe('the sync engine is lazy (M18)', () => {
       expect(errs.some((e) => e.startsWith('no-restricted-imports') && e.includes('M18')), errs.join('\n')).toBe(true);
     });
   }
+  // M18-D2: `import()` of the engine (or of the lazy front) is written exactly once, in src/app/container.ts.
+  for (const [f, rel] of [
+    ['src/app/start.ts', '../services/sync-service'],
+    ['src/app/z.ts', '../data/dexie/sync-store'],
+    ['src/ui/components/StatusRow.tsx', '../../services/lazy-sync-engine'],
+    ['src/ui/screens/Settings.tsx', '../../services/sync-service'],
+    ['src/services/auth-service.ts', './sync-service'],
+    ['src/integration/supabase/loader.ts', '../../services/sync-service'],
+    ['src/integration/platform.ts', '../services/sync-service'],
+    ['src/services/lazy-sync-engine.test.ts', './sync-service'],
+    ['e2e/probe.ts', '../src/services/sync-service'],
+  ] as const) {
+    it(`${f}: import('${rel}') is an error`, async () => {
+      const errs = await errorsFor(`export const load = () => import('${rel}');\n`, f);
+      expect(errs.some((e) => e.startsWith('no-restricted-syntax') && e.includes('sync engine')), errs.join('\n')).toBe(true);
+    });
+  }
   it('`import type`, import() in the container, tests and test helpers are fine; remote-store is not caught', async () => {
     expect(await errorsFor("import type { SyncService } from './sync-service'; export type S = SyncService;\n", 'src/services/lazy-sync-engine.ts')).toEqual([]);
     expect(await errorsFor("import type { SyncService } from '../services/sync-service'; export type S = SyncService;\n", 'src/app/sync-scheduler.ts')).toEqual([]);

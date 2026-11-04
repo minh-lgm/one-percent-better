@@ -40,6 +40,12 @@ export class LazySyncEngine implements SyncEngine {
   private started = false;
   private status: SyncStatus = PAUSED;
   private prompt: MergePrompt | null = null;
+  /**
+   * M18-D1 (FR-47, A-27): a sign-in whose decision could not be taken because the engine failed to load. It is settled
+   * (`engine.handleSignedIn` → D5 prompt or merge) the moment the engine arrives, before any cycle runs, so a load
+   * failure can never turn into a silent upload of another account's data.
+   */
+  private pendingSignIn: { userId: string; email: string } | null = null;
   private readonly statusListeners = new Set<(s: SyncStatus) => void>();
   private readonly eventListeners = new Set<(e: SyncEvent) => void>();
   private readonly promptListeners = new Set<(p: MergePrompt | null) => void>();
@@ -148,14 +154,29 @@ export class LazySyncEngine implements SyncEngine {
   }
 
   async handleSignedIn(userId: string, email: string): Promise<FirstSignInDecision> {
+    this.pendingSignIn = { userId, email };
     let engine: SyncService;
     try {
       engine = await this.load();
     } catch {
+      // Undecided: the sign-in stays pending (settled by the next successful load, see `settleSignIn`) and the engine
+      // is in error. 'confirm-merge' is the only safe answer — nothing may be uploaded until the real decision is taken.
       this.loadFailed();
-      return 'same-user';
+      return 'confirm-merge';
     }
-    return engine.handleSignedIn(userId, email);
+    return this.settleSignIn(engine, userId, email);
+  }
+
+  /**
+   * Run the engine's sign-in handling for the pending sign-in (if it is still the one asked for) and clear it. Called by
+   * `handleSignedIn` itself and by `syncNow` after a load that followed a failed one, so the D5 decision always precedes
+   * the first cycle.
+   */
+  private async settleSignIn(engine: SyncService, userId?: string, email?: string): Promise<FirstSignInDecision> {
+    const pending = this.pendingSignIn;
+    if (!pending || (userId !== undefined && pending.userId !== userId)) return 'same-user';
+    this.pendingSignIn = null;
+    return engine.handleSignedIn(pending.userId, email ?? pending.email);
   }
 
   willAnnounceMerge(): Promise<boolean> {
@@ -175,10 +196,12 @@ export class LazySyncEngine implements SyncEngine {
   }
 
   reset(options?: { forgetLastUser?: boolean }): Promise<void> {
+    this.pendingSignIn = null;
     return this.whenLoaded((e) => e.reset(options), undefined);
   }
 
   pause(): void {
+    this.pendingSignIn = null;
     this.engine?.pause();
   }
 
@@ -204,6 +227,12 @@ export class LazySyncEngine implements SyncEngine {
       engine = await this.load();
     } catch {
       return this.loadFailed();
+    }
+    if (this.pendingSignIn) {
+      // M18-D1: a sign-in handled while the engine could not load. Decide it first (D5 / merge / same user); when the
+      // user has to be asked, nothing runs until they answer (`awaiting-merge`).
+      const decision = await this.settleSignIn(engine);
+      if (decision === 'confirm-merge') return { status: 'skipped', why: 'awaiting-merge' };
     }
     return engine.syncNow(reason);
   }

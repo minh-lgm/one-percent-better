@@ -103,9 +103,9 @@ describe('LazySyncEngine', () => {
     expect(await lazy.handleSignedIn('00000000-0000-4000-8000-000000000001', 'minh.test@example.com')).toBe('same-user');
     expect(loads()).toBe(2);
     expect(lazy.loaded()).not.toBeNull();
-    // A load that keeps failing on handleSignedIn: no throw either.
+    // A load that keeps failing on handleSignedIn: no throw either; the decision stays undecided ('confirm-merge', M18-D1).
     const { lazy: broken } = await lazyDevice(99);
-    expect(await broken.handleSignedIn('u', 'e')).toBe('same-user');
+    expect(await broken.handleSignedIn('u', 'e')).toBe('confirm-merge');
     expect(broken.current()).toMatchObject({ kind: 'error', error: 'SYNC_UNREACHABLE' });
   });
 
@@ -150,3 +150,96 @@ describe('LazySyncEngine', () => {
 // Type-level: the lazy front is a `SyncEngine` and a `SyncService` is one too (the UI accepts either).
 const _assign: (s: SyncService) => import('./lazy-sync-engine').SyncEngine = (s) => s;
 void _assign;
+
+// ---- M18-D1 (FR-47, A-27): a sign-in whose engine load failed is settled by the next successful load, never skipped ----
+describe('LazySyncEngine — sign-in handled while the engine cannot load (M18-D1)', () => {
+  const U1 = '00000000-0000-4000-8000-000000000001';
+  const U2 = '00000000-0000-4000-8000-000000000002';
+
+  /** A device bound to U1 holding U1 data, on which `user` signs in; the first `n` loads fail. */
+  async function deviceBoundToU1(user: string, failLoads: number) {
+    const d = await createDevice('P', server, { now: NOW, userId: user, signedIn: false });
+    devices.push(d);
+    const { datasetQ1 } = await import('../test/builders');
+    await d.db.goals.bulkPut(datasetQ1().goals.map((g) => ({ ...g, deletedAt: null, dirty: 1 as const })));
+    await d.kv.set('sync', { userId: U1, lastUserId: U1, account: null, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null });
+    let loads = 0;
+    const lazy = new LazySyncEngine(async () => {
+      loads += 1;
+      if (loads <= failLoads) throw new Error('chunk 404');
+      return d.sync;
+    });
+    return { d, lazy, loads: () => loads };
+  }
+
+  it('another account (U2): the failed load answers confirm-merge and uploads nothing; the next cycle loads, raises D5 and is skipped (awaiting-merge); "Add to account" then uploads', async () => {
+    const { d, lazy, loads } = await deviceBoundToU1(U2, 1);
+    const prompts: unknown[] = [];
+    lazy.watchMergePrompt().subscribe((p) => prompts.push(p));
+    expect(await lazy.handleSignedIn(U2, 'other.user@example.com')).toBe('confirm-merge');
+    expect(lazy.current()).toMatchObject({ kind: 'error', error: 'SYNC_UNREACHABLE' });
+    expect(await lazy.willAnnounceMerge()).toBe(false);
+    expect(server.live('goals', U2)).toEqual([]);
+    // The engine loads on a later trigger: the sign-in is decided first — D5 — and the cycle does not run.
+    expect(await lazy.syncNow('visible')).toEqual({ status: 'skipped', why: 'awaiting-merge' });
+    expect(loads()).toBe(2);
+    expect(prompts[prompts.length - 1]).toMatchObject({ userId: U2, email: 'other.user@example.com', goals: 6 });
+    expect(server.live('goals', U2)).toEqual([]);
+    expect(await lazy.syncNow('interval')).toEqual({ status: 'skipped', why: 'awaiting-merge' });
+    expect(server.live('goals', U2)).toEqual([]);
+    expect(await d.store.countDirty()).toBe(6);
+    // The user decides.
+    expect(await lazy.confirmMerge()).toEqual({ status: 'ran', ok: true });
+    expect(server.live('goals', U2)).toHaveLength(6);
+    expect(prompts[prompts.length - 1]).toBeNull();
+    expect(await lazy.syncNow('manual')).toEqual({ status: 'ran', ok: true });
+  });
+
+  it('another account, the user cancels D5 (sign-out → reset): the pending sign-in is dropped and the next cycle uploads nothing', async () => {
+    const { lazy } = await deviceBoundToU1(U2, 1);
+    expect(await lazy.handleSignedIn(U2, 'other.user@example.com')).toBe('confirm-merge');
+    expect(await lazy.syncNow('visible')).toEqual({ status: 'skipped', why: 'awaiting-merge' });
+    lazy.cancelMerge();
+    await lazy.reset();
+    expect(server.live('goals', U2)).toEqual([]);
+  });
+
+  it('the same account (U1): the failed load answers confirm-merge (undecided), the next cycle settles it as same-user and syncs U1 normally', async () => {
+    const { d, lazy } = await deviceBoundToU1(U1, 1);
+    const prompts: unknown[] = [];
+    lazy.watchMergePrompt().subscribe((p) => prompts.push(p));
+    expect(await lazy.handleSignedIn(U1, 'minh.test@example.com')).toBe('confirm-merge');
+    expect(server.live('goals', U1)).toEqual([]);
+    expect(await lazy.syncNow('visible')).toEqual({ status: 'ran', ok: true });
+    expect(server.live('goals', U1)).toHaveLength(6);
+    expect(prompts.every((p) => p === null)).toBe(true);
+    expect(await d.store.countDirty()).toBe(0);
+  });
+
+  it('a device that never synced (fresh): the failed load is settled as merge-silently on the next cycle and the data goes up with the merge event', async () => {
+    const d = await createDevice('F', server, { now: NOW, userId: U2, signedIn: false });
+    devices.push(d);
+    await d.goalService.create({ name: 'Read', why: '', targetType: 'daily', targetValue: 30, startDate: '2026-10-01', endDate: null }, NOW);
+    let loads = 0;
+    const lazy = new LazySyncEngine(async () => {
+      loads += 1;
+      if (loads === 1) throw new Error('chunk 404');
+      return d.sync;
+    });
+    const events: unknown[] = [];
+    lazy.onEvent((e) => events.push(e));
+    expect(await lazy.handleSignedIn(U2, 'other.user@example.com')).toBe('confirm-merge');
+    expect(await lazy.syncNow('online')).toEqual({ status: 'ran', ok: true });
+    expect(server.live('goals', U2)).toHaveLength(1);
+    expect(events).toContainEqual({ type: 'merge-done', goals: 1, entries: 0 });
+  });
+
+  it('pause() (another sign-in starts / session expired) drops the pending sign-in: the later cycle runs for the current account only', async () => {
+    const { lazy } = await deviceBoundToU1(U2, 1);
+    expect(await lazy.handleSignedIn(U2, 'other.user@example.com')).toBe('confirm-merge');
+    lazy.pause();
+    // A new sign-in for the same account that loads fine: decided by the engine itself (D5 as usual).
+    expect(await lazy.handleSignedIn(U2, 'other.user@example.com')).toBe('confirm-merge');
+    expect(server.live('goals', U2)).toEqual([]);
+  });
+});

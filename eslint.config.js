@@ -110,7 +110,15 @@ const DYNAMIC_NATIVE_SELECTORS = [
     message: 'Dynamic import of integration/native is only allowed in src/integration/platform.ts (ADR-35).',
   },
 ];
-const DYNAMIC_IMPORT_SELECTORS = [...DYNAMIC_SUPABASE_SELECTORS, ...DYNAMIC_NATIVE_SELECTORS];
+// M18 (M18-D2, ARCH §10 "lazy sync"): the sync engine is `import()`ed in exactly one place, src/app/container.ts; a dynamic
+// import of it (or of the lazy front) anywhere else would create a second loading path the budget/lint cannot see.
+const DYNAMIC_SYNC_SELECTORS = [
+  {
+    selector: String.raw`ImportExpression > Literal[value=/(^|\/)(sync-service|sync-store|lazy-sync-engine)([.][cm]?[jt]sx?)?$/]`,
+    message: 'Dynamic import of the sync engine (services/sync-service, data/dexie/sync-store, services/lazy-sync-engine) is only allowed in src/app/container.ts (M18, ARCH §10).',
+  },
+];
+const DYNAMIC_IMPORT_SELECTORS = [...DYNAMIC_SUPABASE_SELECTORS, ...DYNAMIC_NATIVE_SELECTORS, ...DYNAMIC_SYNC_SELECTORS];
 
 const HARDCODED_TEXT_SELECTORS = [
   {
@@ -219,14 +227,19 @@ export default tseslint.config(
     rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_IMPORT_SELECTORS] },
   },
   {
-    // platform.ts is the one place allowed to `import()` integration/native (ADR-35); the Supabase rule still applies.
-    files: ['src/integration/platform.ts'],
-    rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_SUPABASE_SELECTORS] },
+    // container.ts is the one place allowed to `import()` the sync engine (M18); the other dynamic-import rules still apply.
+    files: ['src/app/container.ts'],
+    rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_SUPABASE_SELECTORS, ...DYNAMIC_NATIVE_SELECTORS] },
   },
   {
-    // The Supabase folder may import() its own client (ADR-18) but not the native adapters (ADR-35).
+    // platform.ts is the one place allowed to `import()` integration/native (ADR-35); the Supabase and sync rules still apply.
+    files: ['src/integration/platform.ts'],
+    rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_SUPABASE_SELECTORS, ...DYNAMIC_SYNC_SELECTORS] },
+  },
+  {
+    // The Supabase folder may import() its own client (ADR-18) but not the native adapters (ADR-35) nor the sync engine (M18).
     files: ['src/integration/supabase/**/*.ts'],
-    rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_NATIVE_SELECTORS] },
+    rules: { 'no-restricted-syntax': ['error', ...DYNAMIC_NATIVE_SELECTORS, ...DYNAMIC_SYNC_SELECTORS] },
   },
 
   // ---- Layer rules (ARCHITECTURE §3) ----
