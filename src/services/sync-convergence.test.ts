@@ -1,11 +1,14 @@
-// Two devices + one fake cloud converge (M7-AC6, M7-AC17, NFR-12). Scenarios (a)–(f) of the AC and
-// a seeded random test: 20 seeds × 200 operations; the seed is printed when a run fails.
+// Two devices + one fake cloud converge (M7-AC6, M7-AC17, NFR-12; v8.0 M18-AC4: the roadmap tables). Scenarios
+// (a)–(f) of the AC and a seeded random test: 20 seeds × 200 operations (goal, entry and roadmap operations); the
+// seed is printed when a run fails.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { normalizeSyncMeta } from '../data/repositories';
+import { normalizeSyncMeta, SYNC_LOCAL_TABLES } from '../data/repositories';
+import { toISODate } from '../domain/dates';
 import type { GoalInput } from '../domain/goal';
+import type { RoadmapItem } from '../domain/roadmap';
 import { FakeRemoteServer, offlineError } from '../test/fake-remote-store';
 import { createDevice, serverSnapshot, U1, type Device } from '../test/two-devices';
-import { datasetO1, datasetS1 } from '../test/builders';
+import { datasetO1, datasetQ1, datasetS1 } from '../test/builders';
 
 const T = (s: string) => new Date(s);
 const NOW = T('2026-10-09T03:00:00.000Z');
@@ -47,6 +50,11 @@ async function expectConverged(a: Device, b: Device) {
   expect(sb.entries).toEqual(sa.entries);
   expect(sr.goals).toEqual(sa.goals);
   expect(sr.entries).toEqual(sa.entries);
+  // v8.0 (M18-AC4, NFR-12): the four roadmap tables too.
+  for (const t of SYNC_LOCAL_TABLES) {
+    expect(sb[t], `${t} A = B`).toEqual(sa[t]);
+    expect(sr[t], `${t} A = server`).toEqual(sa[t]);
+  }
   expect(await a.store.countDirty()).toBe(0);
   expect(await b.store.countDirty()).toBe(0);
 }
@@ -362,21 +370,22 @@ describe('random operations converge (NFR-12; 20 seeds × 200 ops)', () => {
           // Random connectivity: a device is offline ~20 % of the time (its syncs are then skipped).
           d.online.value = rand() >= 0.2;
           const goals = await d.goals.getAll();
+          const today = toISODate(d.clock.now);
           const op = rand();
-          if (op < 0.18 || goals.length === 0) {
+          if (op < 0.14 || goals.length === 0) {
             // v4.0 (M11-AC6): about a third of the goals have no end date.
             const open = rand() < 0.34;
             const g = await d.goalService.create({ ...READ, name: `G${step}`, endDate: open ? null : READ.endDate }, d.clock.now);
             trace.push(`${d.name} create ${open ? 'open-ended ' : ''}goal ${g.ok ? g.value.id.slice(0, 8) : 'fail'}`);
-          } else if (op < 0.45) {
+          } else if (op < 0.34) {
             const g = pick(goals);
             const r = await d.entryService.add({ goalId: g.id, date: `2026-10-${String(1 + Math.floor(rand() * 8)).padStart(2, '0')}`, minutes: 1 + Math.floor(rand() * 60), note: `s${step}`, source: rand() < 0.5 ? 'manual' : 'timer' }, d.clock.now);
             trace.push(`${d.name} add entry on ${g.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
-          } else if (op < 0.6) {
+          } else if (op < 0.44) {
             const g = pick(goals);
             const r = await d.goalService.update(g.id, { ...READ, name: `${g.name}-${d.name}${step}`, startDate: g.startDate, endDate: g.endDate }, d.clock.now);
             trace.push(`${d.name} rename ${g.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
-          } else if (op < 0.7) {
+          } else if (op < 0.52) {
             const g = pick(goals);
             const es = await d.entries.getByGoal(g.id);
             if (es.length > 0) {
@@ -384,25 +393,62 @@ describe('random operations converge (NFR-12; 20 seeds × 200 ops)', () => {
               const r = rand() < 0.5 ? await d.entryService.update(e.id, { minutes: 1 + Math.floor(rand() * 30), note: 'u' }, d.clock.now) : await d.entryService.remove(e.id);
               trace.push(`${d.name} edit/remove entry ${e.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
             }
-          } else if (op < 0.74) {
+          } else if (op < 0.55) {
             // v4.0 (M11-AC6): switch the end date on/off (entries are dated 10-01 … 10-08, inside both periods).
             const g = pick(goals);
             const r = await d.goalService.update(g.id, { ...READ, name: g.name, startDate: g.startDate, endDate: g.endDate === null ? '2026-12-31' : null }, d.clock.now);
             trace.push(`${d.name} end date ${g.endDate === null ? 'set' : 'removed'} on ${g.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
-          } else if (op < 0.78) {
+          } else if (op < 0.58) {
             const g = pick(goals);
             await d.goalService.setArchived(g.id, !g.archived, d.clock.now);
             trace.push(`${d.name} archive toggle ${g.id.slice(0, 8)}`);
-          } else if (op < 0.85) {
+          } else if (op < 0.63) {
+            // Deleting a goal also unlinks the roadmaps that point to it (A-79).
             const g = pick(goals);
             await d.goalService.remove(g.id);
             trace.push(`${d.name} delete goal ${g.id.slice(0, 8)}`);
-          } else if (op < 0.9) {
+          } else if (op < 0.67) {
             // M10 (ADR-29): time jumps 31 days and this device purges its old tombstones.
             clock += 31 * 86_400_000;
             d.clock.now = tick();
             const purged = await d.store.purgeTombstones(d.clock.now);
-            trace.push(`${d.name} +31d purge → ${purged.goals} goals, ${purged.entries} entries`);
+            trace.push(`${d.name} +31d purge → ${purged.goals} goals, ${purged.entries} entries, ${purged.roadmapItems} items`);
+          } else if (op < 0.9) {
+            // v8.0 (M18-AC4): roadmap operations — create, add phase/item, tick, edit, delete phase, delete roadmap, link/unlink.
+            const roadmaps = await d.roadmaps.listLive();
+            const rop = rand();
+            if (rop < 0.18 || roadmaps.length === 0) {
+              const goalId = rand() < 0.5 ? pick(goals).id : null;
+              const r = await d.roadmapService.create({ title: `R${step}`, note: '', goalId, weeklyTargetHours: rand() < 0.5 ? 8 : null, milestoneLabel: '', milestoneDate: null });
+              trace.push(`${d.name} create roadmap${goalId ? ' linked' : ''} → ${r.ok ? r.value.id.slice(0, 8) : r.errors[0].code}`);
+            } else {
+              const rm = pick(roadmaps);
+              const agg = (await d.roadmaps.getAggregate(rm.id))!;
+              if (rop < 0.4 || agg.phases.length === 0) {
+                const r = await d.roadmapService.addPhase(rm.id, { title: `P${step}`, note: '' });
+                trace.push(`${d.name} add phase to ${rm.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
+              } else if (rop < 0.6) {
+                const phase = pick(agg.phases);
+                const start = `2026-11-${String(1 + Math.floor(rand() * 20)).padStart(2, '0')}`;
+                const r = await d.roadmapService.addItem(phase.id, { title: `W${step}`, note: '', plannedStart: start, plannedEnd: start, actualStart: null, actualEnd: null }, today);
+                trace.push(`${d.name} add item to ${phase.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
+              } else if (rop < 0.76 && agg.items.length > 0) {
+                const item: RoadmapItem = pick(agg.items);
+                const r = rand() < 0.6 ? await d.roadmapService.setItemDone(item.id, item.actualEnd === null, today) : await d.roadmapService.updateItem(item.id, { ...item, note: `n${step}` }, today);
+                trace.push(`${d.name} tick/edit item ${item.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
+              } else if (rop < 0.84) {
+                const phase = pick(agg.phases);
+                await d.roadmapService.removePhase(phase.id);
+                trace.push(`${d.name} delete phase ${phase.id.slice(0, 8)} of ${rm.id.slice(0, 8)}`);
+              } else if (rop < 0.9) {
+                await d.roadmapService.remove(rm.id);
+                trace.push(`${d.name} delete roadmap ${rm.id.slice(0, 8)}`);
+              } else {
+                const goalId = rm.goalId === null ? pick(goals).id : null;
+                const r = await d.roadmapService.setGoalLink(rm.id, goalId);
+                trace.push(`${d.name} ${goalId ? 'link' : 'unlink'} ${rm.id.slice(0, 8)} → ${r.ok ? 'ok' : r.errors[0].code}`);
+              }
+            }
           } else {
             const r = await d.sync.syncNow('manual');
             trace.push(`${d.name} sync → ${r.status === 'ran' ? (r.ok ? 'ok' : r.error) : r.why}`);
@@ -417,6 +463,7 @@ describe('random operations converge (NFR-12; 20 seeds × 200 ops)', () => {
         await syncOk(a);
         await expectConverged(a, b);
         expect(trace.some((t) => t.includes('open-ended')), 'the run exercised open-ended goals').toBe(true);
+        expect(trace.some((t) => t.includes('create roadmap')), 'the run exercised roadmaps').toBe(true);
       } catch (e) {
         console.error(`random convergence failed for seed ${seed}\n${trace.join('\n')}`);
         throw e;
@@ -519,6 +566,134 @@ describe('open-ended goals converge (M11-AC6, FR-57, NFR-12)', () => {
     expect(b.sync.current().remoteInvalid).toBeUndefined();
     expect(normalizeSyncMeta(await b.kv.get('sync')).pullResetVersion).toBe(1);
     await syncOk(a);
+    await expectConverged(a, b);
+  });
+});
+
+// ---- v8.0 (M18-AC4, FR-78, NFR-12, NFR-28): the roadmap tables across two devices ----
+describe('roadmaps converge across two devices (M18-AC4)', () => {
+  const Q1_NOW = T('2026-11-04T03:00:00.000Z');
+  const TODAY = '2026-11-04';
+
+  async function deviceQ1(name: string) {
+    return device(name, Q1_NOW);
+  }
+
+  /** Q1 on device `d`: goals + entries through the services' tables, the roadmap through the repository. */
+  async function seedQ1(d: Device) {
+    const q1 = datasetQ1();
+    await d.db.goals.bulkPut(q1.goals.map((g) => ({ ...g, deletedAt: null, dirty: 1 as const })));
+    await d.db.entries.bulkPut(q1.entries.map((e) => ({ ...e, deletedAt: null, dirty: 1 as const })));
+    await d.seedRoadmap(q1);
+    return q1;
+  }
+
+  it('(a) A seeds Q1, sync A, sync B → B holds 1 / 5 / 21 / 5 live rows equal to A in every field, and the server too', async () => {
+    const a = await deviceQ1('A');
+    const b = await deviceQ1('B');
+    await seedQ1(a);
+    await syncOk(a);
+    await syncOk(b);
+    const sb = await b.snapshot();
+    expect(sb.roadmaps).toHaveLength(1);
+    expect(sb.roadmapPhases).toHaveLength(5);
+    expect(sb.roadmapItems).toHaveLength(21);
+    expect(sb.roadmapCheckpoints).toHaveLength(5);
+    expect(sb.roadmapItems.find((i) => i.id === 'wq1')).toMatchObject({ actualStart: '2026-10-27', actualEnd: '2026-11-01', plannedStart: '2026-10-27', plannedEnd: '2026-11-02' });
+    expect(sb.roadmapCheckpoints.find((c) => c.id === 'cq1')).toMatchObject({ date: '2026-09-24', score: 5, maxScore: 32, threshold: null });
+    expect(sb.roadmaps[0]).toMatchObject({ goalId: 'gq', weeklyTargetMinutes: 480, milestoneDate: '2027-03-09' });
+    await expectConverged(a, b);
+  });
+
+  it('(b) B ticks W2 at 10:05; A edited the note of W2 at 10:03 → after A, B, A: both hold B\'s row (actualEnd set, note untouched — LWW per row)', async () => {
+    const a = await deviceQ1('A');
+    const b = await deviceQ1('B');
+    const q1 = await seedQ1(a);
+    await syncOk(a);
+    await syncOk(b);
+    const w2 = q1.items[1];
+    a.clock.now = T('2026-11-04T03:03:00.000Z');
+    expect((await a.roadmapService.updateItem('wq2', { ...w2, note: 'A: focus on rank' }, TODAY)).ok).toBe(true);
+    b.clock.now = T('2026-11-04T03:05:00.000Z');
+    expect((await b.roadmapService.setItemDone('wq2', true, TODAY)).ok).toBe(true);
+    await syncOk(a);
+    await syncOk(b);
+    await syncOk(a);
+    for (const d of [a, b]) {
+      const item = await d.roadmaps.getItem('wq2');
+      expect(item, d.name).toMatchObject({ actualEnd: TODAY, note: '', updatedAt: '2026-11-04T03:05:00.000Z' });
+    }
+    await expectConverged(a, b);
+  });
+
+  it('(c) A deletes phase p2 offline (10:05); B edits W5 of p2 later (10:06) → p2 gone everywhere, W5 survives the LWW then is tombstoned as an orphan; remote W5 is a tombstone', async () => {
+    const a = await deviceQ1('A');
+    const b = await deviceQ1('B');
+    const q1 = await seedQ1(a);
+    await syncOk(a);
+    await syncOk(b);
+    a.online.value = false;
+    a.clock.now = T('2026-11-04T03:05:00.000Z');
+    expect((await a.roadmapService.removePhase('pq2')).ok).toBe(true);
+    expect(await a.sync.syncNow('change')).toEqual({ status: 'skipped', why: 'offline' });
+    b.clock.now = T('2026-11-04T03:06:00.000Z');
+    expect((await b.roadmapService.updateItem('wq5', { ...q1.items[4], note: 'B edit' }, TODAY)).ok).toBe(true);
+    a.online.value = true;
+    await syncOk(a); // pushes the p2 tombstone + its 4 items; pulls B's W5 (newer → alive again on A), orphan cleanup tombstones it and pushes
+    await syncOk(b); // pulls the tombstones: p2 gone, W5 gone
+    await syncOk(a);
+    for (const d of [a, b]) {
+      expect(await d.roadmaps.getPhase('pq2'), d.name).toBeUndefined();
+      expect(await d.roadmaps.getItem('wq5'), d.name).toBeUndefined();
+      const agg = (await d.roadmaps.getAggregate('rq'))!;
+      expect(agg.phases.map((p) => p.id)).toEqual(['pq1', 'pq3', 'pq4', 'pq5']);
+      expect(agg.items).toHaveLength(17);
+    }
+    const remoteW5 = server.rows('roadmap_items', U1).find((r) => r.id === 'wq5')!;
+    expect(remoteW5.deleted_at).not.toBeNull();
+    expect(remoteW5.note).toBe('B edit');
+    expect(server.rows('roadmap_phases', U1).find((r) => r.id === 'pq2')?.deleted_at).toBe('2026-11-04T03:05:00.000Z');
+    await expectConverged(a, b);
+  });
+
+  it('(d) A deletes the linked goal gq → after a sync B\'s roadmap has goalId null (A-79 through the cloud); the roadmap itself stays', async () => {
+    const a = await deviceQ1('A');
+    const b = await deviceQ1('B');
+    await seedQ1(a);
+    await syncOk(a);
+    await syncOk(b);
+    expect((await b.roadmaps.getAggregate('rq'))!.roadmap.goalId).toBe('gq');
+    a.clock.now = T('2026-11-04T03:05:00.000Z');
+    expect((await a.goalService.remove('gq')).ok).toBe(true);
+    await syncOk(a);
+    await syncOk(b);
+    expect(await b.goals.getById('gq')).toBeUndefined();
+    expect((await b.roadmaps.getAggregate('rq'))!.roadmap.goalId).toBeNull();
+    expect((await b.roadmaps.getAggregate('rq'))!.items).toHaveLength(21);
+    expect(server.live('roadmaps', U1)[0].goal_id).toBeNull();
+    await syncOk(a);
+    await expectConverged(a, b);
+  });
+
+  it('(e) A deletes the roadmap; B had ticked an item meanwhile → everything of rq is gone on both and tombstoned on the server', async () => {
+    const a = await deviceQ1('A');
+    const b = await deviceQ1('B');
+    await seedQ1(a);
+    await syncOk(a);
+    await syncOk(b);
+    b.clock.now = T('2026-11-04T03:04:00.000Z');
+    expect((await b.roadmapService.setItemDone('wq2', true, TODAY)).ok).toBe(true);
+    a.clock.now = T('2026-11-04T03:05:00.000Z');
+    expect((await a.roadmapService.remove('rq')).ok).toBe(true);
+    await syncOk(b);
+    await syncOk(a);
+    await syncOk(b);
+    for (const d of [a, b]) {
+      expect(await d.roadmaps.listLive(), d.name).toEqual([]);
+      expect((await d.snapshot()).roadmapItems, d.name).toEqual([]);
+    }
+    expect(server.live('roadmaps', U1)).toEqual([]);
+    expect(server.rows('roadmap_items', U1).every((r) => r.deleted_at !== null)).toBe(true);
     await expectConverged(a, b);
   });
 });
