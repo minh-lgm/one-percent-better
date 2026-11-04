@@ -86,7 +86,7 @@ test.describe('M7-AC1 Dexie v1 → v2 upgrade (NFR-14)', () => {
     await expect(page.getByRole('table').locator('tbody tr')).toHaveCount(8);
 
     const raw = await rawRows(page);
-    expect(raw.version).toBe(20);
+    expect(raw.version).toBe(30); // v8.0 (M17, ADR-48): the app now opens the database at Dexie v3
     expect(raw.goals).toHaveLength(1);
     expect(raw.goals[0]).toMatchObject({ id: 'g1', name: 'Read', why: 'Be smarter', deletedAt: null, dirty: 1, createdAt: '2026-09-30T01:00:00.000Z' });
     expect(raw.entries).toHaveLength(8);

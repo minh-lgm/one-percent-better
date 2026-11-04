@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi as vitest } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi as vitest } from 'vitest';
 import { IMPORT_MAX_BYTES } from '../../config/constants';
 import { buildBackup } from '../../domain/backup-file';
 import { DEFAULT_SETTINGS, StorageError } from '../../domain/types';
@@ -65,7 +65,7 @@ describe('Settings — Backup card (M3-AC6, AC8, AC9, AC10, AC13)', () => {
     await waitFor(() => expect(clicks).toHaveLength(1));
     expect(clicks[0].download).toBe('1percent-better-backup-2026-10-09.json');
     const file = JSON.parse(await readBlob(blobs[0])) as { app: string; schemaVersion: number; goals: unknown[]; entries: unknown[]; settings: unknown };
-    expect(file).toMatchObject({ app: 'one-percent-better', schemaVersion: 1 });
+    expect(file).toMatchObject({ app: 'one-percent-better', schemaVersion: 2 });
     expect(file.goals).toHaveLength(1);
     expect(file.entries).toHaveLength(3);
     expect(file.settings).toBeDefined();
@@ -139,8 +139,8 @@ describe('Settings — Backup card (M3-AC6, AC8, AC9, AC10, AC13)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(en.errors.IMPORT_INVALID_JSON);
     await user.upload(input, jsonFile(JSON.stringify({ app: 'other' })));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(en.errors.IMPORT_INVALID_SCHEMA));
-    await user.upload(input, jsonFile(JSON.stringify({ ...JSON.parse(s1File()), schemaVersion: 2 })));
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('This backup uses a format version (2) this app can\'t read.'));
+    await user.upload(input, jsonFile(JSON.stringify({ ...JSON.parse(s1File()), schemaVersion: 3 })));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('This backup uses a format version (3) this app can\'t read.'));
     const big = new File([new Uint8Array(IMPORT_MAX_BYTES + 1)], 'big.json', { type: 'application/json' });
     await user.upload(input, big);
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(en.errors.IMPORT_FILE_TOO_LARGE));
@@ -277,5 +277,59 @@ describe('M10-D2: a failed file creation is not a backup', () => {
     } finally {
       Object.assign(URL, { createObjectURL: realCreate });
     }
+  });
+});
+
+// ---- v8.0 (M17-T4 / AC7, DESIGN "Phase 8 — chỉnh màn cũ" D3): the roadmap line appears only when roadmaps are involved ----
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { DexieRoadmapRepository } from '../../data/dexie/roadmap-repo';
+import { datasetQ1, FIXED_NOW_Q1 } from '../../test/builders';
+
+const fixtureText = (name: string) => readFileSync(join(process.cwd(), 'e2e', 'fixtures', name), 'utf8'); // jsdom rewrites import.meta.url
+
+describe('D3 roadmap line (M17)', () => {
+  beforeEach(() => {
+    vitest.setSystemTime(FIXED_NOW_Q1);
+  });
+
+  it('v2 file with 1 roadmap on an empty device: the body is unchanged and a separate paragraph says "1 in this backup, 0 on this device"; import → 1 roadmap', async () => {
+    const user = userEvent.setup();
+    tc = await createTestContainer();
+    await renderApp({ route: '/settings', container: tc });
+    await screen.findByText(en.settings.backup.lastNever);
+    await user.upload(screen.getByTestId('import-file'), jsonFile(fixtureText('q1-roadmap-backup.json')));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/^This backup has 6 goals, 29 entries, exported 2026-11-04\./)).toBeInTheDocument();
+    expect(within(dialog).getByTestId('confirm-note')).toHaveTextContent('Big goals: 1 in this backup, 0 on this device now. Importing replaces them.');
+    expect(dialog).toHaveAttribute('aria-describedby', 'confirm-body confirm-note');
+    await user.click(within(dialog).getByRole('button', { name: en.import.confirm }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Backup imported: 6 goals, 29 entries'));
+    expect(await tc.container.db.roadmaps.count()).toBe(1);
+    expect(await tc.container.db.roadmapItems.count()).toBe(21);
+  });
+
+  it('v1 file while the device has a roadmap: "kept" paragraph (vi), the old body untouched; no roadmaps anywhere → no paragraph (DOM as before)', async () => {
+    const user = userEvent.setup();
+    tc = await createTestContainer({ locale: 'vi' });
+    const d = datasetQ1();
+    await tc.container.db.goals.bulkPut(d.goals);
+    await tc.container.db.entries.bulkPut(d.entries);
+    await new DexieRoadmapRepository(tc.container.db).putMany({ roadmaps: [d.roadmap], phases: d.phases, items: d.items, checkpoints: d.checkpoints });
+    await renderApp({ route: '/settings', container: tc });
+    await screen.findByText(vi.settings.backup.lastNever);
+    await user.upload(screen.getByTestId('import-file'), jsonFile(fixtureText('sample-backup.json'))); // schemaVersion 1
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByTestId('confirm-note')).toHaveTextContent('Mục tiêu lớn: bản sao lưu cũ này không có, nên 1 mục tiêu lớn trên thiết bị này được giữ lại. Liên kết tới mục tiêu không có trong bản sao lưu sẽ bị gỡ.');
+    expect(scanVi()).toEqual([]);
+    await user.click(within(dialog).getByRole('button', { name: vi.import.confirm }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect((await tc.container.db.roadmaps.get('rq'))?.goalId).toBeNull(); // gq is not in S1 → unlinked (A-87)
+    // Now the device still has the roadmap; wipe it so neither side has one → the pre-phase-8 dialog, no note.
+    await tc.container.db.roadmaps.clear();
+    await user.upload(screen.getByTestId('import-file'), jsonFile(s1File()));
+    const plain = await screen.findByRole('dialog');
+    expect(within(plain).queryByTestId('confirm-note')).toBeNull();
+    expect(plain).toHaveAttribute('aria-describedby', 'confirm-body');
   });
 });

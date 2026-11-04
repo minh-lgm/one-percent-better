@@ -69,3 +69,35 @@ describe('older probes still hold (M1-AC13, M1-AC17, M6-AC4)', () => {
     expect((await errorsFor('export const X = () => <p>Hello</p>;\n', 'src/ui/probe.tsx')).length).toBeGreaterThan(0);
   });
 });
+
+// ---- v8.0 (M17-AC8, ADR-53): the big-goals modules are reachable only through import() from router/container ----
+describe('big-goals modules are lazy (ADR-53)', () => {
+  const PROBE = (rel: string, name = 'roadmapOverview') => `import { ${name} } from '${rel}'; export const x = ${name};\n`;
+  for (const [f, rel, name] of [
+    ['src/ui/screens/Today.tsx', '../../domain/roadmap-progress', 'roadmapOverview'],
+    ['src/ui/components/AppShell.tsx', '../../domain/roadmap', 'positionBetween'],
+    ['src/app/container.ts', '../services/roadmap-service', 'RoadmapService'],
+    ['src/app/router.tsx', '../data/dexie/roadmap-repo', 'DexieRoadmapRepository'],
+    ['src/main.tsx', './i18n/resources/roadmap.en.json', 'default'],
+    ['src/services/backup-service.ts', '../domain/roadmap', 'positionBetween'],
+    ['src/data/dexie/backup-repo.ts', '../../domain/roadmap-progress', 'roadmapOverview'],
+    ['src/i18n/instance.ts', './resources/roadmap.vi.json', 'default'],
+  ] as const) {
+    it(`${f} ← ${rel}: error`, async () => {
+      const code = name === 'default' ? `import r from '${rel}'; export const x = r;\n` : PROBE(rel, name);
+      const errs = await errorsFor(code, f);
+      expect(errs.some((e) => e.startsWith('no-restricted-imports') && e.includes('ADR-53')), errs.join('\n')).toBe(true);
+    });
+  }
+  it('`import type` and import() are fine; the roadmap modules and tests may import each other', async () => {
+    expect(await errorsFor("import type { Roadmap } from '../../domain/roadmap'; export type R = Roadmap;\n", 'src/ui/screens/Today.tsx')).toEqual([]);
+    expect(await errorsFor("export const load = () => import('../services/roadmap-service');\n", 'src/app/container.ts')).toEqual([]);
+    expect(await errorsFor("import { roadmapView } from '../domain/roadmap-progress'; export const v = roadmapView;\n", 'src/services/roadmap-service.ts')).toEqual([]);
+    expect(await errorsFor("import { sortItems } from './roadmap'; export const s = sortItems;\n", 'src/domain/roadmap-progress.ts')).toEqual([]);
+    expect(await errorsFor("import { datasetQ1 } from '../test/builders'; import { roadmapView } from './roadmap-progress'; export const v = [datasetQ1, roadmapView];\n", 'src/domain/roadmap-progress.test.ts')).toEqual([]);
+    expect(await errorsFor("import { RoadmapService } from '../../services/roadmap-service'; export const s = RoadmapService;\n", 'src/ui/screens/Roadmaps.tsx')).toEqual([]);
+    // Layer rules still hold inside the roadmap modules.
+    expect((await errorsFor("import Dexie from 'dexie'; export const d = Dexie;\n", 'src/services/roadmap-service.ts')).length).toBeGreaterThan(0);
+    expect((await errorsFor("import React from 'react'; export const r = React;\n", 'src/domain/roadmap.ts')).length).toBeGreaterThan(0);
+  });
+});

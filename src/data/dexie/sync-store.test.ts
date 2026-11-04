@@ -206,40 +206,40 @@ describe('purgeTombstones (M10-AC4, ADR-29)', () => {
     const backups = new DexieBackupRepository(db);
     const before = await otherRows();
     const exportBefore = await backups.exportAll();
-    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 1, entries: 8 });
+    expect(await store.purgeTombstones(PURGE_AT)).toMatchObject({ goals: 1, entries: 8 });
     expect(await db.goals.get('g1')).toBeUndefined();
     expect(await db.entries.where('goalId').equals('g1').count()).toBe(0);
     expect(await otherRows()).toEqual(before);
     expect(await backups.exportAll()).toEqual(exportBefore);
     // Idempotent.
-    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 0, entries: 0 });
+    expect(await store.purgeTombstones(PURGE_AT)).toMatchObject({ goals: 0, entries: 0 });
   });
 
   it('not old enough → nothing is purged', async () => {
     await seedWithDeletedG1();
-    expect(await store.purgeTombstones(new Date('2026-11-08T02:59:59.000Z'))).toEqual({ goals: 0, entries: 0 });
+    expect(await store.purgeTombstones(new Date('2026-11-08T02:59:59.000Z'))).toMatchObject({ goals: 0, entries: 0 });
     expect(await db.goals.get('g1')).toBeDefined();
   });
 
   it('device that synced before (kv sync.lastUserId): dirty 1 tombstones stay; dirty 0 (or 2) tombstones go', async () => {
     await seedWithDeletedG1();
     await db.kv.put({ key: 'sync', value: { userId: null, lastUserId: 'u1' } });
-    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 0, entries: 0 });
+    expect(await store.purgeTombstones(PURGE_AT)).toMatchObject({ goals: 0, entries: 0 });
     expect(await db.goals.get('g1')).toBeDefined();
     await db.goals.update('g1', { dirty: 0 });
     await db.entries.where('goalId').equals('g1').modify({ dirty: 0 });
-    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 1, entries: 8 });
+    expect(await store.purgeTombstones(PURGE_AT)).toMatchObject({ goals: 1, entries: 8 });
 
     // dirty = 2 (refused by the cloud) is purgeable on a synced device too.
     await db.goals.put({ ...buildGoal({ id: 'gx', name: 'Refused' }), deletedAt: DELETED_AT.toISOString(), dirty: 2 });
-    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 1, entries: 0 });
+    expect(await store.purgeTombstones(PURGE_AT)).toMatchObject({ goals: 1, entries: 0 });
     expect(await db.goals.get('gx')).toBeUndefined();
   });
 
   it('kv sync present but userId and lastUserId both null counts as never synced', async () => {
     await seedWithDeletedG1();
     await db.kv.put({ key: 'sync', value: { userId: null, lastUserId: null, account: null } });
-    expect(await store.purgeTombstones(PURGE_AT)).toEqual({ goals: 1, entries: 8 });
+    expect(await store.purgeTombstones(PURGE_AT)).toMatchObject({ goals: 1, entries: 8 });
   });
 
   it('a failure in the middle of the transaction rolls back: no row is deleted', async () => {

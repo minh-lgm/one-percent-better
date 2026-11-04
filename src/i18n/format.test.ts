@@ -55,6 +55,17 @@ describe('format.ts (ARCH §5.8, M1-AC18)', () => {
     expect(en.hours(240)).toBe('4.0 h');
     expect(vi.hours(240)).toBe('4,0 giờ');
     expect(en.hours(565)).toBe('9.4 h');
+    // v8.0 (M17-AC2, DESIGN 7.9.0): roadmap hours drop `.0` and round half away from zero.
+    expect(en.hoursShort(345)).toBe('5.8 h');
+    expect(vi.hoursShort(345)).toBe('5,8 giờ');
+    expect(en.hoursShort(270)).toBe('4.5 h');
+    expect(en.hoursShort(75)).toBe('1.3 h');
+    expect(vi.hoursShort(75)).toBe('1,3 giờ');
+    expect(en.hoursShort(960)).toBe('16 h');
+    expect(vi.hoursShort(960)).toBe('16 giờ');
+    expect(en.hoursShort(0)).toBe('0 h');
+    expect(en.hoursShort(4500)).toBe('75 h');
+    expect(en.hoursShort(63)).toBe('1.1 h'); // 1.05 → half away from zero
     expect(en.monthLong('2026-10-01')).toBe('October');
     expect(en.monthYear('2026-10-01')).toBe('October 2026');
     expect(en.dateMonthDay('2026-10-09')).toBe('Oct 9');

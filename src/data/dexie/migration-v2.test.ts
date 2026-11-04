@@ -58,7 +58,7 @@ describe('v1 → v2 upgrade (M7-AC1, NFR-14)', () => {
     const s1 = await seedV1(name);
     const db = new AppDatabase(name);
     await openDatabase(db);
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3); // v8.0 (M17, ADR-48): the app opens at v3; the v1 → v2 upgrade still runs first
 
     const goals = new DexieGoalRepository(db);
     const entries = new DexieEntryRepository(db);
@@ -145,7 +145,7 @@ describe('v1 → v2 upgrade (M7-AC1, NFR-14)', () => {
   it('a fresh database opens straight at v2 with the empty markers', async () => {
     const db = new AppDatabase(freshName());
     await openDatabase(db);
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3); // v8.0 (M17, ADR-48): the app opens at v3; the v1 → v2 upgrade still runs first
     expect(await db.kv.get('prefsSync')).toBeUndefined();
     db.close();
   });

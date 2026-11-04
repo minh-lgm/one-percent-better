@@ -194,3 +194,111 @@ describe('limits parity — open-ended goals (M11-AC6, ADR-31)', () => {
     expect(parseBackup(text([e('2026-10-10')]), 1, '2026-10-09').ok).toBe(false);
   });
 });
+
+// ---- v8.0 (M17-AC7): roadmap fields — the form validators (domain/roadmap.ts) and the v2 importer must agree ----
+import { validateCheckpointInput, validateItemInput, validatePhaseInput, validateRoadmapInput } from './roadmap';
+import type { RoadmapCheckpoint, RoadmapItem, RoadmapPhase, Roadmap } from './roadmap';
+import { datasetQ1, TODAY_Q1 } from '../test/builders';
+
+function q1FileWith(patch: { roadmap?: Partial<Roadmap>; phase?: Partial<RoadmapPhase>; item?: Partial<RoadmapItem>; checkpoint?: Partial<RoadmapCheckpoint> }): boolean {
+  const d = datasetQ1();
+  const file = {
+    app: 'one-percent-better',
+    schemaVersion: 2,
+    exportedAt: FIXED_NOW.toISOString(),
+    goals: d.goals,
+    entries: d.entries,
+    settings: {},
+    roadmaps: [{ ...d.roadmap, ...patch.roadmap }],
+    roadmapPhases: d.phases.map((p) => (p.id === 'pq1' ? { ...p, ...patch.phase } : p)),
+    roadmapItems: d.items.map((i) => (i.id === 'wq2' ? { ...i, ...patch.item } : i)),
+    roadmapCheckpoints: d.checkpoints.map((c) => (c.id === 'cq3' ? { ...c, ...patch.checkpoint } : c)),
+  };
+  const text = JSON.stringify(file);
+  return parseBackup(text, text.length, TODAY_Q1).ok;
+}
+
+describe('limits parity: roadmap form validators ↔ parseBackup v2 (M17-AC7)', () => {
+  const d = datasetQ1();
+  const roadmapCases: Array<[string, Partial<Roadmap>, boolean]> = [
+    ['title 80', { title: 'a'.repeat(80) }, true],
+    ['title 81', { title: 'a'.repeat(81) }, false],
+    ['title blank', { title: '  ' }, false],
+    ['note 2000', { note: 'n'.repeat(2000) }, true],
+    ['note 2001', { note: 'n'.repeat(2001) }, false],
+    ['milestoneLabel 40', { milestoneLabel: 'm'.repeat(40) }, true],
+    ['milestoneLabel 41', { milestoneLabel: 'm'.repeat(41) }, false],
+    ['weekly target 30 min (0.5 h)', { weeklyTargetMinutes: 30 }, true],
+    ['weekly target 10080 min (168 h)', { weeklyTargetMinutes: 10080 }, true],
+    ['weekly target 15 min', { weeklyTargetMinutes: 15 }, false],
+    ['weekly target 10110 min', { weeklyTargetMinutes: 10110 }, false],
+    ['weekly target 438 min (7.3 h)', { weeklyTargetMinutes: 438 }, false],
+    ['weekly target null', { weeklyTargetMinutes: null }, true],
+    ['milestoneDate invalid', { milestoneDate: '2027-02-30' }, false],
+  ];
+  for (const [label, patch, expected] of roadmapCases) {
+    it(`roadmap: ${label} → form ${expected ? 'accepts' : 'rejects'} and so does the importer`, () => {
+      const r = { ...d.roadmap, ...patch };
+      const form = validateRoadmapInput({ title: r.title, note: r.note, goalId: r.goalId, weeklyTargetHours: r.weeklyTargetMinutes === null ? null : r.weeklyTargetMinutes / 60, milestoneLabel: r.milestoneLabel, milestoneDate: r.milestoneDate }).ok;
+      expect(form, 'form').toBe(expected);
+      expect(q1FileWith({ roadmap: patch }), 'file').toBe(expected);
+    });
+  }
+
+  const phaseCases: Array<[string, Partial<RoadmapPhase>, boolean]> = [
+    ['title 80', { title: 'p'.repeat(80) }, true],
+    ['title 81', { title: 'p'.repeat(81) }, false],
+    ['note 120', { note: 'n'.repeat(120) }, true],
+    ['note 121', { note: 'n'.repeat(121) }, false],
+  ];
+  for (const [label, patch, expected] of phaseCases) {
+    it(`phase: ${label} → form ${expected ? 'accepts' : 'rejects'} and so does the importer`, () => {
+      const p = { ...d.phases[0], ...patch };
+      expect(validatePhaseInput({ title: p.title, note: p.note }).ok, 'form').toBe(expected);
+      expect(q1FileWith({ phase: patch }), 'file').toBe(expected);
+    });
+  }
+
+  const itemCases: Array<[string, Partial<RoadmapItem>, boolean]> = [
+    ['title 200', { title: 'i'.repeat(200) }, true],
+    ['title 201', { title: 'i'.repeat(201) }, false],
+    ['note 1000', { note: 'n'.repeat(1000) }, true],
+    ['note 1001', { note: 'n'.repeat(1001) }, false],
+    ['span 366 days', { plannedStart: '2026-11-03', plannedEnd: addDays('2026-11-03', 365) }, true],
+    ['span 367 days', { plannedStart: '2026-11-03', plannedEnd: addDays('2026-11-03', 366) }, false],
+    ['end before start', { plannedEnd: '2026-11-02' }, false],
+    ['actualEnd before actualStart', { actualStart: '2026-11-04', actualEnd: '2026-11-03' }, false],
+    ['actualEnd after today', { actualStart: '2026-11-03', actualEnd: '2026-11-05' }, false],
+    ['actual dates today', { actualStart: '2026-11-03', actualEnd: '2026-11-04' }, true],
+  ];
+  for (const [label, patch, expected] of itemCases) {
+    it(`item: ${label} → form ${expected ? 'accepts' : 'rejects'} and so does the importer`, () => {
+      const i = { ...d.items[1], ...patch };
+      expect(validateItemInput({ title: i.title, note: i.note, plannedStart: i.plannedStart, plannedEnd: i.plannedEnd, actualStart: i.actualStart, actualEnd: i.actualEnd }, TODAY_Q1).ok, 'form').toBe(expected);
+      expect(q1FileWith({ item: patch }), 'file').toBe(expected);
+    });
+  }
+
+  const cpCases: Array<[string, Partial<RoadmapCheckpoint>, boolean]> = [
+    ['title 80', { title: 'c'.repeat(80) }, true],
+    ['title 81', { title: 'c'.repeat(81) }, false],
+    ['note 280', { note: 'n'.repeat(280) }, true],
+    ['note 281', { note: 'n'.repeat(281) }, false],
+    ['maxScore 10000', { maxScore: 10000, threshold: 20 }, true],
+    ['maxScore 10001', { maxScore: 10001 }, false],
+    ['maxScore 0', { maxScore: 0 }, false],
+    ['score 32 of 32', { score: 32 }, true],
+    ['score 33 of 32', { score: 33 }, false],
+    ['score 7.5', { score: 7.5 }, true],
+    ['score 7.25', { score: 7.25 }, false],
+    ['threshold -1', { threshold: -1 }, false],
+    ['threshold above max', { threshold: 32.5 }, false],
+  ];
+  for (const [label, patch, expected] of cpCases) {
+    it(`checkpoint: ${label} → form ${expected ? 'accepts' : 'rejects'} and so does the importer`, () => {
+      const c = { ...d.checkpoints[2], ...patch };
+      expect(validateCheckpointInput({ title: c.title, note: c.note, date: c.date, maxScore: c.maxScore, threshold: c.threshold, score: c.score }).ok, 'form').toBe(expected);
+      expect(q1FileWith({ checkpoint: patch }), 'file').toBe(expected);
+    });
+  }
+});

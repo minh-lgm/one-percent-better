@@ -84,12 +84,12 @@ describe('soft delete (M7-AC2)', () => {
     const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id));
     expect(byId(await goals.getAll())).toEqual(byId(s1.goals));
     expect(await db.goals.get('temp')).toMatchObject({ deletedAt: NOW.toISOString(), dirty: 1 });
-    expect(await new DexieLocalDataRepository(db).countLive()).toEqual({ goals: 5, entries: 23 });
+    expect(await new DexieLocalDataRepository(db).countLive()).toEqual({ goals: 5, entries: 23, roadmaps: 0 });
   });
 
   it('countLive ignores tombstones and entries of deleted goals; clearUserData also removes tombstones', async () => {
     await goals.deleteWithEntries('g2');
-    expect(await new DexieLocalDataRepository(db).countLive()).toEqual({ goals: 4, entries: 10 });
+    expect(await new DexieLocalDataRepository(db).countLive()).toEqual({ goals: 4, entries: 10, roadmaps: 0 });
     await new DexieLocalDataRepository(db).clearUserData();
     expect(await db.goals.count()).toBe(0);
     expect(await db.entries.count()).toBe(0);

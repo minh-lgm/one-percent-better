@@ -91,7 +91,7 @@ test.describe('M11 — No end date (en)', () => {
     expect(external).toEqual([]);
   });
 
-  test('M11-AC10 / M11-AC5: O1 at 2026-10-09 on Goals, Goal detail (Day 9, +100.0%, no Range, 9 rows, 58.5 %), Review, Day; 2031-10-02 still Active with +1%; Export writes "endDate": null with schemaVersion 1', async ({ page }) => {
+  test('M11-AC10 / M11-AC5: O1 at 2026-10-09 on Goals, Goal detail (Day 9, +100.0%, no Range, 9 rows, 58.5 %), Review, Day; 2031-10-02 still Active with +1%; Export writes "endDate": null with schemaVersion 2', async ({ page }) => {
     const external = trackExternal(page);
     await freezeClock(page);
     await importBackup(page, 'o1-open-ended-backup.json');
@@ -180,7 +180,7 @@ test.describe('M11 — No end date (en)', () => {
     const text = await readFile((await download.path())!, 'utf8');
     expect(text).toMatch(/"endDate":\s*null/);
     const file = JSON.parse(text) as { schemaVersion: number; goals: Array<{ id: string; endDate: unknown }>; entries: unknown[] };
-    expect(file.schemaVersion).toBe(1);
+    expect(file.schemaVersion).toBe(2); // v8.0 (M17, ADR-49)
     expect(file.goals).toHaveLength(1);
     expect(file.goals[0].endDate).toBeNull();
     expect('endDate' in file.goals[0]).toBe(true);

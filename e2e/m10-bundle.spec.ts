@@ -17,6 +17,15 @@ test('M10-AC1: cold #/today (cloud off) <= 230 kB gzip, no Recharts / SDK / zod 
   // Sanity: the entry chunk and the stylesheet were measured (the method really saw the app).
   expect(load.hits.some((h) => /^\/assets\/index-.*\.js$/.test(h.url))).toBe(true);
   expect(load.hits.some((h) => /\.css$/.test(h.url))).toBe(true);
+  // v8.0 (M17-AC8, ADR-53): nothing of the big-goals feature on the cold-load path — no roadmap chunk, and the
+  // transferred JS/CSS contains neither the `roadmap` namespace strings nor the QPT template content.
+  expect(load.hits.filter((h) => /Roadmap|roadmap/.test(h.url))).toEqual([]);
+  for (const h of load.hits.filter((x) => /javascript|css/.test(x.type))) {
+    const body = readFileSync(join(process.cwd(), 'dist', h.url), 'utf8');
+    for (const marker of ['Plans that run for weeks', 'Study time comes from the goal', 'Linear Algebra', 'Đúng tiến độ', 'Your roadmaps', 'rm-chip']) {
+      expect(body.includes(marker), `${h.url} contains "${marker}"`).toBe(false);
+    }
+  }
 });
 
 test('M10-AC6 (3): the cloud-off build emits no supabase-client chunk and no JS mentions auth/v1', async () => {

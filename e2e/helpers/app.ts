@@ -4,12 +4,20 @@ import AxeBuilder from '@axe-core/playwright';
 import { flattenMessages } from '../../src/i18n/parity';
 import en from '../../src/i18n/resources/en.json' with { type: 'json' };
 import vi from '../../src/i18n/resources/vi.json' with { type: 'json' };
+import roadmapEn from '../../src/i18n/resources/roadmap.en.json' with { type: 'json' };
+import roadmapVi from '../../src/i18n/resources/roadmap.vi.json' with { type: 'json' };
 import { scanUntranslated, type ScanHit } from '../../src/test/i18n-scan';
 
 export const FIXED_TIME = new Date('2026-10-09T10:00:00+07:00');
+/** Phase 8 "today" (TASKS phase 8): 2026-11-04 10:00 Asia/Ho_Chi_Minh. */
+export const FIXED_TIME_Q1 = new Date('2026-11-04T10:00:00+07:00');
 export const EN = en;
 export const VI = vi;
-const SCAN_DATA = { en: flattenMessages(en), vi: flattenMessages(vi) };
+/** v8.0: the lazy `roadmap` namespace, for specs on the Big goals screen. */
+export const ROADMAP_EN = roadmapEn;
+export const ROADMAP_VI = roadmapVi;
+// v8.0 (M17-AC9): the scan also knows the `roadmap` namespace strings.
+const SCAN_DATA = { en: { ...flattenMessages(en), ...flattenMessages(roadmapEn, 'roadmap') }, vi: { ...flattenMessages(vi), ...flattenMessages(roadmapVi, 'roadmap') } };
 
 /** Freeze "now" (TASKS §0) before any app script runs. Call again to move the frozen time. */
 export async function freezeClock(page: Page, time: Date = FIXED_TIME): Promise<void> {

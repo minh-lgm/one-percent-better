@@ -16,10 +16,10 @@ const codeOf = (text: string, size = text.length) => {
 };
 
 describe('buildBackup / backupFileName (M3-AC6)', () => {
-  it('produces schemaVersion 1 with app, exportedAt and the three collections; no locale anywhere', () => {
+  it('produces schemaVersion 2 (v8.0, ADR-49) with app, exportedAt and the three collections; no locale anywhere', () => {
     const file = sampleFile();
     expect(file.app).toBe('one-percent-better');
-    expect(file.schemaVersion).toBe(1);
+    expect(file.schemaVersion).toBe(2);
     expect(file.exportedAt).toBe(FIXED_NOW.toISOString());
     expect(file.goals).toHaveLength(5);
     expect(file.entries).toHaveLength(23);
@@ -63,12 +63,12 @@ describe('parseBackup (M3-AC9)', () => {
     expect(codeOf(text(noVersion))).toBe('IMPORT_INVALID_SCHEMA');
   });
 
-  it('IMPORT_UNSUPPORTED_VERSION for schemaVersion 2 (with the version in params)', () => {
-    const r = parseBackup(text({ ...sampleFile(), schemaVersion: 2 }), 100);
+  it('IMPORT_UNSUPPORTED_VERSION for schemaVersion 3 (with the version in params; v8.0 reads 1 and 2)', () => {
+    const r = parseBackup(text({ ...sampleFile(), schemaVersion: 3 }), 100);
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.errors[0].code).toBe('IMPORT_UNSUPPORTED_VERSION');
-      expect(r.errors[0].params).toEqual({ v: '2' });
+      expect(r.errors[0].params).toEqual({ v: '3' });
     }
     expect(codeOf(text({ ...sampleFile(), schemaVersion: '1' }))).toBe('IMPORT_UNSUPPORTED_VERSION');
   });
@@ -236,9 +236,9 @@ describe('backup with "endDate": null (M11-AC5, FR-19, FR-20, A-54)', () => {
     return `${r.errors[0].code}${r.errors[0].params?.variant ? `:${String(r.errors[0].params.variant)}` : ''}`;
   };
 
-  it('buildBackup keeps schemaVersion 1 and writes the key with a JSON null; parse accepts it and round-trips S1 + O1 (6 goals, 27 entries)', () => {
+  it('buildBackup writes schemaVersion 2 (v8.0) and writes the key with a JSON null; parse accepts it and round-trips S1 + O1 (6 goals, 27 entries)', () => {
     const file = fileS1O1();
-    expect(file.schemaVersion).toBe(1);
+    expect(file.schemaVersion).toBe(2);
     const json = JSON.stringify(file);
     expect(json).toContain('"endDate":null');
     const o1 = (JSON.parse(json) as { goals: Array<Record<string, unknown>> }).goals.find((g) => g.id === 'o1')!;

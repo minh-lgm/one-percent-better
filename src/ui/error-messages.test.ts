@@ -96,3 +96,37 @@ describe('v4.0 keys — open-ended goals (M11-AC1, M11-T5, DESIGN §7.3)', () =>
     expect(errorMessage({ code: 'DATE_OUTSIDE_GOAL_PERIOD', message: '', params: { start: '2026-10-01', end: '2026-10-31' } }, f).key).toBe('errors.DATE_OUTSIDE_GOAL_PERIOD');
   });
 });
+
+// ---- v8.0 (M17-AC9, DESIGN 7.9.0 / ARCH §4.8 j): the `roadmap` scope tries the namespace first ----
+import roadmapEn from '../i18n/resources/roadmap.en.json';
+import { flattenMessages } from '../i18n/parity';
+import { roadmapErrorMessage } from './roadmap-errors';
+
+describe('roadmapErrorMessage — the roadmap namespace first (M17-AC9, ui/roadmap-errors.ts)', () => {
+  const NS = flattenMessages(roadmapEn);
+  const exists = (key: string) => key.startsWith('roadmap:') && key.slice('roadmap:'.length) in NS;
+
+  it('DATE_IN_FUTURE and GOAL_NOT_FOUND → roadmap:errors.<CODE> in the roadmap scope, errors.<CODE> by default', () => {
+    expect(roadmapErrorMessage({ code: 'DATE_IN_FUTURE', message: '' }, f, exists).key).toBe('roadmap:errors.DATE_IN_FUTURE');
+    expect(roadmapErrorMessage({ code: 'GOAL_NOT_FOUND', message: '' }, f, exists).key).toBe('roadmap:errors.GOAL_NOT_FOUND');
+    expect(errorMessage({ code: 'DATE_IN_FUTURE', message: '' }, f).key).toBe('errors.DATE_IN_FUTURE');
+    expect(errorMessage({ code: 'GOAL_NOT_FOUND', message: '' }, f).key).toBe('errors.GOAL_NOT_FOUND');
+  });
+
+  it('ROADMAP_* variants pick the suffixed key; a variant without its own key falls back to the unsuffixed one; params are formatted', () => {
+    expect(roadmapErrorMessage({ code: 'ROADMAP_NOT_FOUND', message: '', params: { kind: 'phase' } }, f, exists).key).toBe('roadmap:errors.ROADMAP_NOT_FOUND_phase');
+    expect(roadmapErrorMessage({ code: 'ROADMAP_DATE_INVALID', message: '', params: { variant: 'order' } }, f, exists).key).toBe('roadmap:errors.ROADMAP_DATE_INVALID_order');
+    expect(roadmapErrorMessage({ code: 'ROADMAP_SCORE_INVALID', message: '', params: { variant: 'precision' } }, f, exists).key).toBe('roadmap:errors.ROADMAP_SCORE_INVALID_precision');
+    expect(roadmapErrorMessage({ code: 'ROADMAP_TEXT_TOO_LONG', field: 'title', message: '', params: { max: 80 } }, f, exists)).toEqual({ key: 'roadmap:errors.ROADMAP_TEXT_TOO_LONG_title', params: { max: '80' } });
+    expect(roadmapErrorMessage({ code: 'ROADMAP_LIMIT_REACHED', message: '', params: { kind: 'item', max: 200 } }, f, exists)).toEqual({ key: 'roadmap:errors.ROADMAP_LIMIT_REACHED_item', params: { max: '200' } });
+    expect(roadmapErrorMessage({ code: 'ROADMAP_GOAL_ALREADY_LINKED', message: '', params: { title: 'QPT 21 tuần' } }, f, exists)).toEqual({ key: 'roadmap:errors.ROADMAP_GOAL_ALREADY_LINKED', params: { title: 'QPT 21 tuần' } });
+    // Unsuffixed fallbacks: ROADMAP_TITLE_REQUIRED has no variants; a (hypothetical) unknown variant drops to the base key when it exists …
+    expect(roadmapErrorMessage({ code: 'ROADMAP_TITLE_REQUIRED', field: 'title', message: '' }, f, exists).key).toBe('roadmap:errors.ROADMAP_TITLE_REQUIRED');
+    expect(roadmapErrorMessage({ code: 'ROADMAP_TARGET_INVALID', message: '', params: { variant: 'step' } }, f, exists).key).toBe('roadmap:errors.ROADMAP_TARGET_INVALID');
+    // … and a code the namespace does not know at all (every variant missing) falls back to the main resource.
+    expect(roadmapErrorMessage({ code: 'ROADMAP_NOT_FOUND', message: '', params: { kind: 'ghost' } }, f, (k) => k === 'roadmap:errors.ROADMAP_NOT_FOUND_roadmap').key).toBe('errors.UNKNOWN');
+    expect(roadmapErrorMessage({ code: 'IMPORT_INTEGRITY', message: '' }, f, exists).key).toBe('errors.IMPORT_INTEGRITY');
+    // Without `exists` the most specific namespace key is returned.
+    expect(roadmapErrorMessage({ code: 'ROADMAP_NOT_FOUND', message: '', params: { kind: 'item' } }, f).key).toBe('roadmap:errors.ROADMAP_NOT_FOUND_item');
+  });
+});

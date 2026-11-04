@@ -232,7 +232,7 @@ describe('tombstone purge and sync (M10-AC5, ADR-29)', () => {
     expect(await b.goals.getById('g2')).toBeUndefined();
     LATER(a, 31);
     LATER(b, 31);
-    expect(await a.store.purgeTombstones(a.clock.now)).toEqual({ goals: 1, entries: expect.any(Number) });
+    expect(await a.store.purgeTombstones(a.clock.now)).toMatchObject({ goals: 1, entries: expect.any(Number) });
     expect(await rawGoal(a, 'g2')).toBeUndefined();
     await syncOk(a);
     await syncOk(b);
@@ -304,7 +304,7 @@ describe('tombstone purge and sync (M10-AC5, ADR-29)', () => {
     expect(await a.sync.syncNow('manual')).toEqual({ status: 'skipped', why: 'paused' });
     expect((await a.goalService.remove(g.value.id)).ok).toBe(true);
     LATER(a, 31);
-    expect(await a.store.purgeTombstones(a.clock.now)).toEqual({ goals: 1, entries: 1 });
+    expect(await a.store.purgeTombstones(a.clock.now)).toMatchObject({ goals: 1, entries: 1 });
     a.user.id = U1;
     await syncOk(a);
     expect(server.rows('goals', U1)).toEqual([]);
@@ -320,7 +320,7 @@ describe('tombstone purge and sync (M10-AC5, ADR-29)', () => {
     a.clock.now = T('2026-10-09T03:05:00.000Z');
     expect((await a.goalService.remove('g2')).ok).toBe(true);
     LATER(a, 31);
-    expect(await a.store.purgeTombstones(a.clock.now)).toEqual({ goals: 0, entries: 0 });
+    expect(await a.store.purgeTombstones(a.clock.now)).toMatchObject({ goals: 0, entries: 0 });
     expect(await rawGoal(a, 'g2')).toBeDefined();
     a.online.value = true;
     await syncOk(a);

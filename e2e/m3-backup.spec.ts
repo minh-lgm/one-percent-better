@@ -25,7 +25,7 @@ test.describe('M3 backup', () => {
     await expect(toast(page)).toHaveText(EN.toast.backupExported);
     const file = JSON.parse(await readFile((await download.path())!, 'utf8')) as Record<string, unknown>;
     expect(file.app).toBe('one-percent-better');
-    expect(file.schemaVersion).toBe(1);
+    expect(file.schemaVersion).toBe(2); // v8.0 (M17, ADR-49)
     expect(file.goals).toHaveLength(5);
     expect(file.entries).toHaveLength(23);
     expect(file.settings).toMatchObject({ reminderEnabled: false, reminderTime: '20:00' });
@@ -99,7 +99,7 @@ test.describe('M3 backup', () => {
     const cases: Array<[string, string]> = [
       ['invalid-json.json', EN.errors.IMPORT_INVALID_JSON],
       ['invalid-schema.json', EN.errors.IMPORT_INVALID_SCHEMA],
-      ['unsupported-version.json', 'This backup uses a format version (2) this app can\'t read.'],
+      ['unsupported-version.json', 'This backup uses a format version (3) this app can\'t read.'],
       ['invalid-integrity.json', EN.errors.IMPORT_INTEGRITY],
     ];
     for (const [fixture, message] of cases) {

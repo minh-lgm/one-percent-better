@@ -105,7 +105,7 @@ test.describe('M1-AC16: switching language in Settings', () => {
     await expect(goalCard(page, 'Read')).toContainText('Còn 10 phút');
     await expectNoViLeaks(page);
 
-    await page.getByRole('link', { name: VI.nav.goals }).click();
+    await page.getByRole('link', { name: VI.nav.goals, exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: VI.goals.title })).toBeVisible();
     await expect(page.getByText('30 phút/ngày · 09/10/2026 – 31/12/2026')).toBeVisible();
     await expect(page.getByText('Be smarter')).toBeVisible();

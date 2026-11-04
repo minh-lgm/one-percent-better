@@ -32,8 +32,8 @@ test.describe('M13 safe area (native build in Chromium, 390×844)', () => {
     await expect(page.locator('main h1')).toBeVisible();
 
     const before = await metrics(page);
-    expect(before.navHeight).toBeGreaterThanOrEqual(56); // 56 px items (+ 1 px top border)
-    expect(before.navHeight).toBeLessThanOrEqual(57);
+    expect(before.navHeight).toBeGreaterThanOrEqual(64); // 64 px items (v8.0, DESIGN §3.1; was 56) (+ 1 px top border)
+    expect(before.navHeight).toBeLessThanOrEqual(65);
     expect(before.navPaddingBottom).toBe('0px');
     expect(before.mainPaddingTop).toBe('16px');
     expect(before.overscrollHtml).toBe('none');
@@ -56,7 +56,7 @@ test.describe('M13 safe area (native build in Chromium, 390×844)', () => {
     const firstItem = await page.locator('.nav .item').first().boundingBox();
     expect(firstItem!.y + firstItem!.height).toBeLessThanOrEqual(844 - 34);
 
-    // Toast region bottom = tab bar (56) + inset (34) + 12.
+    // Toast region bottom = tab bar (64, v8.0) + inset (34) + 12.
     const toastBottom = await page.evaluate(() => {
       const el = document.createElement('div');
       el.className = 'toast-region';
@@ -65,7 +65,7 @@ test.describe('M13 safe area (native build in Chromium, 390×844)', () => {
       el.remove();
       return value;
     });
-    expect(toastBottom).toBe('102px');
+    expect(toastBottom).toBe('110px');
 
     await page.evaluate(() => document.body.classList.add('keyboard-open'));
     expect((await metrics(page)).navDisplay).toBe('none');

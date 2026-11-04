@@ -36,14 +36,14 @@ afterEach(async () => {
 });
 
 describe('BackupService.export (M3-AC6, M3-AC13)', () => {
-  it('names the file by the local date, writes schemaVersion 1 and updates lastBackupAt', async () => {
+  it('names the file by the local date, writes schemaVersion 2 (v8.0) and updates lastBackupAt', async () => {
     await seedS1();
     await db.kv.put({ key: 'locale', value: 'vi' });
     const { fileName, json } = await service.export(FIXED_NOW);
     expect(fileName).toBe('1percent-better-backup-2026-10-09.json');
     const file = JSON.parse(json) as Record<string, unknown>;
     expect(file.app).toBe('one-percent-better');
-    expect(file.schemaVersion).toBe(1);
+    expect(file.schemaVersion).toBe(2);
     expect(file.exportedAt).toBe(FIXED_NOW.toISOString());
     expect(file.goals).toHaveLength(5);
     expect(file.entries).toHaveLength(23);
@@ -71,7 +71,7 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
       if (!preview.ok) return;
       expect(preview.value).toMatchObject({ goals: 5, entries: 23, exportedAt: FIXED_NOW.toISOString() });
       const r = await other.service.import(preview.value);
-      expect(r).toEqual({ ok: true, value: { goals: 5, entries: 23 } });
+      expect(r).toEqual({ ok: true, value: { goals: 5, entries: 23, roadmaps: 0 } });
       const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id));
       const again = await new DexieBackupRepository(db2).exportAll();
       expect(byId(again.goals)).toEqual(byId(s1.goals));
@@ -100,7 +100,7 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
     const preview = await service.parse(json, json.length);
     expect(preview.ok).toBe(true);
     if (!preview.ok) return;
-    expect(await service.counts()).toEqual({ goals: 1, entries: 1 });
+    expect(await service.counts()).toEqual({ goals: 1, entries: 1, roadmaps: 0 });
     await service.import(preview.value);
     expect(await db.goals.filter((g) => g.deletedAt == null).count()).toBe(5);
     expect((await db.goals.get('temp'))?.deletedAt).toBeTruthy(); // v2: soft-deleted (ADR-20)
@@ -108,7 +108,7 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
     expect(await db.kv.get('activeTimer')).toBeUndefined();
     expect(await settings.get()).toEqual({ reminderEnabled: true, reminderTime: '07:30', lastReminderDate: null, lastBackupAt: '2026-10-01T00:00:00.000Z', plusOneShown: {} });
     expect(await db.kv.get('locale')).toEqual({ key: 'locale', value: 'vi' });
-    expect(await service.counts()).toEqual({ goals: 5, entries: 23 });
+    expect(await service.counts()).toEqual({ goals: 5, entries: 23, roadmaps: 0 });
   });
 
   it('every parse error leaves the data untouched and maps to the right code', async () => {
@@ -121,7 +121,7 @@ describe('BackupService.parse / import (M3-AC7, M3-AC8, M3-AC9, M3-AC13)', () =>
       ['IMPORT_INVALID_SCHEMA', JSON.stringify({ ...base, goals: undefined })],
       ['IMPORT_INVALID_SCHEMA', JSON.stringify({ ...base, app: 'nope' })],
       ['IMPORT_INVALID_SCHEMA', JSON.stringify({ ...base, entries: [{ ...s1.entries[0], minutes: '30' }] })],
-      ['IMPORT_UNSUPPORTED_VERSION', JSON.stringify({ ...base, schemaVersion: 2 })],
+      ['IMPORT_UNSUPPORTED_VERSION', JSON.stringify({ ...base, schemaVersion: 3 })],
       ['IMPORT_INTEGRITY', JSON.stringify({ ...base, entries: [buildEntry({ id: 'x', goalId: 'ghost', date: '2026-10-05' })] })],
       ['IMPORT_INTEGRITY', JSON.stringify({ ...base, entries: [s1.entries[0], s1.entries[0]] })],
       ['IMPORT_INTEGRITY', JSON.stringify({ ...base, entries: [buildEntry({ id: 'a', goalId: 'g1', date: '2026-10-05', minutes: 1000 }), buildEntry({ id: 'b', goalId: 'g1', date: '2026-10-05', minutes: 441 })] })],
@@ -205,13 +205,13 @@ describe('BackupService.parse loads the schema lazily (M10-AC3, ADR-27)', () => 
 
 // ---- v4.0 (M11-AC5): export / import of an open-ended goal through the service ----
 describe('BackupService with an open-ended goal (M11-AC5, ADR-32)', () => {
-  it('export S1 + O1 → schemaVersion 1 and "endDate": null; parse counts 6 goals / 27 entries; import → exportAll deep-equals', async () => {
+  it('export S1 + O1 → schemaVersion 2 and "endDate": null; parse counts 6 goals / 27 entries; import → exportAll deep-equals', async () => {
     const d = datasetS1O1();
     await db.goals.bulkPut(d.goals);
     await db.entries.bulkPut(d.entries);
     const { json } = await service.export(FIXED_NOW);
     const file = JSON.parse(json) as { schemaVersion: number; goals: Array<{ id: string; endDate: unknown }> };
-    expect(file.schemaVersion).toBe(1);
+    expect(file.schemaVersion).toBe(2);
     expect(json).toMatch(/"endDate":\s*null/);
     expect(file.goals.find((g) => g.id === 'o1')?.endDate).toBeNull();
 
@@ -224,7 +224,7 @@ describe('BackupService with an open-ended goal (M11-AC5, ADR-32)', () => {
       if (!preview.ok) return;
       expect(preview.value).toMatchObject({ goals: 6, entries: 27 });
       const r = await other.service.import(preview.value);
-      expect(r).toEqual({ ok: true, value: { goals: 6, entries: 27 } });
+      expect(r).toEqual({ ok: true, value: { goals: 6, entries: 27, roadmaps: 0 } });
       const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id));
       const again = await new DexieBackupRepository(db2).exportAll();
       expect(byId(again.goals)).toEqual(byId(d.goals));

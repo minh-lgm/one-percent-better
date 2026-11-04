@@ -37,9 +37,9 @@ afterEach(async () => {
 
 describe('DexieLocalDataRepository (M6-AC9, FR-41)', () => {
   it('countLive counts goals and entries', async () => {
-    expect(await repo.countLive()).toEqual({ goals: 0, entries: 0 });
+    expect(await repo.countLive()).toEqual({ goals: 0, entries: 0, roadmaps: 0 });
     await seed();
-    expect(await repo.countLive()).toEqual({ goals: 5, entries: 23 });
+    expect(await repo.countLive()).toEqual({ goals: 5, entries: 23, roadmaps: 0 });
   });
 
   it('clearUserData empties goals/entries and the user kv rows, keeping only locale and loginPrompt', async () => {

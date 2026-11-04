@@ -53,7 +53,7 @@ test.describe('M7-AC11 backup while signed in (FR-51)', () => {
     const download = await downloadPromise;
     const text = await readFile((await download.path())!, 'utf8');
     const file = JSON.parse(text) as { schemaVersion: number; goals: unknown[]; entries: unknown[] };
-    expect(file.schemaVersion).toBe(1);
+    expect(file.schemaVersion).toBe(2); // v8.0 (M17, ADR-49)
     expect(file.goals).toHaveLength(5);
     expect(file.entries).toHaveLength(23);
     expect(text).not.toMatch(/deletedAt|dirty|user_id/);

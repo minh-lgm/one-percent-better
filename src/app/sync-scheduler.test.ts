@@ -1,6 +1,6 @@
 // Sync triggers (M7-AC8 scheduler part, FR-46).
 import { describe, expect, it } from 'vitest';
-import type { Subscribable, SyncMeta } from '../data/repositories';
+import { emptyCursors, type Subscribable, type SyncMeta } from '../data/repositories';
 import type { SyncStatus } from '../domain/sync';
 import type { AuthState } from '../services/auth-service';
 import type { SyncReason } from '../services/sync-service';
@@ -174,7 +174,7 @@ describe('startSyncScheduler', () => {
   });
 
   it('exposes the SyncMeta shape it relies on (type-level smoke)', () => {
-    const meta: SyncMeta = { userId: null, lastUserId: null, account: null, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null };
+    const meta: SyncMeta = { userId: null, lastUserId: null, account: null, cursor: emptyCursors(), lastSyncedAt: null, lastError: null };
     expect(meta.cursor.goals).toBeNull();
   });
 });

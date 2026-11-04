@@ -9,12 +9,15 @@ import { Settings } from '../ui/screens/Settings';
 import { flattenMessages } from '../i18n/parity';
 import en from '../i18n/resources/en.json';
 import vi from '../i18n/resources/vi.json';
+import roadmapEn from '../i18n/resources/roadmap.en.json';
+import roadmapVi from '../i18n/resources/roadmap.vi.json';
 import type { Locale } from '../i18n/types';
 import { ToastProvider } from '../ui/components/Toast';
 import { createTestContainer, type TestContainer } from './container';
 import { scanUntranslated, type ScanHit } from './i18n-scan';
 
-const SCAN_DATA = { en: flattenMessages(en), vi: flattenMessages(vi) };
+/** v8.0 (M17-AC9): the vi scan also knows the lazy `roadmap` namespace (keys reported as `roadmap.…`). */
+export const SCAN_DATA = { en: { ...flattenMessages(en), ...flattenMessages(roadmapEn, 'roadmap') }, vi: { ...flattenMessages(vi), ...flattenMessages(roadmapVi, 'roadmap') } };
 
 /** Run the "vi scan" on the document (or a subtree). Returns the offending strings. */
 export function scanVi(root: Element | Document = document): ScanHit[] {
@@ -53,7 +56,7 @@ export async function renderWithLocale(ui: ReactElement, locale: Locale = 'en', 
 export async function renderApp(options: RenderOptions = {}): Promise<RenderResult & { tc: TestContainer; router: ReturnType<typeof createTestRouter> }> {
   const tc = options.container ?? (await createTestContainer({ locale: options.locale ?? 'en' }));
   // Settings is lazy in the app (M14, ADR-27); tests mount it synchronously so `getBy*` right after render keeps working.
-  const router = createTestRouter([options.route ?? '/today'], { Settings });
+  const router = createTestRouter([options.route ?? '/today'], { Settings, i18n: tc.i18n });
   const result = render(<App container={tc.container} router={router as unknown as Parameters<typeof RouterProvider>[0]['router'] & ReturnType<typeof createTestRouter>} />);
   return Object.assign(result, { tc, router });
 }

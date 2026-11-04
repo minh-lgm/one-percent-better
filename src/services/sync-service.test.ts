@@ -1,6 +1,6 @@
 // SyncService (M7-AC6 d/f, M7-AC8 backoff, M7-AC13 errors, ARCHITECTURE §5.10).
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { normalizeSyncMeta, type KvKey, type KvRepository } from '../data/repositories';
+import { emptyCursors, normalizeSyncMeta, type KvKey, type KvRepository } from '../data/repositories';
 import { rewindCursor, type SyncStatus } from '../domain/sync';
 import { PULL_RESET_VERSION } from '../config/constants';
 import { buildEntry, buildGoal } from '../test/builders';
@@ -407,7 +407,7 @@ describe('sign-in, merge and sign-out (FR-47, FR-41)', () => {
     await a.sync.syncNow('manual');
     await a.sync.reset();
     const meta = normalizeSyncMeta((await a.kv.get('sync')) ?? undefined);
-    expect(meta.cursor).toEqual({ goals: null, entries: null });
+    expect(meta.cursor).toEqual(emptyCursors()); // v8.0 (M17): six cursors
     expect(meta.lastSyncedAt).toBeNull();
     expect(a.sync.current()).toMatchObject({ kind: 'paused', lastSyncedAt: null });
   });
