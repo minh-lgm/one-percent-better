@@ -81,6 +81,37 @@ describe('goal link (A-78)', () => {
   });
 });
 
+describe('goal link helpers for the editor and Goal detail (M19; A-78, FR-80)', () => {
+  it('linkableGoals(rq) lists gq (its own goal) and the free, unarchived goals; archived goals and goals of other roadmaps are left out; the own archived goal stays', async () => {
+    await seedQ1();
+    await goals.put({ ...(await goals.getById('g2'))!, archived: true });
+    const r2 = expectOk(await service.create(roadmapInput({ title: 'Other', goalId: 'g1' })));
+    const forRq = (await service.linkableGoals('rq')).map((g) => g.id);
+    expect(forRq).toContain('gq');
+    expect(forRq).not.toContain('g1'); // linked to r2
+    expect(forRq).not.toContain('g2'); // archived
+    expect(forRq).toEqual(expect.arrayContaining(['g3', 'g4', 'g5']));
+    // A new roadmap: gq (rq's) and g1 (r2's) are taken.
+    const forNew = (await service.linkableGoals(null)).map((g) => g.id);
+    expect(forNew).not.toContain('gq');
+    expect(forNew).not.toContain('g1');
+    // The roadmap's own goal stays listed even once archived (shown as "(archived)" by the picker).
+    await goals.put({ ...(await goals.getById('gq'))!, archived: true });
+    expect((await service.linkableGoals('rq')).map((g) => g.id)).toContain('gq');
+    expect((await service.linkableGoals(r2.id)).map((g) => g.id)).not.toContain('gq');
+  });
+
+  it('findByGoal(gq) → [rq]; oldest first when two roadmaps point at one goal (sync convergence, A-D92); unlinked → []', async () => {
+    await seedQ1();
+    expect((await service.findByGoal('gq')).map((r) => r.id)).toEqual(['rq']);
+    expect(await service.findByGoal('g3')).toEqual([]);
+    // Two roadmaps on one goal can only arise from sync; write the second row directly.
+    const later = new Date('2026-11-04T04:00:00.000Z');
+    await repo.putRoadmap({ id: 'r-dup', title: 'Dup', note: '', goalId: 'gq', weeklyTargetMinutes: null, milestoneLabel: '', milestoneDate: null, createdAt: later.toISOString(), updatedAt: later.toISOString() });
+    expect((await service.findByGoal('gq')).map((r) => r.id)).toEqual(['rq', 'r-dup']);
+  });
+});
+
 describe('roadmap CRUD and limits', () => {
   it('create validates, stamps and stores; 21st live roadmap → ROADMAP_LIMIT_REACHED kind roadmap; remove soft-deletes; unknown id → ROADMAP_NOT_FOUND', async () => {
     expect(expectFail(await service.create(roadmapInput({ title: ' ' })))).toMatchObject({ code: 'ROADMAP_TITLE_REQUIRED' });

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { TOAST_DURATION_MS, TOAST_ERROR_DURATION_MS } from '../../config/constants';
 import type { MessageKey, TParams } from '../../i18n/types';
-import { ToastContext, useToast, type ToastMessage, type ToastOptions } from '../hooks/useToast';
+import { ToastContext, useToast, type ToastKey, type ToastMessage, type ToastOptions } from '../hooks/useToast';
 import { useT } from '../hooks/useT';
 import { Icon } from './Icon';
 
@@ -21,7 +21,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [clear]);
 
   const show = useCallback(
-    (key: MessageKey, params?: TParams, options: ToastOptions = {}) => {
+    (key: ToastKey, params?: TParams, options: ToastOptions = {}) => {
       clear();
       const tone = options.tone ?? 'default';
       setCurrent({ id: ++counter.current, key, params, tone, action: options.action });
@@ -44,7 +44,7 @@ export function ToastRegion() {
         {current ? (
           <div className={current.tone === 'error' ? 'toast error' : 'toast'} key={current.id} data-testid="toast" data-tone={current.tone}>
             <Icon name={current.tone === 'error' ? 'alert' : 'check'} />
-            <span>{t(current.key, current.params)}</span>
+            <span>{t(current.key as MessageKey, current.params)}</span>
             {current.action ? (
               <button
                 type="button"

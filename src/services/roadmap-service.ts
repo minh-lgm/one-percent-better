@@ -27,7 +27,7 @@ import {
 } from '../domain/roadmap';
 import { roadmapView, toListRow, type RoadmapListRow, type RoadmapView } from '../domain/roadmap-progress';
 import { nextUpdatedAt } from '../domain/sync';
-import { fail, ok, type DomainError, type ISODate, type Result } from '../domain/types';
+import { fail, ok, type DomainError, type Goal, type ISODate, type Result } from '../domain/types';
 import { randomUuid } from '../domain/uuid';
 
 export interface RoadmapServiceDeps {
@@ -69,6 +69,22 @@ export class RoadmapService {
     const other = (await this.roadmaps.findByGoal(goalId)).find((r) => r.id !== roadmapId);
     if (other) return { code: 'ROADMAP_GOAL_ALREADY_LINKED', field: 'goalId', message: `goal ${goalId} is linked to roadmap ${other.id}`, params: { title: other.title } };
     return null;
+  }
+
+  /** Live roadmaps linked to `goalId`, oldest first (Goal detail "Part of roadmap", D2 note; FR-80, A-D92). */
+  async findByGoal(goalId: string): Promise<Roadmap[]> {
+    return (await this.roadmaps.findByGoal(goalId)).sort((a, b) => (a.createdAt === b.createdAt ? (a.id < b.id ? -1 : 1) : a.createdAt < b.createdAt ? -1 : 1));
+  }
+
+  /**
+   * Goals the picker may offer for `roadmapId` (A-78, DESIGN S14 / A-D86): live, not archived, not linked to another
+   * live roadmap — plus the goal currently linked to this roadmap, archived or not. Sorted by name, then id.
+   */
+  async linkableGoals(roadmapId: string | null): Promise<Goal[]> {
+    const [goals, roadmaps] = await Promise.all([this.goals.getAll(), this.roadmaps.listLive()]);
+    const current = roadmapId === null ? null : (roadmaps.find((r) => r.id === roadmapId)?.goalId ?? null);
+    const taken = new Set(roadmaps.filter((r) => r.id !== roadmapId && r.goalId !== null).map((r) => r.goalId as string));
+    return goals.filter((g) => g.id === current || (!g.archived && !taken.has(g.id))).sort((a, b) => a.name.localeCompare(b.name) || (a.id < b.id ? -1 : 1));
   }
 
   // ---- roadmap ----

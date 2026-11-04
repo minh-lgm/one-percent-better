@@ -34,6 +34,13 @@ export interface Formatters {
    * (`Math.round(minutes / 6) / 10`): 345 → `5.8 h` / `5,8 giờ`, 960 → `16 h`, 75 → `1.3 h`, 0 → `0 h`.
    */
   hoursShort(minutes: number): string;
+  /** v8.0 (DESIGN 7.9.0, strip cell names): day and month without the year — `11/03` (en) / `03/11` (vi). */
+  dayMonth(date: string): string;
+  /**
+   * v8.0 (DESIGN 7.9.0, A-D90): planned range of a roadmap item. Same year → the year appears once
+   * (`2026-11-03 – 11-09` / `03/11 – 09/11/2026`); different years → two full short dates, joined by ` – `.
+   */
+  itemRange(start: string, end: string): string;
   /**
    * Plural phrase with a locale-formatted number: `1 goal`, `16,000 entries` / `16.000 lần ghi`.
    * The plural form is chosen with `Intl.PluralRules` and passed as i18next `context`
@@ -149,6 +156,9 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
     return dtf(tag, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
   };
 
+  // `MM/dd` (en) / `dd/MM` (vi) from an ISO date, no Intl needed.
+  const dayMonth = (date: string) => (locale === 'en' ? `${date.slice(5, 7)}/${date.slice(8, 10)}` : `${date.slice(8, 10)}/${date.slice(5, 7)}`);
+
   return {
     locale,
     dateLong(date, options) {
@@ -181,6 +191,11 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
     },
     hoursShort(minutes) {
       return t('format.hours', { n: nf(tag, { maximumFractionDigits: 1 }).format(Math.round(minutes / 6) / 10) });
+    },
+    dayMonth,
+    itemRange(start, end) {
+      if (start.slice(0, 4) !== end.slice(0, 4)) return `${dateShort(start)} – ${dateShort(end)}`;
+      return locale === 'en' ? `${dateShort(start)} – ${end.slice(5)}` : `${dayMonth(start)} – ${dateShort(end)}`;
     },
     count(key, n) {
       // A string `count` disables i18next's own plural lookup; `context` picks the suffix instead.

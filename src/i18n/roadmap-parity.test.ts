@@ -13,7 +13,7 @@ const EN = flattenMessages(roadmapEn);
 const VI = flattenMessages(roadmapVi);
 
 /** DESIGN §7.0 rule 5: rows marked "(= en)". */
-const SAME_VALUE_ALLOWLIST = ['noValue', 'milestone.line'];
+const SAME_VALUE_ALLOWLIST = ['noValue', 'milestone.line', 'now.eyebrowIndexed'];
 
 function cells(line: string): string[] {
   const out: string[] = [];
@@ -63,12 +63,24 @@ describe('roadmap namespace parity (M17-AC9)', () => {
     }
   });
 
-  it('covers the M17 rows of 7.9.2 and every errors.* row', () => {
+  it('covers the M17 and M19 rows of 7.9.2 and every errors.* row (M20 rows are not shipped yet)', () => {
     const section = design.slice(design.indexOf('#### 7.9.2'), design.indexOf('#### 7.9.3'));
     const rows = section.split('\n').filter((l) => /^\| `[a-zA-Z]/.test(l)).map((l) => cells(l));
-    const m17 = rows.filter((c) => c[1] === 'M17' || unquote(c[0]).startsWith('errors.')).map((c) => unquote(c[0]));
-    expect(m17.length).toBeGreaterThan(40);
-    for (const key of m17) expect(EN[key], `missing ${key}`).toBeDefined();
+    const shipped = rows.filter((c) => c[1] === 'M17' || c[1] === 'M19' || unquote(c[0]).startsWith('errors.')).map((c) => unquote(c[0]));
+    expect(shipped.length).toBeGreaterThan(200);
+    for (const key of shipped) expect(EN[key], `missing ${key}`).toBeDefined();
+    const m20 = rows.filter((c) => c[1] === 'M20' && !unquote(c[0]).startsWith('errors.')).map((c) => unquote(c[0]));
+    expect(m20.length).toBeGreaterThan(20);
+    for (const key of m20) expect(EN[key], `${key} is M20`).toBeUndefined();
+  });
+
+  it('(M19, FR-80) goal.detail.roadmapLabel and goal.delete.roadmapNote (7.9.1) are in the main resources verbatim', () => {
+    for (const key of ['goal.detail.roadmapLabel', 'goal.delete.roadmapNote']) {
+      const expected = designCopy(key, '#### 7.9.1', '#### 7.9.2');
+      expect(flattenMessages(en)[key], key).toBe(expected.en);
+      expect(flattenMessages(vi)[key], key).toBe(expected.vi);
+    }
+    expect(flattenMessages(vi)['goal.detail.roadmapLabel']).toBe('Thuộc lộ trình');
   });
 
   it('nav.roadmaps (7.9.1) is in the main resources verbatim', () => {

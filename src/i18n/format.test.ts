@@ -65,6 +65,20 @@ describe('format.ts (ARCH §5.8, M1-AC18)', () => {
     expect(vi.hoursShort(960)).toBe('16 giờ');
     expect(en.hoursShort(0)).toBe('0 h');
     expect(en.hoursShort(4500)).toBe('75 h');
+  });
+
+  it('M19 (DESIGN 7.9.0): dayMonth and itemRange (same year once, different years twice, en-dash)', () => {
+    expect(en.dayMonth('2026-11-03')).toBe('11/03');
+    expect(vi.dayMonth('2026-11-03')).toBe('03/11');
+    expect(en.itemRange('2026-11-03', '2026-11-09')).toBe('2026-11-03 – 11-09');
+    expect(vi.itemRange('2026-11-03', '2026-11-09')).toBe('03/11 – 09/11/2026');
+    expect(en.itemRange('2027-03-09', '2027-03-15')).toBe('2027-03-09 – 03-15');
+    expect(vi.itemRange('2027-03-09', '2027-03-15')).toBe('09/03 – 15/03/2027');
+    expect(en.itemRange('2026-12-29', '2027-01-04')).toBe('2026-12-29 – 2027-01-04');
+    expect(vi.itemRange('2026-12-29', '2027-01-04')).toBe('29/12/2026 – 04/01/2027');
+  });
+
+  it('M4: monthLong, monthYear, dateMonthDay', () => {
     expect(en.hoursShort(63)).toBe('1.1 h'); // 1.05 → half away from zero
     expect(en.monthLong('2026-10-01')).toBe('October');
     expect(en.monthYear('2026-10-01')).toBe('October 2026');

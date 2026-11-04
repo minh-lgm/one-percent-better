@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { MessageKey, TParams } from '../../i18n/types';
+import type { MessageKey, RoadmapMessageKey, TParams } from '../../i18n/types';
 
 export interface ToastAction {
   /** Label key (e.g. `settings.account.goTo`). */
@@ -13,16 +13,19 @@ export interface ToastOptions {
   action?: ToastAction;
 }
 
+/** v8.0 (M19): the big-goals screens toast keys of the lazy `roadmap` namespace (`roadmap:toast.*`), registered before they render. */
+export type ToastKey = MessageKey | RoadmapMessageKey;
+
 export interface ToastMessage {
   id: number;
-  key: MessageKey;
+  key: ToastKey;
   params?: TParams;
   tone: 'default' | 'error';
   action?: ToastAction;
 }
 
 export interface ToastApi {
-  show(key: MessageKey, params?: TParams, options?: ToastOptions): void;
+  show(key: ToastKey, params?: TParams, options?: ToastOptions): void;
   current: ToastMessage | null;
   dismiss(): void;
 }
