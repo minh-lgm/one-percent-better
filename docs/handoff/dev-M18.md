@@ -88,18 +88,21 @@ Kết quả lần chạy cuối: §10.
 5. **`toRemoteError` chấp nhận 404 không mã trên bảng roadmap** là `tableMissing` (ARCH chỉ nêu `PGRST205`/`42P01`) — PostgREST thật luôn gửi mã; lenient hơn để một 404 lạ trên 4 bảng mới không thành backoff vô hạn. 401 trên bảng roadmap vẫn là `SYNC_UNAUTHORIZED`.
 6. **Mapper kiểm thêm "tối đa 1 chữ số lẻ"** cho `max_score`/`threshold`/`score` (SQL `numeric(7,1)` tự làm tròn, không từ chối) để khớp validate domain (A-91) và import; `weekly_target_minutes` chỉ kiểm khoảng như SQL (không kiểm bước 30, như SQL).
 7. **S11:** dòng `roadmapsUnavailable` dùng `className="note rm-note"` (DESIGN nói `class="note"`; `.note` chưa có style toàn cục nên thêm `.rm-note` trong `roadmaps.css`: `--info-soft`/`--info`, icon `info` 16 px, `flex`, `min-width: 0`, không `nowrap`).
-8. **Test cũ bị ảnh hưởng (dev đã sửa, không đổi hành vi):**
+8. **Chỉ báo khi cloud thiếu bảng = "N changes waiting", không phải "Synced"** (TASKS Demo/AC7 ghi "trạng thái Synced", DESIGN ghi "không đổi `SyncIndicator` (vẫn `Synced`)"): ARCH §4.8 (h) quy định `watchPendingCount` cộng hàng `dirty = 1` của cả 6 bảng và AC7 nói "số chờ về 0" sau khi bật bảng — tức số chờ > 0 trong lúc thiếu bảng — nên `indicatorState` hiện có cho `pending` ("32 changes waiting"), không `error`/`expired`/"Sign in again"; chu kỳ vẫn `idle`, `Last synced` cập nhật, card có dòng gợi ý. Nếu designer/QC muốn chip "Synced" trong trường hợp này thì cần quyết định tách số chờ roadmap khỏi `pending` (đổi ARCH); e2e `m18-roadmap-sync.spec.ts` test 2 assert `pending` + "32 changes waiting".
+9. **`two-devices.ts`**: `snapshot()`/`serverSnapshot()` giữ nguyên dạng `{ goals, entries }` (QC `tests/qc/m7-r1-oracle.test.ts:220–222` deep-equal dạng này); thêm `snapshotAll()`/`serverSnapshotAll()` 6 bảng cho `expectConverged` và test M18.
+10. **Test cũ bị ảnh hưởng (dev đã sửa, không đổi hành vi):**
 
 | File | Thay đổi | Lý do |
 | :- | :- | :- |
 | `src/services/sync-service.test.ts:77` | chuỗi `calls.map(method)` `['push','fetchByIds','pull','pull','pushPrefs']` → 6 `pull` | chu kỳ kéo 6 bảng (ADR-50) |
 | `src/services/sync-service.test.ts:474` | `pulls()` thêm `['roadmaps', null]` … `['roadmap_checkpoints', null]` sau goals/entries | thiết bị cũ kéo 4 bảng mới từ `null` |
+| `src/services/sync-service.test.ts` "single-flight" (chờ 120 → 400 ms) và "the scheduled retry runs a cycle by itself" (chờ 20 → 100 ms) | chỉ nới thời gian chờ, assertion giữ | chu kỳ có thêm 4 pull × `delayMs`; test thứ hai đã flaky từ M7 (lần chạy chung với e2e đỏ, chạy riêng 3/3 xanh ở cả hai bản) |
 | `src/data/dexie/roadmap-repo.test.ts:209` | "watchPendingCount does not count roadmap rows yet" → đếm +1 | M18 đếm roadmap (TASKS M17 ghi "M18 adds them") |
 | `src/services/sync-convergence.test.ts` | `expectConverged` thêm 4 bảng (assertion cũ giữ); random test đổi phân bố xác suất để thêm thao tác roadmap (chuỗi thao tác đổi, cùng seed) | M18-AC4 |
 | `e2e/m10-bundle.spec.ts`, `e2e/cloud/m10-bundle.spec.ts`, `e2e/cloud/m6-lazy.spec.ts` | thêm assertion: không request `sync-engine` lúc tải lạnh / khi duyệt signed-out; bản cloud tắt không phát chunk; bản cloud bật có đúng 1 chunk chứa `opb-sync`; bấm Sign in nạp 1 chunk | lazy sync |
 | `tests/db/remote-store.test.ts` | `reset()` xoá thêm 4 bảng roadmap | contract 6 bảng trên Postgres |
 | Spec `cloud` đếm request mỗi chu kỳ | **không có spec nào phải đổi**: `m7-sync` lọc `POST /rest/v1/entries`, `m7-merge:153` so tổng REST trước/sau (cùng chu kỳ), `m7-import-perf` lấy max batch | — |
-| `tests/qc/**` | **không chạm**. QC lưu ý: spec QC nào đếm `calls.map(method)` của Fake hoặc số `GET /rest/v1/*` mỗi chu kỳ sẽ thấy +4 pull/chu kỳ; `/__test/rows` nay trả 7 khoá (các spec dùng `rows.goals/entries/settings` không ảnh hưởng) | QC re-target nếu có |
+| `tests/qc/**` | **không chạm**; chạy chung trong `npm run check` tất cả pass (kể cả `m7-r1-oracle`, `m10-r1-purge-oracle`, `m14-r1/r2-service`). QC lưu ý: spec QC nào đếm `calls.map(method)` của Fake hoặc số `GET /rest/v1/*` mỗi chu kỳ sẽ thấy +4 pull/chu kỳ; `/__test/rows` nay trả 7 khoá (các spec dùng `rows.goals/entries/settings` không ảnh hưởng) | QC re-target nếu có |
 
 ## 8. Known issues và giới hạn
 

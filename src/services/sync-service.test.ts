@@ -247,7 +247,8 @@ describe('errors, backoff and retry (M7-AC8, M7-AC13, NFR-15)', () => {
     a.remote.failure = null;
     const calls = server.calls.length;
     ft.scheduled[0].fn();
-    await new Promise((r) => setTimeout(r, 20));
+    // v8.0 (M18): the retried cycle pulls six tables; 20 ms was already tight under load (known flaky since M7).
+    await new Promise((r) => setTimeout(r, 100));
     expect(server.calls.length).toBeGreaterThan(calls);
     expect(a.sync.current().kind).toBe('idle');
   });
@@ -284,7 +285,8 @@ describe('single-flight and cross-tab lock (M7-AC6 f)', () => {
     const first = a.sync.syncNow('change');
     expect(await a.sync.syncNow('change')).toEqual({ status: 'skipped', why: 'busy' });
     await first;
-    await new Promise((r) => setTimeout(r, 120));
+    // v8.0 (M18): a cycle now makes 6 pulls (+4 roadmap tables) at `delayMs` each — give the remembered re-run time to finish.
+    await new Promise((r) => setTimeout(r, 400));
     const pulls = server.calls.filter((c) => c.method === 'pushPrefs' || c.method === 'pullPrefs').length;
     expect(pulls).toBe(2); // first cycle + the remembered re-run
     const second = a.sync.syncNow('change');
