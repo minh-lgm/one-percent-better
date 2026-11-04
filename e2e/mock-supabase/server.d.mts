@@ -32,7 +32,18 @@ export interface MockState {
   now: number | null;
   refreshMode: 'ok' | 'invalid_grant';
   fail: Array<{ path: string; status: number; times: number; delay?: number }>;
-  rows: { goals: Map<string, Map<string, Record<string, unknown>>>; entries: Map<string, Map<string, Record<string, unknown>>>; settings: Map<string, Record<string, unknown>> };
+  rows: {
+    goals: Map<string, Map<string, Record<string, unknown>>>;
+    entries: Map<string, Map<string, Record<string, unknown>>>;
+    /** v8.0 (M18) */
+    roadmaps: Map<string, Map<string, Record<string, unknown>>>;
+    roadmap_phases: Map<string, Map<string, Record<string, unknown>>>;
+    roadmap_items: Map<string, Map<string, Record<string, unknown>>>;
+    roadmap_checkpoints: Map<string, Map<string, Record<string, unknown>>>;
+    settings: Map<string, Record<string, unknown>>;
+  };
+  /** v8.0 (M18, ADR-52): `false` = roadmap migration not run (404 PGRST205 on the four roadmap tables). */
+  roadmapTables: boolean;
   exchanges: number;
   refreshes: number;
   /** v5.0 (M14) */

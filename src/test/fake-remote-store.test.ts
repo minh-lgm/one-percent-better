@@ -18,6 +18,9 @@ describeRemoteStoreContract('FakeRemoteStore', async (): Promise<ContractHarness
         else server.seedRow(table, ids[user], row);
       }
     },
+    setRoadmapTables: async (on) => {
+      server.roadmapTables = on;
+    },
   };
 });
 

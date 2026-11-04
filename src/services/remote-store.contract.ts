@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { rewindCursor } from '../domain/sync';
 import type { Goal, LogEntry } from '../domain/types';
 import type { RemotePrefs, SyncRecord } from '../data/repositories';
-import type { RemoteStore } from './remote-store';
+import type { RemoteTable } from '../data/sync-tables';
+import { datasetQ1 } from '../test/builders';
+import { isTableMissing, type RemoteStore } from './remote-store';
 
 export interface ContractHarness {
   /** Store bound to user `u1` or `u2`. */
@@ -18,9 +20,14 @@ export interface ContractHarness {
    * reject invalid rows), so the contract parts that need it are skipped there and
    * `tests/db/remote-store.test.ts` asserts the constraints instead.
    */
-  seedRaw?(user: 'u1' | 'u2', table: 'goals' | 'entries' | 'settings', rows: Record<string, unknown>[]): Promise<void>;
+  seedRaw?(user: 'u1' | 'u2', table: RemoteTable | 'settings', rows: Record<string, unknown>[]): Promise<void>;
   /** The server's clock, when the harness controls it (lets the window test skip waiting). Optional. */
   now?(): Date;
+  /**
+   * v8.0 (M18, ADR-52): pretend the project has (`true`) or has not (`false`) run the roadmap migration. Fake and
+   * mock provide it; real Postgres cannot (the tables exist once migrated), so that contract part is skipped there.
+   */
+  setRoadmapTables?(on: boolean): Promise<void>;
 }
 
 const G = (id: string, updatedAt: string, name = `Goal ${id}`): SyncRecord<Goal> => ({
@@ -267,6 +274,136 @@ export function describeRemoteStoreContract(name: string, setup: () => Promise<C
         expect(bad.skippedInvalid).toBe(2);
       }
     });
+
+    // ---- v8.0 (M18-AC2, FR-78/FR-79, ADR-50/52): the four roadmap tables ----
+
+    it('(v8.0) roadmap tables: push Q1 → fetchByIds returns every row (deep-equal), pull keyset in 3 pages of 10 items, tie → server, u2 sees nothing', async () => {
+      const h = await setup();
+      await h.reset();
+      await h.setRoadmapTables?.(true);
+      const u1 = h.as('u1');
+      const u2 = h.as('u2');
+      const q1 = datasetQ1();
+      const live = <T,>(xs: T[]): Array<T & { deletedAt: null }> => xs.map((x) => ({ ...x, deletedAt: null }));
+      const r = await u1.push({ goals: [], entries: [], roadmaps: live(q1.roadmaps), roadmapPhases: live(q1.phases), roadmapItems: live(q1.items), roadmapCheckpoints: live(q1.checkpoints) });
+      expect(r).toEqual({ rejected: { goals: [], entries: [] } });
+      const fetched = await u1.fetchByIds({ goals: [], entries: [], roadmaps: ['rq'], roadmapPhases: q1.phases.map((p) => p.id), roadmapItems: q1.items.map((i) => i.id), roadmapCheckpoints: q1.checkpoints.map((c) => c.id) });
+      const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id));
+      expect(byId(fetched.roadmaps)).toEqual(byId(live(q1.roadmaps)));
+      expect(byId(fetched.roadmapPhases)).toEqual(byId(live(q1.phases)));
+      expect(byId(fetched.roadmapItems)).toEqual(byId(live(q1.items)));
+      expect(byId(fetched.roadmapCheckpoints)).toEqual(byId(live(q1.checkpoints)));
+      expect(fetched.goals).toEqual([]);
+      expect(fetched.skippedInvalid).toBe(0);
+      for (const id of ['rq', 'pq1', 'wq1', 'cq1']) expect(fetched.serverUpdatedAt[id]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      // Numeric columns come back as numbers whatever PostgREST returns (`numeric(7,1)` may be a string).
+      expect(fetched.roadmapCheckpoints.find((c) => c.id === 'cq1')).toMatchObject({ maxScore: 32, score: 5, threshold: null });
+      expect(fetched.roadmapCheckpoints.find((c) => c.id === 'cq3')).toMatchObject({ maxScore: 32, threshold: 20, score: null });
+
+      // Keyset pull: 21 items with limit 10 → 10 / 10 / 1, every id once.
+      const seen = new Set<string>();
+      let cursor = null as Awaited<ReturnType<typeof u1.pull>>['next'];
+      const sizes: number[] = [];
+      let hasMore = true;
+      while (hasMore) {
+        const page = await u1.pull('roadmap_items', cursor, 10);
+        sizes.push(page.rows.length);
+        for (const row of page.rows) {
+          expect(seen.has(row.id)).toBe(false);
+          seen.add(row.id);
+        }
+        cursor = page.next;
+        hasMore = page.hasMore;
+      }
+      expect(sizes).toEqual([10, 10, 1]);
+      expect(seen.size).toBe(21);
+      expect((await u1.pull('roadmaps', null, 500)).rows.map((x) => x.id)).toEqual(['rq']);
+      expect((await u1.pull('roadmap_phases', null, 500)).rows).toHaveLength(5);
+      expect((await u1.pull('roadmap_checkpoints', null, 500)).rows).toHaveLength(5);
+
+      // LWW like goals: an equal `updatedAt` keeps the server row, a newer one wins, a tombstone is a write.
+      const w1 = { ...q1.items[0], deletedAt: null };
+      const stampBefore = fetched.serverUpdatedAt.wq1;
+      await u1.push({ goals: [], entries: [], roadmapItems: [{ ...w1, note: 'same stamp' }] });
+      let again = await u1.fetchByIds({ goals: [], entries: [], roadmapItems: ['wq1'] });
+      expect(again.roadmapItems[0].note).toBe('');
+      expect(again.serverUpdatedAt.wq1).toBe(stampBefore);
+      const LATER = '2026-11-04T03:00:00.000Z'; // after the Q1 stamps (2026-10-27)
+      await u1.push({ goals: [], entries: [], roadmapItems: [{ ...w1, updatedAt: LATER, note: 'newer' }] });
+      again = await u1.fetchByIds({ goals: [], entries: [], roadmapItems: ['wq1'] });
+      expect(again.roadmapItems[0]).toMatchObject({ note: 'newer', updatedAt: LATER });
+      expect(Date.parse(again.serverUpdatedAt.wq1)).toBeGreaterThan(Date.parse(stampBefore));
+      await u1.push({ goals: [], entries: [], roadmaps: [{ ...q1.roadmap, updatedAt: LATER, deletedAt: LATER }] });
+      expect((await u1.fetchByIds({ goals: [], entries: [], roadmaps: ['rq'] })).roadmaps[0].deletedAt).toBe(LATER);
+
+      // RLS: the other user has none of it.
+      expect((await u2.pull('roadmap_items', null, 500)).rows).toEqual([]);
+      expect((await u2.fetchByIds({ goals: [], entries: [], roadmaps: ['rq'], roadmapItems: ['wq1'] })).roadmapItems).toEqual([]);
+    });
+
+    it('(v8.0, M7-D1 rule) pre-validation: an item with actual_end < actual_start, a 201-char title and planned_end < planned_start are reported in rejected.roadmapItems and never sent; a 65-char roadmap id in rejected.roadmaps', async () => {
+      const h = await setup();
+      await h.reset();
+      await h.setRoadmapTables?.(true);
+      const u1 = h.as('u1');
+      const q1 = datasetQ1();
+      const base = { ...q1.items[0], deletedAt: null };
+      const r = await u1.push({
+        goals: [],
+        entries: [],
+        roadmaps: [{ ...q1.roadmap, deletedAt: null }, { ...q1.roadmap, id: 'x'.repeat(65), deletedAt: null }],
+        roadmapItems: [
+          base,
+          { ...base, id: 'bad-actual', actualStart: '2026-11-01', actualEnd: '2026-10-27' },
+          { ...base, id: 'bad-title', title: 'x'.repeat(201) },
+          { ...base, id: 'bad-planned', plannedStart: '2026-11-10', plannedEnd: '2026-11-03' },
+          { ...base, id: 'ok2' },
+        ],
+      });
+      expect(r.rejected.roadmapItems).toEqual(['bad-actual', 'bad-title', 'bad-planned']);
+      expect(r.rejected.roadmaps).toEqual(['x'.repeat(65)]);
+      expect(r.rejected.goals).toEqual([]);
+      expect((await u1.pull('roadmap_items', null, 500)).rows.map((x) => x.id).sort()).toEqual(['ok2', 'wq1']);
+      expect((await u1.pull('roadmaps', null, 500)).rows.map((x) => x.id)).toEqual(['rq']);
+      // A clean push has no roadmap keys in `rejected` (M7 callers compare with `{ goals, entries }`).
+      expect(await u1.push({ goals: [], entries: [], roadmapItems: [{ ...base, id: 'ok3' }] })).toEqual({ rejected: { goals: [], entries: [] } });
+    });
+
+    it('(v8.0, ADR-52) roadmap tables missing on the project: every roadmap-table request fails with tableMissing (not SYNC_UNAUTHORIZED); goals/entries/settings work; back on → works', async ({ skip }) => {
+      const h = await setup();
+      if (!h.setRoadmapTables) {
+        skip('a real Postgres has the tables once migrated; tests/db/roadmaps.test.ts covers the migrated schema');
+        return;
+      }
+      await h.reset();
+      await h.setRoadmapTables(false);
+      const u1 = h.as('u1');
+      const q1 = datasetQ1();
+      const expectMissing = async (p: Promise<unknown>) => {
+        const e = await p.then(
+          () => null,
+          (err: unknown) => err,
+        );
+        expect(e, 'request should fail').not.toBeNull();
+        expect(isTableMissing(e)).toBe(true);
+        expect(e).toMatchObject({ name: 'RemoteError', tableMissing: true });
+        expect((e as { code: string }).code).not.toBe('SYNC_UNAUTHORIZED');
+      };
+      await expectMissing(u1.push({ goals: [], entries: [], roadmaps: [{ ...q1.roadmap, deletedAt: null }] }));
+      await expectMissing(u1.pull('roadmaps', null, 500));
+      await expectMissing(u1.pull('roadmap_items', null, 500));
+      await expectMissing(u1.fetchByIds({ goals: [], entries: [], roadmapPhases: ['pq1'] }));
+      // The core tables are unaffected, in the same cycle shape the engine uses (goals pushed before the roadmap group).
+      expect(await u1.push({ goals: [G('g1', T0)], entries: [E('e1', 'g1', T0)] })).toEqual({ rejected: { goals: [], entries: [] } });
+      expect((await u1.fetchByIds({ goals: ['g1'], entries: ['e1'] })).goals).toHaveLength(1);
+      expect((await u1.pull('entries', null, 500)).rows.map((x) => x.id)).toEqual(['e1']);
+      await u1.pushPrefs(prefs({ locale: { value: 'vi', updatedAt: T1 } }));
+      expect((await u1.pullPrefs()).prefs?.locale?.value).toBe('vi');
+      // Migration run: the next request works and the rows land.
+      await h.setRoadmapTables(true);
+      await u1.push({ goals: [], entries: [], roadmaps: [{ ...q1.roadmap, deletedAt: null }] });
+      expect((await u1.pull('roadmaps', null, 500)).rows.map((x) => x.id)).toEqual(['rq']);
+    });
   });
 }
 
@@ -301,4 +438,13 @@ export function entryRaw(id: string, goalId: string, updatedAt: string, extra: R
     deleted_at: null,
     ...extra,
   };
+}
+
+/** Raw cloud rows of the roadmap tables (snake_case) for `seedRaw` and the Postgres tests. */
+export function roadmapRaw(id: string, updatedAt: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return { id, title: `Roadmap ${id}`, note: '', goal_id: null, weekly_target_minutes: 480, milestone_label: '', milestone_date: null, created_at: '2026-10-27T01:00:00.000Z', updated_at: updatedAt, deleted_at: null, ...extra };
+}
+
+export function roadmapItemRaw(id: string, roadmapId: string, phaseId: string, updatedAt: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return { id, roadmap_id: roadmapId, phase_id: phaseId, title: `Item ${id}`, note: '', position: 0, planned_start: '2026-10-27', planned_end: '2026-11-02', actual_start: null, actual_end: null, created_at: '2026-10-27T01:00:00.000Z', updated_at: updatedAt, deleted_at: null, ...extra };
 }

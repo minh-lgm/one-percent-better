@@ -12,11 +12,20 @@ export interface MockLog {
   refreshes: number;
 }
 
+export type MockRow = Record<string, unknown> & { id: string; deleted_at: string | null; updated_at: string };
+
 export interface MockRows {
-  goals: Array<Record<string, unknown> & { id: string; deleted_at: string | null; updated_at: string }>;
-  entries: Array<Record<string, unknown> & { id: string; goal_id: string; deleted_at: string | null; updated_at: string }>;
+  goals: MockRow[];
+  entries: Array<MockRow & { goal_id: string }>;
   settings: Array<Record<string, unknown>>;
+  /** v8.0 (M18): the four roadmap tables. */
+  roadmaps: MockRow[];
+  roadmap_phases: Array<MockRow & { roadmap_id: string }>;
+  roadmap_items: Array<MockRow & { roadmap_id: string; phase_id: string }>;
+  roadmap_checkpoints: Array<MockRow & { roadmap_id: string }>;
 }
+
+export type MockTable = Exclude<keyof MockRows, 'settings'> | 'settings';
 
 /** Test controls of the mock, bound to this worker's partition. */
 export class MockApi {
@@ -61,9 +70,19 @@ export class MockApi {
     return this.request.post(`${MOCK_SUPABASE_URL}/__test/seed`, { headers: { 'x-opb-scope': this.scope }, data: { user, ...rows } });
   }
 
-  /** M7: every stored row of a user (tombstones included). */
+  /** M7: every stored row of a user (tombstones included); v8.0: seven tables. */
   async rows(user: 'u1' | 'u2' = 'u1'): Promise<MockRows> {
     return (await this.get(`/__test/rows?user=${user}`)).json();
+  }
+
+  /** v8.0 (M18): the stored rows of one table (`/__test/rows?user=&table=`). */
+  async rowsOf<T extends MockTable>(user: 'u1' | 'u2', table: T): Promise<MockRows[T]> {
+    return (await this.get(`/__test/rows?user=${user}&table=${table}`)).json();
+  }
+
+  /** v8.0 (M18, ADR-52): `roadmapTables: false` = the project has not run the roadmap migration (404 PGRST205 on the four tables). */
+  config(o: { roadmapTables: boolean }) {
+    return this.request.post(`${MOCK_SUPABASE_URL}/__test/config`, { headers: { 'x-opb-scope': this.scope }, data: o });
   }
 
   async liveRows(user: 'u1' | 'u2' = 'u1'): Promise<{ goals: MockRows['goals']; entries: MockRows['entries'] }> {

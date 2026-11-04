@@ -2,13 +2,29 @@
 // Reached exclusively through `loader.ts` (dynamic import) so the SDK is its own chunk.
 import { createClient, type AuthChangeEvent, type Session, type SupabaseClient, type SupportedStorage } from '@supabase/supabase-js';
 import type { CloudConfig } from '../../config/env';
-import type { PullCursor, RemoteChanges, RemotePrefs } from '../../data/repositories';
-import type { Goal, LogEntry } from '../../domain/types';
+import { emptyChanges, type IdsByTable, type PullCursor, type RemoteChanges, type RemotePrefs, type SyncRecord } from '../../data/repositories';
+import { isRoadmapTable, SYNC_TABLES } from '../../data/sync-tables';
 import type { AccountDeletionPort, AccountDeletionResult, AppleRevokeResult } from '../../services/account-deletion-port';
 import { displayName, type AuthEvent, type AuthPort, type AuthProvider, type AuthSession } from '../../services/auth-port';
-import { chunk, FETCH_IDS_BATCH_MAX, isConstraintRejection, NO_REJECTS, PUSH_BATCH_MAX, REMOTE_TIMEOUT_MS, RemoteError, type FetchedRows, type PulledPrefs, type PullPage, type PushResult, type RemoteStore, type RemoteTable } from '../../services/remote-store';
+import {
+  addRejected,
+  chunk,
+  FETCH_IDS_BATCH_MAX,
+  isConstraintRejection,
+  NO_REJECTS,
+  PUSH_BATCH_MAX,
+  REMOTE_TIMEOUT_MS,
+  RemoteError,
+  type FetchedRows,
+  type PulledPrefs,
+  type PullPage,
+  type PushResult,
+  type RemoteRecordByTable,
+  type RemoteStore,
+  type RemoteTable,
+} from '../../services/remote-store';
 import { AUTH_STORAGE_KEY, clearPkceVerifiers, clearStoredSession } from './loader';
-import { entryRowSchema, entryToRow, goalRowSchema, goalToRow, mapEntryRows, mapGoalRows, mapPrefsRow, prefsToRow } from './mapper';
+import { mapPrefsRow, prefsToRow, TABLE_CODECS } from './mapper';
 
 export interface SupabaseClientOptions {
   /** Defaults to `localStorage`; tests pass an in-memory adapter. */
@@ -241,10 +257,20 @@ interface PostgrestLikeError {
   hint?: string;
 }
 
-/** Map a PostgREST/fetch failure to a `RemoteError` (NFR-15). */
-export function toRemoteError(status: number, error: PostgrestLikeError | null, cause?: unknown): RemoteError {
+/** The project has no such table yet (PostgREST schema cache / Postgres undefined_table) or no grant on it (insufficient_privilege). */
+const TABLE_MISSING_CODES: ReadonlySet<string> = new Set(['PGRST205', '42P01', '42501']);
+
+/**
+ * Map a PostgREST/fetch failure to a `RemoteError` (NFR-15). v8.0 (M18, ADR-52): on a roadmap table, 404 `PGRST205` /
+ * `42P01` and 403 `42501` mean "the user has not run the roadmap migration yet" → `tableMissing`, not a session problem;
+ * `goals`/`entries`/`settings` keep the M7 mapping (401/403 → `SYNC_UNAUTHORIZED`).
+ */
+export function toRemoteError(status: number, error: PostgrestLikeError | null, cause?: unknown, table?: RemoteTable | 'settings'): RemoteError {
   const message = error?.message ?? 'unknown';
   const meta = { cause, status, pgCode: error?.code };
+  if (table && isRoadmapTable(table) && ((status === 404 && (error?.code === undefined || TABLE_MISSING_CODES.has(error.code))) || (error?.code !== undefined && TABLE_MISSING_CODES.has(error.code) && status !== 401))) {
+    return new RemoteError('SYNC_UNREACHABLE', `HTTP ${status}: ${message} (table ${table} missing)`, { ...meta, tableMissing: true });
+  }
   if (status === 401 || status === 403 || error?.code === 'PGRST301' || error?.code === '42501') return new RemoteError('SYNC_UNAUTHORIZED', `HTTP ${status}: ${message}`, meta);
   if (status === 0) {
     const aborted = /abort/i.test(message) || /abort/i.test(error?.hint ?? '');
@@ -285,13 +311,13 @@ export class SupabaseRemoteStore implements RemoteStore {
     return id;
   }
 
-  /** Runs one PostgREST query with the timeout; throws `RemoteError`. */
-  private async run<T>(build: (signal: AbortSignal | undefined) => PromiseLike<{ data: T | null; error: PostgrestLikeError | null; status: number }>): Promise<T | null> {
+  /** Runs one PostgREST query with the timeout; throws `RemoteError` (mapped knowing which table was hit, ADR-52). */
+  private async run<T>(table: RemoteTable | 'settings', build: (signal: AbortSignal | undefined) => PromiseLike<{ data: T | null; error: PostgrestLikeError | null; status: number }>): Promise<T | null> {
     const controller = this.timeoutMs > 0 ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), this.timeoutMs) : null;
     try {
       const res = await build(controller?.signal);
-      if (res.error) throw toRemoteError(res.status, res.error);
+      if (res.error) throw toRemoteError(res.status, res.error, undefined, table);
       return res.data;
     } catch (e) {
       if (e instanceof RemoteError) throw e;
@@ -303,58 +329,60 @@ export class SupabaseRemoteStore implements RemoteStore {
     }
   }
 
+  /** Upsert table by table in `SYNC_TABLES` order (parents first); only tables with rows are requested. */
   async push(changes: RemoteChanges): Promise<PushResult> {
     const uid = await this.uid();
     const result = NO_REJECTS();
-    // Rows the cloud schema (= SQL check constraints) refuses never leave the device (M7-D1).
-    const goals = changes.goals.map((g) => goalToRow(g, uid)).filter((row) => goalRowSchema.safeParse(row).success || !result.rejected.goals.push(String(row.id)));
-    const entries = changes.entries.map((e) => entryToRow(e, uid)).filter((row) => entryRowSchema.safeParse(row).success || !result.rejected.entries.push(String(row.id)));
-    for (const batch of chunk(goals, PUSH_BATCH_MAX)) await this.pushRows('goals', batch, result.rejected.goals);
-    for (const batch of chunk(entries, PUSH_BATCH_MAX)) await this.pushRows('entries', batch, result.rejected.entries);
+    for (const spec of SYNC_TABLES) {
+      const records = (changes[spec.local] ?? []) as unknown as SyncRecord<Record<string, unknown>>[];
+      if (records.length === 0) continue;
+      const codec = TABLE_CODECS[spec.remote];
+      // Rows the cloud schema (= SQL check constraints) refuses never leave the device (M7-D1).
+      const rows = records.map((r) => codec.toRow(r, uid)).filter((row) => {
+        if (codec.schema.safeParse(row).success) return true;
+        addRejected(result.rejected, spec.local, String(row.id));
+        return false;
+      });
+      for (const batch of chunk(rows, PUSH_BATCH_MAX)) await this.pushRows(spec.remote, batch, (id) => addRejected(result.rejected, spec.local, id));
+    }
     return result;
   }
 
   /** One upsert; a constraint rejection (400, SQLSTATE 22xxx/23xxx) splits the batch so only the bad rows are isolated. */
-  private async pushRows(table: RemoteTable, rows: Array<Record<string, unknown>>, rejected: string[]): Promise<void> {
+  private async pushRows(table: RemoteTable, rows: Array<Record<string, unknown>>, reject: (id: string) => void): Promise<void> {
     if (rows.length === 0) return;
     try {
-      await this.run((signal) => withSignal(this.client.from(table).upsert(rows, { onConflict: 'user_id,id' }), signal));
+      await this.run(table, (signal) => withSignal(this.client.from(table).upsert(rows, { onConflict: 'user_id,id' }), signal));
     } catch (e) {
       if (!isConstraintRejection(e)) throw e;
       if (rows.length === 1) {
-        rejected.push(String(rows[0].id));
+        reject(String(rows[0].id));
         return;
       }
       const mid = Math.ceil(rows.length / 2);
-      await this.pushRows(table, rows.slice(0, mid), rejected);
-      await this.pushRows(table, rows.slice(mid), rejected);
+      await this.pushRows(table, rows.slice(0, mid), reject);
+      await this.pushRows(table, rows.slice(mid), reject);
     }
   }
 
-  async fetchByIds(ids: { goals: string[]; entries: string[] }): Promise<FetchedRows> {
-    const out: FetchedRows = { goals: [], entries: [], serverUpdatedAt: {}, skippedInvalid: 0 };
-    for (const batch of chunk(ids.goals, FETCH_IDS_BATCH_MAX)) {
-      const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('goals').select('*').filter('id', 'in', `(${batch.map(quoteInValue).join(',')})`), signal))) ?? [];
-      const m = mapGoalRows(rows);
-      out.goals.push(...m.rows);
-      Object.assign(out.serverUpdatedAt, m.serverUpdatedAt);
-      out.skippedInvalid += m.skippedInvalid;
-    }
-    for (const batch of chunk(ids.entries, FETCH_IDS_BATCH_MAX)) {
-      const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('entries').select('*').filter('id', 'in', `(${batch.map(quoteInValue).join(',')})`), signal))) ?? [];
-      const m = mapEntryRows(rows);
-      out.entries.push(...m.rows);
-      Object.assign(out.serverUpdatedAt, m.serverUpdatedAt);
-      out.skippedInvalid += m.skippedInvalid;
+  async fetchByIds(ids: IdsByTable): Promise<FetchedRows> {
+    const out: FetchedRows = { ...emptyChanges(), serverUpdatedAt: {}, skippedInvalid: 0 };
+    for (const spec of SYNC_TABLES) {
+      const codec = TABLE_CODECS[spec.remote];
+      for (const batch of chunk(ids[spec.local] ?? [], FETCH_IDS_BATCH_MAX)) {
+        const rows = (await this.run<unknown[]>(spec.remote, (signal) => withSignal(this.client.from(spec.remote).select('*').filter('id', 'in', `(${batch.map(quoteInValue).join(',')})`), signal))) ?? [];
+        const m = codec.mapRows(rows);
+        (out[spec.local] as unknown[]).push(...m.rows);
+        Object.assign(out.serverUpdatedAt, m.serverUpdatedAt);
+        out.skippedInvalid += m.skippedInvalid;
+      }
     }
     return out;
   }
 
-  pull(table: 'goals', cursor: PullCursor | null, limit: number): Promise<PullPage<Goal>>;
-  pull(table: 'entries', cursor: PullCursor | null, limit: number): Promise<PullPage<LogEntry>>;
-  async pull(table: RemoteTable, cursor: PullCursor | null, limit: number): Promise<PullPage<Goal> | PullPage<LogEntry>> {
+  async pull<T extends RemoteTable>(table: T, cursor: PullCursor | null, limit: number): Promise<PullPage<RemoteRecordByTable[T]>> {
     const rows =
-      (await this.run<Array<Record<string, unknown>>>((signal) => {
+      (await this.run<Array<Record<string, unknown>>>(table, (signal) => {
         let q = this.client.from(table).select('*');
         if (cursor) {
           // PostgREST: server_updated_at > c  OR  (server_updated_at = c AND id > c.id); values quoted.
@@ -368,13 +396,13 @@ export class SupabaseRemoteStore implements RemoteStore {
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page[page.length - 1];
     const next = last ? { serverUpdatedAt: new Date(String(last.server_updated_at)).toISOString(), id: String(last.id) } : null;
-    const m = table === 'goals' ? mapGoalRows(page) : mapEntryRows(page);
+    const m = TABLE_CODECS[table].mapRows(page);
     return { rows: m.rows as never, serverUpdatedAt: m.serverUpdatedAt, next, hasMore, skippedInvalid: m.skippedInvalid };
   }
 
   async pushPrefs(prefs: RemotePrefs): Promise<RemotePrefs> {
     const uid = await this.uid();
-    const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('settings').upsert(prefsToRow(prefs, uid), { onConflict: 'user_id' }).select('*'), signal))) ?? [];
+    const rows = (await this.run<unknown[]>('settings', (signal) => withSignal(this.client.from('settings').upsert(prefsToRow(prefs, uid), { onConflict: 'user_id' }).select('*'), signal))) ?? [];
     if (rows.length === 0) {
       // Nothing newer (the trigger returned NULL): read the current row back.
       const pulled = await this.pullPrefs();
@@ -385,7 +413,7 @@ export class SupabaseRemoteStore implements RemoteStore {
 
   async pullPrefs(): Promise<PulledPrefs> {
     const uid = await this.uid();
-    const rows = (await this.run<unknown[]>((signal) => withSignal(this.client.from('settings').select('*').eq('user_id', uid), signal))) ?? [];
+    const rows = (await this.run<unknown[]>('settings', (signal) => withSignal(this.client.from('settings').select('*').eq('user_id', uid), signal))) ?? [];
     if (rows.length === 0) return { prefs: null, skippedInvalid: 0 };
     return mapPrefsRow(rows[0]);
   }

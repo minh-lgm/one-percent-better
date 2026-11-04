@@ -3,7 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { startMockSupabase, USERS, type MockSupabase } from '../../../e2e/mock-supabase/server.mjs';
 import { describeRemoteStoreContract, goalRaw, type ContractHarness } from '../../services/remote-store.contract';
-import { createSupabase, quoteInValue, SupabaseRemoteStore } from './supabase-client';
+import { createSupabase, quoteInValue, SupabaseRemoteStore, toRemoteError } from './supabase-client';
 
 let mock: MockSupabase;
 
@@ -49,6 +49,9 @@ describeRemoteStoreContract('SupabaseRemoteStore → mock Supabase', async (): P
     },
     seedRaw: async (user, table, rows) => {
       await fetch(`${mock.url}/__test/seed`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user, [table]: rows }) });
+    },
+    setRoadmapTables: async (on) => {
+      await fetch(`${mock.url}/__test/config`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ roadmapTables: on }) });
     },
   };
 });
@@ -194,5 +197,44 @@ describe('SupabaseRemoteStore error mapping (M7-AC5, NFR-15)', () => {
     const rows = (await (await fetch(`${mock.url}/__test/rows?user=u1`)).json()) as { settings: Record<string, unknown>[] };
     expect(Object.keys(rows.settings[0]).sort()).toEqual(['locale', 'locale_updated_at', 'reminder_enabled', 'reminder_time', 'reminder_updated_at', 'server_updated_at', 'user_id']);
     vi.restoreAllMocks();
+  });
+});
+
+// ---- v8.0 (M18-AC2, ADR-52): "table missing" is told apart from a lost session, per table ----
+describe('toRemoteError — roadmap tables missing on the project (M18-AC2, ADR-52)', () => {
+  const missing = (status: number, code: string | undefined) => ({ status, ...(code === undefined ? {} : { pgCode: code }) });
+  it('404 PGRST205 / 42P01 and 403 42501 on a roadmap table → tableMissing (SYNC_UNREACHABLE, never SYNC_UNAUTHORIZED)', () => {
+    for (const [status, code] of [
+      [404, 'PGRST205'],
+      [404, '42P01'],
+      [403, '42501'],
+      [404, undefined],
+    ] as const) {
+      for (const table of ['roadmaps', 'roadmap_phases', 'roadmap_items', 'roadmap_checkpoints'] as const) {
+        const e = toRemoteError(status, code === undefined ? { message: 'x' } : { code, message: 'x' }, undefined, table);
+        expect(e, `${status} ${code} ${table}`).toMatchObject({ code: 'SYNC_UNREACHABLE', tableMissing: true, ...missing(status, code) });
+      }
+    }
+  });
+  it('the same answers on goals / entries / settings keep the M7 mapping: 403 → SYNC_UNAUTHORIZED, 404 → SYNC_UNREACHABLE without tableMissing; 401 on a roadmap table is still a lost session', () => {
+    expect(toRemoteError(403, { code: '42501', message: 'x' }, undefined, 'goals')).toMatchObject({ code: 'SYNC_UNAUTHORIZED' });
+    expect(toRemoteError(403, { code: '42501', message: 'x' }, undefined, 'goals').tableMissing).toBeUndefined();
+    expect(toRemoteError(404, { code: 'PGRST205', message: 'x' }, undefined, 'entries')).toMatchObject({ code: 'SYNC_UNREACHABLE' });
+    expect(toRemoteError(404, { code: 'PGRST205', message: 'x' }, undefined, 'settings').tableMissing).toBeUndefined();
+    expect(toRemoteError(404, { code: 'PGRST205', message: 'x' }).tableMissing).toBeUndefined();
+    expect(toRemoteError(401, { code: 'PGRST301', message: 'x' }, undefined, 'roadmaps')).toMatchObject({ code: 'SYNC_UNAUTHORIZED' });
+    expect(toRemoteError(403, { code: 'PGRST301', message: 'x' }, undefined, 'roadmaps')).toMatchObject({ code: 'SYNC_UNAUTHORIZED' });
+    expect(toRemoteError(500, { message: 'boom' }, undefined, 'roadmap_items')).toMatchObject({ code: 'SYNC_UNREACHABLE' });
+    expect(toRemoteError(500, { message: 'boom' }, undefined, 'roadmap_items').tableMissing).toBeUndefined();
+  });
+  it('through the store: a 403 42501 answer on roadmaps → tableMissing; the same answer on goals → SYNC_UNAUTHORIZED', async () => {
+    const forbid = (table: string): typeof fetch => async (input, init) =>
+      String(input).includes(`/rest/v1/${table}`) ? new Response(JSON.stringify({ code: '42501', message: `permission denied for table ${table}`, details: null, hint: null }), { status: 403, headers: { 'content-type': 'application/json' } }) : fetch(input, init);
+    const onRoadmaps = await storeFor('u1', forbid('roadmaps'));
+    await expect(onRoadmaps.pull('roadmaps', null, 10)).rejects.toMatchObject({ name: 'RemoteError', tableMissing: true, status: 403, pgCode: '42501' });
+    const onGoals = await storeFor('u1', forbid('goals'));
+    const e = await onGoals.pull('goals', null, 10).catch((err: unknown) => err);
+    expect(e).toMatchObject({ code: 'SYNC_UNAUTHORIZED' });
+    expect((e as { tableMissing?: boolean }).tableMissing).toBeUndefined();
   });
 });

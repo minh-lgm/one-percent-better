@@ -21,6 +21,11 @@ const JWT_SECRET = 'mock-supabase-jwt-secret-not-a-real-secret';
 const DEFAULT_TOKEN_TTL_S = 3600;
 const ALLOWED_REDIRECT = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//;
 const REST_TABLES = ['goals', 'entries', 'settings'];
+// v8.0 (M18, ARCH §4.8 g/h): the four roadmap tables of `20261104000000_roadmaps.sql`. They exist only while the
+// partition's `roadmapTables` toggle is on (`POST /__test/config { roadmapTables: false }` = migration not run yet →
+// PostgREST answers 404 PGRST205 for them, ADR-52).
+const ROADMAP_TABLES = ['roadmaps', 'roadmap_phases', 'roadmap_items', 'roadmap_checkpoints'];
+const ROW_TABLES = ['goals', 'entries', ...ROADMAP_TABLES];
 
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
 
@@ -109,9 +114,31 @@ function toSnakeEntry(r) {
   };
 }
 
-const GOAL_COLUMNS = ['user_id', 'id', 'name', 'why', 'target_type', 'target_minutes', 'start_date', 'end_date', 'archived', 'created_at', 'updated_at', 'deleted_at', 'server_updated_at'];
-const ENTRY_COLUMNS = ['user_id', 'id', 'goal_id', 'date', 'minutes', 'note', 'source', 'created_at', 'updated_at', 'deleted_at', 'server_updated_at'];
+const SYNC_COLUMNS = ['created_at', 'updated_at', 'deleted_at', 'server_updated_at'];
+const GOAL_COLUMNS = ['user_id', 'id', 'name', 'why', 'target_type', 'target_minutes', 'start_date', 'end_date', 'archived', ...SYNC_COLUMNS];
+const ENTRY_COLUMNS = ['user_id', 'id', 'goal_id', 'date', 'minutes', 'note', 'source', ...SYNC_COLUMNS];
 const SETTINGS_COLUMNS = ['user_id', 'reminder_enabled', 'reminder_time', 'reminder_updated_at', 'locale', 'locale_updated_at', 'server_updated_at'];
+const COLUMNS = {
+  goals: GOAL_COLUMNS,
+  entries: ENTRY_COLUMNS,
+  roadmaps: ['user_id', 'id', 'title', 'note', 'goal_id', 'weekly_target_minutes', 'milestone_label', 'milestone_date', ...SYNC_COLUMNS],
+  roadmap_phases: ['user_id', 'id', 'roadmap_id', 'title', 'note', 'position', ...SYNC_COLUMNS],
+  roadmap_items: ['user_id', 'id', 'roadmap_id', 'phase_id', 'title', 'note', 'position', 'planned_start', 'planned_end', 'actual_start', 'actual_end', ...SYNC_COLUMNS],
+  roadmap_checkpoints: ['user_id', 'id', 'roadmap_id', 'title', 'note', 'date', 'max_score', 'threshold', 'score', ...SYNC_COLUMNS],
+};
+
+/** `snake_case` for a camelCase field (`goalId` → `goal_id`, `plannedStart` → `planned_start`). */
+const snake = (k) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+/** Domain (camelCase) → cloud row for any row table; accepts rows already in snake_case. `deleted_at` defaults to null. */
+function toSnakeRow(table, r) {
+  if (table === 'goals') return toSnakeGoal(r);
+  if (table === 'entries') return toSnakeEntry(r);
+  const out = {};
+  for (const [k, v] of Object.entries(r)) out[snake(k)] = v;
+  if (out.deleted_at === undefined) out.deleted_at = null;
+  if (out.note === undefined) out.note = '';
+  return out;
+}
 
 /** Only the columns of ARCHITECTURE §4.3 are stored (unknown columns would be a PostgREST 400). */
 function pick(row, columns) {
@@ -139,6 +166,42 @@ function checkRow(table, row) {
     if (!Number.isInteger(row.minutes) || row.minutes < 1 || row.minutes > 1440) return 'minutes';
     if (typeof row.note !== 'string' || row.note.length > 280) return 'note';
     if (!['manual', 'timer'].includes(row.source)) return 'source';
+    if (ms(row.updated_at) === Number.NEGATIVE_INFINITY || ms(row.created_at) === Number.NEGATIVE_INFINITY) return 'timestamps';
+  } else if (ROADMAP_TABLES.includes(table)) {
+    // The check constraints of 20261104000000_roadmaps.sql (ARCH §4.8 g), mirrored on the raw row.
+    const len = (v, min, max) => typeof v === 'string' && v.length >= min && v.length <= max;
+    const finitePos = (v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 1e15;
+    const num = (v) => (typeof v === 'number' ? v : typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : NaN);
+    if (!len(row.id, 1, 64)) return 'id';
+    if (table !== 'roadmaps' && !len(row.roadmap_id, 1, 64)) return 'roadmap_id';
+    if (table === 'roadmaps') {
+      if (!len(row.title, 1, 80)) return 'title';
+      if (!len(row.note, 0, 2000)) return 'note';
+      if (row.goal_id != null && !len(row.goal_id, 1, 64)) return 'goal_id';
+      if (row.weekly_target_minutes != null && (!Number.isInteger(row.weekly_target_minutes) || row.weekly_target_minutes < 30 || row.weekly_target_minutes > 10080)) return 'weekly_target_minutes';
+      if (!len(row.milestone_label, 0, 40)) return 'milestone_label';
+    } else if (table === 'roadmap_phases') {
+      if (!len(row.title, 1, 80)) return 'title';
+      if (!len(row.note, 0, 120)) return 'note';
+      if (!finitePos(row.position)) return 'position';
+    } else if (table === 'roadmap_items') {
+      if (!len(row.phase_id, 1, 64)) return 'phase_id';
+      if (!len(row.title, 1, 200)) return 'title';
+      if (!len(row.note, 0, 1000)) return 'note';
+      if (!finitePos(row.position)) return 'position';
+      if (typeof row.planned_start !== 'string' || typeof row.planned_end !== 'string') return 'planned dates';
+      if (String(row.planned_end) < String(row.planned_start)) return 'roadmap_items_planned_check';
+      if ((Date.parse(row.planned_end) - Date.parse(row.planned_start)) / 86_400_000 > 365) return 'roadmap_items_planned_check';
+      if (row.actual_start != null && row.actual_end != null && String(row.actual_end) < String(row.actual_start)) return 'roadmap_items_actual_check';
+    } else {
+      if (!len(row.title, 1, 80)) return 'title';
+      if (!len(row.note, 0, 280)) return 'note';
+      if (typeof row.date !== 'string') return 'date';
+      const max = num(row.max_score);
+      if (!(max > 0 && max <= 10000)) return 'roadmap_checkpoints_max_score_check';
+      if (row.threshold != null && !(num(row.threshold) >= 0 && num(row.threshold) <= max)) return 'roadmap_checkpoints_threshold_check';
+      if (row.score != null && !(num(row.score) >= 0 && num(row.score) <= max)) return 'roadmap_checkpoints_score_check';
+    }
     if (ms(row.updated_at) === Number.NEGATIVE_INFINITY || ms(row.created_at) === Number.NEGATIVE_INFINITY) return 'timestamps';
   } else if (table === 'settings') {
     const rNull = row.reminder_enabled == null;
@@ -186,7 +249,9 @@ export function createMockSupabase() {
       now: null,
       refreshMode: 'ok', // 'ok' | 'invalid_grant'
       fail: [], // { path, status, times, delay }
-      rows: { goals: new Map(), entries: new Map(), settings: new Map() }, // userKey → Map(id → row)
+      rows: { goals: new Map(), entries: new Map(), roadmaps: new Map(), roadmap_phases: new Map(), roadmap_items: new Map(), roadmap_checkpoints: new Map(), settings: new Map() }, // userKey → Map(id → row)
+      /** v8.0 (ADR-52): `false` = the roadmap migration has not been run on this "project" (404 PGRST205 on the four tables). */
+      roadmapTables: true,
       exchanges: 0,
       refreshes: 0,
       idTokenSignIns: 0,
@@ -337,7 +402,7 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
 
   /** `sync_before_write`: insert, or update only when `updated_at` is strictly newer (tie → server). Returns the stored row or null (kept). */
   function upsertRow(state, table, userKey, incoming) {
-    const columns = table === 'goals' ? GOAL_COLUMNS : ENTRY_COLUMNS;
+    const columns = COLUMNS[table];
     const rows = userRows(state, table, userKey);
     const row = pick({ ...incoming, user_id: userIdOf(userKey) }, columns);
     const old = rows.get(String(row.id));
@@ -464,7 +529,8 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
 
   async function handleRest(state, req, res, url, body) {
     const table = url.pathname.slice('/rest/v1/'.length);
-    if (!REST_TABLES.includes(table)) return restError(res, 404, 'PGRST205', `Could not find the table 'public.${table}' in the schema cache`);
+    const known = REST_TABLES.includes(table) || (ROADMAP_TABLES.includes(table) && state.roadmapTables !== false);
+    if (!known) return restError(res, 404, 'PGRST205', `Could not find the table 'public.${table}' in the schema cache`);
     const user = bearerUser(state, req);
     if (!user) return restError(res, 401, 'PGRST301', 'JWT expired');
     const userKey = keyFor(user);
@@ -553,8 +619,7 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
       // Hard delete of the auth user; the FK cascade removes every row of the account in the same transaction.
       state.users.delete(user.id);
       state.deleted.add(user.id);
-      state.rows.goals.delete(key);
-      state.rows.entries.delete(key);
+      for (const t of ROW_TABLES) state.rows[t].delete(key);
       state.rows.settings.delete(key);
       for (const [token, id] of [...state.refreshTokens]) if (id === user.id) state.refreshTokens.delete(token);
       const code = body && typeof body === 'object' && typeof body.appleAuthorizationCode === 'string' && body.appleAuthorizationCode !== '' ? body.appleAuthorizationCode : null;
@@ -696,19 +761,33 @@ ${button('u1', USERS.u1.name)}${button('u2', USERS.u2.name)}${button('cancel', '
     }
     if (pathname === '/__test/seed' && req.method === 'POST') {
       // Rows may be given in domain (camelCase) or cloud (snake_case) shape; they bypass LWW and get a server stamp.
+      // v8.0: the four roadmap tables too (keys = remote table names, or camelCase `roadmapPhases` …).
       const userKey = body?.user ?? 'u1';
-      if (Array.isArray(body?.goals)) for (const r of body.goals) userRows(state, 'goals', userKey).set(String(r.id), { ...pick({ ...toSnakeGoal(r), user_id: userIdOf(userKey) }, GOAL_COLUMNS), server_updated_at: r.server_updated_at ?? serverStamp(state) });
-      if (Array.isArray(body?.entries)) for (const r of body.entries) userRows(state, 'entries', userKey).set(String(r.id), { ...pick({ ...toSnakeEntry(r), user_id: userIdOf(userKey) }, ENTRY_COLUMNS), server_updated_at: r.server_updated_at ?? serverStamp(state) });
+      const camelKey = { roadmaps: 'roadmaps', roadmap_phases: 'roadmapPhases', roadmap_items: 'roadmapItems', roadmap_checkpoints: 'roadmapCheckpoints' };
+      for (const t of ROW_TABLES) {
+        const list = Array.isArray(body?.[t]) ? body[t] : Array.isArray(body?.[camelKey[t]]) ? body[camelKey[t]] : null;
+        if (!list) continue;
+        for (const r of list) userRows(state, t, userKey).set(String(r.id), { ...pick({ ...toSnakeRow(t, r), user_id: userIdOf(userKey) }, COLUMNS[t]), server_updated_at: r.server_updated_at ?? serverStamp(state) });
+      }
       if (Array.isArray(body?.settings)) for (const r of body.settings) state.rows.settings.set(userKey, { ...pick({ ...r, user_id: userIdOf(userKey) }, SETTINGS_COLUMNS), server_updated_at: serverStamp(state) });
       return send(res, 200, { ok: true });
     }
+    if (pathname === '/__test/config') {
+      // v8.0 (M18, ADR-52): `POST { roadmapTables: false }` = the project has not run the roadmap migration.
+      if (body && typeof body === 'object' && typeof body.roadmapTables === 'boolean') state.roadmapTables = body.roadmapTables;
+      if (q.roadmapTables !== undefined) state.roadmapTables = q.roadmapTables !== 'false' && q.roadmapTables !== '0';
+      return send(res, 200, { ok: true, roadmapTables: state.roadmapTables });
+    }
     if (pathname === '/__test/rows') {
       const userKey = q.user ?? 'u1';
-      const out = {
-        goals: [...(state.rows.goals.get(userKey)?.values() ?? [])],
-        entries: [...(state.rows.entries.get(userKey)?.values() ?? [])],
-        settings: state.rows.settings.has(userKey) ? [state.rows.settings.get(userKey)] : [],
-      };
+      // `?table=` → the rows of that one table (array); otherwise every table (7 keys).
+      if (q.table) {
+        if (q.table === 'settings') return send(res, 200, state.rows.settings.has(userKey) ? [state.rows.settings.get(userKey)] : []);
+        if (!ROW_TABLES.includes(q.table)) return send(res, 400, { message: `unknown table ${q.table}` });
+        return send(res, 200, [...(state.rows[q.table].get(userKey)?.values() ?? [])]);
+      }
+      const out = { settings: state.rows.settings.has(userKey) ? [state.rows.settings.get(userKey)] : [] };
+      for (const t of ROW_TABLES) out[t] = [...(state.rows[t].get(userKey)?.values() ?? [])];
       return send(res, 200, out);
     }
 
