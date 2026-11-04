@@ -353,6 +353,7 @@
       "syncNow": "Đồng bộ ngay",
       "offlineSync": "Bạn đang ngoại tuyến. Thay đổi được lưu trên thiết bị này và sẽ đồng bộ khi có mạng trở lại.",
       "nextRetry": "Sẽ thử lại lúc {{time}}.",
+      "roadmapsUnavailable": "Mục tiêu lớn chưa đồng bộ được vì tài khoản của bạn chưa có bảng dữ liệu cho chúng. Thay đổi ở đó vẫn nằm trên thiết bị này và sẽ được tải lên khi sự cố được khắc phục. Mục tiêu và lần ghi vẫn đồng bộ như thường.",
       "localRejected_other": "{{count}} mục trên thiết bị này không tải lên được tài khoản của bạn nên chỉ còn ở đây. Hãy xuất bản sao lưu để giữ một bản sao; mọi thứ còn lại đã được đồng bộ.",
       "descSignedOutIos": "Đăng nhập bằng Apple hoặc Google để lưu một bản sao mục tiêu và lần ghi vào tài khoản của bạn và dùng trên mọi thiết bị. Bạn không cần tài khoản để dùng 1% Better.",
       "privacyNoteIos": "Từ Google hoặc Apple, app chỉ nhận tên và email của bạn.",

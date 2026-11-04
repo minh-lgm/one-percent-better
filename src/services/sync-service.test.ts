@@ -74,7 +74,8 @@ describe('one cycle', () => {
     expect(meta.lastSyncedAt).toBe(NOW.toISOString());
     expect(meta.lastError).toBeNull();
     expect(server.settings.get(U1)).toMatchObject({ locale: 'vi' });
-    expect(server.calls.map((c) => c.method)).toEqual(['push', 'fetchByIds', 'pull', 'pull', 'pushPrefs']);
+    // v8.0 (M18, ADR-50): six pulls — goals, entries and the four roadmap tables (re-targeted from two pulls).
+    expect(server.calls.map((c) => c.method)).toEqual(['push', 'fetchByIds', 'pull', 'pull', 'pull', 'pull', 'pull', 'pull', 'pushPrefs']);
     expect(server.calls.filter((c) => c.method === 'push')).toHaveLength(1); // nothing new after the pull: no second push
   });
 
@@ -478,9 +479,14 @@ describe('pull cursor reset once (M11-AC7, ADR-33)', () => {
     const meta = normalizeSyncMeta(await a.kv.get('sync'));
     expect(meta.pullResetVersion).toBe(PULL_RESET_VERSION);
     expect(meta.pullResetVersion).toBe(1);
+    // v8.0 (M18): the four roadmap tables have no stored cursor on a pre-phase-8 device and are pulled from null.
     expect(pulls().map((c) => [c.table, c.cursor])).toEqual([
       ['goals', null],
       ['entries', rewindCursor(OLD_ENTRIES)],
+      ['roadmaps', null],
+      ['roadmap_phases', null],
+      ['roadmap_items', null],
+      ['roadmap_checkpoints', null],
     ]);
     // The row an older client would have skipped (server stamp before the old cursor) is now on the device.
     expect((await a.goals.getById('o1'))?.endDate).toBeNull();

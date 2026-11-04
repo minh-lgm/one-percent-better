@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { toISODate } from '../../domain/dates';
 import type { RoadmapListRow } from '../../domain/roadmap-progress';
 import type { RoadmapService } from '../../services/roadmap-service';
+import type { SyncStatus } from '../../domain/sync';
 import { ErrorState } from '../components/ErrorState';
+import { Icon } from '../components/Icon';
 import { PageHeader } from '../components/PageHeader';
 import { PaceChip } from '../components/roadmap/PaceChip';
 import { useDelayed } from '../hooks/useDelayed';
@@ -43,6 +45,11 @@ export function Roadmaps() {
   const { service, error: loadError } = useRoadmapService(attempt);
   const rows = useSubscribable<RoadmapListRow[]>(() => (service ? service.watchList(today) : NEVER), [service, today, attempt]);
   const showSkeleton = useDelayed(rows.loading && loadError === undefined);
+  // v8.0 (M18, ADR-52): the account has no roadmap tables yet → one status line under the header (same key as the
+  // Account card, main resources). `syncService` is null with the cloud off.
+  const { syncService } = useServices();
+  const sync = useSubscribable<SyncStatus>(() => (syncService ? syncService.watchStatus() : NEVER), [syncService]);
+  const roadmapsUnavailable = (sync.data ?? syncService?.current())?.roadmapsUnavailable === true;
 
   if (loadError !== undefined || rows.error !== undefined) {
     return <ErrorState title={tm('errors.loadViewTitle')} body={tm('errors.loadViewBody')} actionLabel={tm('common.retry')} onAction={() => setAttempt((n) => n + 1)} />;
@@ -51,6 +58,12 @@ export function Roadmaps() {
   return (
     <>
       <PageHeader title={t('list.title')} subtitle={t('list.intro')} />
+      {roadmapsUnavailable ? (
+        <p className="note rm-note" role="status" data-testid="roadmaps-unavailable">
+          <Icon name="info" />
+          <span>{tm('settings.account.roadmapsUnavailable')}</span>
+        </p>
+      ) : null}
       {rows.data === undefined ? (
         showSkeleton ? (
           <div role="status" aria-busy="true" className="rm-loading" data-testid="roadmaps-loading">

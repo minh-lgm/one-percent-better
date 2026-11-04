@@ -361,6 +361,7 @@
       "syncNow": "Sync now",
       "offlineSync": "You're offline. Changes are saved on this device and sync when you're back online.",
       "nextRetry": "Trying again at {{time}}.",
+      "roadmapsUnavailable": "Big goals can't sync yet because your account is missing their tables. Changes to them stay on this device and upload once that's fixed. Goals and entries sync as usual.",
       "localRejected_one": "1 item on this device couldn't be uploaded to your account and stays only here. Export a backup to keep a copy; everything else is synced.",
       "localRejected_other": "{{count}} items on this device couldn't be uploaded to your account and stay only here. Export a backup to keep a copy; everything else is synced.",
       "descSignedOutIos": "Sign in with Apple or Google to keep a copy of your goals and entries in your account and use them on all your devices. You don't need an account to use 1% Better.",

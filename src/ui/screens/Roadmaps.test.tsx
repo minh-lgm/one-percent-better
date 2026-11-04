@@ -108,3 +108,53 @@ describe('Roadmaps (S11, M17)', () => {
     expect(scanVi()).toEqual([]);
   });
 });
+
+// ---- v8.0 (M18-AC3/AC7, ADR-52): the "cloud has no roadmap tables" status line under the header ----
+const U1 = '00000000-0000-4000-8000-000000000001';
+
+/** Cloud on, u1 signed in (stored session + kv account), like Settings.sync.test.tsx. */
+async function signedIn(locale: 'en' | 'vi') {
+  tc = await createTestContainer({ locale, clock: () => FIXED_NOW_Q1, cloud: true, authStored: true });
+  tc.auth!.port.session = { userId: U1, email: 'minh.test@example.com', name: 'Minh Test' };
+  await tc.container.db.kv.put({ key: 'sync', value: { userId: U1, lastUserId: U1, account: { email: 'minh.test@example.com', name: 'Minh Test' } } });
+  await tc.container.authService.init();
+  await tc.container.authService.settled();
+  return tc;
+}
+
+describe('Roadmaps — roadmapsUnavailable (M18)', () => {
+  it('cloud on: absent while the tables exist, appears once a cycle finds them missing, goes away when a later cycle succeeds; cloud off: never', async () => {
+    await signedIn('en');
+    expect(await tc!.container.syncService!.syncNow('manual')).toMatchObject({ status: 'ran', ok: true });
+    await renderApp({ route: '/roadmaps', container: tc });
+    await screen.findByTestId('roadmaps-empty');
+    expect(screen.queryByTestId('roadmaps-unavailable')).toBeNull();
+    // The fake cloud "has not run the migration": the engine reports the flag through its status.
+    tc!.auth!.server.roadmapTables = false;
+    expect(await tc!.container.syncService!.syncNow('manual')).toMatchObject({ status: 'ran', ok: true });
+    const line = await screen.findByTestId('roadmaps-unavailable');
+    expect(line).toHaveAttribute('role', 'status');
+    expect(line).toHaveTextContent("Big goals can't sync yet because your account is missing their tables.");
+    expect(line.querySelector('svg')).not.toBeNull();
+    tc!.auth!.server.roadmapTables = true;
+    await tc!.container.syncService!.syncNow('manual');
+    await waitFor(() => expect(screen.queryByTestId('roadmaps-unavailable')).toBeNull());
+    cleanup();
+    await tc!.dispose();
+    tc = await createTestContainer({ locale: 'en', clock: () => FIXED_NOW_Q1 });
+    expect(tc.container.syncService).toBeNull();
+    await renderApp({ route: '/roadmaps', container: tc });
+    await screen.findByTestId('roadmaps-empty');
+    expect(screen.queryByTestId('roadmaps-unavailable')).toBeNull();
+  });
+
+  it('vi: the DESIGN vi copy, no English leaks on the screen', async () => {
+    await signedIn('vi');
+    tc!.auth!.server.roadmapTables = false;
+    await tc!.container.syncService!.syncNow('manual');
+    await renderApp({ route: '/roadmaps', container: tc });
+    expect(await screen.findByTestId('roadmaps-unavailable')).toHaveTextContent('Mục tiêu lớn chưa đồng bộ được vì tài khoản của bạn chưa có bảng dữ liệu cho chúng.');
+    await screen.findByTestId('roadmaps-empty');
+    expect(scanVi()).toEqual([]);
+  });
+});

@@ -19,6 +19,11 @@ export interface SyncStatus {
   remoteSkipped?: boolean;
   /** Rows on this device the cloud refused (`dirty = 2`): kept locally, exported, not in the account (M7-D1/D5). */
   rejected?: number;
+  /**
+   * v8.0 (M18, ADR-52): the last cycle found no roadmap tables on the project (migration not run yet). Goals and
+   * entries synced as usual; roadmap rows stay on the device (`dirty = 1`) until a later cycle succeeds.
+   */
+  roadmapsUnavailable?: boolean;
 }
 
 /** Epoch milliseconds of an ISO timestamp; `NaN` when unparsable. */

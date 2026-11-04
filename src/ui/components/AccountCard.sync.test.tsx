@@ -95,3 +95,28 @@ describe('AccountCard — M7 sync details (DESIGN A5 … A9, M7-AC15)', () => {
     expect(scanVi()).toEqual([]);
   });
 });
+
+// ---- v8.0 (M18-AC3, ADR-52; DESIGN "Phase 8 — chỉnh màn cũ"): the account has no roadmap tables yet ----
+describe('AccountCard — roadmapsUnavailable (M18)', () => {
+  it('shows the DESIGN line under the sync details, keeps "Synced" (no alert), in en and vi; hidden otherwise', async () => {
+    const { rerender, handlers } = await renderSynced(idle({ roadmapsUnavailable: true, lastSyncedAt: '2026-10-09T07:05:00.000Z', pending: 32 }));
+    const line = screen.getByTestId('roadmaps-unavailable');
+    expect(line).toHaveTextContent(en.settings.account.roadmapsUnavailable);
+    expect(line).toHaveClass('hint');
+    expect(line.querySelector('svg')).not.toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: en.settings.account.syncNow })).toBeEnabled();
+    // Order (DESIGN): details → this line → Sync now.
+    const details = screen.getByTestId('sync-details');
+    expect(details.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(line.compareDocumentPosition(screen.getByTestId('sync-now')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    rerender(<AccountCard auth={SIGNED_IN} online sync={idle({ lastSyncedAt: '2026-10-09T07:05:00.000Z' })} {...handlers} />);
+    expect(screen.queryByTestId('roadmaps-unavailable')).toBeNull();
+  });
+
+  it('vi: the line is the DESIGN vi copy and the card has no English leaks', async () => {
+    await renderSynced(idle({ roadmapsUnavailable: true, lastSyncedAt: '2026-10-09T07:05:00.000Z' }), 'vi');
+    expect(screen.getByTestId('roadmaps-unavailable')).toHaveTextContent(vi.settings.account.roadmapsUnavailable);
+    expect(scanVi()).toEqual([]);
+  });
+});

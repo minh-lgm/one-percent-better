@@ -144,6 +144,14 @@ export function AccountCard({ auth, online, sync = null, onSignIn, onSignOut, on
             <dd data-testid="pending-count">{f.count('format.changesCount', status.pending)}</dd>
           </div>
         </dl>
+        {status.roadmapsUnavailable ? (
+          // v8.0 (M18, ADR-52; DESIGN "Phase 8 — chỉnh màn cũ"): the account has no roadmap tables yet. Not an error:
+          // the indicator stays "Synced", goals/entries sync, roadmap changes wait on the device.
+          <p className="hint info-line" data-testid="roadmaps-unavailable">
+            <Icon name="info" />
+            <span>{t('settings.account.roadmapsUnavailable')}</span>
+          </p>
+        ) : null}
         {status.remoteInvalid ? (
           // One info line (DESIGN A9) whose wording tells the two cases apart (M7-P1): rows the cloud refused
           // live only on this device (export!), rows from the account that failed validation were skipped.

@@ -76,6 +76,16 @@ export default defineConfig(({ mode }) => {
           advancedChunks: {
             groups: [
               {
+                // M18 (ARCH §10 "lazy sync"): the sync engine and the remote-store contract it shares with the SDK chunk form
+                // one lazy chunk, `import()`ed by the container once the account can sync. The cloud-off build has none of it.
+                name: 'sync-engine',
+                // Only the three modules themselves: their dependencies (repositories, db.ts → Dexie, domain/sync …) are
+                // shared with the entry and must stay where the default algorithm puts them, or the entry would import
+                // this chunk statically (the default `includeDependenciesRecursively: true` did exactly that).
+                includeDependenciesRecursively: false,
+                test: (id: string) => /\/src\/(services\/(sync-service|remote-store)|data\/dexie\/sync-store)\.ts$/.test(id.replace(/\\/g, '/')),
+              },
+              {
                 name: 'core',
                 test: (id: string) => {
                   const p = id.replace(/\\/g, '/');

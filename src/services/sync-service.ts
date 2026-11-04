@@ -1,14 +1,18 @@
-// Sync engine (ARCHITECTURE §5.3, §5.10; FR-45 … FR-50, FR-55; ADR-20/21/24/25). One cycle:
-// push dirty rows → read the canonical rows back → pull by keyset cursor → tombstone orphans →
-// preferences (push dirty groups or pull) → bookkeeping. Errors become a `SyncStatus`, never
-// exceptions. Single-flight inside the tab, `LockPort` (Web Locks) across tabs.
+// Sync engine (ARCHITECTURE §5.3, §5.10; FR-45 … FR-50, FR-55, FR-78/79; ADR-20/21/24/25/50/52). One cycle:
+// push dirty rows of the `core` group, then of the `roadmap` group (separate requests) → read the canonical rows
+// back → pull the six tables by keyset cursor → tombstone orphans → preferences (push dirty groups or pull) →
+// bookkeeping. A roadmap table the project does not have yet (ADR-52) only skips the roadmap group for the cycle
+// (`SyncStatus.roadmapsUnavailable`). Errors become a `SyncStatus`, never exceptions. Single-flight inside the
+// tab, `LockPort` (Web Locks) across tabs. Loaded lazily by the container (M18, ARCH §10): nothing on the
+// cold-load path imports this module statically.
 import { PULL_RESET_VERSION } from '../config/constants';
 import type { KvRepository, LocalDataRepository, LocalSyncStore, PullCursor, Subscribable, SyncedPrefsRepository, SyncMeta } from '../data/repositories';
-import { emptyCursors, normalizeSyncMeta } from '../data/repositories';
+import { changesCount, emptyChanges, emptyCursors, normalizeSyncMeta } from '../data/repositories';
+import { SYNC_TABLES, type SyncGroup } from '../data/sync-tables';
 import { backoffMs, rewindCursor, type SyncErrorCode, type SyncStatus } from '../domain/sync';
 import type { Locale } from '../i18n/types';
 import type { LockPort } from './lock-port';
-import { isRemoteError, rejectedCount, type RemoteStore, type RemoteTable } from './remote-store';
+import { isRemoteError, isTableMissing, rejectedCount, type RemoteStore, type RemoteTable } from './remote-store';
 
 export type SyncReason = 'sign-in' | 'startup' | 'online' | 'visible' | 'change' | 'interval' | 'manual' | 'retry' | 'sign-out' | 'rerun';
 
@@ -96,6 +100,8 @@ export class SyncService {
   private failures = 0;
   /** Rows the cloud refused during the current cycle (M7-D5: told apart from rows skipped on pull). */
   private cycleRejected = 0;
+  /** v8.0 (ADR-52): a roadmap-table request of the current cycle answered "no such table"; the rest of the group is skipped. */
+  private roadmapsUnavailable = false;
   private retryTimer: unknown = null;
   private started = false;
   /** v5.0 (M14): set while the account is being deleted; every `syncNow` is skipped (nothing may be pushed any more). */
@@ -186,7 +192,7 @@ export class SyncService {
     if (previous === userId) return 'same-user';
     if (previous !== null) {
       const live = await this.deps.localData.countLive();
-      if (live.goals + live.entries > 0) return 'confirm-merge';
+      if (live.goals + live.entries + live.roadmaps > 0) return 'confirm-merge';
     }
     return 'merge-silently';
   }
@@ -301,7 +307,8 @@ export class SyncService {
       await this.deps.local.markAllDirty();
       await this.deps.prefs.markAllDirty();
     }
-    this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined, remoteInvalid: undefined, remoteSkipped: undefined, rejected: undefined, lastSyncedAt: null });
+    this.roadmapsUnavailable = false;
+    this.set({ kind: 'paused', error: undefined, nextRetryAt: undefined, remoteInvalid: undefined, remoteSkipped: undefined, rejected: undefined, roadmapsUnavailable: undefined, lastSyncedAt: null });
   }
 
   /**
@@ -408,6 +415,7 @@ export class SyncService {
           remoteInvalid: skippedInvalid > 0 || rejected > 0 ? true : undefined,
           remoteSkipped: skippedInvalid - this.cycleRejected > 0 ? true : undefined,
           rejected: rejected > 0 ? rejected : undefined,
+          roadmapsUnavailable: this.roadmapsUnavailable ? true : undefined,
           pending: await this.deps.local.countDirty(),
         });
         return { status: 'ran', ok: true } as const;
@@ -433,6 +441,21 @@ export class SyncService {
     if (this.generation !== run.generation || this.deps.auth.currentUserId() !== run.userId) throw new SyncAborted();
   }
 
+  /** v8.0 (ADR-52): the roadmap group runs only while no request of the cycle has said "table missing". */
+  private groupAvailable(group: SyncGroup): boolean {
+    return group === 'core' || !this.roadmapsUnavailable;
+  }
+
+  /**
+   * ADR-52: a `tableMissing` failure on the roadmap group is not an error of the cycle — the user has not run the
+   * roadmap migration yet. Flag it, skip the rest of the group this cycle, keep the rows `dirty = 1` for later.
+   */
+  private skipRoadmapsIfMissing(e: unknown, group: SyncGroup): boolean {
+    if (group !== 'roadmap' || !isTableMissing(e)) return false;
+    this.roadmapsUnavailable = true;
+    return true;
+  }
+
   /** Returns the number of invalid remote rows skipped (+ rows the cloud rejected). */
   private async cycle(run: CycleContext): Promise<number> {
     // 0. v4.0 (ADR-33): a device that pulled goals with an older schema generation (and skipped rows
@@ -441,35 +464,46 @@ export class SyncService {
     const remote = await this.getRemote();
     let skippedInvalid = 0;
     this.cycleRejected = 0;
+    this.roadmapsUnavailable = false;
 
-    // 1. Push, then read the canonical rows back (ADR-21: the device learns when it lost).
-    skippedInvalid += await this.pushPhase(remote, run);
+    // 1. Push the core group, then the roadmap group (separate requests, ADR-52), each read back (ADR-21: the device
+    //    learns when it lost).
+    skippedInvalid += await this.pushPhase(remote, run, 'core');
+    skippedInvalid += await this.pushPhase(remote, run, 'roadmap');
 
-    // 2. Pull by keyset cursor, goals before entries; the cursor is stored after each applied page.
-    for (const table of ['goals', 'entries'] as const) {
+    // 2. Pull by keyset cursor in SYNC_TABLES order (parents first); the cursor is stored after each applied page.
+    //    A device that synced before phase 8 has no cursor for the four new tables and pulls them whole, once.
+    for (const spec of SYNC_TABLES) {
+      if (!this.groupAvailable(spec.group)) continue;
       const meta = await this.readMeta();
-      let cursor: PullCursor | null = rewindCursor(meta.cursor[table]);
+      let cursor: PullCursor | null = rewindCursor(meta.cursor[spec.remote]);
       for (;;) {
         this.checkpoint(run);
-        const page = table === 'goals' ? await remote.pull('goals', cursor, this.batchSize) : await remote.pull('entries', cursor, this.batchSize);
+        let page;
+        try {
+          page = await remote.pull(spec.remote, cursor, this.batchSize);
+        } catch (e) {
+          if (this.skipRoadmapsIfMissing(e, spec.group)) break;
+          throw e;
+        }
         skippedInvalid += page.skippedInvalid;
         this.checkpoint(run);
-        if (page.rows.length > 0) {
-          await this.deps.local.applyRemote(table === 'goals' ? { goals: page.rows as never, entries: [] } : { goals: [], entries: page.rows as never });
-        }
+        if (page.rows.length > 0) await this.deps.local.applyRemote({ ...emptyChanges(), [spec.local]: page.rows });
         if (page.next) {
           cursor = page.next;
-          await this.writeCursor(table, page.next);
+          await this.writeCursor(spec.remote, page.next);
         }
         if (!page.hasMore) break;
       }
     }
 
-    // 3. Orphans (entries of goals deleted elsewhere) are tombstoned; together with the entries the
-    //    pull cascaded, they are pushed right away so one cycle per device converges.
+    // 3. Orphans (entries of goals deleted elsewhere; v8.0: children of roadmaps/phases deleted elsewhere) are
+    //    tombstoned; together with the rows the pull cascaded, they are pushed right away so one cycle per device
+    //    converges. Only the groups still available are pushed again (ADR-52).
     this.checkpoint(run);
     await this.deps.local.tombstoneOrphanEntries(this.clock());
-    if ((await this.deps.local.countDirty()) > 0) skippedInvalid += await this.pushPhase(remote, run);
+    if ((await this.deps.local.countDirty('core')) > 0) skippedInvalid += await this.pushPhase(remote, run, 'core');
+    if (this.groupAvailable('roadmap') && (await this.deps.local.countDirty('roadmap')) > 0) skippedInvalid += await this.pushPhase(remote, run, 'roadmap');
 
     // 3b. Preferences (v2.1): push dirty groups (the server returns the merged row) or pull.
     const dirtyPrefs = await this.deps.prefs.getDirty();
@@ -490,31 +524,48 @@ export class SyncService {
   }
 
   /**
-   * Push loop: up to `maxPushBatches` batches of dirty rows, each read back and applied. Rows the cloud
-   * refuses (M7-D1) are flagged `dirty = 2` on the device — kept, no longer counted as waiting, not
-   * retried until edited — and counted like invalid remote rows so the Account card mentions them.
+   * Push loop for one group (ADR-50/52): up to `maxPushBatches` batches of dirty rows of the group's tables, each
+   * read back and applied. Rows the cloud refuses (M7-D1) are flagged `dirty = 2` on the device — kept, no longer
+   * counted as waiting, not retried until edited — and counted like invalid remote rows so the Account card mentions
+   * them. The roadmap group stops at the first `tableMissing` answer (rows stay `dirty = 1`, flag set).
    */
-  private async pushPhase(remote: RemoteStore, run: CycleContext): Promise<number> {
+  private async pushPhase(remote: RemoteStore, run: CycleContext, group: SyncGroup): Promise<number> {
+    if (!this.groupAvailable(group)) return 0;
     let skippedInvalid = 0;
-    let before = await this.deps.local.countDirty();
+    let before = await this.deps.local.countDirty(group);
     for (let i = 0; i < this.maxPushBatches && before > 0; i += 1) {
-      const dirty = await this.deps.local.getDirty(this.batchSize);
-      if (dirty.goals.length === 0 && dirty.entries.length === 0) break;
+      const dirty = await this.deps.local.getDirty(this.batchSize, group);
+      if (changesCount(dirty) === 0) break;
       this.checkpoint(run);
-      const pushed = await remote.push(dirty);
+      let pushed;
+      try {
+        pushed = await remote.push(dirty);
+      } catch (e) {
+        if (this.skipRoadmapsIfMissing(e, group)) return skippedInvalid;
+        throw e;
+      }
       this.checkpoint(run);
       if (rejectedCount(pushed) > 0) {
         skippedInvalid += rejectedCount(pushed);
         this.cycleRejected += rejectedCount(pushed);
         await this.deps.local.markRejected(pushed.rejected);
       }
-      const rejectedGoals = new Set(pushed.rejected.goals);
-      const rejectedEntries = new Set(pushed.rejected.entries);
-      const fetched = await remote.fetchByIds({ goals: dirty.goals.map((g) => g.id).filter((id) => !rejectedGoals.has(id)), entries: dirty.entries.map((e) => e.id).filter((id) => !rejectedEntries.has(id)) });
+      const ids = emptyChanges() as unknown as Record<string, string[]>;
+      for (const spec of SYNC_TABLES) {
+        const rejected = new Set(pushed.rejected[spec.local] ?? []);
+        ids[spec.local] = dirty[spec.local].map((r) => r.id).filter((id) => !rejected.has(id));
+      }
+      let fetched;
+      try {
+        fetched = await remote.fetchByIds(ids as never);
+      } catch (e) {
+        if (this.skipRoadmapsIfMissing(e, group)) return skippedInvalid;
+        throw e;
+      }
       skippedInvalid += fetched.skippedInvalid;
       this.checkpoint(run);
-      await this.deps.local.applyRemote({ goals: fetched.goals, entries: fetched.entries });
-      const after = await this.deps.local.countDirty();
+      await this.deps.local.applyRemote(fetched);
+      const after = await this.deps.local.countDirty(group);
       if (after >= before) break; // nothing was acknowledged (e.g. rows rejected server-side): do not spin
       before = after;
     }
@@ -613,7 +664,7 @@ export class SyncService {
   private set(patch: Partial<SyncStatus>): void {
     const next: SyncStatus = { ...this.status, ...patch };
     // Drop undefined optionals so equality checks and tests see a clean object.
-    for (const key of ['error', 'nextRetryAt', 'remoteInvalid', 'remoteSkipped', 'rejected'] as const) if (next[key] === undefined) delete next[key];
+    for (const key of ['error', 'nextRetryAt', 'remoteInvalid', 'remoteSkipped', 'rejected', 'roadmapsUnavailable'] as const) if (next[key] === undefined) delete next[key];
     this.status = next;
     this.listeners.forEach((l) => l(next));
   }

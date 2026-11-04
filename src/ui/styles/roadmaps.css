@@ -1,5 +1,25 @@
 /* S11 — Big goals list (DESIGN v8.0 S11, mockup 11-roadmaps.html). Loaded with the lazy Roadmaps chunk (ADR-53), so
    nothing here counts toward the cold-load budget. Flat sections: hairlines, no cards. */
+.rm-note {
+  /* M18 (DESIGN S11 "cloud chua co bang"): info status line under the page header; wraps freely at 360 px. */
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--info-soft);
+  color: var(--info);
+  font-size: 14px;
+  line-height: 20px;
+}
+.rm-note .ic {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 2px;
+}
 .rm-list {
   list-style: none;
   margin: 0;

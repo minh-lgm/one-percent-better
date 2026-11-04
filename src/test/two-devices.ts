@@ -1,5 +1,5 @@
 // Two "devices" (two fake-indexeddb databases, two repository/service sets) sharing one
-// `FakeRemoteServer` (ARCHITECTURE §8 "Hai thiết bị", M7-AC6, M7-AC17).
+// `FakeRemoteServer` (ARCHITECTURE §8 "Hai thiết bị", M7-AC6, M7-AC17; v8.0 M18-AC4: the roadmap tables too).
 import { DexieBackupRepository } from '../data/dexie/backup-repo';
 import { AppDatabase, openDatabase } from '../data/dexie/db';
 import { DexieEntryRepository } from '../data/dexie/entry-repo';
@@ -7,12 +7,17 @@ import { DexieGoalRepository } from '../data/dexie/goal-repo';
 import { DexieKvRepository } from '../data/dexie/kv-repo';
 import { DexieLocalDataRepository } from '../data/dexie/local-data-repo';
 import { DexieSyncedPrefsRepository } from '../data/dexie/prefs-repo';
+import { DexieRoadmapRepository } from '../data/dexie/roadmap-repo';
 import { DexieSyncStore } from '../data/dexie/sync-store';
+import { SYNC_TABLES } from '../data/sync-tables';
+import type { RoadmapAggregate } from '../domain/roadmap';
+import { TABLE_CODECS } from '../integration/supabase/mapper';
 import { BackupService } from '../services/backup-service';
 import { EntryService } from '../services/entry-service';
 import { GoalService } from '../services/goal-service';
 import { LocaleService } from '../services/locale-service';
 import { MemoryLockPort, noLocks, type LockPort } from '../services/lock-port';
+import { RoadmapService } from '../services/roadmap-service';
 import { SettingsService } from '../services/settings-service';
 import { goalsDateRange } from '../services/stats-service';
 import { SyncService, type SyncServiceDeps } from '../services/sync-service';
@@ -34,16 +39,24 @@ export interface Device {
   settingsService: SettingsService;
   localeService: LocaleService;
   backupService: BackupService;
+  /** v8.0 (M18): the big-goals repository and service of this device. */
+  roadmaps: DexieRoadmapRepository;
+  roadmapService: RoadmapService;
   remote: FakeRemoteStore;
   sync: SyncService;
   /** Device clock (settable: simulate a slow clock). */
   clock: { now: Date };
   online: { value: boolean };
   user: { id: string | null };
-  /** Live goals/entries as domain objects (what the UI would show). */
-  snapshot(): Promise<{ goals: Record<string, unknown>[]; entries: Record<string, unknown>[] }>;
+  /** Live rows of the six synced tables as domain objects (what the UI would show), sorted by id. */
+  snapshot(): Promise<Snapshot>;
+  /** v8.0: write a whole roadmap aggregate (template / dataset) as new dirty rows. */
+  seedRoadmap(aggregate: RoadmapAggregate): Promise<void>;
   dispose(): Promise<void>;
 }
+
+/** Live rows per local table, sorted by id (convergence checks). */
+export type Snapshot = Record<'goals' | 'entries' | 'roadmaps' | 'roadmapPhases' | 'roadmapItems' | 'roadmapCheckpoints', Record<string, unknown>[]>;
 
 export interface DeviceOptions {
   userId?: string;
@@ -76,6 +89,7 @@ export async function createDevice(name: string, server: FakeRemoteServer, optio
   const prefs = new DexieSyncedPrefsRepository(db);
   const store = new DexieSyncStore(db, tick);
   const localData = new DexieLocalDataRepository(db);
+  const roadmaps = new DexieRoadmapRepository(db, { clock: tick });
   if (options.signedIn) await kv.set('sync', { userId: user.id, lastUserId: user.id, account: null, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null });
   const remote = new FakeRemoteStore(server, user.id ?? U1);
   const settingsService = new SettingsService(kv, prefs, tick);
@@ -108,16 +122,34 @@ export async function createDevice(name: string, server: FakeRemoteServer, optio
     settingsService,
     localeService,
     backupService: new BackupService(new DexieBackupRepository(db, tick), settingsService, () => user.id !== null),
+    roadmaps,
+    roadmapService: new RoadmapService({ roadmaps, goals, clock: tick }),
     remote,
     sync,
     clock,
     online,
     user,
     async snapshot() {
+      const byId = <T extends { id: string }>(xs: T[]) => [...xs].sort((a, b) => a.id.localeCompare(b.id)) as unknown as Record<string, unknown>[];
       const g = (await goals.getAll()).sort((a, b) => a.id.localeCompare(b.id));
       const range = goalsDateRange(g);
-      const e = range ? (await entries.getByDateRange(range[0], range[1])).sort((a, b) => a.id.localeCompare(b.id)) : [];
-      return { goals: g as unknown as Record<string, unknown>[], entries: e as unknown as Record<string, unknown>[] };
+      const e = range ? await entries.getByDateRange(range[0], range[1]) : [];
+      // Roadmap tables: live rows whose parents are live (what `RoadmapRepository` reads), without the sync markers.
+      const live = (r: { deletedAt?: string | null }) => r.deletedAt == null;
+      const strip = <T extends { dirty?: unknown; deletedAt?: unknown }>(r: T) => {
+        const { dirty: _d, deletedAt: _x, ...rest } = r;
+        return rest;
+      };
+      const rm = (await db.roadmaps.toArray()).filter(live);
+      const rmIds = new Set(rm.map((r) => r.id));
+      const ph = (await db.roadmapPhases.toArray()).filter((p) => live(p) && rmIds.has(p.roadmapId));
+      const phIds = new Set(ph.map((p) => p.id));
+      const it = (await db.roadmapItems.toArray()).filter((i) => live(i) && rmIds.has(i.roadmapId) && phIds.has(i.phaseId));
+      const cp = (await db.roadmapCheckpoints.toArray()).filter((c) => live(c) && rmIds.has(c.roadmapId));
+      return { goals: byId(g), entries: byId(e), roadmaps: byId(rm.map(strip)), roadmapPhases: byId(ph.map(strip)), roadmapItems: byId(it.map(strip)), roadmapCheckpoints: byId(cp.map(strip)) };
+    },
+    async seedRoadmap(aggregate) {
+      await roadmaps.putMany({ roadmaps: [aggregate.roadmap], phases: aggregate.phases, items: aggregate.items, checkpoints: aggregate.checkpoints });
     },
     async dispose() {
       sync.stop();
@@ -127,28 +159,23 @@ export async function createDevice(name: string, server: FakeRemoteServer, optio
   return device;
 }
 
-/** What the server holds as live rows, in domain shape, sorted by id (for convergence checks). */
-export function serverSnapshot(server: FakeRemoteServer, userId: string): { goals: Record<string, unknown>[]; entries: Record<string, unknown>[] } {
-  const g = server.live('goals', userId).map((r) => ({
-    id: r.id,
-    name: r.name,
-    why: r.why,
-    targetType: r.target_type,
-    targetMinutes: r.target_minutes,
-    startDate: r.start_date,
-    endDate: r.end_date,
-    archived: r.archived,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-  }));
-  const liveGoalIds = new Set(g.map((x) => x.id as string));
-  const e = server
-    .live('entries', userId)
-    .filter((r) => liveGoalIds.has(r.goal_id as string))
-    .map((r) => ({ id: r.id, goalId: r.goal_id, date: r.date, minutes: r.minutes, note: r.note, source: r.source, createdAt: r.created_at, updatedAt: r.updated_at }));
-  g.sort((a, b) => (a.id as string).localeCompare(b.id as string));
-  e.sort((a, b) => (a.id as string).localeCompare(b.id as string));
-  return { goals: g, entries: e };
+/**
+ * What the server holds as live rows, in domain shape, sorted by id (for convergence checks). Children of a
+ * tombstoned parent are left out, like a device's `snapshot()` (they are tombstoned there at the next cycle).
+ */
+export function serverSnapshot(server: FakeRemoteServer, userId: string): Snapshot {
+  const out = {} as Snapshot;
+  const liveIds = {} as Record<string, Set<string>>;
+  for (const spec of SYNC_TABLES) {
+    const mapped = TABLE_CODECS[spec.remote].mapRows(server.live(spec.remote, userId)).rows as Array<Record<string, unknown>>;
+    const rows = mapped
+      .filter((r) => spec.parents.every((p) => liveIds[p.table].has(r[p.field] as string)))
+      .map(({ deletedAt: _d, ...rest }) => rest)
+      .sort((a, b) => (a.id as string).localeCompare(b.id as string));
+    liveIds[spec.local] = new Set(rows.map((r) => r.id as string));
+    out[spec.local] = rows;
+  }
+  return out;
 }
 
 export { FakeRemoteServer, FakeRemoteStore, MemoryLockPort };

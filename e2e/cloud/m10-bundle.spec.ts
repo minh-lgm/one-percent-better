@@ -19,6 +19,20 @@ test('M10-AC1: cold #/today (cloud on, signed out) <= 230 kB gzip, no Recharts /
   expect(rec.mock()).toEqual([]);
   expect(rec.sdk()).toEqual([]);
   expect(rec.external()).toEqual([]);
+  // v8.0 (M18, ARCH §10 "lazy sync"): signed out, the sync engine chunk is not requested either.
+  expect(load.hits.filter((h) => /sync-engine/.test(h.url))).toEqual([]);
+  expect(rec.urls.filter((u) => /sync-engine/.test(u))).toEqual([]);
+});
+
+test('M18 (ARCH §10): the cloud build ships the lazy sync-engine chunk (SyncService + DexieSyncStore + remote-store), and only it holds the engine', async () => {
+  const dir = join(process.cwd(), 'dist-cloud-e2e', 'assets');
+  const files = readdirSync(dir);
+  const engine = files.filter((f) => /^sync-engine-.*\.js$/.test(f));
+  expect(engine).toHaveLength(1);
+  const body = readFileSync(join(dir, engine[0]), 'utf8');
+  expect(body).toContain('opb-sync');
+  const others = files.filter((f) => f.endsWith('.js') && !engine.includes(f) && readFileSync(join(dir, f), 'utf8').includes('opb-sync'));
+  expect(others).toEqual([]);
 });
 
 test('M10-AC6 (3): the cloud build still ships the lazy supabase-client chunk (and it is the one mentioning auth/v1)', async () => {

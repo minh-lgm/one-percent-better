@@ -53,9 +53,17 @@ const ROADMAP_LAZY_RULE = [
   'Big-goals modules are lazy (ADR-53): import them only from other roadmap modules, or through import() in router.tsx / container.ts. `import type` is allowed.',
   { allowTypeImports: true },
 ];
+// M18 (ARCH §10 "lazy sync"): the sync engine (`services/sync-service`, `data/dexie/sync-store`) is reached only through
+// the `import()` in app/container.ts (`LazySyncEngine`), so a build with the cloud off ships none of it and the cold load
+// of `#/today` never carries it. Tests and test helpers (src/test/**) may import it statically. `import type` is fine.
+const SYNC_LAZY_RULE = [
+  '(^|/)(sync-service|sync-store)(\\.[cm]?[jt]sx?)?$',
+  'The sync engine is lazy (M18, ARCH §10): import services/sync-service and data/dexie/sync-store only through import() in app/container.ts, or from tests. `import type` is allowed.',
+  { allowTypeImports: true },
+];
 // Files that are themselves part of the lazy feature.
-// Every layer config below carries the lazy rule; the roadmap modules get the same layer rules without it (end of file).
-const BOUNDARY_RULES = [...BOUNDARY_RULES_CORE, ROADMAP_LAZY_RULE];
+// Every layer config below carries the lazy rules; the roadmap modules get the same layer rules without the roadmap one (end of file).
+const BOUNDARY_RULES = [...BOUNDARY_RULES_CORE, ROADMAP_LAZY_RULE, SYNC_LAZY_RULE];
 // The `src/integration/native/**` files themselves: every boundary rule except the Capacitor one.
 const NATIVE_DIR_RULES = [ZOD_RULE, ...SUPABASE_RULES];
 // `src/ui/**` reads capabilities and ports from the container; it must not import integration values (types are fine).
@@ -272,23 +280,23 @@ export default tseslint.config(
   // import each other statically. Last so they win over the generic configs above. ----
   {
     files: ['src/domain/roadmap.ts', 'src/domain/roadmap-progress.ts', 'src/domain/roadmap-template.ts'],
-    rules: restrictImports([...DOMAIN_RULES, ...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+    rules: restrictImports([...DOMAIN_RULES, ...BOUNDARY_RULES_CORE, SYNC_LAZY_RULE, BACKUP_STATIC_RULE]),
   },
   {
     files: ['src/services/roadmap-service.ts'],
-    rules: restrictImports([...SERVICE_RULES, ...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+    rules: restrictImports([...SERVICE_RULES, ...BOUNDARY_RULES_CORE, SYNC_LAZY_RULE, BACKUP_STATIC_RULE]),
   },
   {
     files: ['src/data/dexie/roadmap-repo.ts'],
-    rules: restrictImports([...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+    rules: restrictImports([...BOUNDARY_RULES_CORE, SYNC_LAZY_RULE, BACKUP_STATIC_RULE]),
   },
   {
     files: ['src/i18n/roadmap-namespace.ts'],
-    rules: restrictImports([...I18N_RULES, ...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+    rules: restrictImports([...I18N_RULES, ...BOUNDARY_RULES_CORE, SYNC_LAZY_RULE, BACKUP_STATIC_RULE]),
   },
   {
     files: ['src/ui/screens/Roadmap*.tsx', 'src/ui/components/roadmap/**/*.tsx', 'src/ui/components/roadmap/**/*.ts'],
-    rules: restrictImports([...UI_RULES, ...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+    rules: restrictImports([...UI_RULES, ...BOUNDARY_RULES_CORE, SYNC_LAZY_RULE, BACKUP_STATIC_RULE]),
   },
   {
     // Tests and test helpers inside src may import the roadmap modules directly (builders, oracle datasets); the other

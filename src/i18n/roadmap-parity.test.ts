@@ -77,4 +77,11 @@ describe('roadmap namespace parity (M17-AC9)', () => {
     expect(flattenMessages(vi)['nav.roadmaps']).toBe(expected.vi);
     expect(expected.vi).toBe('Mục tiêu lớn');
   });
+
+  it('(M18) settings.account.roadmapsUnavailable (7.9.1) is in the main resources verbatim', () => {
+    const expected = designCopy('settings.account.roadmapsUnavailable', '#### 7.9.1', '#### 7.9.2');
+    expect(flattenMessages(en)['settings.account.roadmapsUnavailable']).toBe(expected.en);
+    expect(flattenMessages(vi)['settings.account.roadmapsUnavailable']).toBe(expected.vi);
+    expect(expected.en).toMatch(/^Big goals can't sync yet/);
+  });
 });

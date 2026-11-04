@@ -18,6 +18,8 @@ test.describe('M6-AC5 the Supabase SDK is loaded lazily (ADR-18, NFR-03)', () =>
     expect(rec.mock()).toEqual([]);
     expect(rec.sdk()).toEqual([]);
     expect(rec.external()).toEqual([]);
+    // M18 (ARCH §10 "lazy sync"): signed out, the sync engine is never loaded either.
+    expect(rec.urls.filter((u) => /sync-engine/.test(u))).toEqual([]);
 
     const html = await (await page.request.get(CLOUD_BASE_URL)).text();
     const preloads = html.match(/<link[^>]+rel="?modulepreload"?[^>]*>/g) ?? [];
@@ -36,6 +38,8 @@ test.describe('M6-AC5 the Supabase SDK is loaded lazily (ADR-18, NFR-03)', () =>
     expect(req.url().startsWith(CLOUD_BASE_URL)).toBe(true);
     await page.waitForURL((u) => u.origin === MOCK_SUPABASE_URL);
     expect(rec.sdk()).toHaveLength(1);
+    // M18: pressing "Sign in" also starts loading the sync engine (ADR-18 spirit: when the user asks for the account).
+    expect(rec.urls.filter((u) => /sync-engine/.test(u))).toHaveLength(1);
     await expect(page.getByRole('button', { name: 'Minh Test', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: EN.auth.signInGoogle })).toHaveCount(0);
   });

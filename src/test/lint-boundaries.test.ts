@@ -101,3 +101,33 @@ describe('big-goals modules are lazy (ADR-53)', () => {
     expect((await errorsFor("import React from 'react'; export const r = React;\n", 'src/domain/roadmap.ts')).length).toBeGreaterThan(0);
   });
 });
+
+// ---- v8.0 (M18, ARCH §10 "lazy sync"): the sync engine is reachable only through import() in app/container.ts ----
+describe('the sync engine is lazy (M18)', () => {
+  const PROBE = (rel: string, name: string) => `import { ${name} } from '${rel}'; export const x = ${name};\n`;
+  for (const [f, rel, name] of [
+    ['src/app/container.ts', '../services/sync-service', 'SyncService'],
+    ['src/app/start.ts', '../data/dexie/sync-store', 'DexieSyncStore'],
+    ['src/app/sync-scheduler.ts', '../services/sync-service', 'SyncService'],
+    ['src/main.tsx', './services/sync-service', 'SyncService'],
+    ['src/ui/components/StatusRow.tsx', '../../services/sync-service', 'SyncService'],
+    ['src/ui/screens/Settings.tsx', '../../data/dexie/sync-store', 'DexieSyncStore'],
+    ['src/services/auth-service.ts', './sync-service', 'SyncService'],
+    ['src/services/lazy-sync-engine.ts', './sync-service', 'SyncService'],
+    ['src/data/dexie/backup-repo.ts', './sync-store', 'DexieSyncStore'],
+  ] as const) {
+    it(`${f} ← ${rel}: error`, async () => {
+      const errs = await errorsFor(PROBE(rel, name), f);
+      expect(errs.some((e) => e.startsWith('no-restricted-imports') && e.includes('M18')), errs.join('\n')).toBe(true);
+    });
+  }
+  it('`import type`, import() in the container, tests and test helpers are fine; remote-store is not caught', async () => {
+    expect(await errorsFor("import type { SyncService } from './sync-service'; export type S = SyncService;\n", 'src/services/lazy-sync-engine.ts')).toEqual([]);
+    expect(await errorsFor("import type { SyncService } from '../services/sync-service'; export type S = SyncService;\n", 'src/app/sync-scheduler.ts')).toEqual([]);
+    expect(await errorsFor("export const load = () => Promise.all([import('../services/sync-service'), import('../data/dexie/sync-store')]);\n", 'src/app/container.ts')).toEqual([]);
+    expect(await errorsFor("import { SyncService } from '../services/sync-service'; export const s = SyncService;\n", 'src/test/two-devices.ts')).toEqual([]);
+    expect(await errorsFor("import { DexieSyncStore } from './sync-store'; export const s = DexieSyncStore;\n", 'src/data/dexie/sync-store.test.ts')).toEqual([]);
+    expect(await errorsFor("import { RemoteError } from '../../services/remote-store'; export const r = RemoteError;\n", 'src/integration/supabase/supabase-client.ts')).toEqual([]);
+    expect(await errorsFor("import { isRemoteError } from './remote-store'; export const r = isRemoteError;\n", 'src/services/sync-service.ts')).toEqual([]);
+  });
+});

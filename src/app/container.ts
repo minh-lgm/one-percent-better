@@ -9,7 +9,7 @@ import { DexieGoalRepository } from '../data/dexie/goal-repo';
 import { DexieKvRepository } from '../data/dexie/kv-repo';
 import { DexieLocalDataRepository } from '../data/dexie/local-data-repo';
 import { DexieSyncedPrefsRepository } from '../data/dexie/prefs-repo';
-import { DexieSyncStore } from '../data/dexie/sync-store';
+import { purgeTombstones } from '../data/dexie/purge-tombstones';
 import { DexieTimerRepository } from '../data/dexie/timer-repo';
 import type { CloudConfig } from '../config/env';
 import { StorageError } from '../domain/types';
@@ -30,6 +30,7 @@ import { BackupService } from '../services/backup-service';
 import { EntryService } from '../services/entry-service';
 import type { FileExportPort } from '../services/file-export-port';
 import { GoalService, defaultIdGenerator } from '../services/goal-service';
+import { LazySyncEngine, type SyncEngine } from '../services/lazy-sync-engine';
 import { LocaleService } from '../services/locale-service';
 import type { LockPort } from '../services/lock-port';
 import { LoginPromptService } from '../services/login-prompt-service';
@@ -39,7 +40,7 @@ import type { RemoteStore } from '../services/remote-store';
 import type { RoadmapService } from '../services/roadmap-service';
 import { SettingsService } from '../services/settings-service';
 import { StatsService } from '../services/stats-service';
-import { SyncService } from '../services/sync-service';
+import type { SyncService } from '../services/sync-service';
 import { TimerService } from '../services/timer-service';
 import { computeCapabilities, type AppCapabilities } from './capabilities';
 import { createUpdateStore, type UpdateStore } from './updates';
@@ -64,8 +65,12 @@ export interface AppContainer {
   statsService: StatsService;
   /** Optional Google sign-in (M6). `unavailable` when the build has no cloud configuration (FR-38). */
   authService: AuthService;
-  /** Background sync (M7). `null` when the build has no cloud configuration. */
-  syncService: SyncService | null;
+  /**
+   * Background sync (M7). `null` when the build has no cloud configuration. v8.0 (M18, ARCH §10): a `LazySyncEngine` —
+   * `SyncService` + `DexieSyncStore` are `import()`ed only once the account can sync (stored session at startup, or a
+   * sign-in), so the cold load of `#/today` carries none of the engine; callers see the same methods throughout.
+   */
+  syncService: SyncEngine | null;
   /** Login prompts (M8). Always present; its rules return `false` while `authService` is `unavailable`. */
   loginPromptService: LoginPromptService;
   connectivity: Connectivity;
@@ -170,7 +175,6 @@ export async function createContainer({
   const timerRepo = new DexieTimerRepository(db);
   const prefsRepo = new DexieSyncedPrefsRepository(db);
   const localData = new DexieLocalDataRepository(db);
-  const syncStore = new DexieSyncStore(db, clock);
 
   const localeService = new LocaleService(kvRepo, prefsRepo, clock);
   const translator = createTranslator(i18n);
@@ -180,7 +184,7 @@ export async function createContainer({
   // Cloud off → stub; nothing here references the SDK (ADR-18). Cloud on → lazy loader, SDK untouched until needed.
   const authLoader = cloud ? (loadAuth ?? createSupabaseLoader(cloud, authStorage ?? undefined)) : null;
   // v5.0 (M14): the sync service is built after the auth service; `deleteAccount` reaches it through this thunk.
-  let syncForDeletion: SyncService | null = null;
+  let syncForDeletion: SyncEngine | null = null;
   const authService = cloud
     ? new AuthService({
         loadAuth: authLoader!,
@@ -199,25 +203,41 @@ export async function createContainer({
       })
     : AuthService.unavailable();
 
-  const syncService = cloud
-    ? new SyncService({
-        local: syncStore,
-        prefs: prefsRepo,
-        localData,
-        loadRemote: loadRemote ?? createRemoteLoader(authLoader!),
-        kv: kvRepo,
-        auth: {
-          currentUserId: () => authService.currentUserId(),
-          ready: () => authService.settled(),
-          onUnauthorized: () => authService.expire(),
-        },
-        locks: locks ?? createWebLocks(),
-        clock,
-        connectivity,
-      })
-    : null;
-
+  // M18 (ARCH §10 "lazy sync"): the only `import()` of the sync engine. `__OPB_CLOUD__` is false in a build without
+  // cloud configuration, so the bundler drops the imports and emits no `sync-engine-*.js` chunk at all (like the SDK,
+  // ADR-18 / M10); `true` for cloud builds and in Vitest.
+  const importSyncEngine = (): Promise<[typeof import('../services/sync-service'), typeof import('../data/dexie/sync-store')]> => {
+    if (!__OPB_CLOUD__) return Promise.reject(new Error('This build has no cloud configuration (FR-38); the sync engine is not included.'));
+    return Promise.all([import('../services/sync-service'), import('../data/dexie/sync-store')]);
+  };
+  const buildSyncService = async (): Promise<SyncService> => {
+    const [engine, store] = await importSyncEngine();
+    return new engine.SyncService({
+      local: new store.DexieSyncStore(db, clock),
+      prefs: prefsRepo,
+      localData,
+      loadRemote: loadRemote ?? createRemoteLoader(authLoader!),
+      kv: kvRepo,
+      auth: {
+        currentUserId: () => authService.currentUserId(),
+        ready: () => authService.settled(),
+        onUnauthorized: () => authService.expire(),
+      },
+      locks: locks ?? createWebLocks(),
+      clock,
+      connectivity,
+    });
+  };
+  const syncService = cloud ? new LazySyncEngine(buildSyncService) : null;
   syncForDeletion = syncService;
+
+  // Load the engine as soon as the account can sync: a saved/verified session at startup or a sign-in in progress
+  // (`signed-out` and `expired` never load it — nothing to sync, the cold load stays small).
+  const stopSyncLoad = syncService
+    ? authService.watch().subscribe((state) => {
+        if (state.kind === 'signed-in' || state.kind === 'signing-in') void syncService.load().catch(() => undefined);
+      }, () => undefined)
+    : () => undefined;
 
   // Language applied from the account (FR-55): kv `locale` changes outside the switcher → apply now, no reload.
   const stopLocaleWatch = localeService.watch().subscribe((saved) => {
@@ -263,7 +283,7 @@ export async function createContainer({
     // No `persist()` story on native (DESIGN 7.8.1 row 12): the data lives inside the app container.
     storagePersistence: native ? Promise.resolve<PersistState>('unsupported') : requestPersistentStorage(storage),
     updates: createUpdateStore(),
-    purgeTombstones: (now) => syncStore.purgeTombstones(now),
+    purgeTombstones: (now) => purgeTombstones(db, now),
     loadRoadmapService,
     capabilities,
     fileExport: exportPort,
@@ -271,6 +291,7 @@ export async function createContainer({
     native,
     dispose() {
       stopLocaleWatch();
+      stopSyncLoad();
       syncService?.stop();
     },
   };
