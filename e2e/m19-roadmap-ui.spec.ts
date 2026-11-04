@@ -1,7 +1,8 @@
 // M19 — detail, quick actions, editor, goal link, FR-80 (TASKS M19-AC1 … AC7; "today" = 2026-11-04 10:00 +07:00).
 // chromium project, en + vi, 1280×720 (default) and 360×740. Data: Q1 fixture through the real import UI.
+import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { chooseBackupFile, EN, expectAxeClean, expectNoHorizontalScroll, expectNoViLeaks, FIXED_TIME_Q1, freezeClock, gotoHash, importBackup, ROADMAP_EN, ROADMAP_VI, toast, VI } from './helpers/app';
+import { chooseBackupFile, EN, fixturePath, expectAxeClean, expectNoHorizontalScroll, expectNoViLeaks, FIXED_TIME_Q1, freezeClock, gotoHash, importBackup, ROADMAP_EN, ROADMAP_VI, toast, VI } from './helpers/app';
 
 const item = (page: Page, id: string) => page.locator(`[data-testid="roadmap-item"][data-item="${id}"]`);
 const cells = (page: Page) => page.getByTestId('strip-cell');
@@ -448,6 +449,29 @@ test.describe('M19 Big goals — detail, quick actions, editor, goal link', () =
     await expect(page.getByTestId('done-value')).toHaveText('1/21');
     await expectNoHorizontalScroll(page);
     await expectAxeClean(page);
+  });
+
+  test('M19-D1 (regression): a 40-char milestone label without spaces wraps — no horizontal scroll at 360 px on the list and the detail (en + vi)', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    const backup = JSON.parse(readFileSync(fixturePath('q1-roadmap-backup.json'), 'utf8')) as { roadmaps: Array<{ milestoneLabel: string }> };
+    const label = 'M'.repeat(40);
+    backup.roadmaps[0]!.milestoneLabel = label;
+    await gotoHash(page, '/settings');
+    await page.getByTestId('import-file').setInputFiles({ name: 'long-label.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+    await page.getByRole('dialog').getByRole('button', { name: EN.import.confirm }).click();
+    await expect(toast(page)).toContainText('Backup imported');
+    for (const lang of ['en', 'vi'] as const) {
+      if (lang === 'vi') await switchToVi(page);
+      await gotoHash(page, '/roadmaps');
+      await expect(page.getByTestId('roadmap-milestone')).toContainText(label);
+      await expectNoHorizontalScroll(page);
+      await gotoHash(page, '/roadmaps/rq');
+      await expect(page.getByTestId('metric-milestone').locator('.eyebrow')).toHaveText(label);
+      await expectNoHorizontalScroll(page);
+      // the label wraps inside its own cell instead of overflowing it
+      const cell = await page.getByTestId('metric-milestone').evaluate((el) => ({ cell: el.getBoundingClientRect().width, eyebrow: (el.querySelector('.eyebrow') as HTMLElement).scrollWidth }));
+      expect(cell.eyebrow).toBeLessThanOrEqual(Math.ceil(cell.cell));
+    }
   });
 
   test('M19-AC8: the roadmap screens are one lazy chunk (`Roadmaps-*.js`, vite.config.ts) requested on the first roadmap route only; nothing roadmap-related on the cold load', async ({ page }) => {

@@ -73,7 +73,7 @@
 /* overview: 2 x 2 on phones, one row from 640 px (3 columns without a milestone) */
 .rd-ov {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px 16px;
   align-items: start;
 }
@@ -87,6 +87,10 @@
 }
 .rd-m {
   min-width: 0;
+}
+/* M19-D1: the milestone eyebrow is the user's label (up to 40 chars, maybe without spaces): wrap, never overflow. */
+.rd-m .eyebrow {
+  overflow-wrap: anywhere;
 }
 .rd-m .rm-chip {
   margin-top: 10px;

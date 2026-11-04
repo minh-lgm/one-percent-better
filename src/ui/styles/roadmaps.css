@@ -75,6 +75,11 @@
 .rm-stats .dash {
   color: var(--text-muted);
 }
+/* M19-D1: user text (a 40-char milestone label without spaces) must wrap instead of widening the row at 360 px. */
+.rm-stats > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .rm-chip {
   display: inline-flex;
   align-items: center;
