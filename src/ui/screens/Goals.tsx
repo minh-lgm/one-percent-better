@@ -21,6 +21,7 @@ import { useServices } from '../hooks/useServices';
 import { useSubscribable } from '../hooks/useSubscribable';
 import { useT } from '../hooks/useT';
 import { useToast } from '../hooks/useToast';
+import { linkedRoadmapTitles } from '../goal-roadmap-link';
 
 const TONES: Record<GoalStatus, BadgeTone> = { active: 'success', upcoming: 'info', ended: 'neutral', archived: 'neutral' };
 
@@ -29,6 +30,8 @@ interface PendingDelete {
   entryCount: number;
   /** True when the running timer belongs to this goal (it will be discarded). */
   timerRunning: boolean;
+  /** v8.0 (FR-80): live roadmaps linked to the goal — D2 names them. */
+  roadmapTitles: string[];
   opener: HTMLElement | null;
 }
 
@@ -44,7 +47,7 @@ export function Goals() {
   const { t } = useT();
   const f = useFormat();
   const toast = useToast();
-  const { goalService, timerService, statsService } = useServices();
+  const { goalService, timerService, statsService, loadRoadmapService } = useServices();
   const today = toISODate(useNow());
   const [attempt, setAttempt] = useState(0);
   const goals = useSubscribable(() => goalService.watchAll(), [goalService, attempt]);
@@ -64,8 +67,8 @@ export function Goals() {
   }, [pending]);
 
   async function openDelete(goal: Goal, opener: HTMLElement) {
-    const [entryCount, timer] = await Promise.all([goalService.entryCount(goal.id), timerService.current()]);
-    setPending({ goal, entryCount, timerRunning: timer?.goalId === goal.id, opener });
+    const [entryCount, timer, roadmapTitles] = await Promise.all([goalService.entryCount(goal.id), timerService.current(), linkedRoadmapTitles(loadRoadmapService, goal.id)]);
+    setPending({ goal, entryCount, timerRunning: timer?.goalId === goal.id, roadmapTitles, opener });
   }
 
   async function confirmDelete() {
@@ -221,6 +224,7 @@ export function Goals() {
         title={pending ? t('goal.delete.title', { name: pending.goal.name }) : ''}
         body={deleteBody}
         extra={pending?.timerRunning ? t('goal.delete.timerNote') : undefined}
+        note={pending && pending.roadmapTitles.length > 0 ? t('goal.delete.roadmapNote', { title: pending.roadmapTitles.join(', ') }) : undefined}
         confirmLabel={t('goal.delete.confirm')}
         busy={busy}
         onConfirm={() => void confirmDelete()}

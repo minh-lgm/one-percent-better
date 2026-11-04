@@ -1273,6 +1273,23 @@ input.switch:disabled {
 .gd-head .why::after {
   content: "\201D";
 }
+/* v8.0 (M19, FR-80): "Part of roadmap" line under the goal info; the link keeps a 44 px tap target. */
+.gd-roadmap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 6px;
+}
+.gd-roadmap .ic {
+  width: 16px;
+  height: 16px;
+}
+.gd-roadmap a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
 .gd-actions {
   display: flex;
   flex-wrap: wrap;

@@ -256,7 +256,8 @@
       "body_one": "This permanently deletes the goal and its 1 entry. This can't be undone.",
       "body_other": "This permanently deletes the goal and its {{count}} entries. This can't be undone.",
       "confirm": "Delete goal",
-      "timerNote": "Its running timer will be discarded."
+      "timerNote": "Its running timer will be discarded.",
+      "roadmapNote": "This goal is part of the roadmap \"{{title}}\". The roadmap stays, but it loses its link and shows study time as —."
     },
     "form": {
       "titleNew": "New goal",
@@ -325,7 +326,8 @@
       "tableYou": "You (total)",
       "tableMinutes": "That day",
       "tableChange": "vs. ideal",
-      "upcoming": "Starts {{date}}. Your line will appear once the goal begins."
+      "upcoming": "Starts {{date}}. Your line will appear once the goal begins.",
+      "roadmapLabel": "Part of roadmap"
     }
   },
   "settings": {

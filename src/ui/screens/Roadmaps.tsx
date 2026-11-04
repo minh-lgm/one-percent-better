@@ -1,14 +1,16 @@
-// S11 — Big goals list (phase 8, M17: rows + empty state; the create buttons come with M19/M20; DESIGN v8.0 S11).
+// S11 — Big goals list (phase 8, M17: rows + empty state; M19: rows are links, "Create empty roadmap"; DESIGN v8.0 S11).
 // Lazy route (ADR-53): the service, the repository and the `roadmap` namespace are loaded by the route's `lazy()`.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router';
 import { toISODate } from '../../domain/dates';
 import type { RoadmapListRow } from '../../domain/roadmap-progress';
-import type { RoadmapService } from '../../services/roadmap-service';
 import type { SyncStatus } from '../../domain/sync';
+import { LinkButton } from '../components/Button';
 import { ErrorState } from '../components/ErrorState';
 import { Icon } from '../components/Icon';
 import { PageHeader } from '../components/PageHeader';
 import { PaceChip } from '../components/roadmap/PaceChip';
+import { NEVER, useRoadmapService } from '../components/roadmap/useRoadmapService';
 import { useDelayed } from '../hooks/useDelayed';
 import { useFormat } from '../hooks/useFormat';
 import { useNow } from '../hooks/useNow';
@@ -16,26 +18,6 @@ import { useServices } from '../hooks/useServices';
 import { useSubscribable } from '../hooks/useSubscribable';
 import { useT, type RoadmapTFn } from '../hooks/useT';
 import '../styles/roadmaps.css';
-
-const NEVER = { subscribe: () => () => undefined };
-
-/** The big-goals service, loaded on first use (memoised by the container); `attempt` retries a failed load. */
-function useRoadmapService(attempt: number): { service: RoadmapService | null; error: unknown } {
-  const { loadRoadmapService } = useServices();
-  const [state, setState] = useState<{ service: RoadmapService | null; error: unknown }>({ service: null, error: undefined });
-  useEffect(() => {
-    let active = true;
-    setState({ service: null, error: undefined });
-    loadRoadmapService().then(
-      (service) => active && setState({ service, error: undefined }),
-      (error: unknown) => active && setState({ service: null, error }),
-    );
-    return () => {
-      active = false;
-    };
-  }, [loadRoadmapService, attempt]);
-  return state;
-}
 
 export function Roadmaps() {
   const { t, tm } = useT('roadmap');
@@ -55,9 +37,17 @@ export function Roadmaps() {
     return <ErrorState title={tm('errors.loadViewTitle')} body={tm('errors.loadViewBody')} actionLabel={tm('common.retry')} onAction={() => setAttempt((n) => n + 1)} />;
   }
 
+  // DESIGN S11: the primary action sits in the header only when there are rows; the empty state carries it itself.
+  const hasRows = (rows.data?.length ?? 0) > 0;
+  const create = (
+    <LinkButton variant="primary" to="/roadmaps/new" icon="plus" data-testid="roadmap-create">
+      {t('list.createBlank')}
+    </LinkButton>
+  );
+
   return (
     <>
-      <PageHeader title={t('list.title')} subtitle={t('list.intro')} />
+      <PageHeader title={t('list.title')} subtitle={t('list.intro')} actions={hasRows ? create : undefined} />
       {roadmapsUnavailable ? (
         <p className="note rm-note" role="status" data-testid="roadmaps-unavailable">
           <Icon name="info" />
@@ -80,6 +70,7 @@ export function Roadmaps() {
         <div className="rm-empty" data-testid="roadmaps-empty">
           <h2>{t('list.empty')}</h2>
           <p>{t('list.emptyBody')}</p>
+          <div className="rm-empty-actions">{create}</div>
         </div>
       ) : (
         <ul className="rm-list" aria-label={t('list.listLabel')} data-testid="roadmaps-list">
@@ -110,7 +101,7 @@ function milestoneWhen(t: RoadmapTFn, days: number): string {
   return t(days === 0 ? 'milestone.today' : 'milestone.past');
 }
 
-/** One row (DESIGN S11 `RoadmapRow`). M17 renders it as plain content; M19 wraps it in the link to `#/roadmaps/:id`. */
+/** One row (DESIGN S11 `RoadmapRow`): the whole row is one link to `#/roadmaps/:id` (M19). */
 function RoadmapRow({ row, t, f }: { row: RoadmapListRow; t: RoadmapTFn; f: ReturnType<typeof useFormat> }) {
   const hoursNone = row.hoursDoneMinutes === null;
   const hours = hoursNone
@@ -121,29 +112,31 @@ function RoadmapRow({ row, t, f }: { row: RoadmapListRow; t: RoadmapTFn; f: Retu
   const pct = row.itemCount === 0 ? 0 : Math.round((row.doneCount / row.itemCount) * 100);
   return (
     <li className="rm" data-testid="roadmap-row" data-id={row.id}>
-      <div className="rm-top">
-        <div className="rm-head">
-          <h2 className="rm-title">{row.title}</h2>
-          <PaceChip pace={row.pace} />
+      <Link className="rm-link" to={`/roadmaps/${row.id}`}>
+        <div className="rm-top">
+          <div className="rm-head">
+            <h2 className="rm-title">{row.title}</h2>
+            <PaceChip pace={row.pace} />
+          </div>
+          <p className="rm-goal" data-testid="roadmap-goal">
+            {goalLine(t, row)}
+          </p>
         </div>
-        <p className="rm-goal" data-testid="roadmap-goal">
-          {goalLine(t, row)}
-        </p>
-      </div>
-      <div className="rm-side">
-        <div className="rm-bar" aria-hidden="true">
-          <i style={{ width: `${pct}%` }} />
+        <div className="rm-side">
+          <div className="rm-bar" aria-hidden="true">
+            <i style={{ width: `${pct}%` }} />
+          </div>
+          <div className="rm-stats">
+            <span data-testid="roadmap-progress">{t('list.row.progress', { done: f.number(row.doneCount), total: f.number(row.itemCount) })}</span>
+            <span className={hoursNone ? 'dash' : undefined} data-testid="roadmap-hours">
+              {hours}
+            </span>
+            {row.milestoneDays !== null ? (
+              <span data-testid="roadmap-milestone">{t('milestone.line', { label: row.milestoneLabel || t('milestone.defaultLabel'), when: milestoneWhen(t, row.milestoneDays) })}</span>
+            ) : null}
+          </div>
         </div>
-        <div className="rm-stats">
-          <span data-testid="roadmap-progress">{t('list.row.progress', { done: f.number(row.doneCount), total: f.number(row.itemCount) })}</span>
-          <span className={hoursNone ? 'dash' : undefined} data-testid="roadmap-hours">
-            {hours}
-          </span>
-          {row.milestoneDays !== null ? (
-            <span data-testid="roadmap-milestone">{t('milestone.line', { label: row.milestoneLabel || t('milestone.defaultLabel'), when: milestoneWhen(t, row.milestoneDays) })}</span>
-          ) : null}
-        </div>
-      </div>
+      </Link>
     </li>
   );
 }

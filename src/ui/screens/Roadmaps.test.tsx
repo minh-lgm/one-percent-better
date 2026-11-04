@@ -47,6 +47,9 @@ describe('Roadmaps (S11, M17)', () => {
     expect(r.getByTestId('roadmap-milestone')).toHaveTextContent('Thi QPT: 125 days left');
     expect(screen.getByRole('list', { name: 'Your roadmaps' })).toBeInTheDocument();
     expect(screen.getByText('Plans that run for weeks or months. Study time comes from the goal you link.')).toBeInTheDocument();
+    // M19: the whole row is one link to the detail; the header carries the create link.
+    expect(r.getByRole('link')).toHaveAttribute('href', '/roadmaps/rq');
+    expect(screen.getByTestId('roadmap-create')).toHaveAttribute('href', '/roadmaps/new');
   });
 
   it('vi: the same row in Vietnamese (5,8 giờ / 16 giờ, Đúng tiến độ, còn 125 ngày); scan finds no English', async () => {
@@ -92,14 +95,17 @@ describe('Roadmaps (S11, M17)', () => {
     expect(r.getByTestId('roadmap-progress')).toHaveTextContent('Done 1/21');
   });
 
-  it('empty: the explanation only (no create buttons in M17), in both languages', async () => {
+  it('empty: the explanation and the "Create empty roadmap" link (M19; no template button before M20), in both languages', async () => {
     tc = await createTestContainer({ locale: 'en', clock: () => FIXED_NOW_Q1 });
     await renderApp({ route: '/roadmaps', container: tc });
     const empty = await screen.findByTestId('roadmaps-empty');
     expect(empty).toHaveTextContent('No big goals yet');
     expect(empty).toHaveTextContent('Start empty, or load the 21-week QPT plan.');
     expect(within(empty).queryByRole('button')).toBeNull();
-    expect(within(empty).queryByRole('link')).toBeNull();
+    expect(within(empty).getAllByRole('link')).toHaveLength(1);
+    expect(within(empty).getByRole('link', { name: 'Create empty roadmap' })).toHaveAttribute('href', '/roadmaps/new');
+    // The header does not repeat the button while the list is empty (DESIGN S11).
+    expect(screen.getAllByTestId('roadmap-create')).toHaveLength(1);
     cleanup();
     await tc.dispose();
     tc = await createTestContainer({ locale: 'vi', clock: () => FIXED_NOW_Q1 });

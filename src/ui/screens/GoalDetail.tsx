@@ -1,9 +1,10 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { curve } from '../../domain/curve';
 import { toISODate, yearOf } from '../../domain/dates';
 import { dailyTarget, goalStatus } from '../../domain/goal';
 import { goalStats } from '../../domain/stats';
+import type { Roadmap } from '../../domain/roadmap';
 import type { DomainError, Goal, GoalStatus } from '../../domain/types';
 import { Alert } from '../components/Alert';
 import { Badge, type BadgeTone } from '../components/Badge';
@@ -12,10 +13,12 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { HistoryTable } from '../components/HistoryTable';
+import { Icon } from '../components/Icon';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { Skeleton } from '../components/Skeleton';
 import { StatCard } from '../components/StatCard';
 import { errorMessage } from '../error-messages';
+import { linkedRoadmaps, linkedRoadmapTitles } from '../goal-roadmap-link';
 import { useDelayed } from '../hooks/useDelayed';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useFormat } from '../hooks/useFormat';
@@ -38,6 +41,8 @@ type Range = 'whole' | 'sofar';
 interface PendingDelete {
   entryCount: number;
   timerRunning: boolean;
+  /** v8.0 (FR-80): titles of the live roadmaps linked to this goal (D2 names them; they lose their link). */
+  roadmapTitles: string[];
   opener: HTMLElement | null;
 }
 
@@ -76,9 +81,19 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
   const f = useFormat();
   const toast = useToast();
   const navigate = useNavigate();
-  const { goalService, entryService, timerService } = useServices();
+  const { goalService, entryService, timerService, loadRoadmapService } = useServices();
   const today = toISODate(useNow());
   const status = goalStatus(goal, today);
+  // v8.0 (M19-T4, FR-80, DESIGN "Phase 8 — chỉnh màn cũ" S4): the roadmap this goal belongs to (earliest `createdAt`
+  // when several, A-D92). Read through the lazy roadmap service; a failed chunk load simply shows no line.
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
+  useEffect(() => {
+    let active = true;
+    void linkedRoadmaps(loadRoadmapService, goal.id).then((list) => active && setRoadmap(list[0] ?? null));
+    return () => {
+      active = false;
+    };
+  }, [loadRoadmapService, goal.id]);
   // v4.0 (DESIGN S4 "Goal không thời hạn"): no Range control, "Day {k}" without a total, chart only once started.
   const openEnded = goal.endDate === null;
   useDocumentTitle(goal.name);
@@ -112,8 +127,8 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
   }, [pending]);
 
   async function openDelete(opener: HTMLElement) {
-    const [entryCount, timer] = await Promise.all([goalService.entryCount(goal.id), timerService.current()]);
-    setPending({ entryCount, timerRunning: timer?.goalId === goal.id, opener });
+    const [entryCount, timer, roadmapTitles] = await Promise.all([goalService.entryCount(goal.id), timerService.current(), linkedRoadmapTitles(loadRoadmapService, goal.id)]);
+    setPending({ entryCount, timerRunning: timer?.goalId === goal.id, roadmapTitles, opener });
   }
 
   async function confirmDelete() {
@@ -360,6 +375,12 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
           </div>
           {goal.why ? <p className="why">{goal.why}</p> : null}
           <p className="muted small num">{info}</p>
+          {roadmap ? (
+            <p className="muted small gd-roadmap" data-testid="goal-roadmap">
+              <Icon name="roadmap" />
+              <span>{t('goal.detail.roadmapLabel')}</span> <Link to={`/roadmaps/${roadmap.id}`}>{roadmap.title}</Link>
+            </p>
+          ) : null}
         </div>
         <div className="gd-actions">
           <LinkButton variant="secondary" to={`/goals/${goal.id}/edit`}>
@@ -387,6 +408,7 @@ function GoalDetailView({ goal, onDeleting }: { goal: Goal; onDeleting: (deletin
         title={pending ? t('goal.delete.title', { name: goal.name }) : ''}
         body={deleteBody}
         extra={pending?.timerRunning ? t('goal.delete.timerNote') : undefined}
+        note={pending && pending.roadmapTitles.length > 0 ? t('goal.delete.roadmapNote', { title: pending.roadmapTitles.join(', ') }) : undefined}
         confirmLabel={t('goal.delete.confirm')}
         busy={busy}
         onConfirm={() => void confirmDelete()}

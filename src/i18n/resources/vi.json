@@ -249,7 +249,8 @@
       "bodyNoEntries": "Thao tác này xóa vĩnh viễn mục tiêu. Mục tiêu chưa có lần ghi nào. Bạn không thể hoàn tác.",
       "body_other": "Thao tác này xóa vĩnh viễn mục tiêu và {{count}} lần ghi của nó. Bạn không thể hoàn tác.",
       "confirm": "Xóa mục tiêu",
-      "timerNote": "Bộ đếm giờ đang chạy của mục tiêu này sẽ bị bỏ."
+      "timerNote": "Bộ đếm giờ đang chạy của mục tiêu này sẽ bị bỏ.",
+      "roadmapNote": "Mục tiêu này thuộc lộ trình \"{{title}}\". Lộ trình vẫn được giữ, nhưng sẽ mất liên kết và hiện giờ học là —."
     },
     "form": {
       "titleNew": "Mục tiêu mới",
@@ -317,7 +318,8 @@
       "tableYou": "Bạn (cộng dồn)",
       "tableMinutes": "Ngày đó",
       "tableChange": "So với lý tưởng",
-      "upcoming": "Bắt đầu {{date}}. Đường của bạn sẽ xuất hiện khi mục tiêu bắt đầu."
+      "upcoming": "Bắt đầu {{date}}. Đường của bạn sẽ xuất hiện khi mục tiêu bắt đầu.",
+      "roadmapLabel": "Thuộc lộ trình"
     }
   },
   "settings": {
