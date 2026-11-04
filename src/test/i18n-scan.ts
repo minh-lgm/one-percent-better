@@ -27,12 +27,16 @@ export const scanUntranslated = (root: Element | Document, data: ScanData): Scan
   const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   // Build patterns from en values whose vi value differs.
+  // v8.0 (M20): an en value that is itself a vi string elsewhere is not a leak — the language names are shown in their
+  // own language (`settings.language.option.en` = "English" in vi too), while `roadmap:tpl.languageName` is "English"
+  // only in en.
+  const viValues = new Set(Object.values(data.vi).map((v) => norm(v)));
   const patterns: Array<{ key: string; re: RegExp }> = [];
   for (const key of Object.keys(data.en)) {
     const enValue = data.en[key];
     const base = key.replace(/_(one|other)$/, '');
     const viValue = data.vi[key] ?? data.vi[`${base}_other`];
-    if (viValue === undefined || norm(viValue) === norm(enValue)) continue;
+    if (viValue === undefined || norm(viValue) === norm(enValue) || viValues.has(norm(enValue))) continue;
     const source = norm(enValue)
       .split(/\{\{[^}]+\}\}/)
       .map(escapeRe)

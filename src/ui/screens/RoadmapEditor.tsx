@@ -1,10 +1,11 @@
 // S14 — Roadmap editor `#/roadmaps/:id/edit` (phase 8, M19; DESIGN v8.0 S14, D8 … D10; FR-69, FR-70, FR-74; ADR-51,
 // A-78, A-83, A-D84, A-D85). Lazy route (ADR-53). Every structural action saves at once through RoadmapService; the
 // roadmap fields have their own `Save details`. The live query re-renders the structure after each write.
+// M20: the Checkpoints section (list in date order, inline CheckpointEditor, D11 delete, 50 cap).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { addDays, toISODate } from '../../domain/dates';
-import { ROADMAP_LIMITS, type RoadmapItem, type RoadmapPhase } from '../../domain/roadmap';
+import { ROADMAP_LIMITS, type RoadmapCheckpoint, type RoadmapItem, type RoadmapPhase } from '../../domain/roadmap';
 import type { RoadmapView } from '../../domain/roadmap-progress';
 import type { DomainError, Goal } from '../../domain/types';
 import { Alert } from '../components/Alert';
@@ -12,11 +13,13 @@ import { Button, LinkButton } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ErrorState } from '../components/ErrorState';
 import { Skeleton } from '../components/Skeleton';
+import { CheckpointEditor } from '../components/roadmap/CheckpointEditor';
 import { ItemEditor } from '../components/roadmap/ItemEditor';
 import { MoveButtons, moveButtonId } from '../components/roadmap/MoveButtons';
 import { PhaseEditor } from '../components/roadmap/PhaseEditor';
 import { RoadmapFields } from '../components/roadmap/RoadmapFields';
 import { RoadmapNotFound } from '../components/roadmap/RoadmapNotFound';
+import { formatScore } from '../components/roadmap/score';
 import { useRoadmapErrors } from '../components/roadmap/useRoadmapErrors';
 import { useRoadmapDetail, type RoadmapServiceState } from '../components/roadmap/useRoadmapService';
 import { useDelayed } from '../hooks/useDelayed';
@@ -30,9 +33,15 @@ import '../styles/roadmaps.css';
 type Service = NonNullable<RoadmapServiceState['service']>;
 
 /** The one inline sub-form that may be open (DESIGN S14 "Quy tắc form" (2)). */
-type OpenForm = { kind: 'phase'; mode: 'add' } | { kind: 'phase'; mode: 'edit'; id: string } | { kind: 'item'; mode: 'add'; phaseId: string } | { kind: 'item'; mode: 'edit'; id: string };
+type OpenForm =
+  | { kind: 'phase'; mode: 'add' }
+  | { kind: 'phase'; mode: 'edit'; id: string }
+  | { kind: 'item'; mode: 'add'; phaseId: string }
+  | { kind: 'item'; mode: 'edit'; id: string }
+  | { kind: 'cp'; mode: 'add' }
+  | { kind: 'cp'; mode: 'edit'; id: string };
 
-type Confirm = { kind: 'roadmap' } | { kind: 'phase'; phase: RoadmapPhase; count: number } | { kind: 'item'; item: RoadmapItem };
+type Confirm = { kind: 'roadmap' } | { kind: 'phase'; phase: RoadmapPhase; count: number } | { kind: 'item'; item: RoadmapItem } | { kind: 'cp'; cp: RoadmapCheckpoint };
 
 export function RoadmapEditor() {
   const { id = '' } = useParams<{ id: string }>();
@@ -161,6 +170,13 @@ function EditorView({ view, today, service, onDeleting }: { view: RoadmapView; t
     }
     openForm({ kind: 'item', mode: 'add', phaseId }, openerId);
   };
+  const addCheckpoint = (openerId: string) => {
+    if (checkpoints.length >= ROADMAP_LIMITS.checkpoint) {
+      setLimitError({ where: 'cp', error: { code: 'ROADMAP_LIMIT_REACHED', message: 'checkpoint limit', params: { kind: 'checkpoint', max: ROADMAP_LIMITS.checkpoint } } });
+      return;
+    }
+    openForm({ kind: 'cp', mode: 'add' }, openerId);
+  };
 
   // A-83: the 7 days right after the last item of the whole roadmap (today → +6 when there is none). Pure, from the view.
   const suggested = (() => {
@@ -190,11 +206,16 @@ function EditorView({ view, today, service, onDeleting }: { view: RoadmapView; t
         if (r.ok) toast.show('roadmap:toast.phaseDeleted');
         else setActionError(r.errors[0]!);
         focusLater('add-phase');
-      } else {
+      } else if (confirm.kind === 'item') {
         const r = await service.removeItem(confirm.item.id);
         if (r.ok) toast.show('roadmap:toast.itemDeleted');
         else setActionError(r.errors[0]!);
         focusLater(`add-item-${confirm.item.phaseId}`);
+      } else {
+        const r = await service.removeCheckpoint(confirm.cp.id);
+        if (r.ok) toast.show('roadmap:toast.checkpointDeleted');
+        else setActionError(r.errors[0]!);
+        focusLater('add-cp');
       }
       setConfirm(null);
     } catch {
@@ -208,7 +229,7 @@ function EditorView({ view, today, service, onDeleting }: { view: RoadmapView; t
   const cancelConfirm = useCallback(() => {
     const c = confirm;
     setConfirm(null);
-    if (c) focusLater(c.kind === 'roadmap' ? 'delete-roadmap' : c.kind === 'phase' ? `del-phase-${c.phase.id}` : `del-item-${c.item.id}`);
+    if (c) focusLater(c.kind === 'roadmap' ? 'delete-roadmap' : c.kind === 'phase' ? `del-phase-${c.phase.id}` : c.kind === 'item' ? `del-item-${c.item.id}` : `del-cp-${c.cp.id}`);
   }, [confirm]);
 
   const dialog = (() => {
@@ -230,6 +251,7 @@ function EditorView({ view, today, service, onDeleting }: { view: RoadmapView; t
         confirmLabel: t('ed.deletePhase'),
       };
     }
+    if (confirm.kind === 'cp') return { title: t('ed.deleteCpTitle', { title: confirm.cp.title }), body: t('ed.deleteCpBody'), confirmLabel: t('ed.deleteCpConfirm') };
     return { title: t('ed.deleteItemTitle', { title: confirm.item.title }), body: t('ed.deleteItemBody'), confirmLabel: t('ed.deleteItemConfirm') };
   })();
 
@@ -352,6 +374,45 @@ function EditorView({ view, today, service, onDeleting }: { view: RoadmapView; t
         <div className="re-add">
           <Button variant="secondary" id="add-phase" icon="plus" onClick={() => addPhase('add-phase')}>
             {t('ed.addPhase')}
+          </Button>
+        </div>
+      </section>
+
+      <section className="re-sec" aria-labelledby="re-cp-h" data-testid="editor-checkpoints">
+        <h2 className="eyebrow" id="re-cp-h">
+          {t('cp.title')}
+        </h2>
+        {checkpoints.length === 0 ? <p className="re-hint-empty">{t('ed.noCheckpoints')}</p> : null}
+        {checkpoints.map((cp) => {
+          const cpTitleId = `cp-t-${cp.id}`;
+          const vars = { date: f.dateShort(cp.date), max: formatScore(f.locale, cp.maxScore) };
+          return (
+            <div key={cp.id} className="re-it" data-testid="editor-checkpoint" data-cp={cp.id}>
+              <div className="re-it-row">
+                <div className="re-it-t">
+                  <b id={cpTitleId}>{cp.title}</b>
+                  <span className="num">{cp.threshold === null ? t('ed.cpRow', vars) : t('ed.cpRowThreshold', { ...vars, threshold: formatScore(f.locale, cp.threshold) })}</span>
+                </div>
+                <div className="re-tools">
+                  <Button variant="secondary" className="sm" id={`edit-cp-${cp.id}`} aria-label={t('ed.editCpAria', { title: cp.title })} onClick={() => openForm({ kind: 'cp', mode: 'edit', id: cp.id }, `edit-cp-${cp.id}`)}>
+                    {t('ed.editItem')}
+                  </Button>
+                  <Button variant="danger-ghost" className="sm" id={`del-cp-${cp.id}`} aria-label={t('ed.deleteCpAria', { title: cp.title })} onClick={() => setConfirm({ kind: 'cp', cp })}>
+                    {t('ed.deleteItem')}
+                  </Button>
+                </div>
+              </div>
+              {open?.kind === 'cp' && open.mode === 'edit' && open.id === cp.id ? (
+                <CheckpointEditor mode="edit" initial={cp} today={today} labelledBy={cpTitleId} onDirty={onDirty} onSave={(input) => service.updateCheckpoint(cp.id, input)} onSaved={() => closeForm()} onCancel={() => closeForm()} />
+              ) : null}
+            </div>
+          );
+        })}
+        {limitAlert('cp')}
+        {open?.kind === 'cp' && open.mode === 'add' ? <CheckpointEditor mode="add" initial={null} today={today} labelledBy="re-cp-h" onDirty={onDirty} onSave={(input) => service.addCheckpoint(roadmap.id, input)} onSaved={() => closeForm()} onCancel={() => closeForm()} /> : null}
+        <div className="re-add">
+          <Button variant="secondary" id="add-cp" icon="plus" onClick={() => addCheckpoint('add-cp')}>
+            {t('ed.addCp')}
           </Button>
         </div>
       </section>

@@ -25,7 +25,9 @@ test('M10-AC1: cold #/today (cloud off) <= 230 kB gzip, no Recharts / SDK / zod 
   expect(load.hits.filter((h) => /sync-engine/.test(h.url))).toEqual([]);
   for (const h of load.hits.filter((x) => /javascript|css/.test(x.type))) {
     const body = readFileSync(join(process.cwd(), 'dist', h.url), 'utf8');
-    for (const marker of ['Plans that run for weeks', 'Study time comes from the goal', 'Linear Algebra', 'Đúng tiến độ', 'Your roadmaps', 'rm-chip', 'Roadmap items, in order', 'rd-strip', 'Save details', 'How study time is counted']) {
+    for (const marker of ['Plans that run for weeks', 'Study time comes from the goal', 'Linear Algebra', 'Đúng tiến độ', 'Your roadmaps', 'rm-chip', 'Roadmap items, in order', 'rd-strip', 'Save details', 'How study time is counted',
+      // M20: template content, D7, checkpoint table/chart
+      'Weekly rhythm', 'Nhịp học mỗi tuần', 'Thi QPT chính thức', 'Official QPT exam', 'Create from QPT 21-week template', 'Scores vs. thresholds', 'cp-table', 'cp-hatch']) {
       expect(body.includes(marker), `${h.url} contains "${marker}"`).toBe(false);
     }
   }

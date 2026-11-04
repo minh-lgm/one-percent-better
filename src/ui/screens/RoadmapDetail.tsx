@@ -1,19 +1,23 @@
 // S13 — Roadmap detail `#/roadmaps/:id` (phase 8, M19; DESIGN v8.0 S13; FR-70 … FR-73; A-81). Lazy route (ADR-53).
 // Overview, week strip, "This week", phases with item rows and the quick actions (tick, actual dates, note). Every
 // write goes through RoadmapService and the live query re-emits the whole view, so nothing here is optimistic.
+// M20: the Checkpoints section (table with quick score entry + plain-SVG chart) heads the aside column.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { toISODate } from '../../domain/dates';
-import type { ItemInput, RoadmapItem, RoadmapPhase } from '../../domain/roadmap';
-import type { RoadmapView } from '../../domain/roadmap-progress';
+import type { ItemInput, RoadmapCheckpoint, RoadmapItem, RoadmapPhase } from '../../domain/roadmap';
+import { roadmapWeekOf, type RoadmapView } from '../../domain/roadmap-progress';
 import type { DomainError, Result } from '../../domain/types';
 import { LinkButton } from '../components/Button';
 import { ErrorState } from '../components/ErrorState';
 import { Skeleton } from '../components/Skeleton';
+import { CheckpointChart } from '../components/roadmap/CheckpointChart';
+import { CheckpointTable } from '../components/roadmap/CheckpointTable';
 import { OverviewMetrics } from '../components/roadmap/OverviewMetrics';
 import { RoadmapItemRow, type ItemError, type ItemField } from '../components/roadmap/RoadmapItemRow';
 import { RoadmapNotFound } from '../components/roadmap/RoadmapNotFound';
 import { ThisWeekCard } from '../components/roadmap/ThisWeekCard';
+import type { UiError } from '../components/roadmap/useRoadmapErrors';
 import { useRoadmapDetail, type RoadmapServiceState } from '../components/roadmap/useRoadmapService';
 import { WeekStrip } from '../components/roadmap/WeekStrip';
 import { useDelayed } from '../hooks/useDelayed';
@@ -44,7 +48,7 @@ type Service = NonNullable<RoadmapServiceState['service']>;
 function RoadmapDetailView({ view, today, service }: { view: RoadmapView; today: string; service: Service }) {
   const { t } = useT('roadmap');
   const f = useFormat();
-  const { roadmap, phases, items, overview, linkState, goal } = view;
+  const { roadmap, phases, items, checkpoints, overview, linkState, goal } = view;
   useDocumentTitle(roadmap.title);
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -84,6 +88,20 @@ function RoadmapDetailView({ view, today, service }: { view: RoadmapView; today:
   const setNote = (item: RoadmapItem, note: string) => {
     const input: ItemInput = { title: item.title, note, plannedStart: item.plannedStart, plannedEnd: item.plannedEnd, actualStart: item.actualStart, actualEnd: item.actualEnd };
     void run(item.id, 'note', () => service.updateItem(item.id, input, today));
+  };
+
+  /** Quick score entry (FR-75): the whole checkpoint is re-validated, so a score above the maximum is `range`. */
+  const saveScore = async (cp: RoadmapCheckpoint, score: number | null): Promise<UiError | null> => {
+    try {
+      const r = await service.updateCheckpoint(cp.id, { title: cp.title, note: cp.note, date: cp.date, maxScore: cp.maxScore, threshold: cp.threshold, score });
+      if (r.ok) {
+        setAnnounce(t('cp.saved', { title: cp.title }));
+        return null;
+      }
+      return r.errors.find((e) => e.field === 'score') ?? r.errors[0]!;
+    } catch {
+      return 'write';
+    }
   };
 
   /** Strip cell → scroll the item row into view and focus it (DESIGN S13 "Dải ô"; reduced motion → no smooth scroll). */
@@ -161,6 +179,15 @@ function RoadmapDetailView({ view, today, service }: { view: RoadmapView; today:
 
   const aside = (
     <aside className="rd-aside">
+      {checkpoints.length > 0 ? (
+        <section className="rd-sec" aria-labelledby="rd-cp-h" data-testid="checkpoints">
+          <h2 className="eyebrow" id="rd-cp-h">
+            {t('cp.title')}
+          </h2>
+          <CheckpointTable checkpoints={checkpoints} weekOf={(date) => roadmapWeekOf(overview, date)} onScore={saveScore} />
+          <CheckpointChart points={checkpoints} scale={view.chartScale} />
+        </section>
+      ) : null}
       {roadmap.note ? (
         <section className="rd-sec" aria-labelledby="rd-note-h" data-testid="roadmap-note">
           <h2 className="eyebrow" id="rd-note-h">

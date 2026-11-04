@@ -654,3 +654,211 @@ dialog.dialog.tpl::before {
 .dialog.tpl .tpl-lang {
   margin-top: 16px;
 }
+
+/* ---- M20: S13 checkpoints — table + plain-SVG chart (DESIGN S13 "Checkpoint", mockup 12) ---- */
+.cp-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.cp-table th {
+  font: 600 var(--text-xs) / 16px var(--font);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: left;
+  padding: 0 8px 8px 0;
+  vertical-align: bottom;
+  overflow-wrap: anywhere;
+}
+.cp-table th:nth-child(2) {
+  width: 72px;
+}
+.cp-table th:nth-child(3) {
+  width: 132px;
+}
+.cp-table td {
+  padding: 10px 8px 10px 0;
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+  font-size: 15px;
+  line-height: 22px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cp-table td:last-child,
+.cp-table th:last-child {
+  padding-right: 0;
+}
+.cp-n {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cp-w,
+.cp-note {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.cp-note {
+  white-space: pre-wrap;
+}
+.cp-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+}
+.cp-score .input {
+  width: 64px;
+  min-height: 44px;
+  padding: 4px 0;
+  font: 400 22px / 28px var(--font-display);
+  text-align: right;
+}
+.cp-max {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.cp-table .err {
+  margin-top: 4px;
+}
+.cp-st {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: center;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+.cp-st.below {
+  color: var(--danger);
+}
+.cp-st.pending {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.cp-dl {
+  font-variant-numeric: tabular-nums;
+}
+.cp-chart {
+  margin: 20px 0 0;
+}
+.cp-chart figcaption {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-muted);
+}
+.cp-scroll.scrolls {
+  overflow-x: auto;
+  border-radius: 6px;
+}
+.cp-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.cp-chart text {
+  font: 600 11px var(--font);
+  fill: var(--text-muted);
+}
+.cp-chart text.cp-v {
+  fill: var(--text);
+  font-size: 12px;
+}
+.cp-base {
+  stroke: var(--border-input);
+}
+.cp-grid {
+  stroke: var(--border);
+  stroke-dasharray: 2 3;
+}
+.cp-bar.pass {
+  fill: var(--text);
+}
+.cp-bar.recorded {
+  fill: var(--primary);
+}
+.cp-bar.below {
+  stroke: var(--danger);
+  stroke-width: 1.5;
+}
+.cp-bar.pending {
+  fill: none;
+  stroke: var(--border-input);
+  stroke-dasharray: 4 3;
+  stroke-width: 1.5;
+}
+.cp-hatch-bg {
+  fill: var(--danger-soft);
+}
+.cp-hatch-line {
+  stroke: var(--danger);
+  stroke-width: 2.5;
+}
+.cp-th {
+  stroke: var(--text);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+}
+.cp-labels {
+  display: grid;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.cp-labels li {
+  min-width: 0;
+  padding: 0 2px;
+  overflow-wrap: anywhere;
+}
+.cp-chart > .hint {
+  margin-top: 8px;
+}
+.cp-lgd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-muted);
+}
+.cp-lgd span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cp-lgd .sw {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+.cp-lgd .sw.pass {
+  background: var(--text);
+}
+.cp-lgd .sw.below {
+  background: repeating-linear-gradient(45deg, var(--danger) 0 2px, var(--danger-soft) 2px 5px);
+  box-shadow: inset 0 0 0 1.5px var(--danger);
+}
+.cp-lgd .sw.recorded {
+  background: var(--primary);
+}
+.cp-lgd .sw.pending {
+  border: 1.5px dashed var(--border-input);
+}
+.cp-lgd .sw.th {
+  height: 0;
+  border-top: 2px dashed var(--text);
+  border-radius: 0;
+}
