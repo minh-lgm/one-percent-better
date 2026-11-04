@@ -58,8 +58,8 @@ describe('TemplateDialog (D7, M20-AC2)', () => {
     expect(screen.getByTestId('done-value')).toHaveTextContent('0/21');
     expect(screen.getAllByTestId('phase')).toHaveLength(5);
     expect(screen.getByTestId('milestone-value')).toHaveTextContent('125');
-    // no actual dates yet: W1 gets 10-27 … 11-01 (270), W2 11-03 / 11-04 (75) → 5,8 giờ of 16 giờ
-    expect(screen.getByTestId('hours-value')).toHaveTextContent('5,8 giờ');
+    // no actual dates yet: W1 gets 10-27 … 11-01 (270), W2 11-03 / 11-04 (75); v8.3 total = every gq minute (+ 10-20 50) → 6,6 giờ
+    expect(screen.getByTestId('hours-value')).toHaveTextContent('6,6 giờ');
     const w20 = screen.getAllByTestId('roadmap-item')[19]!;
     expect(w20).toHaveTextContent('Thi QPT chính thức');
     expect(w20).toHaveTextContent('09/03 – 15/03/2027');

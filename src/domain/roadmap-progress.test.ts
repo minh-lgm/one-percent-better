@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildEntry, buildQptRoadmap, datasetQ1, TODAY_Q1 } from '../test/builders';
 import { addDays } from './dates';
+import { goalStats } from './stats';
 import { attributeMinutes, checkpointState, chartScale, itemLabel, itemState, itemWindow, linkState, milestoneDays, roadmapOverview, roadmapView, thisWeek, toListRow } from './roadmap-progress';
 import type { RoadmapItem } from './roadmap';
 import type { LogEntry } from './types';
@@ -13,8 +14,8 @@ const viewQ1 = (variant?: 'b' | 'c' | 'e', today = TODAY_Q1) => {
   return roadmapView(d, gq(d), gqEntries(d), today);
 };
 
-describe('hours (FR-71, A-77, A-80, A-82) — M17-AC2', () => {
-  it('Q1: windows W1 [10-27, 11-01], W2 [11-03, 11-09], W3 [11-10, 11-16]; W1 270, W2 75, W3 0; total 345; 10-20 outside', () => {
+describe('hours (FR-71, A-77, A-80, A-82; v8.3 A-93, A-95) — M17-AC2, M21-AC1', () => {
+  it('Q1: windows W1 [10-27, 11-01], W2 [11-03, 11-09], W3 [11-10, 11-16]; W1 270, W2 75, W3 0; total 395 = goal; 10-20 outside (50, before start)', () => {
     const v = viewQ1();
     const [w1, w2, w3] = v.items;
     expect(itemWindow(w1, TODAY_Q1)).toMatchObject({ start: '2026-10-27', end: '2026-11-01', empty: false, explicit: true });
@@ -23,7 +24,9 @@ describe('hours (FR-71, A-77, A-80, A-82) — M17-AC2', () => {
     expect(v.itemMinutes.get('wq1')).toBe(270);
     expect(v.itemMinutes.get('wq2')).toBe(75);
     expect(v.itemMinutes.get('wq3')).toBe(0);
-    expect(v.hoursDoneMinutes).toBe(345);
+    expect(v.hoursDoneMinutes).toBe(395);
+    expect(v.outsideMinutes).toBe(50);
+    expect(v.beforeStartMinutes).toBe(50);
     expect(v.linkState).toBe('linked');
   });
 
@@ -32,14 +35,18 @@ describe('hours (FR-71, A-77, A-80, A-82) — M17-AC2', () => {
     expect(itemWindow(v.items[0], TODAY_Q1)).toMatchObject({ start: '2026-10-27', end: '2026-11-04', explicit: true });
     expect(v.itemMinutes.get('wq1')).toBe(345);
     expect(v.itemMinutes.get('wq2')).toBe(0);
-    expect(v.hoursDoneMinutes).toBe(345);
+    expect(v.hoursDoneMinutes).toBe(395);
+    expect(v.outsideMinutes).toBe(50);
+    expect(v.beforeStartMinutes).toBe(50);
   });
 
   it('Q1c: W2 also started 11-04 → two explicit candidates on 11-04, the later start wins → W1 315, W2 30', () => {
     const v = viewQ1('c');
     expect(v.itemMinutes.get('wq1')).toBe(315);
     expect(v.itemMinutes.get('wq2')).toBe(30);
-    expect(v.hoursDoneMinutes).toBe(345);
+    expect(v.hoursDoneMinutes).toBe(395);
+    expect(v.outsideMinutes).toBe(50);
+    expect(v.beforeStartMinutes).toBe(50);
   });
 
   it('empty window (only actualEnd before plannedStart) → 0 minutes, no error; the early label still shows', () => {
@@ -101,16 +108,125 @@ describe('hours (FR-71, A-77, A-80, A-82) — M17-AC2', () => {
     const none = roadmapView({ ...d, roadmap: { ...d.roadmap, goalId: null } }, null, gqEntries(d), TODAY_Q1);
     expect(none.linkState).toBe('none');
     expect(none.hoursDoneMinutes).toBeNull();
+    expect(none.outsideMinutes).toBeNull();
+    expect(none.beforeStartMinutes).toBeNull();
     expect([...none.itemMinutes.values()].every((m) => m === null)).toBe(true);
     const missing = viewQ1('e');
     expect(missing.linkState).toBe('missing');
     expect(missing.hoursDoneMinutes).toBeNull();
+    expect(missing.outsideMinutes).toBeNull();
+    expect(missing.beforeStartMinutes).toBeNull();
+    expect([...missing.itemMinutes.values()].every((m) => m === null)).toBe(true);
     expect(missing.goal).toBeNull();
     expect(missing.overview.doneCount).toBe(1);
     const archived = roadmapView(d, { ...gq(d)!, archived: true }, gqEntries(d), TODAY_Q1);
     expect(archived.linkState).toBe('archived');
-    expect(archived.hoursDoneMinutes).toBe(345);
+    expect(archived.hoursDoneMinutes).toBe(395);
+    expect(archived.outsideMinutes).toBe(50);
+    expect(archived.beforeStartMinutes).toBe(50);
     expect(linkState({ goalId: 'x' }, undefined)).toBe('missing');
+  });
+});
+
+describe('roadmap total = goal total (v8.3: FR-71, A-80, A-93, A-95; ARCH §4.8 d "Oracle v8.3") — M21-AC1', () => {
+  const sumItems = (v: ReturnType<typeof viewQ1>) => [...v.itemMinutes.values()].reduce<number>((s, m) => s + (m ?? 0), 0);
+
+  it('Q1: hoursDoneMinutes 395 equals goalStats(gq, entries of gq, 2026, today).minutesTotal (the Goal detail total)', () => {
+    const d = datasetQ1();
+    const v = viewQ1();
+    expect(goalStats(gq(d)!, gqEntries(d), 2026, TODAY_Q1).minutesTotal).toBe(395);
+    expect(v.hoursDoneMinutes).toBe(goalStats(gq(d)!, gqEntries(d), 2026, TODAY_Q1).minutesTotal);
+    expect(sumItems(v) + v.outsideMinutes!).toBe(v.hoursDoneMinutes);
+    // attributeMinutes keeps its contract: total = minutes given to items
+    expect(attributeMinutes(v.items, gqEntries(d), TODAY_Q1).total).toBe(345);
+  });
+
+  it('Q1d (today 2026-10-26): not filtered by today → 395, Σ items 345, outside 50 / before 50', () => {
+    const v = viewQ1(undefined, '2026-10-26');
+    expect(v.hoursDoneMinutes).toBe(395);
+    expect(sumItems(v)).toBe(345);
+    expect(v.outsideMinutes).toBe(50);
+    expect(v.beforeStartMinutes).toBe(50);
+  });
+
+  it('Q1 + 30 min on 11-04 → 425, W2 105, outside still 50; Q1 without the 10-20 entry → 345, outside 0', () => {
+    const d = datasetQ1();
+    const more = [...gqEntries(d), buildEntry({ id: 'e-more', goalId: 'gq', date: '2026-11-04', minutes: 30 })];
+    const v = roadmapView(d, gq(d), more, TODAY_Q1);
+    expect(v.hoursDoneMinutes).toBe(425);
+    expect(v.itemMinutes.get('wq2')).toBe(105);
+    expect(v.outsideMinutes).toBe(50);
+    expect(v.beforeStartMinutes).toBe(50);
+    const without = roadmapView(d, gq(d), gqEntries(d).filter((e) => e.date !== '2026-10-20'), TODAY_Q1);
+    expect(without.hoursDoneMinutes).toBe(345);
+    expect(without.outsideMinutes).toBe(0);
+    expect(without.beforeStartMinutes).toBe(0);
+  });
+
+  it('rq linked to g3 "Spanish" (60 min on 2026-03-02) → 60 / 60 / 60; + 100 min on 11-03 → 160, W2 100', () => {
+    const d = datasetQ1();
+    const g3 = d.goals.find((g) => g.id === 'g3')!;
+    const g3Entries = d.entries.filter((e) => e.goalId === 'g3');
+    expect(g3Entries.map((e) => [e.date, e.minutes])).toEqual([['2026-03-02', 60]]);
+    const agg = { ...d, roadmap: { ...d.roadmap, goalId: 'g3' } };
+    const v = roadmapView(agg, g3, g3Entries, TODAY_Q1);
+    expect(v.hoursDoneMinutes).toBe(60);
+    expect(sumItems(v)).toBe(0);
+    expect(v.outsideMinutes).toBe(60);
+    expect(v.beforeStartMinutes).toBe(60);
+    const plus = roadmapView(agg, g3, [...g3Entries, buildEntry({ id: 'e-g3-2', goalId: 'g3', date: '2026-11-03', minutes: 100 })], TODAY_Q1);
+    expect(plus.hoursDoneMinutes).toBe(160);
+    expect(plus.itemMinutes.get('wq2')).toBe(100);
+    expect(plus.outsideMinutes).toBe(60);
+  });
+
+  it('gap (v8.2): A 11-01 – 11-03, B 11-06 – 11-12 → 395 = A 165 + B 0 + outside 230 (before 200; 11-04 in the gap)', () => {
+    const d = datasetQ1();
+    const a: RoadmapItem = { ...d.items[0], id: 'a', actualStart: null, actualEnd: null, plannedStart: '2026-11-01', plannedEnd: '2026-11-03' };
+    const b: RoadmapItem = { ...d.items[1], id: 'b', plannedStart: '2026-11-06', plannedEnd: '2026-11-12' };
+    const v = roadmapView({ ...d, items: [a, b], checkpoints: [] }, gq(d), gqEntries(d), TODAY_Q1);
+    expect(v.hoursDoneMinutes).toBe(395);
+    expect(v.itemMinutes.get('a')).toBe(165);
+    expect(v.itemMinutes.get('b')).toBe(0);
+    expect(v.outsideMinutes).toBe(230);
+    expect(v.beforeStartMinutes).toBe(200);
+  });
+
+  it('property: 200 seeded random roadmaps (entries before / inside / after items, random today, linked or archived) → Σ itemMinutes + outside = total = Σ entries; 0 ≤ before ≤ outside', () => {
+    let seed = 20261105;
+    const rnd = () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    const base = datasetQ1();
+    for (let n = 0; n < 200; n += 1) {
+      const today = addDays('2026-10-15', Math.floor(rnd() * 60));
+      const count = Math.floor(rnd() * 10); // 0 … 9 items (0 = no items)
+      const items: RoadmapItem[] = [];
+      for (let k = 0; k < count; k += 1) {
+        const start = addDays('2026-10-01', Math.floor(rnd() * 60));
+        const end = addDays(start, Math.floor(rnd() * 14));
+        const r = rnd();
+        const actualStart = r < 0.3 ? addDays(start, Math.floor(rnd() * 5) - 2) : null;
+        const actualEnd = r > 0.7 ? addDays(end, Math.floor(rnd() * 5) - 2) : null;
+        items.push({ ...base.items[0], id: `i${k}`, phaseId: 'pq1', position: k, plannedStart: start, plannedEnd: end, actualStart, actualEnd });
+      }
+      const entries: LogEntry[] = [];
+      const entryCount = Math.floor(rnd() * 40);
+      for (let k = 0; k < entryCount; k += 1) entries.push(buildEntry({ id: `e${k}`, goalId: 'gq', date: addDays('2026-09-01', Math.floor(rnd() * 120)), minutes: 1 + Math.floor(rnd() * 120) }));
+      const goal = { ...gq(base)!, archived: rnd() < 0.2 };
+      const v = roadmapView({ ...base, items, checkpoints: [] }, goal, entries, today);
+      const total = entries.reduce((s, e) => s + e.minutes, 0);
+      expect(v.hoursDoneMinutes).toBe(total);
+      expect(sumItems(v) + v.outsideMinutes!).toBe(total);
+      expect(v.beforeStartMinutes).toBeGreaterThanOrEqual(0);
+      expect(v.beforeStartMinutes!).toBeLessThanOrEqual(v.outsideMinutes!);
+      if (items.length === 0) {
+        expect(v.outsideMinutes).toBe(total);
+        expect(v.beforeStartMinutes).toBe(0);
+      }
+      expect(attributeMinutes(v.items, entries, today).total).toBe(sumItems(v));
+    }
   });
 });
 
@@ -126,7 +242,7 @@ describe('overview, pace, labels, this week, milestone (FR-72, A-84, A-85) — M
     expect(v.thisWeek).toEqual({ kind: 'current', itemId: 'wq2', index: 2, itemMinutes: 75, itemTargetMinutes: 480, daysLeft: 5, done: false });
     expect(v.milestoneDays).toBe(125);
     expect(v.roadmap.milestoneDate).toBe('2027-03-09');
-    expect(toListRow(v)).toMatchObject({ id: 'rq', title: 'QPT 21 tuần', goalName: 'QPT study', linkState: 'linked', doneCount: 1, itemCount: 21, hoursDoneMinutes: 345, plannedMinutesToDate: 960, milestoneLabel: 'Thi QPT', milestoneDays: 125 });
+    expect(toListRow(v)).toMatchObject({ id: 'rq', title: 'QPT 21 tuần', goalName: 'QPT study', linkState: 'linked', doneCount: 1, itemCount: 21, hoursDoneMinutes: 395, plannedMinutesToDate: 960, milestoneLabel: 'Thi QPT', milestoneDays: 125 });
   });
 
   it('Q1b: W1 overdue → behind warn, doneCount 0, in progress label; today 2026-11-10 with W2 still open → overdueCount 2, crit', () => {
@@ -188,7 +304,10 @@ describe('overview, pace, labels, this week, milestone (FR-72, A-84, A-85) — M
     expect(empty.overview).toMatchObject({ itemCount: 0, start: null, end: null, totalWeeks: 0, weeksElapsed: 0, plannedMinutesToDate: 0, currentItemId: null });
     expect(empty.overview.pace).toMatchObject({ kind: 'empty', severity: 'idle' });
     expect(empty.thisWeek).toBeNull();
-    expect(empty.hoursDoneMinutes).toBe(0);
+    // v8.3: a roadmap without items still shows every minute of its goal; all of it is outside, none "before start"
+    expect(empty.hoursDoneMinutes).toBe(395);
+    expect(empty.outsideMinutes).toBe(395);
+    expect(empty.beforeStartMinutes).toBe(0);
   });
 
   it('labels: on time, late, early with studied days', () => {

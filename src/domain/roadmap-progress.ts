@@ -1,5 +1,7 @@
 // Derived values of a roadmap (phase 8, M17; ARCHITECTURE §4.8 c; FR-71, FR-72, FR-75; A-77, A-80 … A-85).
 // Pure functions that take `today`; nothing here is stored. Oracle: dataset Q1 (§4.8 d).
+// v8.3 (M21, A-80 v8.3, A-93, A-95, ADR-54): the roadmap total is every minute logged on the linked goal (the Goal
+// detail figure); item hours still follow the item windows (one day → one item) and the rest is `outsideMinutes`.
 import { dayNumber } from './dates';
 import { isItemDone, sortCheckpoints, sortItems, sortPhases, type Roadmap, type RoadmapAggregate, type RoadmapCheckpoint, type RoadmapItem, type RoadmapPhase } from './roadmap';
 import type { Goal, ISODate, LogEntry } from './types';
@@ -34,17 +36,21 @@ export function itemWindow(item: RoadmapItem, today: ISODate): ItemWindow {
   return { start, end, empty: end < start, explicit: item.actualStart !== null || item.actualEnd !== null };
 }
 
-/**
- * Minutes per item (A-80: one day → one item). `items` must be in item order `ord`. Every day with entries goes
- * to exactly one candidate window: explicit first, then the later start, then the earlier `ord`. Days outside every
- * window are not counted. Returns a map item id → minutes (every item present) and the total.
- */
-export function attributeMinutes(items: readonly RoadmapItem[], entries: readonly Pick<LogEntry, 'date' | 'minutes'>[], today: ISODate): { byItem: Map<string, number>; total: number } {
+interface Attribution {
+  byItem: Map<string, number>;
+  /** Minutes given to an item (= Σ byItem). */
+  total: number;
+  /** Days that fall in no item window: date → minutes. */
+  outside: Map<string, number>;
+}
+
+function attribute(items: readonly RoadmapItem[], entries: readonly Pick<LogEntry, 'date' | 'minutes'>[], today: ISODate): Attribution {
   const perDay = new Map<string, number>();
   for (const e of entries) perDay.set(e.date, (perDay.get(e.date) ?? 0) + e.minutes);
   const windows = items.map((i) => itemWindow(i, today));
   const byItem = new Map<string, number>();
   for (const i of items) byItem.set(i.id, 0);
+  const outside = new Map<string, number>();
   let total = 0;
   for (const [date, minutes] of perDay) {
     let best = -1;
@@ -61,11 +67,25 @@ export function attributeMinutes(items: readonly RoadmapItem[], entries: readonl
       } else if (w.start > b.start) best = k;
       // same explicitness and start: the earlier `ord` (already `best`) keeps the day
     }
-    if (best === -1) continue;
+    if (best === -1) {
+      outside.set(date, minutes);
+      continue;
+    }
     const id = items[best].id;
     byItem.set(id, byItem.get(id)! + minutes);
     total += minutes;
   }
+  return { byItem, total, outside };
+}
+
+/**
+ * Minutes per item (A-80: one day → one item). `items` must be in item order `ord`. Every day with entries goes
+ * to exactly one candidate window: explicit first, then the later start, then the earlier `ord`. Days outside every
+ * window go to no item (v8.3: they still count in the roadmap total, `RoadmapView.outsideMinutes`). Returns a map
+ * item id → minutes (every item present) and `total` = the minutes given to items (= Σ byItem).
+ */
+export function attributeMinutes(items: readonly RoadmapItem[], entries: readonly Pick<LogEntry, 'date' | 'minutes'>[], today: ISODate): { byItem: Map<string, number>; total: number } {
+  const { byItem, total } = attribute(items, entries, today);
   return { byItem, total };
 }
 
@@ -225,8 +245,15 @@ export interface RoadmapView {
   checkpoints: RoadmapCheckpoint[];
   goal: Goal | null;
   linkState: LinkState;
-  /** `null` when `linkState` is `none` / `missing`. */
+  /**
+   * v8.3 (A-80, A-95): every minute logged on the linked goal (not filtered by windows or `today`) — the Goal detail
+   * total. `null` when `linkState` is `none` / `missing`.
+   */
   hoursDoneMinutes: number | null;
+  /** v8.3 (A-93): `hoursDoneMinutes − Σ itemMinutes` — days in no item window (all of it when there are no items). */
+  outsideMinutes: number | null;
+  /** v8.3: the part of `outsideMinutes` dated before the roadmap start (`min plannedStart`); 0 without items. */
+  beforeStartMinutes: number | null;
   /** Item id → minutes; `null` values when hours cannot be counted. */
   itemMinutes: Map<string, number | null>;
   overview: RoadmapOverview;
@@ -241,10 +268,22 @@ export function roadmapView(aggregate: RoadmapAggregate, goal: Goal | null | und
   const checkpoints = sortCheckpoints(aggregate.checkpoints);
   const link = linkState(aggregate.roadmap, goal);
   const counted = link === 'linked' || link === 'archived';
-  const minutes = counted ? attributeMinutes(items, entries, today) : null;
+  const minutes = counted ? attribute(items, entries, today) : null;
   const itemMinutes = new Map<string, number | null>();
   for (const i of items) itemMinutes.set(i.id, minutes ? (minutes.byItem.get(i.id) ?? 0) : null);
   const overview = roadmapOverview(aggregate.roadmap, items, today);
+  let hoursDoneMinutes: number | null = null;
+  let outsideMinutes: number | null = null;
+  let beforeStartMinutes: number | null = null;
+  if (minutes) {
+    outsideMinutes = 0;
+    beforeStartMinutes = 0;
+    for (const [date, m] of minutes.outside) {
+      outsideMinutes += m;
+      if (overview.start !== null && date < overview.start) beforeStartMinutes += m;
+    }
+    hoursDoneMinutes = minutes.total + outsideMinutes;
+  }
   return {
     roadmap: aggregate.roadmap,
     phases,
@@ -252,7 +291,9 @@ export function roadmapView(aggregate: RoadmapAggregate, goal: Goal | null | und
     checkpoints,
     goal: goal ?? null,
     linkState: link,
-    hoursDoneMinutes: minutes ? minutes.total : null,
+    hoursDoneMinutes,
+    outsideMinutes,
+    beforeStartMinutes,
     itemMinutes,
     overview,
     thisWeek: thisWeek(aggregate.roadmap, items, overview, minutes?.byItem ?? null, today),

@@ -159,7 +159,8 @@ export interface DatasetQ1 extends RoadmapAggregate {
  * entries 10-20 50, 10-27 60, 10-29 90, 11-01 120, 11-03 45, 11-04 30; roadmap `rq` from the QPT template
  * (start 2026-10-27) linked to `gq`; W1 actual 10-27 → 11-01; Diagnostic dated 2026-09-24, score 5.
  * Variants: `b` W1 has only `actualStart`; `c` = b + W2 `actualStart 11-04`; `e` goal `gq` and its entries gone
- * (link state `missing`). Oracle at today 2026-11-04: W1 270, W2 75, total 345 min; planned 960; 1/21; on track; 125 days.
+ * (link state `missing`). Oracle at today 2026-11-04: W1 270, W2 75, total 395 min (v8.3: every gq minute; 50 outside
+ * the items, before the start); planned 960; 1/21; on track; 125 days.
  */
 export function datasetQ1(variant?: Q1Variant): DatasetQ1 {
   const s1 = datasetS1();

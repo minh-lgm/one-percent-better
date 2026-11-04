@@ -74,6 +74,8 @@
     "doneValue": "{{done}}/{{total}}",
     "hours": "Study time",
     "hoursPlan": "Planned through this week: {{plan}}",
+    "hoursOutsideBefore": "Includes {{hours}} from before the roadmap's start date.",
+    "hoursOutside": "Includes {{hours}} from days that fall outside every item.",
     "hoursNone": "Link a goal to count study time.",
     "hoursMissing": "The linked goal was deleted.",
     "hoursArchived": "The linked goal is archived. Its time still counts.",
@@ -155,7 +157,7 @@
   },
   "howHours": {
     "summary": "How study time is counted",
-    "body": "Study time comes from the entries on the linked goal. Each day's minutes count toward one item: the one you've started or finished on that date, otherwise the one whose planned dates include it. Days outside every item aren't counted here (they still count on the goal)."
+    "body": "The total is everything logged on the linked goal, the same figure the goal's page shows. An item's hours include only the days counted for it, and each day counts for one item: the one you've started or finished on that date, otherwise the one whose planned dates include it. A day that falls in no item isn't added to any item, but it still counts in the total."
   },
   "new": {
     "title": "New roadmap",

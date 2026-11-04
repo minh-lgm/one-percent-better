@@ -33,7 +33,7 @@ async function seed(locale: 'en' | 'vi', variant?: Q1Variant | 'none') {
 const row = async () => within(await screen.findByTestId('roadmap-row'));
 
 describe('Roadmaps (S11, M17)', () => {
-  it('en: one row with title, goal, 1/21, On track, 5.8 h of 16 h, 125 days left', async () => {
+  it('en: one row with title, goal, 1/21, On track, 6.6 h of 16 h, 125 days left', async () => {
     await seed('en');
     await renderApp({ route: '/roadmaps', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: 'Big goals' })).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe('Roadmaps (S11, M17)', () => {
     expect(r.getByTestId('roadmap-progress')).toHaveTextContent('Done 1/21');
     expect(r.getByTestId('pace-chip')).toHaveTextContent('On track');
     expect(r.getByTestId('pace-chip')).toHaveAttribute('data-pace', 'onTrack');
-    expect(r.getByTestId('roadmap-hours')).toHaveTextContent('Studied 5.8 h of 16 h');
+    expect(r.getByTestId('roadmap-hours')).toHaveTextContent('Studied 6.6 h of 16 h');
     expect(r.getByTestId('roadmap-milestone')).toHaveTextContent('Thi QPT: 125 days left');
     expect(screen.getByRole('list', { name: 'Your roadmaps' })).toBeInTheDocument();
     expect(screen.getByText('Plans that run for weeks or months. Study time comes from the goal you link.')).toBeInTheDocument();
@@ -52,7 +52,7 @@ describe('Roadmaps (S11, M17)', () => {
     expect(screen.getByTestId('roadmap-create')).toHaveAttribute('href', '/roadmaps/new');
   });
 
-  it('vi: the same row in Vietnamese (5,8 giờ / 16 giờ, Đúng tiến độ, còn 125 ngày); scan finds no English', async () => {
+  it('vi: the same row in Vietnamese (6,6 giờ / 16 giờ, Đúng tiến độ, còn 125 ngày); scan finds no English', async () => {
     await seed('vi');
     await renderApp({ route: '/roadmaps', container: tc });
     expect(await screen.findByRole('heading', { level: 1, name: 'Mục tiêu lớn' })).toBeInTheDocument();
@@ -60,7 +60,7 @@ describe('Roadmaps (S11, M17)', () => {
     expect(r.getByTestId('roadmap-goal')).toHaveTextContent('Mục tiêu: QPT study');
     expect(r.getByTestId('roadmap-progress')).toHaveTextContent('Xong 1/21');
     expect(r.getByTestId('pace-chip')).toHaveTextContent('Đúng tiến độ');
-    expect(r.getByTestId('roadmap-hours')).toHaveTextContent('Đã học 5,8 giờ / 16 giờ');
+    expect(r.getByTestId('roadmap-hours')).toHaveTextContent('Đã học 6,6 giờ / 16 giờ');
     expect(r.getByTestId('roadmap-milestone')).toHaveTextContent('Thi QPT: còn 125 ngày');
     expect(scanVi()).toEqual([]);
   });

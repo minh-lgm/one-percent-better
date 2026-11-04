@@ -63,7 +63,7 @@ describe('roadmap namespace parity (M17-AC9)', () => {
     }
   });
 
-  it('covers every 7.9.2 row of M17, M19 and M20 (M20: cp.*, tpl.*, checkpoint editor, template entry points) — 282 en / 268 vi keys (DESIGN 7.9.4)', () => {
+  it('covers every 7.9.2 row of M17, M19, M20 and M21 (M20: cp.*, tpl.*, checkpoint editor, template entry points; M21: overview.hoursOutside*) — 284 en / 270 vi keys (DESIGN v8.3)', () => {
     const section = design.slice(design.indexOf('#### 7.9.2'), design.indexOf('#### 7.9.3'));
     const rows = section.split('\n').filter((l) => /^\| `[a-zA-Z]/.test(l)).map((l) => cells(l));
     const keys = rows.map((c) => unquote(c[0]));
@@ -71,9 +71,11 @@ describe('roadmap namespace parity (M17-AC9)', () => {
     for (const key of keys) expect(EN[key], `missing ${key}`).toBeDefined();
     const m20 = rows.filter((c) => c[1] === 'M20').map((c) => unquote(c[0]));
     expect(m20).toEqual(expect.arrayContaining(['list.createTemplate', 'new.templateHint', 'cp.sr.intro_other', 'tpl.preview', 'ed.saveCp', 'toast.templateCreated']));
-    // the two D3 lines moved from 7.9.1 (M17 budget fallback) come on top of the 282 / 268 rows of 7.9.4
-    expect(Object.keys(EN).length - 2).toBe(282);
-    expect(Object.keys(VI).length - 2).toBe(268);
+    const m21 = rows.filter((c) => /M21/.test(c[1])).map((c) => unquote(c[0]));
+    expect(m21).toEqual(expect.arrayContaining(['overview.hoursOutsideBefore', 'overview.hoursOutside', 'howHours.body']));
+    // the two D3 lines moved from 7.9.1 (M17 budget fallback) come on top of the 284 / 270 rows (v8.3: +2 hours-outside keys)
+    expect(Object.keys(EN).length - 2).toBe(284);
+    expect(Object.keys(VI).length - 2).toBe(270);
   });
 
   it('(M19, FR-80) goal.detail.roadmapLabel and goal.delete.roadmapNote (7.9.1) are in the main resources verbatim', () => {

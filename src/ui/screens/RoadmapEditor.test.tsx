@@ -258,8 +258,8 @@ describe('Goal picker (M19-AC5, A-78)', () => {
     await user.click(screen.getByTestId('editor-done'));
     await waitFor(() => expect(app.router.state.location.pathname).toBe('/roadmaps/rq'));
     await screen.findByRole('heading', { level: 1, name: 'QPT 21 tuần' });
-    // g3's only entry inside the roadmap: 100 min on 11-03 (W2) → 1.7 h; the 60 min of 03-02 is outside.
-    expect(within(screen.getByTestId('overview')).getByTestId('hours-value')).toHaveTextContent('1.7 h');
+    // v8.3: the total is every g3 minute — 100 min on 11-03 (W2) + the 60 min of 03-02 (outside the items) → 2.7 h.
+    expect(within(screen.getByTestId('overview')).getByTestId('hours-value')).toHaveTextContent('2.7 h');
     expect(within(screen.getByTestId('this-week')).getByTestId('this-week-minutes')).toHaveTextContent('100/480 min');
 
     // Unlink → "—"

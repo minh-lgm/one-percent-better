@@ -1,4 +1,5 @@
 // S13 "Overview" — the four metrics (DESIGN v8.0 S13 "Overview — 4 chỉ số", FR-72). Lazy-only (ADR-53).
+// v8.3 (M21, FR-71, A-93): Study time = the linked goal's total; `hours-outside` explains the part in no item.
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { RoadmapView } from '../../../domain/roadmap-progress';
@@ -45,6 +46,12 @@ export function OverviewMetrics({ view }: { view: RoadmapView }) {
   } else {
     hoursSub = plan;
   }
+  // DESIGN v8.3 S13 "Dòng hours-outside" (A-D98, OQ-D88): only with a goal, at least one item and a non-zero remainder.
+  const outside = view.outsideMinutes ?? 0;
+  const outsideLine =
+    hoursKnown && overview.itemCount > 0 && outside > 0
+      ? t(view.beforeStartMinutes === outside ? 'overview.hoursOutsideBefore' : 'overview.hoursOutside', { hours: f.hoursShort(outside) })
+      : null;
   const showMilestone = roadmap.milestoneDate !== null && milestoneDays !== null;
   return (
     <section className="rd-sec" aria-labelledby="rd-ov-h" data-testid="overview">
@@ -73,6 +80,11 @@ export function OverviewMetrics({ view }: { view: RoadmapView }) {
           <div className={hoursKnown ? 'rd-v num' : 'rd-v txt'} data-testid="hours-value">
             {hoursKnown ? f.hoursShort(view.hoursDoneMinutes!) : t('noValue')}
           </div>
+          {outsideLine ? (
+            <div className="rd-s rd-out" data-testid="hours-outside">
+              {outsideLine}
+            </div>
+          ) : null}
           {hoursSub ? (
             <div className="rd-s" data-testid="hours-sub">
               {hoursSub}

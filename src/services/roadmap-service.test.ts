@@ -73,7 +73,8 @@ describe('goal link (A-78)', () => {
     await goals.put({ ...(await goals.getById('gq'))!, archived: true });
     const view = await first(service.watchDetail('rq', TODAY_Q1));
     expect(view?.linkState).toBe('archived');
-    expect(view?.hoursDoneMinutes).toBe(345);
+    expect(view?.hoursDoneMinutes).toBe(395); // v8.3: every gq minute (10-20 is outside the items)
+    expect(view?.outsideMinutes).toBe(50);
     await goals.deleteWithEntries('gq');
     const after = await first(service.watchDetail('rq', TODAY_Q1));
     expect(after?.linkState).toBe('none'); // unlinked on this device (A-79)
@@ -248,7 +249,8 @@ describe('watchDetail / watchList', () => {
     await new DexieEntryRepository(db, () => now).put(buildEntry({ id: 'e-new', goalId: 'gq', date: '2026-11-04', minutes: 30 }));
     await waitFor(() => views.at(-1)?.itemMinutes.get('wq2') === 105);
     expect(performance.now() - t0).toBeLessThan(100);
-    expect(views.at(-1)?.hoursDoneMinutes).toBe(375);
+    expect(views.at(-1)?.hoursDoneMinutes).toBe(425); // v8.3: goal total 395 + 30
+    expect(views.at(-1)?.outsideMinutes).toBe(50);
     stop();
   });
 
@@ -262,7 +264,7 @@ describe('watchDetail / watchList', () => {
     await db.goals.update('gx', { deletedAt: later.toISOString() });
     const rows = await first(service.watchList(TODAY_Q1));
     expect(rows.map((r) => r.id)).toEqual(['rq', r2.id, r3.id]);
-    expect(rows[0]).toMatchObject({ title: 'QPT 21 tuần', goalName: 'QPT study', linkState: 'linked', doneCount: 1, itemCount: 21, hoursDoneMinutes: 345, plannedMinutesToDate: 960, milestoneLabel: 'Thi QPT', milestoneDays: 125 });
+    expect(rows[0]).toMatchObject({ title: 'QPT 21 tuần', goalName: 'QPT study', linkState: 'linked', doneCount: 1, itemCount: 21, hoursDoneMinutes: 395, plannedMinutesToDate: 960, milestoneLabel: 'Thi QPT', milestoneDays: 125 });
     expect(rows[0].pace).toMatchObject({ kind: 'onTrack', severity: 'good' });
     expect(rows[1]).toMatchObject({ linkState: 'none', goalName: null, hoursDoneMinutes: null, itemCount: 0, milestoneDays: 209 });
     expect(rows[1].pace.kind).toBe('empty');
@@ -290,8 +292,9 @@ describe('createFromQptTemplate (M20-AC2, FR-76, A-78, A-86)', () => {
     expect(view?.overview).toMatchObject({ doneCount: 0, itemCount: 21, weeksElapsed: 2, plannedMinutesToDate: 960 });
     expect(view?.milestoneDays).toBe(125);
     expect(view?.linkState).toBe('linked');
-    // no actual dates: 10-27 … 11-01 fall in W1, 11-03 / 11-04 in W2
-    expect(view?.hoursDoneMinutes).toBe(345);
+    // no actual dates: 10-27 … 11-01 fall in W1, 11-03 / 11-04 in W2; v8.3: the total is every gq minute (+ 10-20)
+    expect(view?.hoursDoneMinutes).toBe(395);
+    expect(view?.itemMinutes.get(view.items[0].id)).toBe(270);
     // gq is now taken: a second template with gq fails, without writing anything
     const again = expectFail(await service.createFromQptTemplate({ startDate: '2026-10-27', goalId: 'gq', locale: 'vi' }, TODAY_Q1));
     expect(again).toMatchObject({ code: 'ROADMAP_GOAL_ALREADY_LINKED', field: 'goalId', params: { title: 'QPT 21 tuần' } });

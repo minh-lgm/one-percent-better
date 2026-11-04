@@ -70,6 +70,8 @@
     "doneValue": "{{done}}/{{total}}",
     "hours": "Giờ đã học",
     "hoursPlan": "Kế hoạch đến hết tuần này: {{plan}}",
+    "hoursOutsideBefore": "Gồm {{hours}} từ trước ngày bắt đầu lộ trình.",
+    "hoursOutside": "Gồm {{hours}} ở những ngày không thuộc mục nào.",
     "hoursNone": "Liên kết một mục tiêu để tính giờ học.",
     "hoursMissing": "Mục tiêu liên kết đã bị xóa.",
     "hoursArchived": "Mục tiêu liên kết đã được lưu trữ. Giờ học vẫn được tính.",
@@ -147,7 +149,7 @@
   },
   "howHours": {
     "summary": "Cách tính giờ học",
-    "body": "Giờ học lấy từ các lần ghi của mục tiêu được liên kết. Mỗi ngày chỉ tính cho một mục: mục bạn đã bắt đầu hoặc đã xong vào ngày đó, nếu không có thì mục có ngày kế hoạch bao gồm ngày ấy. Ngày nằm ngoài mọi mục không tính ở đây (vẫn tính ở mục tiêu)."
+    "body": "Tổng giờ học là toàn bộ thời gian đã ghi ở mục tiêu được liên kết, đúng con số trang mục tiêu hiển thị. Giờ của từng mục chỉ gồm các ngày tính cho mục đó; mỗi ngày chỉ tính cho một mục: mục bạn đã bắt đầu hoặc đã xong vào ngày đó, nếu không có thì mục có ngày kế hoạch bao gồm ngày ấy. Ngày không rơi vào mục nào thì không cộng cho mục nào, nhưng vẫn nằm trong tổng."
   },
   "new": {
     "title": "Lộ trình mới",
