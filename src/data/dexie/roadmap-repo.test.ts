@@ -207,13 +207,13 @@ describe('local data, purge, pending count', () => {
     expect(await store.purgeTombstones(later)).toMatchObject({ roadmaps: 1, roadmapItems: 0 });
   });
 
-  it('watchPendingCount does not count roadmap rows yet (M17; M18 adds them)', async () => {
+  it('watchPendingCount counts roadmap rows written by the repository (M18-AC1, FR-78)', async () => {
     await seedQ1();
     const store = new DexieSyncStore(db, clock);
     const before = await store.countDirty();
     const repo = new DexieRoadmapRepository(db, { clock });
     await repo.putRoadmap({ ...datasetQ1().roadmap, id: 'r2', title: 'Spanish B1', goalId: null });
-    expect(await store.countDirty()).toBe(before);
-    expect(await firstValue(store.watchPendingCount())).toBe(before);
+    expect(await store.countDirty()).toBe(before + 1);
+    expect(await firstValue(store.watchPendingCount())).toBe(before + 1);
   });
 });

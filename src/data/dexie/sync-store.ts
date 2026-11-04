@@ -1,26 +1,65 @@
 import type { Table } from 'dexie';
 import { TOMBSTONE_RETENTION_DAYS } from '../../config/constants';
 import { isPurgeableTombstone, nextUpdatedAt, resolveIncoming, sameVersion } from '../../domain/sync';
-import type { Goal, LogEntry } from '../../domain/types';
 import {
+  emptyChanges,
   isLive,
   normalizePrefsSync,
-  normalizeSyncMeta,
   toSyncRecord,
   type ApplyResult,
-  type EntryRow,
-  type GoalRow,
+  type FullRemoteChanges,
+  type IdsByTable,
   type LocalSyncStore,
   type PurgeCounts,
   type RemoteChanges,
   type Subscribable,
-  type SyncRecord,
 } from '../repositories';
-import { fromLiveQuery, ROADMAP_TABLES, type AppDatabase } from './db';
+import { SYNC_TABLES, syncTables, type LocalTable, type SyncGroup, type SyncTableSpec } from '../sync-tables';
+import { fromLiveQuery, type AppDatabase } from './db';
+import { purgeTombstones } from './purge-tombstones';
+
+/** The shape every synced row shares; table-specific fields are carried as a record. */
+type AnyRow = Record<string, unknown> & { id: string; updatedAt: string; deletedAt: string | null; dirty: 0 | 1 | 2 };
+type AnyRecord = Record<string, unknown> & { id: string; updatedAt: string; deletedAt: string | null };
+type AnyTable = Table<AnyRow, string>;
 
 /**
- * `LocalSyncStore` on Dexie v2 (ARCHITECTURE §5.2, §5.10, ADR-20/21). `applyRemote` is one
- * readwrite transaction over goals + entries (atomic per batch, serialised across tabs); no
+ * The fields of each table as stored (ARCHITECTURE §4.1, §4.8 a): a remote record is reduced to exactly these, so
+ * nothing the cloud adds (e.g. `server_updated_at` leftovers) reaches IndexedDB (NFR-05).
+ */
+const FIELDS: Record<LocalTable, readonly string[]> = {
+  goals: ['id', 'name', 'why', 'targetType', 'targetMinutes', 'startDate', 'endDate', 'archived', 'createdAt', 'updatedAt', 'deletedAt'],
+  entries: ['id', 'goalId', 'date', 'minutes', 'note', 'source', 'createdAt', 'updatedAt', 'deletedAt'],
+  roadmaps: ['id', 'title', 'note', 'goalId', 'weeklyTargetMinutes', 'milestoneLabel', 'milestoneDate', 'createdAt', 'updatedAt', 'deletedAt'],
+  roadmapPhases: ['id', 'roadmapId', 'title', 'note', 'position', 'createdAt', 'updatedAt', 'deletedAt'],
+  roadmapItems: ['id', 'roadmapId', 'phaseId', 'title', 'note', 'position', 'plannedStart', 'plannedEnd', 'actualStart', 'actualEnd', 'createdAt', 'updatedAt', 'deletedAt'],
+  roadmapCheckpoints: ['id', 'roadmapId', 'title', 'note', 'date', 'maxScore', 'threshold', 'score', 'createdAt', 'updatedAt', 'deletedAt'],
+};
+
+/**
+ * Cascades (ADR-20, v8.0 §4.8 h): a parent tombstone takes the live children with it. `children` finds the live
+ * candidates of one tombstoned parent record (the parent may be a remote record without a local row).
+ */
+interface Cascade {
+  parent: LocalTable;
+  child: LocalTable;
+  children: (db: AppDatabase, parent: AnyRecord) => Promise<AnyRow[]>;
+}
+
+const byIndex = (table: AnyTable, index: string, value: unknown) => table.where(index).equals(value as string).toArray();
+
+const CASCADES: readonly Cascade[] = [
+  { parent: 'goals', child: 'entries', children: (db, g) => byIndex(db.entries as unknown as AnyTable, 'goalId', g.id) },
+  { parent: 'roadmaps', child: 'roadmapPhases', children: (db, r) => byIndex(db.roadmapPhases as unknown as AnyTable, 'roadmapId', r.id) },
+  { parent: 'roadmaps', child: 'roadmapItems', children: (db, r) => byIndex(db.roadmapItems as unknown as AnyTable, 'roadmapId', r.id) },
+  { parent: 'roadmaps', child: 'roadmapCheckpoints', children: (db, r) => byIndex(db.roadmapCheckpoints as unknown as AnyTable, 'roadmapId', r.id) },
+  // `phaseId` is not indexed: items of the phase's roadmap, filtered.
+  { parent: 'roadmapPhases', child: 'roadmapItems', children: async (db, p) => (await byIndex(db.roadmapItems as unknown as AnyTable, 'roadmapId', p.roadmapId)).filter((i) => i.phaseId === p.id) },
+];
+
+/**
+ * `LocalSyncStore` on Dexie (ARCHITECTURE §5.2, §5.10, ADR-20/21; v8.0 ADR-50: six tables driven by `SYNC_TABLES`).
+ * `applyRemote` is one readwrite transaction over the six tables (atomic per batch, serialised across tabs); no
  * non-Dexie promise is awaited inside (ADR-16).
  */
 export class DexieSyncStore implements LocalSyncStore {
@@ -28,6 +67,14 @@ export class DexieSyncStore implements LocalSyncStore {
     private readonly db: AppDatabase,
     private readonly clock: () => Date = () => new Date(),
   ) {}
+
+  private table(name: LocalTable): AnyTable {
+    return this.db[name] as unknown as AnyTable;
+  }
+
+  private get allTables(): AnyTable[] {
+    return SYNC_TABLES.map((t) => this.table(t.local));
+  }
 
   /**
    * ADR-29 follow-up (M10 fix round 1): a remote tombstone for a record this device does not hold, old
@@ -38,120 +85,129 @@ export class DexieSyncStore implements LocalSyncStore {
     return remote.deletedAt !== null && isPurgeableTombstone({ deletedAt: remote.deletedAt, dirty: 0 }, this.clock(), { neverSynced: false, retentionDays: TOMBSTONE_RETENTION_DAYS });
   }
 
-  getDirty(limit: number): Promise<RemoteChanges> {
-    return this.db.transaction('r', this.db.goals, this.db.entries, async () => {
-      const goals = await this.db.goals.where('dirty').equals(1).limit(limit).toArray();
-      const entries = await this.db.entries.where('dirty').equals(1).limit(limit).toArray();
-      return { goals: goals.map(toSyncRecord), entries: entries.map(toSyncRecord) };
+  getDirty(limit: number, group?: SyncGroup): Promise<FullRemoteChanges> {
+    const specs = syncTables(group);
+    return this.db.transaction('r', this.allTables, async () => {
+      const out = emptyChanges();
+      for (const spec of specs) {
+        const rows = await this.table(spec.local).where('dirty').equals(1).limit(limit).toArray();
+        (out as unknown as Record<LocalTable, unknown[]>)[spec.local] = rows.map(toSyncRecord);
+      }
+      return out;
     });
   }
 
   applyRemote(changes: RemoteChanges): Promise<ApplyResult> {
-    return this.db.transaction('rw', this.db.goals, this.db.entries, async () => {
+    return this.db.transaction('rw', this.allTables, async () => {
       const result: ApplyResult = { applied: 0, keptLocal: 0, skippedInvalid: 0 };
-      const goalsToWrite: GoalRow[] = [];
-      const tombstonedGoals: Array<{ id: string; deletedAt: string }> = [];
-      const goalIds = changes.goals.map((g) => g.id);
-      const localGoals = await this.db.goals.bulkGet(goalIds);
-      changes.goals.forEach((remote, i) => {
-        const local = localGoals[i];
-        const canonical = asGoalRow(remote);
-        if (local && sameVersion(local, remote)) {
-          // Same version: the server copy is the canonical one; usually identical → only `dirty` drops.
-          if (local.dirty === 1 || !equalRows(local, canonical)) goalsToWrite.push(canonical);
-          result.applied += 1;
-          return;
-        }
-        if (resolveIncoming(local, remote) === 'keep-local') {
-          result.keptLocal += 1;
-          return;
-        }
-        if (!local && this.isStaleRemoteTombstone(remote)) {
-          // Nothing to delete here and nothing worth keeping: count it, cascade, do not store (ADR-29).
-          result.applied += 1;
-          tombstonedGoals.push({ id: remote.id, deletedAt: remote.deletedAt! });
-          return;
-        }
-        goalsToWrite.push(canonical);
-        result.applied += 1;
-        if (remote.deletedAt !== null) tombstonedGoals.push({ id: remote.id, deletedAt: remote.deletedAt });
-      });
-      if (goalsToWrite.length > 0) await this.db.goals.bulkPut(goalsToWrite);
+      const toWrite = {} as Record<LocalTable, AnyRow[]>;
+      const written = {} as Record<LocalTable, Set<string>>;
+      const tombstoned = {} as Record<LocalTable, AnyRecord[]>;
 
-      const entriesToWrite: EntryRow[] = [];
-      const entryIds = changes.entries.map((e) => e.id);
-      const localEntries = await this.db.entries.bulkGet(entryIds);
-      const written = new Set<string>();
-      changes.entries.forEach((remote, i) => {
-        const local = localEntries[i];
-        const canonical = asEntryRow(remote);
-        if (local && sameVersion(local, remote)) {
-          if (local.dirty === 1 || !equalRows(local, canonical)) entriesToWrite.push(canonical);
+      // 1. Every table, parents first: LWW per row against the local copy.
+      for (const spec of SYNC_TABLES) {
+        const remoteRows = (changes[spec.local] ?? []) as unknown as AnyRecord[];
+        const writes: AnyRow[] = [];
+        const seen = new Set<string>();
+        const stones: AnyRecord[] = [];
+        const locals = remoteRows.length > 0 ? await this.table(spec.local).bulkGet(remoteRows.map((r) => r.id)) : [];
+        remoteRows.forEach((remote, i) => {
+          const local = locals[i];
+          const canonical = asRow(spec, remote);
+          if (local && sameVersion(local, remote)) {
+            // Same version: the server copy is the canonical one; usually identical → only `dirty` drops.
+            if (local.dirty === 1 || !equalRows(local, canonical)) writes.push(canonical);
+            result.applied += 1;
+            seen.add(remote.id);
+            return;
+          }
+          if (resolveIncoming(local, remote) === 'keep-local') {
+            result.keptLocal += 1;
+            return;
+          }
           result.applied += 1;
-          written.add(remote.id);
-          return;
-        }
-        if (resolveIncoming(local, remote) === 'keep-local') {
-          result.keptLocal += 1;
-          return;
-        }
-        if (!local && this.isStaleRemoteTombstone(remote)) {
-          result.applied += 1;
-          written.add(remote.id);
-          return;
-        }
-        entriesToWrite.push(canonical);
-        written.add(remote.id);
-        result.applied += 1;
-      });
+          seen.add(remote.id);
+          if (!local && this.isStaleRemoteTombstone(remote)) {
+            // Nothing to delete here and nothing worth keeping: count it, cascade, do not store (ADR-29).
+            stones.push(remote);
+            return;
+          }
+          writes.push(canonical);
+          if (remote.deletedAt !== null) stones.push(remote);
+        });
+        toWrite[spec.local] = writes;
+        written[spec.local] = seen;
+        tombstoned[spec.local] = stones;
+      }
 
-      // Cascade: a goal tombstone takes its live entries with it (ADR-20). Entries already written
-      // in this batch keep the batch's version (the remote row is the canonical one).
-      for (const { id, deletedAt } of tombstonedGoals) {
-        const live = (await this.db.entries.where('goalId').equals(id).toArray()).filter((e) => isLive(e) && !written.has(e.id));
-        for (const e of live) {
-          const stamp = nextUpdatedAt(new Date(deletedAt), e.updatedAt);
-          entriesToWrite.push({ ...e, updatedAt: stamp, deletedAt: stamp, dirty: 1 });
+      // 2. Cascades: a parent tombstone takes its live children with it (ADR-20). Children already written in this
+      //    batch keep the batch's version (the remote row is the canonical one).
+      for (const cascade of CASCADES) {
+        for (const parent of tombstoned[cascade.parent]) {
+          const live = (await cascade.children(this.db, parent)).filter((c) => isLive(c) && !written[cascade.child].has(c.id));
+          for (const c of live) {
+            const stamp = nextUpdatedAt(new Date(parent.deletedAt!), c.updatedAt);
+            toWrite[cascade.child].push({ ...c, updatedAt: stamp, deletedAt: stamp, dirty: 1 });
+            written[cascade.child].add(c.id);
+          }
         }
       }
-      if (entriesToWrite.length > 0) await this.db.entries.bulkPut(entriesToWrite);
+
+      // 3. Write, parents first.
+      for (const spec of SYNC_TABLES) if (toWrite[spec.local].length > 0) await this.table(spec.local).bulkPut(toWrite[spec.local]);
       return result;
     });
   }
 
   markAllDirty(): Promise<number> {
-    return this.db.transaction('rw', this.db.goals, this.db.entries, async () => {
-      const g = await this.db.goals.filter(isLive).modify({ dirty: 1 });
-      const e = await this.db.entries.filter(isLive).modify({ dirty: 1 });
-      return g + e;
+    return this.db.transaction('rw', this.allTables, async () => {
+      let n = 0;
+      for (const t of this.allTables) n += await t.filter(isLive).modify({ dirty: 1 });
+      return n;
     });
   }
 
   tombstoneOrphanEntries(now: Date): Promise<number> {
-    return this.db.transaction('rw', this.db.goals, this.db.entries, async () => {
-      const deleted = new Set<string>();
-      await this.db.goals.filter((g) => !isLive(g)).each((g) => {
-        deleted.add(g.id);
-      });
-      if (deleted.size === 0) return 0;
-      const orphans = (await this.db.entries.where('goalId').anyOf([...deleted]).toArray()).filter(isLive);
-      if (orphans.length === 0) return 0;
-      await this.db.entries.bulkPut(
-        orphans.map((e) => {
-          const stamp = nextUpdatedAt(now, e.updatedAt);
-          return { ...e, updatedAt: stamp, deletedAt: stamp, dirty: 1 };
-        }),
-      );
-      return orphans.length;
+    return this.db.transaction('rw', this.allTables, async () => {
+      let n = 0;
+      // Parents first: a phase tombstoned here because its roadmap is gone is seen as deleted by the items step.
+      for (const spec of SYNC_TABLES) {
+        if (spec.parents.length === 0) continue;
+        const orphans = new Map<string, AnyRow>();
+        for (const parent of spec.parents) {
+          const deleted = new Set<string>();
+          await this.table(parent.table)
+            .filter((r) => !isLive(r))
+            .each((r) => {
+              deleted.add(r.id);
+            });
+          if (deleted.size === 0) continue;
+          const children = parent.indexed
+            ? await this.table(spec.local).where(parent.field).anyOf([...deleted]).toArray()
+            : await this.table(spec.local).filter((r) => deleted.has(r[parent.field] as string)).toArray();
+          for (const c of children) if (isLive(c)) orphans.set(c.id, c);
+        }
+        if (orphans.size === 0) continue;
+        await this.table(spec.local).bulkPut(
+          [...orphans.values()].map((c) => {
+            const stamp = nextUpdatedAt(now, c.updatedAt);
+            return { ...c, updatedAt: stamp, deletedAt: stamp, dirty: 1 as const };
+          }),
+        );
+        n += orphans.size;
+      }
+      return n;
     });
   }
 
-  countDirty(): Promise<number> {
-    return this.db.transaction('r', this.db.goals, this.db.entries, this.db.kv, async () => {
-      const g = await this.db.goals.where('dirty').equals(1).count();
-      const e = await this.db.entries.where('dirty').equals(1).count();
+  countDirty(group?: SyncGroup): Promise<number> {
+    const specs = syncTables(group);
+    return this.db.transaction('r', [...this.allTables, this.db.kv], async () => {
+      let n = 0;
+      for (const spec of specs) n += await this.table(spec.local).where('dirty').equals(1).count();
+      if (group) return n;
       const prefs = normalizePrefsSync((await this.db.kv.get('prefsSync'))?.value);
-      return g + e + prefs.reminder.dirty + prefs.locale.dirty;
+      return n + prefs.reminder.dirty + prefs.locale.dirty;
     });
   }
 
@@ -159,37 +215,27 @@ export class DexieSyncStore implements LocalSyncStore {
     return fromLiveQuery(() => this.countDirty());
   }
 
-  markRejected(ids: { goals: string[]; entries: string[] }): Promise<number> {
-    return this.db.transaction('rw', this.db.goals, this.db.entries, async () => {
+  markRejected(ids: IdsByTable): Promise<number> {
+    return this.db.transaction('rw', this.allTables, async () => {
       let n = 0;
-      if (ids.goals.length > 0) n += await this.db.goals.where('id').anyOf(ids.goals).and((g) => g.dirty === 1).modify({ dirty: 2 });
-      if (ids.entries.length > 0) n += await this.db.entries.where('id').anyOf(ids.entries).and((e) => e.dirty === 1).modify({ dirty: 2 });
+      for (const spec of SYNC_TABLES) {
+        const list = ids[spec.local];
+        if (list && list.length > 0) n += await this.table(spec.local).where('id').anyOf(list).and((r) => r.dirty === 1).modify({ dirty: 2 });
+      }
       return n;
     });
   }
 
   countRejected(): Promise<number> {
-    return this.db.transaction('r', this.db.goals, this.db.entries, async () => (await this.db.goals.where('dirty').equals(2).count()) + (await this.db.entries.where('dirty').equals(2).count()));
+    return this.db.transaction('r', this.allTables, async () => {
+      let n = 0;
+      for (const t of this.allTables) n += await t.where('dirty').equals(2).count();
+      return n;
+    });
   }
 
   purgeTombstones(now: Date): Promise<PurgeCounts> {
-    // v8.0 (M17): the same rule on the four roadmap tables (ADR-29).
-    const tables = ['goals', 'entries', ...ROADMAP_TABLES] as const;
-    return this.db.transaction('rw', [...tables.map((t) => this.db[t]), this.db.kv], async () => {
-      const raw = await this.db.kv.get('sync');
-      const meta = raw ? normalizeSyncMeta(raw.value) : null;
-      const rule = { neverSynced: !meta || (meta.userId === null && meta.lastUserId === null), retentionDays: TOMBSTONE_RETENTION_DAYS };
-      const counts = {} as PurgeCounts;
-      for (const t of tables) {
-        const ids: string[] = [];
-        await (this.db[t] as Table<{ id: string; deletedAt: string | null; dirty: 0 | 1 | 2 }, string>).filter((r) => isPurgeableTombstone(r, now, rule)).each((r) => {
-          ids.push(r.id);
-        });
-        if (ids.length > 0) await this.db[t].bulkDelete(ids);
-        counts[t] = ids.length;
-      }
-      return counts;
-    });
+    return purgeTombstones(this.db, now);
   }
 }
 
@@ -202,34 +248,9 @@ function equalRows<T extends object>(a: T, b: T): boolean {
   return true;
 }
 
-function asGoalRow(remote: SyncRecord<Goal>): GoalRow {
-  return {
-    id: remote.id,
-    name: remote.name,
-    why: remote.why,
-    targetType: remote.targetType,
-    targetMinutes: remote.targetMinutes,
-    startDate: remote.startDate,
-    endDate: remote.endDate,
-    archived: remote.archived,
-    createdAt: remote.createdAt,
-    updatedAt: remote.updatedAt,
-    deletedAt: remote.deletedAt,
-    dirty: 0,
-  };
-}
-
-function asEntryRow(remote: SyncRecord<LogEntry>): EntryRow {
-  return {
-    id: remote.id,
-    goalId: remote.goalId,
-    date: remote.date,
-    minutes: remote.minutes,
-    note: remote.note,
-    source: remote.source,
-    createdAt: remote.createdAt,
-    updatedAt: remote.updatedAt,
-    deletedAt: remote.deletedAt,
-    dirty: 0,
-  };
+/** The remote record reduced to the table's stored fields, `dirty = 0` (the server copy is in sync by definition). */
+function asRow(spec: SyncTableSpec, remote: AnyRecord): AnyRow {
+  const row = { dirty: 0 } as unknown as AnyRow;
+  for (const f of FIELDS[spec.local]) row[f] = remote[f];
+  return row;
 }

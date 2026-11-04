@@ -2,6 +2,7 @@ import type { Roadmap, RoadmapAggregate, RoadmapCheckpoint, RoadmapItem, Roadmap
 import type { PrefGroupMeta, SyncErrorCode } from '../domain/sync';
 import type { ActiveTimer, Goal, ISODate, ISODateTime, LogEntry, Settings } from '../domain/types';
 import type { Locale } from '../i18n/types';
+import type { LocalTable, SyncGroup } from './sync-tables';
 
 export interface Subscribable<T> {
   subscribe(onNext: (value: T) => void, onError?: (e: unknown) => void): () => void;
@@ -252,9 +253,36 @@ export type EntryRow = LogEntry & { deletedAt: ISODateTime | null; dirty: SyncFl
 /** Exchange format with a `RemoteStore`: domain record + tombstone marker, no `dirty`. */
 export type SyncRecord<T> = T & { deletedAt: ISODateTime | null };
 
+/**
+ * Rows exchanged with a `RemoteStore`, keyed by local table name. `goals`/`entries` are required (M7 API);
+ * the four roadmap arrays (v8.0, M18, ADR-50) are optional on input so older callers and tests still compile.
+ * Outputs (`getDirty`, `fetchByIds`) always carry all six.
+ */
 export interface RemoteChanges {
   goals: SyncRecord<Goal>[];
   entries: SyncRecord<LogEntry>[];
+  roadmaps?: SyncRecord<Roadmap>[];
+  roadmapPhases?: SyncRecord<RoadmapPhase>[];
+  roadmapItems?: SyncRecord<RoadmapItem>[];
+  roadmapCheckpoints?: SyncRecord<RoadmapCheckpoint>[];
+}
+
+export type FullRemoteChanges = Required<RemoteChanges>;
+
+/** Ids per table (`fetchByIds` input, `PushResult.rejected`, `markRejected`); roadmap keys optional like `RemoteChanges`. */
+export type IdsByTable = { goals: string[]; entries: string[] } & Partial<Record<Exclude<LocalTable, 'goals' | 'entries'>, string[]>>;
+
+export const SYNC_LOCAL_TABLES: readonly LocalTable[] = ['goals', 'entries', 'roadmaps', 'roadmapPhases', 'roadmapItems', 'roadmapCheckpoints'];
+
+export function emptyChanges(): FullRemoteChanges {
+  return { goals: [], entries: [], roadmaps: [], roadmapPhases: [], roadmapItems: [], roadmapCheckpoints: [] };
+}
+
+/** Rows in a `RemoteChanges` (all tables). */
+export function changesCount(c: RemoteChanges): number {
+  let n = 0;
+  for (const t of SYNC_LOCAL_TABLES) n += c[t]?.length ?? 0;
+  return n;
 }
 
 export interface ApplyResult {
@@ -285,25 +313,34 @@ export function isLive(row: { deletedAt?: ISODateTime | null } | undefined): boo
  * transaction, so it is atomic per batch and serialised across tabs.
  */
 export interface LocalSyncStore {
-  /** Up to `limit` dirty rows per table, goals first. Includes tombstones. */
-  getDirty(limit: number): Promise<RemoteChanges>;
   /**
-   * ONE readwrite transaction over goals + entries: `resolveIncoming(local, remote)` per row;
+   * Up to `limit` dirty rows per table, parents first (SYNC_TABLES order). Includes tombstones. v8.0 (M18, ADR-50):
+   * `group` restricts the read to one push group (`core` = goals/entries, `roadmap` = the four roadmap tables);
+   * tables outside the group come back empty.
+   */
+  getDirty(limit: number, group?: SyncGroup): Promise<FullRemoteChanges>;
+  /**
+   * ONE readwrite transaction over the six synced tables: `resolveIncoming(local, remote)` per row;
    * `apply` → write the remote row with `dirty = 0`; `keep-local` → untouched. A remote row equal to
    * the local one (same `updatedAt`, same deleted-ness) only clears `dirty`. Applying a goal
-   * tombstone soft-deletes the goal's live entries (`dirty = 1`).
+   * tombstone soft-deletes the goal's live entries (`dirty = 1`); a roadmap tombstone its live
+   * phases/items/checkpoints and a phase tombstone its live items (v8.0), all in the same transaction.
    */
   applyRemote(changes: RemoteChanges): Promise<ApplyResult>;
-  /** `dirty = 1` on every live row (merge into another account, FR-47). Returns how many. */
+  /** `dirty = 1` on every live row of the six tables (merge into another account, FR-47). Returns how many. */
   markAllDirty(): Promise<number>;
-  /** Soft-delete live entries whose goal is soft-deleted (end-of-cycle cleanup). Returns how many. */
+  /**
+   * End-of-cycle cleanup: soft-delete live rows whose parent is soft-deleted — entries of deleted goals (M7), and
+   * v8.0: phases/items/checkpoints of deleted roadmaps and items of deleted phases. Returns how many.
+   */
   tombstoneOrphanEntries(now: Date): Promise<number>;
-  countDirty(): Promise<number>;
-  /** Dirty goals + dirty entries + dirty preference groups (v2.1). */
+  /** Dirty rows of the six tables + dirty preference groups; with `group`, only that group's rows (no prefs). */
+  countDirty(group?: SyncGroup): Promise<number>;
+  /** Dirty rows of the six tables + dirty preference groups (v2.1). */
   watchPendingCount(): Subscribable<number>;
   /** M7-D1: rows the cloud refused → `dirty = 2` (only rows still at `dirty = 1`). Returns how many were flagged. */
-  markRejected(ids: { goals: string[]; entries: string[] }): Promise<number>;
-  /** Rows (live or tombstoned) flagged `dirty = 2`. */
+  markRejected(ids: IdsByTable): Promise<number>;
+  /** Rows (live or tombstoned) of the six tables flagged `dirty = 2`. */
   countRejected(): Promise<number>;
   /**
    * v3.1 (M10, ADR-29): hard-delete the tombstones `isPurgeableTombstone` allows, in ONE readwrite
