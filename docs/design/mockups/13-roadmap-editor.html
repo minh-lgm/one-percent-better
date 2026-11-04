@@ -55,6 +55,8 @@ h1{font:400 36px/40px var(--font-display);letter-spacing:-.01em}@media (min-widt
 .input{font:400 17px/24px var(--font);color:var(--text);background:transparent;border:0;border-bottom:1px solid var(--border-input);padding:8px 0;min-height:44px;width:100%;min-width:0;border-radius:0}
 .input:hover{border-bottom-color:var(--text)}.input:focus-visible{outline:none;border-bottom:2px solid var(--text);padding-bottom:7px}
 .input[aria-invalid=true]{border-bottom-color:var(--danger)}
+/* v8.3 date boxes (FR-81): app class "num narrow date-fit" = Fraunces 24/30; never narrower than "dd/mm/yyyy" + calendar icon (10ch + 56px, ch of the box's own font) */
+.input[type=date]{font:400 24px/30px var(--font-display);font-variant-numeric:tabular-nums;min-width:calc(10ch + 56px);max-width:100%}
 input.input.n{font:400 24px/30px var(--font-display);width:8ch}
 select.input{padding-right:24px}textarea.input{min-height:96px;resize:vertical}
 .hint{font-size:14px;line-height:20px;color:var(--text-muted);margin-top:6px}

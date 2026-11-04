@@ -65,6 +65,8 @@ h1{font:400 36px/40px var(--font-display);letter-spacing:-.01em;overflow-wrap:an
 .m .v small{font:400 16px/24px var(--font);color:var(--text-muted);letter-spacing:0}
 .m .v.txt{font-size:26px;line-height:32px}
 .m .s{margin-top:4px;font-size:14px;line-height:20px;color:var(--text-muted)}
+/* v8.3: hours-outside is a plain sentence under the number (same 14/20 --text-muted as the plan line: 4.9:1 light, 6.8:1 dark); the plan line follows at 2 px */
+.m .s.out+.s{margin-top:2px}
 .m .chip{margin-top:10px}
 .pbar{height:6px;background:var(--border);border-radius:3px;margin-top:10px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--primary)}
 /* week strip: 7 per row on phones (3 rows for 21), one row on desktop */
@@ -109,7 +111,10 @@ h1{font:400 36px/40px var(--font-display);letter-spacing:-.01em;overflow-wrap:an
 .fld label{display:block;font:600 12px/16px var(--font);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
 .fld .in{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .input{font:400 17px/24px var(--font);color:var(--text);background:transparent;border:0;border-bottom:1px solid var(--border-input);padding:8px 0;min-height:44px;min-width:0;width:100%;border-radius:0}
-.input.d{width:auto;flex:1 1 120px;font:400 22px/28px var(--font-display)}
+/* v8.3 date boxes (FR-81): never narrower than the full "dd/mm/yyyy" + calendar icon. --date-min resolves ch on the element that uses it; width:max-content = natural width; Today/Clear stay together in .btns and wrap as ONE unit under the box */
+:root{--date-min:calc(10ch + 56px)}
+.input.d{flex:0 0 auto;width:max-content;min-width:var(--date-min);max-width:100%;font:400 22px/28px var(--font-display);font-variant-numeric:tabular-nums}
+.btns{display:flex;gap:8px;align-items:center;flex:0 0 auto}
 textarea.input{min-height:72px;resize:vertical}
 .err{font-size:14px;line-height:20px;color:var(--danger);display:flex;gap:6px;margin-top:6px}
 .hint{font-size:14px;line-height:20px;color:var(--text-muted);margin-top:6px}
@@ -163,7 +168,7 @@ details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;f
     <label>Điểm CP2 <select id="cp2"><option value="">chưa có</option><option value="18">18 (dưới ngưỡng)</option><option value="21">21 (đạt)</option></select></label>
   </div>
   <div id="view"></div>
-  <p class="mock-note">Mockup S13 (DESIGN v8.0; M19 chi tiết + thao tác nhanh, M20 checkpoint). Số liệu tính bằng đúng quy tắc ARCH §4.8 (c) từ dataset Q1: 6 entry, hôm nay 04/11/2026. Bấm ô trong dải để cuộn tới mục; tick hoặc "Hôm nay" cập nhật ngay; "Ngày & ghi chú" mở chi tiết mục.</p>
+  <p class="mock-note">Mockup S13 (DESIGN v8.0 + v8.3; M19 chi tiết + thao tác nhanh, M20 checkpoint, M21 giờ + ô ngày). Số liệu tính bằng đúng quy tắc ARCH §4.8 (c) v8.3 từ dataset Q1: 6 entry, hôm nay 04/11/2026; Giờ đã học = tổng goal 395 phút = 6,6 giờ, dòng "Gồm 0,8 giờ từ trước ngày bắt đầu lộ trình" (50 phút ngày 20/10); W1 4,5 / W2 1,3 giờ không đổi. Ô ngày (mở "Ngày & ghi chú"): luôn đủ dd/mm/yyyy + biểu tượng lịch; nút Hôm nay + Xóa xuống dòng cùng nhau dưới ô khi hẹp. Bấm ô trong dải để cuộn tới mục; tick hoặc "Hôm nay" cập nhật ngay; "Ngày & ghi chú" mở chi tiết mục.</p>
 </main></div>
 <script>
 const DAY=864e5,P=s=>Date.parse(s+'T00:00:00Z'),F=ms=>new Date(ms).toISOString().slice(0,10);
@@ -185,7 +190,8 @@ en:{'a11y.skip':'Skip to content','nav.today':'Today','nav.goals':'Goals','nav.r
 'phase.progress':'Done {{done}}/{{total}}',
 'cp.title':'Checkpoints','cp.colName':'Checkpoint','cp.colThreshold':'Threshold','cp.colScore':'Score','cp.week':'W{{n}}','cp.scoreAria':'Score for {{title}} (out of {{max}})','cp.state.pass':'Passed','cp.state.below':'Below threshold','cp.state.recorded':'Recorded','cp.state.pending':'No score yet',
 'cp.chartTitle':'Scores vs. thresholds','cp.legendThreshold':'Threshold','cp.err.range':'Score must be between 0 and the maximum score.',
-'note.title':'Notes','howHours.summary':'How study time is counted','howHours.body':"Study time comes from the entries on the linked goal. Each day's minutes count toward one item: the one you've started or finished on that date, otherwise the one whose planned dates include it. Days outside every item aren't counted here (they still count on the goal).",
+'note.title':'Notes','howHours.summary':'How study time is counted','howHours.body':"The total is everything logged on the linked goal, the same figure the goal's page shows. An item's hours include only the days counted for it, and each day counts for one item: the one you've started or finished on that date, otherwise the one whose planned dates include it. A day that falls in no item isn't added to any item, but it still counts in the total.",
+'overview.hoursOutsideBefore':"Includes {{hours}} from before the roadmap's start date.",'overview.hoursOutside':'Includes {{hours}} from days that fall outside every item.',
 'roadmapTitle':'QPT 21 weeks','goalName':'QPT study','milestoneLabel':'QPT exam'},
 vi:{'a11y.skip':'Chuyển tới nội dung','nav.today':'Hôm nay','nav.goals':'Mục tiêu','nav.roadmaps':'Mục tiêu lớn','nav.review':'Tổng kết','nav.settings':'Cài đặt','noValue':'—','h':'{{n}} giờ','min':'{{n}} phút',
 'detail.back':'Tất cả mục tiêu lớn','detail.edit':'Sửa lộ trình','detail.goal':'Mục tiêu','detail.goalArchived':'đã lưu trữ','detail.goalNone':'Chưa liên kết mục tiêu','detail.goalMissing':'Mục tiêu liên kết đã bị xóa',
@@ -204,7 +210,8 @@ vi:{'a11y.skip':'Chuyển tới nội dung','nav.today':'Hôm nay','nav.goals':'
 'phase.progress':'Xong {{done}}/{{total}}',
 'cp.title':'Điểm kiểm tra','cp.colName':'Mốc','cp.colThreshold':'Ngưỡng','cp.colScore':'Điểm','cp.week':'W{{n}}','cp.scoreAria':'Điểm của {{title}} (trên {{max}})','cp.state.pass':'Đạt','cp.state.below':'Dưới ngưỡng','cp.state.recorded':'Đã ghi','cp.state.pending':'Chưa có điểm',
 'cp.chartTitle':'Điểm so với ngưỡng','cp.legendThreshold':'Ngưỡng','cp.err.range':'Điểm phải từ 0 đến điểm tối đa.',
-'note.title':'Ghi chú','howHours.summary':'Cách tính giờ học','howHours.body':'Giờ học lấy từ các lần ghi của mục tiêu được liên kết. Mỗi ngày chỉ tính cho một mục: mục bạn đã bắt đầu hoặc đã xong vào ngày đó, nếu không có thì mục có ngày kế hoạch bao gồm ngày ấy. Ngày nằm ngoài mọi mục không tính ở đây (vẫn tính ở mục tiêu).',
+'note.title':'Ghi chú','howHours.summary':'Cách tính giờ học','howHours.body':'Tổng giờ học là toàn bộ thời gian đã ghi ở mục tiêu được liên kết, đúng con số trang mục tiêu hiển thị. Giờ của từng mục chỉ gồm các ngày tính cho mục đó; mỗi ngày chỉ tính cho một mục: mục bạn đã bắt đầu hoặc đã xong vào ngày đó, nếu không có thì mục có ngày kế hoạch bao gồm ngày ấy. Ngày không rơi vào mục nào thì không cộng cho mục nào, nhưng vẫn nằm trong tổng.',
+'overview.hoursOutsideBefore':'Gồm {{hours}} từ trước ngày bắt đầu lộ trình.','overview.hoursOutside':'Gồm {{hours}} ở những ngày không thuộc mục nào.',
 'roadmapTitle':'QPT 21 tuần','goalName':'QPT study','milestoneLabel':'Thi QPT'}};
 let L='vi';
 const t=(k,v)=>{let s=D[L][k]??D.en[k]??k;for(const x in v)s=s.split('{{'+x+'}}').join(v[x]);return s};
@@ -243,16 +250,16 @@ function build(){
  state={v,today:P(today),link:v==='q1e'?'missing':v==='arch'?'archived':v==='none'?'none':'linked'};
 }
 function compute(){
- const T=state.today;const mins=items.map(()=>0);
+ const T=state.today;const mins=items.map(()=>0);let all=0,out=0,before=0; /* v8.3: all = every entry of the linked goal (= Goal detail total); out = days no item claims; before = part of out earlier than the first planned start */
  if(state.link==='linked'||state.link==='archived'){
-  for(const d in ENT){const dd=P(d);if(dd>T)continue;const c=items.filter(x=>{const S=x.as??x.ps,E=x.ae??(x.as?Math.max(x.pe,T):x.pe);return S<=dd&&dd<=E});
-   if(!c.length)continue;c.sort((a,b)=>((b.as||b.ae)?1:0)-((a.as||a.ae)?1:0)||((b.as??b.ps)-(a.as??a.ps))||a.i-b.i);mins[c[0].i]+=ENT[d]}}
+  for(const d in ENT){const dd=P(d);if(dd>T)continue;all+=ENT[d];const c=items.filter(x=>{const S=x.as??x.ps,E=x.ae??(x.as?Math.max(x.pe,T):x.pe);return S<=dd&&dd<=E});
+   if(!c.length){out+=ENT[d];if(dd<START)before+=ENT[d];continue}c.sort((a,b)=>((b.as||b.ae)?1:0)-((a.as||a.ae)?1:0)||((b.as??b.ps)-(a.as??a.ps))||a.i-b.i);mins[c[0].i]+=ENT[d]}}
  const hasHours=state.link==='linked'||state.link==='archived';
  const done=items.filter(x=>x.ae!=null).length,over=items.filter(x=>x.ae==null&&x.pe<T).length;
  const end=items[items.length-1].pe,weeks=Math.min(21,T<START?0:Math.floor((T-START)/DAY/7)+1);
  let pace;if(T<START)pace='notStarted';else if(done===items.length)pace='completed';else if(!over)pace='onTrack';else pace=over===1?'warn':'crit';
  const cur=items.find(x=>x.ps<=T&&T<=x.pe);
- return {mins,hasHours,done,over,weeks,pace,cur,end,total:hasHours?mins.reduce((a,b)=>a+b,0):null,plan:480*weeks};
+ return {mins,hasHours,done,over,weeks,pace,cur,end,total:hasHours?all:null,out,before,plan:480*weeks};
 }
 const IC={good:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',idle:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',warn:'<path d="M12 4l9 16H3zM12 10v4M12 17h.01"/>',crit:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/>'};
 const chip=(k,txt)=>`<span class="chip ${k}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>${txt}</span>`;
@@ -285,12 +292,14 @@ function render(){
  let hs;if(state.link==='none')hs=`${t('overview.hoursNone')} <a href="13-roadmap-editor.html">${t('overview.linkGoal')}</a>`;
  else if(state.link==='missing')hs=`${t('overview.hoursMissing')} <a href="13-roadmap-editor.html">${t('overview.linkGoal')}</a>`;
  else hs=(state.link==='archived'?t('overview.hoursArchived')+' ':'')+t('overview.hoursPlan',{plan:hrs(c.plan)});
+ /* v8.3 hours-outside: shown only with a goal, at least one item and a non-zero remainder; "before the start date" variant when ALL of it is earlier than the first planned start */
+ const outLine=(c.hasHours&&items.length&&c.out>0)?`<div class="s out" data-testid="hours-outside">${t(c.before===c.out?'overview.hoursOutsideBefore':'overview.hoursOutside',{hours:hrs(c.out)})}</div>`:'';
  const days=Math.round((P('2027-03-09')-T)/DAY);
  const mv=days>0?`${days}<small> ${t('milestoneN')}</small>`:days===0?`<span class="txt-v">${t('milestone.today')}</span>`:`<span class="txt-v">${t('milestone.past')}</span>`;
  const ov=`<section class="sec" aria-labelledby="ovh"><h2 class="eyebrow" id="ovh">${t('overview.label')}</h2><div class="ov">
   <div class="m"><div class="eyebrow">${t('overview.pace')}</div>${paceChip}<div class="s">${paceSub}</div></div>
   <div class="m"><div class="eyebrow">${t('overview.doneWeeks')}</div><div class="v">${c.done}/${items.length}</div><div class="pbar" aria-hidden="true"><i style="width:${c.done/items.length*100}%"></i></div></div>
-  <div class="m"><div class="eyebrow">${t('overview.hours')}</div><div class="v ${c.hasHours?'':'txt'}">${hv}</div><div class="s">${hs}</div></div>
+  <div class="m"><div class="eyebrow">${t('overview.hours')}</div><div class="v ${c.hasHours?'':'txt'}">${hv}</div>${outLine}<div class="s">${hs}</div></div>
   <div class="m"><div class="eyebrow">${t('milestoneLabel')}</div><div class="v ${days>0?'':'txt'}">${mv}</div><div class="s">${t('milestone.date',{date:fd(P('2027-03-09'))})}</div></div></div></section>`;
  // strip
  const cells=items.map(x=>{
@@ -328,8 +337,8 @@ function render(){
    ${x.note?`<div class="it-note">${x.note}</div>`:''}
    <div class="it-det"><button class="btn ghost sm" type="button" data-open="${x.i}" aria-expanded="${isCur}" aria-controls="det-${x.i}" id="ob-${x.i}">${t('item.details')}</button></div>
    <div class="det" id="det-${x.i}">
-    <div class="fld"><label for="as-${x.i}">${t('item.actualStart')}</label><div class="in"><input class="input d" id="as-${x.i}" type="date" value="${x.as?F(x.as):''}"><button class="btn secondary sm" type="button" data-today="as" data-i="${x.i}" aria-label="${t('item.todayAriaStart',{title:x.title}).replace(/"/g,'&quot;')}">${t('item.today')}</button><button class="btn ghost sm" type="button">${t('item.clear')}</button></div></div>
-    <div class="fld"><label for="ae-${x.i}">${t('item.actualEnd')}</label><div class="in"><input class="input d" id="ae-${x.i}" type="date" value="${x.ae?F(x.ae):''}"><button class="btn secondary sm" type="button" data-today="ae" data-i="${x.i}" aria-label="${t('item.todayAriaEnd',{title:x.title}).replace(/"/g,'&quot;')}">${t('item.today')}</button><button class="btn ghost sm" type="button">${t('item.clear')}</button></div></div>
+    <div class="fld"><label for="as-${x.i}">${t('item.actualStart')}</label><div class="in"><input class="input d" id="as-${x.i}" type="date" value="${x.as?F(x.as):''}"><span class="btns"><button class="btn secondary sm" type="button" data-today="as" data-i="${x.i}" aria-label="${t('item.todayAriaStart',{title:x.title}).replace(/"/g,'&quot;')}">${t('item.today')}</button><button class="btn ghost sm" type="button">${t('item.clear')}</button></span></div></div>
+    <div class="fld"><label for="ae-${x.i}">${t('item.actualEnd')}</label><div class="in"><input class="input d" id="ae-${x.i}" type="date" value="${x.ae?F(x.ae):''}"><span class="btns"><button class="btn secondary sm" type="button" data-today="ae" data-i="${x.i}" aria-label="${t('item.todayAriaEnd',{title:x.title}).replace(/"/g,'&quot;')}">${t('item.today')}</button><button class="btn ghost sm" type="button">${t('item.clear')}</button></span></div></div>
     <div class="fld full"><label for="nt-${x.i}">${t('item.noteLabel')}</label><textarea class="input" id="nt-${x.i}" placeholder="${t('item.notePlaceholder')}">${x.note}</textarea></div>
    </div></div></div>`;});
   phHtml+='</section>';});
