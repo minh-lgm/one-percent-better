@@ -95,8 +95,8 @@ export function ItemEditor({ mode, initial, phases, phaseId, suggested, labelled
       {topError ? <Alert>{errorText(topError)}</Alert> : null}
       <TextField id="it-title" inputRef={refs.title} label={t('ed.itemTitleLabel')} required autoComplete="off" counter={t('ed.itemTitleCounter', { n: f.number(title.length) })} maxLength={ITEM_TITLE_MAX + 40} value={title} onChange={(e) => setTitle(e.target.value)} error={fieldError('title')} />
       <div className="re-two">
-        <TextField id="it-start" inputRef={refs.plannedStart} label={t('ed.plannedStart')} required type="date" className="num narrow" value={plannedStart} onChange={(e) => setStart(e.target.value)} error={fieldError('plannedStart')} hint={mode === 'add' ? t('ed.itemDatesHint') : undefined} />
-        <TextField id="it-end" inputRef={refs.plannedEnd} label={t('ed.plannedEnd')} required type="date" className="num narrow" value={plannedEnd} onChange={(e) => setEnd(e.target.value)} error={fieldError('plannedEnd')} />
+        <TextField id="it-start" inputRef={refs.plannedStart} label={t('ed.plannedStart')} required type="date" className="num narrow date-fit" value={plannedStart} onChange={(e) => setStart(e.target.value)} error={fieldError('plannedStart')} hint={mode === 'add' ? t('ed.itemDatesHint') : undefined} />
+        <TextField id="it-end" inputRef={refs.plannedEnd} label={t('ed.plannedEnd')} required type="date" className="num narrow date-fit" value={plannedEnd} onChange={(e) => setEnd(e.target.value)} error={fieldError('plannedEnd')} />
       </div>
       <div className="field">
         <label htmlFor="it-phase">{t('ed.itemPhaseLabel')}</label>

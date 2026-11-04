@@ -167,7 +167,7 @@ export function RoadmapFields({ roadmap, goals, goalMissing = false, srLabel, su
           onChange={(e) => setMilestoneLabel(e.target.value)}
           error={fieldError('milestoneLabel')}
         />
-        <TextField id="rm-md" inputRef={refs.milestoneDate} label={t('ed.milestoneDateLabel')} type="date" className="num narrow" hint={t('ed.milestoneHint')} value={milestoneDate} onChange={(e) => setMilestoneDate(e.target.value)} error={fieldError('milestoneDate')} />
+        <TextField id="rm-md" inputRef={refs.milestoneDate} label={t('ed.milestoneDateLabel')} type="date" className="num narrow date-fit" hint={t('ed.milestoneHint')} value={milestoneDate} onChange={(e) => setMilestoneDate(e.target.value)} error={fieldError('milestoneDate')} />
       </div>
       <div className="re-actions">
         <Button type="submit" variant="primary" disabled={saving} aria-busy={saving || undefined}>

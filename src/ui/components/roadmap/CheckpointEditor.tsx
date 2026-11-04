@@ -109,7 +109,7 @@ export function CheckpointEditor({ mode, initial, today, labelledBy, onDirty, on
       {count > 0 ? <Alert>{t('ed.summary', { count })}</Alert> : null}
       {topError ? <Alert>{errorText(topError)}</Alert> : null}
       <TextField id="cp-title" inputRef={refs.title} label={t('ed.cpNameLabel')} required autoComplete="off" counter={t('ed.titleCounter', { n: f.number(values.title.length) })} maxLength={CHECKPOINT_TITLE_MAX + 40} value={values.title} onChange={set('title')} error={fieldError('title')} />
-      <TextField id="cp-date" inputRef={refs.date} label={t('ed.cpDateLabel')} required type="date" className="num narrow" value={values.date} onChange={set('date')} error={fieldError('date')} />
+      <TextField id="cp-date" inputRef={refs.date} label={t('ed.cpDateLabel')} required type="date" className="num narrow date-fit" value={values.date} onChange={set('date')} error={fieldError('date')} />
       <div className="re-two">
         {numberField('maxScore', t('ed.cpMaxLabel'))}
         {numberField('threshold', t('ed.cpThresholdLabel'))}

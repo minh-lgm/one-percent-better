@@ -196,7 +196,7 @@ function DateControl({ id, label, value, today, error, todayAria, clearAria, onC
         <input
           id={id}
           type="date"
-          className="input d num"
+          className="input d num date-fit"
           value={draft}
           max={today}
           aria-invalid={error ? true : undefined}
@@ -210,12 +210,14 @@ function DateControl({ id, label, value, today, error, todayAria, clearAria, onC
             if (e.target.value === '' && value !== null) onChange(null);
           }}
         />
-        <Button variant="secondary" className="sm" aria-label={todayAria} onClick={() => onChange(today)}>
-          {t('item.today')}
-        </Button>
-        <Button variant="ghost" className="sm" aria-label={clearAria} disabled={value === null && draft === ''} onClick={() => onChange(null)}>
-          {t('item.clear')}
-        </Button>
+        <div className="rd-btns">
+          <Button variant="secondary" className="sm" aria-label={todayAria} onClick={() => onChange(today)}>
+            {t('item.today')}
+          </Button>
+          <Button variant="ghost" className="sm" aria-label={clearAria} disabled={value === null && draft === ''} onClick={() => onChange(null)}>
+            {t('item.clear')}
+          </Button>
+        </div>
       </div>
       {error ? (
         <p id={`${id}-err`} className="err" role="alert">

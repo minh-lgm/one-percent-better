@@ -2,6 +2,19 @@
    Loaded with the lazy roadmap chunks (ADR-53) next to roadmaps.css; nothing here is on the cold-load path.
    Flat sections with hairlines, no cards. ASCII only. */
 
+/* ---- v8.3 date boxes (M21, FR-81, A-94; DESIGN v8.3 §6.3 "Ô ngày (FR-81)") ----
+   A date box never gets narrower than its own "dd/mm/yyyy" + calendar icon; the buttons wrap, not the box.
+   `ch` resolves on the element that uses the variable (22 px or 24 px Fraunces). `.date-fit` keeps the lower
+   specificity on purpose: `.input.narrow` (app.css) still caps the editor/dialog boxes at 220 px, and a
+   `min-width` larger than that cap would still win. */
+:root {
+  --date-min: calc(10ch + 56px);
+}
+.date-fit {
+  min-width: var(--date-min);
+  max-width: 100%;
+}
+
 /* ---- M19 list changes: rows are links; create button in the empty state (DESIGN S11) ---- */
 .rm-link {
   display: block;
@@ -121,6 +134,10 @@
 }
 .rd-s a {
   color: var(--primary);
+}
+/* v8.3 (M21, DESIGN S13 "Dòng hours-outside"): plain sentence under the hours; the plan line follows at 2 px. */
+.rd-s.rd-out + .rd-s {
+  margin-top: 2px;
 }
 .rd-bar {
   height: 6px;
@@ -372,19 +389,15 @@
 }
 .rd-det {
   display: grid;
-  grid-template-columns: 1fr;
+  /* v8.3: a column is never narrower than 14rem (> the date floor), so two columns only when both fit */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: 12px;
   margin-top: 8px;
   padding: 12px 0 4px;
   border-top: 1px dashed var(--border);
 }
-@media (min-width: 640px) {
-  .rd-det {
-    grid-template-columns: 1fr 1fr;
-  }
-  .rd-det .full {
-    grid-column: 1 / -1;
-  }
+.rd-det .full {
+  grid-column: 1 / -1;
 }
 .rd-fld {
   min-width: 0;
@@ -415,10 +428,18 @@
   align-items: center;
 }
 .rd-in .input.d {
-  width: auto;
-  flex: 1 1 120px;
-  min-width: 0;
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: var(--date-min);
+  max-width: 100%;
   font: 400 22px / 28px var(--font-display);
+}
+/* v8.3: Today + Clear wrap together under the box, never apart */
+.rd-btns {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  align-items: center;
 }
 .rd-det textarea.input {
   min-height: 72px;

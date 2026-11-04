@@ -131,7 +131,7 @@ export function TemplateDialog({ today, goals, onCreate, onCreated, onCancel }: 
             inputRef={startRef}
             label={t('tpl.startLabel')}
             type="date"
-            className="num narrow"
+            className="num narrow date-fit"
             required
             disabled={busy}
             value={startDate}
