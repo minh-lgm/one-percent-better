@@ -63,6 +63,7 @@ describe('M9 QC: copy matches DESIGN v6.0 verbatim (FR-35, FR-36)', () => {
   it('every other goal.detail.* row of DESIGN (M3/M5, unchanged) still matches too', () => {
     const bad: string[] = [];
     for (const [k, row] of rows) {
+      if (/roadmap/i.test(k)) continue; // M17 re-target: v8.0 rows goal.detail.roadmapLabel / goal.delete.roadmapNote are M19, not implemented yet
       if (en[k] !== row.en) bad.push(`en ${k}`);
       if (vi[k] !== row.vi) bad.push(`vi ${k}`);
     }

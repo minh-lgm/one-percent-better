@@ -171,7 +171,7 @@ test.describe('M12 QC: native build as iOS (en)', () => {
     expect(fs[0].options.directory).toBe('CACHE');
     expect(fs[0].options.encoding).toBe('utf8');
     const parsed = JSON.parse(String(fs[0].options.data)) as { schemaVersion: number; goals: Array<{ name: string }>; entries: unknown[] };
-    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.schemaVersion).toBe(2); // M17 re-target: export is schemaVersion 2
     expect(parsed.goals.map((g) => g.name)).toEqual(['Read']);
     expect(parsed.entries).toHaveLength(1);
     expect(share[0].options.files).toEqual(['file:///var/mobile/Containers/Data/Application/QC/Library/Caches/1percent-better-backup-2026-10-09.json']);

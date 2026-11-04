@@ -121,7 +121,7 @@ test.describe('QC M7-AC1 / NFR-14 in a real browser', () => {
     await expect(page.getByRole('heading', { level: 1, name: VI.today.title })).toBeVisible();
     await expect(goalCard(page, 'Read')).toBeVisible();
     const upgraded = await rawRows(page);
-    expect(upgraded.version).toBe(20);
+    expect(upgraded.version).toBe(30); // M17: Dexie v3
     expect(upgraded.goals).toHaveLength(5);
     expect(upgraded.entries).toHaveLength(23);
     expect(errors).toEqual([]);
@@ -141,7 +141,7 @@ test.describe('QC M7-AC1 / NFR-14 in a real browser', () => {
     await expect(page.getByTestId('timer-elapsed')).toHaveText('00:30:00');
 
     const raw = await rawRows(page);
-    expect(raw.version).toBe(20);
+    expect(raw.version).toBe(30); // M17: Dexie v3
     expect(raw.goals.sort(byId).map(strip)).toEqual([...SAMPLE.goals].sort(byId));
     expect(raw.entries.sort(byId).map(strip)).toEqual([...SAMPLE.entries].sort(byId));
     for (const r of [...raw.goals, ...raw.entries]) expect({ deletedAt: r.deletedAt, dirty: r.dirty }).toEqual({ deletedAt: null, dirty: 1 });
@@ -165,7 +165,7 @@ test.describe('QC M7-AC1 / NFR-14 in a real browser', () => {
     await page.getByRole('button', { name: VI.settings.backup.export }).click();
     const text = readFileSync((await (await download).path())!, 'utf8');
     const file = JSON.parse(text) as typeof SAMPLE & { schemaVersion: number };
-    expect(file.schemaVersion).toBe(1);
+    expect(file.schemaVersion).toBe(2); // M17 re-target: export is schemaVersion 2
     expect([...file.goals].sort(byId)).toEqual([...SAMPLE.goals].sort(byId));
     expect([...file.entries].sort(byId)).toEqual([...SAMPLE.entries].sort(byId));
     expect(text).not.toMatch(/deletedAt|"dirty"|user_id/);

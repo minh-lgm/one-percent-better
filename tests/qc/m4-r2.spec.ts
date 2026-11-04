@@ -19,7 +19,7 @@ test.describe('M4 round 2: fixes', () => {
   });
 
   for (const [width, label] of [[1200, '1200'], [1280, '1280'], [1440, '1440'], [1920, '1920']] as const) {
-    test(`M4-D2: ${label}px heatmap fits without scrolling, main is class wide and <= 960 px, other screens are not wide`, async ({ page }) => {
+    test(`M4-D2: ${label}px heatmap fits without scrolling, main is class wide and <= the v7.2 cap (1240 px, 1360 px from 1440 px), other screens are not wide`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await importBackup(page);
       await gotoHash(page, '/review');
@@ -30,7 +30,7 @@ test.describe('M4 round 2: fixes', () => {
         return { cls: main.className, w: main.getBoundingClientRect().width, hidden: s.scrollWidth - s.clientWidth, scrollLeft: s.scrollLeft };
       });
       expect(m.cls).toContain('wide');
-      expect(m.w).toBeLessThanOrEqual(960);
+      expect(m.w).toBeLessThanOrEqual(width >= 1440 ? 1360 : 1240); // v7.2 re-target (was 960)
       expect(m.hidden).toBeLessThanOrEqual(2);
       await expectNoHorizontalScroll(page);
       for (const hash of ['/today', '/goals', '/settings']) {

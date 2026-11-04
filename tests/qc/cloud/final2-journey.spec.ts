@@ -226,7 +226,7 @@ for (const cfg of CONFIGS) {
       expect(download.suggestedFilename()).toBe('1percent-better-backup-2026-10-09.json');
       const exportedPath = (await download.path())!;
       const file = JSON.parse(await readFile(exportedPath, 'utf8')) as { schemaVersion: number; goals: unknown[]; entries: unknown[] };
-      expect(file.schemaVersion).toBe(1);
+      expect(file.schemaVersion).toBe(2); // M17 re-target: export is schemaVersion 2
       expect(file.goals).toHaveLength(2);
       expect(file.entries).toHaveLength(4);
       await expect(toast(page)).toHaveText(copy.toast.backupExported);

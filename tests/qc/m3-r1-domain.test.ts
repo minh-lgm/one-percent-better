@@ -78,9 +78,9 @@ describe('M3-AC9 hostile import files (domain.parseBackup)', () => {
     const { app: _drop, ...noApp } = base;
     void _drop;
     expect(code(parse(noApp))).toBe('IMPORT_INVALID_SCHEMA');
-    const v2 = parseBackup(JSON.stringify({ ...base, schemaVersion: 2 }), 10);
+    const v2 = parseBackup(JSON.stringify({ ...base, schemaVersion: 3 }), 10); // M17: v2 is now valid (backup schemaVersion 2)
     expect(!v2.ok && v2.errors[0]?.code).toBe('IMPORT_UNSUPPORTED_VERSION');
-    expect(!v2.ok && v2.errors[0]?.params).toEqual({ v: '2' });
+    expect(!v2.ok && v2.errors[0]?.params).toEqual({ v: '3' });
     for (const v of [0, -1, 1.5, '1', null, 99]) expect(parse({ ...base, schemaVersion: v }).ok, String(v)).toBe(false);
     const { schemaVersion: _sv, ...noV } = base;
     void _sv;
@@ -195,7 +195,7 @@ describe('BackupService on a real container', () => {
     const preview = await backupService.parse(SAMPLE, bytes(SAMPLE));
     expect(preview.ok).toBe(true);
     if (!preview.ok) return;
-    expect(await backupService.import(preview.value)).toEqual({ ok: true, value: { goals: 5, entries: 23 } });
+    expect(await backupService.import(preview.value)).toEqual({ ok: true, value: { goals: 5, entries: 23, roadmaps: 0 } });
     expect((await db.kv.get('locale'))?.value).toBe('vi');
     expect(await db.kv.get('activeTimer')).toBeUndefined();
     expect(((await db.kv.get('settings'))?.value as { lastReminderDate: unknown }).lastReminderDate).toBeNull();
@@ -203,7 +203,7 @@ describe('BackupService on a real container', () => {
     expect(out.fileName).toBe('1percent-better-backup-2026-10-09.json');
     expect(out.json).not.toMatch(/locale|activeTimer|startedAt/i);
     const back = JSON.parse(out.json) as { app: string; schemaVersion: number; goals: unknown[]; entries: unknown[]; settings: { lastBackupAt: string } };
-    expect([back.app, back.schemaVersion, back.goals.length, back.entries.length]).toEqual(['one-percent-better', 1, 5, 23]);
+    expect([back.app, back.schemaVersion, back.goals.length, back.entries.length]).toEqual(['one-percent-better', 2, 5, 23]);
     expect(back.settings.lastBackupAt).toBe(NOW.toISOString());
   });
 

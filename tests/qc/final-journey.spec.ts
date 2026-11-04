@@ -252,7 +252,7 @@ for (const cfg of CONFIGS) {
       const raw = await readFile(exportedPath, 'utf8');
       const file = JSON.parse(raw) as { app: string; schemaVersion: number; goals: Array<{ id: string; name: string; archived?: boolean }>; entries: unknown[]; settings: Record<string, unknown> };
       expect(file.app).toBe('one-percent-better');
-      expect(file.schemaVersion).toBe(1);
+      expect(file.schemaVersion).toBe(2); // M17 re-target: export is schemaVersion 2
       expect(file.goals.map((g) => g.name).sort()).toEqual(['Read', 'Spanish']);
       expect(file.entries).toHaveLength(4); // Read: 20 manual + 10 timer + 30 yesterday; Spanish: 10
       expect(raw).not.toContain('"locale"');

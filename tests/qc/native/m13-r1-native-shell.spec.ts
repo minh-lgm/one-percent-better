@@ -261,7 +261,7 @@ test.describe('M13 QC: safe area through the REAL env() (CDP Emulation.setSafeAr
     expect(m.navBottom).toBe(m.vh);
     expect(m.itemBottom).toBeLessThanOrEqual(m.vh - 34);
     expect(m.mainPadT).toBe('75px'); // 16 + 59
-    expect(m.toast.bottom).toBe('102px'); // tab bar 56 + 34 + 12
+    expect(m.toast.bottom).toBe('110px'); // M17 re-target: tab bar 64 + 34 + 12
     expect(m.sheet.paddingBottom).toBe('58px');
     expect(m.sheet.maxHeight).toBe(`${m.vh - 16 - 59}px`);
     expect(m.errorPage.paddingTop).not.toBe('0px');

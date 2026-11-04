@@ -446,7 +446,7 @@ test.describe('M9 QC — interaction, language, theme', () => {
       (window as unknown as { __noReload: boolean }).__noReload = true;
     });
     await page.getByRole('radio', { name: 'Tiếng Việt' }).check();
-    await page.getByRole('link', { name: VI.nav.goals }).click();
+    await page.getByRole('link', { name: VI.nav.goals, exact: true }).click();
     await page.getByRole('link', { name: 'Đọc sách' }).first().click();
     await expect(headline(page)).toHaveText(`${MINUS}54,0%`);
     await expect(sub(page)).toHaveText(`Hôm nay: 27 phút. Tổng 56 phút, lý tưởng 122 phút (${MINUS}66 phút).`);
@@ -457,7 +457,7 @@ test.describe('M9 QC — interaction, language, theme', () => {
     await expectNoViLeaks(page);
     await page.getByRole('link', { name: VI.nav.settings }).click();
     await page.getByRole('radio', { name: 'English' }).check();
-    await page.getByRole('link', { name: EN.nav.goals }).click();
+    await page.getByRole('link', { name: EN.nav.goals, exact: true }).click();
     await page.getByRole('link', { name: 'Đọc sách' }).first().click();
     await expect(headline(page)).toHaveText(R1_HEADLINE);
     expect(await page.evaluate(() => (window as unknown as { __noReload?: boolean }).__noReload)).toBe(true);

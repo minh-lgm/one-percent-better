@@ -123,7 +123,7 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(await page.locator('.mark').isVisible()).toBe(false);
       await expectNoHorizontalScroll(page);
       const nav = await page.getByRole('navigation').first().boundingBox();
-      expect(nav!.height).toBeLessThanOrEqual(64);
+      expect(nav!.height).toBeLessThanOrEqual(65); // M17 re-target: tab bar 64 px (+1 border)
       await page.screenshot({ path: testInfo.outputPath(`brand-360-${scheme}.png`) });
       await page.setViewportSize({ width: 1023, height: 800 });
       expect(await page.locator('.mark').isVisible()).toBe(false);

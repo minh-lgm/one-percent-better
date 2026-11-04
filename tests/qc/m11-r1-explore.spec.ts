@@ -153,7 +153,7 @@ test.describe('M11 r1 explore: backup', () => {
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: EN.settings.backup.export }).click()]);
     const text = readFileSync(await download.path(), 'utf8');
     const out = JSON.parse(text) as { schemaVersion: number; goals: Json[] };
-    expect(out.schemaVersion).toBe(1);
+    expect(out.schemaVersion).toBe(2); // M17 re-target: export is schemaVersion 2
     const strip = (g: Json) => ({ id: g.id, name: g.name, targetType: g.targetType, targetMinutes: g.targetMinutes, startDate: g.startDate, endDate: g.endDate });
     expect(out.goals.map(strip).sort((a, b) => String(a.id).localeCompare(String(b.id)))).toEqual(SAMPLE.goals.map(strip).sort((a, b) => String(a.id).localeCompare(String(b.id))));
     expect(text).not.toContain('"endDate": null');

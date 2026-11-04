@@ -98,7 +98,7 @@ describe('generic sentence (the file is not shaped like a backup, or mixes shape
     expect((await keyFor('{abc')).key).toBe('errors.IMPORT_INVALID_JSON');
   });
   it('unsupported schemaVersion keeps its own sentence', async () => {
-    expect((await keyFor({ ...base(), schemaVersion: 2 })).code).toBe('IMPORT_UNSUPPORTED_VERSION');
+    expect((await keyFor({ ...base(), schemaVersion: 3 })).code).toBe('IMPORT_UNSUPPORTED_VERSION');
   });
   it(`${GENERIC} is still the mapping for a plain schema failure`, async () => {
     expect((await keyFor({ ...base(), app: 'x' })).key).toBe(GENERIC);
