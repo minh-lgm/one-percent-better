@@ -338,9 +338,8 @@ test.describe('M19 QC r1', () => {
     await item(page, 'wq2').getByRole('button', { name: /^Dates & note/ }).click({ trial: true }).catch(() => undefined);
     await expectNoHorizontalScroll(page);
   });
-  // M19-D1 (open): a 40-char milestone label without spaces widens the overview metric (detail) and the list row beyond 360 px.
-  // test.fail() = this test is expected to fail while the defect is open; when fixed it starts failing -> re-target to a plain test.
-  test.fail('M19-D1: 40 unbroken chars in the milestone label must not cause horizontal scroll at 360 px (list + detail)', async ({ page }) => {
+  // M19-D1 (fixed in 2e9534f, verified by QC M20 r1): a 40-char milestone label without spaces must not widen the overview metric (detail) or the list row at 360 px.
+  test('M19-D1: 40 unbroken chars in the milestone label must not cause horizontal scroll at 360 px (list + detail)', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 740 });
     await importBackup(page, 'q1-roadmap-backup.json');
     await importMutated(page, (d) => {

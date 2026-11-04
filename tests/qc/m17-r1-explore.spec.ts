@@ -19,12 +19,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('M17 QC: list numbers, empty state, a11y, layout', () => {
-  test('empty state (fresh install): explanation only, no create button, axe clean, en and vi', async ({ page }) => {
+  test('empty state (fresh install): explanation + the two create entries (M20), axe clean, en and vi', async ({ page }) => {
     await gotoHash(page, '/roadmaps');
     await expect(page.getByRole('heading', { level: 1, name: ROADMAP_EN.list.title })).toBeVisible();
     await expect(page.getByTestId('roadmaps-empty')).toContainText(ROADMAP_EN.list.empty);
     await expect(page.getByTestId('roadmaps-empty')).toContainText(ROADMAP_EN.list.emptyBody);
-    await expect(page.getByRole('button')).toHaveCount(0);
+    // M20 (DESIGN S11 / mockup 11 "trạng thái rỗng 2 lối tạo"): the empty state now has the QPT template button; "Create empty roadmap" stays a link.
+    await expect(page.getByRole('button')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Create from QPT 21-week template' })).toBeVisible();
     await expectAxeClean(page);
     await setLocale(page, 'vi');
     await gotoHash(page, '/roadmaps');
