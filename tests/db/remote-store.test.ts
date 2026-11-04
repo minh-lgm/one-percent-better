@@ -42,7 +42,8 @@ async function harness(): Promise<ContractHarness> {
   return {
     as: (user) => new SupabaseRemoteStore(clients[user]!, async () => users[user].id, { timeoutMs: 0 }),
     reset: async () => {
-      for (const table of ['entries', 'goals', 'settings'] as const) {
+      // v8.0 (M18): the four roadmap tables too (children first is irrelevant: no FK between them, ADR-20).
+      for (const table of ['entries', 'goals', 'settings', 'roadmap_items', 'roadmap_phases', 'roadmap_checkpoints', 'roadmaps'] as const) {
         const { error } = await admin.from(table).delete().in('user_id', [users.u1.id, users.u2.id]);
         if (error) throw error;
       }
