@@ -395,14 +395,39 @@ test.describe('M20 QC r1', () => {
     await expect(toast(page)).toHaveText(ROADMAP_VI.toast.templateCreated);
   });
 
-  // M20-D1 (open): start 9999-12-31 -> preview "NaN-NaN-NaN", items dated 10000-xx-xx, and the app's own export is refused by its own import.
-  // test.fail = expected to fail while the defect is open; when fixed it starts failing -> flip to a plain test.
-  test.fail('M20-D1: far-future start date (9999-12-31): no NaN in the preview, and Export -> Import of the result works', async ({ page }) => {
+  // M20-D1 (FIXED in b1e5fb6; r2 rewrite): Create with an overflowing start date is refused by design.
+  test('M20-D1: far-future start date (9999-12-31) is refused inline, focus on the date field, 0 roadmaps, no NaN; 9999-08-07 round-trips', async ({ page }) => {
     await importBackup(page, 'q1-goal-only-backup.json');
     await gotoHash(page, '/roadmaps');
     await page.getByRole('button', { name: ROADMAP_EN.list.createTemplate }).click();
     const d = dlg(page);
-    await d.locator('input[type="date"]').fill('9999-12-31');
+    const date = d.locator('input[type="date"]');
+    await date.fill('9999-12-31');
+    await expect(d).not.toContainText('NaN');
+    await expect(d).toContainText('Enter a valid date.');
+    await d.getByRole('button', { name: ROADMAP_EN.ed.create }).click();
+    await expect(d).toBeVisible();
+    await expect(d).toContainText('Enter a valid date.');
+    await expect(date).toBeFocused();
+    await expect(date).toHaveAttribute('aria-invalid', 'true');
+    await expect(d).not.toContainText('NaN');
+    expect(page.url()).toMatch(/#\/roadmaps$/);
+    expect(await page.evaluate(() => new Promise<number>((res, rej) => {
+      const open = indexedDB.databases ? indexedDB.databases() : Promise.resolve([]);
+      void open.then(async (dbs) => {
+        const name = dbs.map((x) => x.name).find((n) => n && /better|onepercent|1/i.test(n)) ?? dbs[0]?.name;
+        const rq = indexedDB.open(name!);
+        rq.onerror = () => rej(rq.error);
+        rq.onsuccess = () => {
+          const db = rq.result;
+          const tx = db.transaction('roadmaps', 'readonly').objectStore('roadmaps').count();
+          tx.onsuccess = () => res(tx.result);
+        };
+      });
+    }))).toBe(0);
+    // last valid date: accepted, preview has no NaN, Export -> Import closes the loop
+    await date.fill('9999-08-07');
+    await expect(d).not.toContainText('Enter a valid date.');
     await expect(d).not.toContainText('NaN');
     await d.getByRole('button', { name: ROADMAP_EN.ed.create }).click();
     await page.waitForURL(/#\/roadmaps\/[^/]+$/);
@@ -411,7 +436,9 @@ test.describe('M20 QC r1', () => {
     const dl = page.waitForEvent('download');
     await page.getByRole('button', { name: EN.settings.backup.export }).click();
     const text = readFileSync((await (await dl).path())!, 'utf8');
+    expect(text).not.toMatch(/"1\d{4}-\d\d-\d\d"/);
     await page.getByTestId('import-file').setInputFiles({ name: 'e.json', mimeType: 'application/json', buffer: Buffer.from(text) });
     await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('dialog')).not.toContainText("doesn't look like");
   });
 });

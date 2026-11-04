@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DexieGoalRepository } from '../../src/data/dexie/goal-repo';
 import { DexieRoadmapRepository } from '../../src/data/dexie/roadmap-repo';
 import type { AppDatabase } from '../../src/data/dexie/db';
+import { isValidISODate } from '../../src/domain/dates';
 import { buildQptTemplate } from '../../src/domain/roadmap-template';
 import { RoadmapService } from '../../src/services/roadmap-service';
 import { buildGoal, FIXED_NOW_Q1 } from '../../src/test/builders';
@@ -162,16 +163,22 @@ describe('M20-AC2 service', () => {
     }
     expect(await counts()).toEqual([2, 10, 42, 10]);
   });
-  // M20-D1 (open): a start date whose later weeks cross into year 10000 writes rows with invalid ISO dates ("10000-01-06").
-  // it.fails = expected to fail while the defect is open; when fixed it starts failing -> flip to a plain it().
-  it.fails('M20-D1: start 9999-12-31 is rejected (ROADMAP_DATE_INVALID) or every written date is a valid ISO date', async () => {
+  // M20-D1 (FIXED in b1e5fb6, r2 flipped from it.fails): a start date whose 21 weeks would cross into year 10000 is refused.
+  it('M20-D1: start 9999-12-31 is refused (ROADMAP_DATE_INVALID, 0 rows)', async () => {
     const r = await make(null, '9999-12-31');
-    if (!r.ok) {
-      expect(r.errors[0]!.code).toBe('ROADMAP_DATE_INVALID');
-      expect(await counts()).toEqual([0, 0, 0, 0]);
-      return;
-    }
+    expect(!r.ok && r.errors[0]!.code).toBe('ROADMAP_DATE_INVALID');
+    expect(await counts()).toEqual([0, 0, 0, 0]);
+  });
+  it('M20-D1 boundary: 9999-08-07 is accepted with only valid ISO dates; 9999-08-08 is refused', async () => {
+    const bad = await make(null, '9999-08-08');
+    expect(!bad.ok && bad.errors[0]!.code).toBe('ROADMAP_DATE_INVALID');
+    expect(await counts()).toEqual([0, 0, 0, 0]);
+    const ok = await make(null, '9999-08-07');
+    expect(ok.ok).toBe(true);
+    expect(await counts()).toEqual([1, 5, 21, 5]);
     const dates = [...(await db.roadmapItems.toArray()).flatMap((i) => [i.plannedStart, i.plannedEnd]), ...(await db.roadmapCheckpoints.toArray()).map((c) => c.date), ...(await db.roadmaps.toArray()).map((x) => x.milestoneDate ?? '9999-01-01')];
-    expect(dates.filter((x) => !/^\d{4}-\d{2}-\d{2}$/.test(x))).toEqual([]);
+    expect(dates.filter((x) => !isValidISODate(x) || !/^\d{4}-\d{2}-\d{2}$/.test(x))).toEqual([]);
+    const items = await db.roadmapItems.toArray();
+    expect(items.map((i) => i.plannedEnd).sort().at(-1)).toBe('9999-12-31');
   });
 });
