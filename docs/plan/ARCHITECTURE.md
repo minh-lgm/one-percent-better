@@ -276,6 +276,33 @@ Version đã kiểm tra trên npm registry ngày 2026-10-09. Developer pin **exa
   - Ngoại lệ chỉ bằng `// eslint-disable-next-line no-restricted-syntax -- <lý do>` và phải liệt kê trong handoff.
 - Chuỗi trong code không phải JSX (toast, `document.title`, nội dung notification) không bị lint bắt: được bảo vệ bằng test quét DOM ở chế độ `vi` (§8).
 
+**Bảng component v8.0 (phase 8 "Mục tiêu lớn", M17 … M20; chi tiết §4.8).** Cột "Tải lạnh" = có nằm trên đường tải lạnh `#/today` hay không (NFR-03, NFR-25, ADR-53).
+
+| Component | Lớp | Trách nhiệm | Phụ thuộc | Tải lạnh |
+| :- | :- | :- | :- | :- |
+| `domain/roadmap.ts` (mới) | logic | Kiểu `Roadmap`, `RoadmapPhase`, `RoadmapItem`, `RoadmapCheckpoint`; validate từng loại (`validateRoadmapInput`, `validatePhaseInput`, `validateItemInput`, `validateCheckpointInput`), giới hạn số lượng, thứ tự hiển thị (`sortPhases`, `sortItems`, `positionBetween`) | dates, text, types, constants | Không (chỉ kiểu được import bằng `import type`) |
+| `domain/roadmap-progress.ts` (mới) | logic | Giá trị suy ra, không lưu: cửa sổ ngày mỗi mục (`itemWindow`), gán ngày cho mục (`attributeMinutes`), trạng thái mục (`itemState`: done/current/overdue/upcoming, nhãn sớm/trễ/đang học), tổng quan (`roadmapOverview`), mục "tuần này", ngày tới mốc chính, trạng thái checkpoint (`checkpointState`), dữ liệu biểu đồ điểm. Oracle Q1 ở §4.8 (d) | roadmap, dates | Không |
+| `domain/roadmap-template.ts` (mới) | logic | `buildQptTemplate(startDate, locale, ids, now)` → 1 roadmap + 5 phase + 21 mục + 5 checkpoint đúng §4.8 (e); nội dung `en`/`vi` nằm trong file này (dữ liệu mẫu, không phải chuỗi UI) | roadmap, dates | Không |
+| `domain/backup.ts`, `backup-file.ts` (sửa) | logic | `schemaVersion` 2 (đọc 1 và 2, ghi 2), bốn mảng roadmap, toàn vẹn tham chiếu mới (§4.8 f, ADR-49) | roadmap | `backup-file.ts`: như cũ (nhỏ); `backup.ts`: lazy như cũ |
+| `domain/types.ts` (sửa) | logic | Mã lỗi `ROADMAP_*` (§5.4 v8.0) | — | Có (vài byte) |
+| `domain/sync.ts` (sửa) | logic | `SyncStatus.roadmapsUnavailable?: boolean` (ADR-52) | — | Có |
+| `data/repositories.ts` (sửa) | data | Interface `RoadmapRepository` (§4.8 b); `RemoteChanges` thêm 4 mảng tuỳ chọn; `SyncMeta.cursor` thêm 4 khoá; `BackupData` thêm 4 mảng; `countLive` thêm `roadmaps` | — | Có (chỉ kiểu + `normalizeSyncMeta`) |
+| `data/dexie/db.ts` (sửa) | data | **Dexie v3**: 4 bảng mới, không có hàm upgrade (ADR-48) | — | Có |
+| `data/dexie/roadmap-repo.ts` (mới) | data | `DexieRoadmapRepository`: đọc/ghi/watch 4 bảng, xoá mềm dây chuyền (roadmap → phase/mục/checkpoint; phase → mục), tạo hàng loạt (mẫu) trong một transaction | db, sync (nextUpdatedAt) | Không (tạo trong chunk lazy của màn roadmap) |
+| `data/dexie/goal-repo.ts` (sửa) | data | `deleteWithEntries` mở thêm bảng `roadmaps` trong **cùng** transaction: roadmap đang liên kết goal bị xoá → `goalId = null`, `updatedAt` mới, `dirty = 1` (A-79) | db | Có (vài dòng) |
+| `data/dexie/sync-store.ts`, `local-data-repo.ts`, `backup-repo.ts` (sửa) | data | Mở rộng theo **bảng đăng ký** `SYNC_TABLES` (ADR-50): `getDirty`, `applyRemote` (tombstone roadmap/phase lan xuống con), `markAllDirty`, `tombstoneOrphans` (thêm con mồ côi của roadmap/phase), `watchPendingCount`, `markRejected`, `countRejected`, `purgeTombstones`, `clearUserData`, `countLive`, `exportAll`, `replaceAll` | db | Có (generic, nhỏ) |
+| `services/roadmap-service.ts` (mới) | logic (application) | `RoadmapService`: CRUD 4 loại, liên kết goal 1↔1 (A-78), thao tác nhanh (đánh dấu xong, ngày thực tế "Hôm nay"), sắp xếp (vị trí phân số, ADR-51), tạo từ mẫu, `watchDetail(id)` (roadmap + con + goal liên kết + entry của goal) | RoadmapRepository, GoalRepository, EntryRepository, roadmap, roadmap-progress, roadmap-template | Không |
+| `services/sync-service.ts` (sửa) | logic | Chu kỳ chạy qua `SYNC_TABLES`; nhóm "lõi" (goals, entries) và nhóm "roadmap" (4 bảng) đẩy/kéo **tách lệnh**; lỗi "bảng chưa có trên cloud" của nhóm roadmap không làm hỏng chu kỳ (ADR-52) | remote-store, repositories | Có (generic) |
+| `services/remote-store.ts`, `remote-store.contract.ts`, `test/fake-remote-store.ts` (sửa) | logic / test | `RemoteTable` thêm 4 bảng; `PushResult.rejected` thêm 4 mảng; `RemoteError.tableMissing` | — | Có (kiểu) |
+| `integration/supabase/mapper.ts`, `supabase-client.ts` (sửa) | integration | zod schema + ánh xạ 4 bảng (§4.8 g); nhận diện 404 `PGRST205`/`42P01` và 403 `42501` trên bảng roadmap → `RemoteError` có `tableMissing = true` | zod, supabase-js | Không (chunk SDK lazy như cũ) |
+| `e2e/mock-supabase/server.mjs` (sửa) | test | 4 bảng mới; công tắc `/__test/config { roadmapTables: false }` để giả "chưa chạy migration" (trả 404 `PGRST205`) | — | — |
+| `i18n/resources/roadmap.en.json`, `roadmap.vi.json` (mới) + `i18n/roadmap-namespace.ts` (mới) | config / i18n | Namespace i18next `roadmap`, nạp bằng `import()` trong chunk lazy rồi `addResourceBundle` (ADR-53); parity test như `en`/`vi` chính | i18n/instance | Không |
+| `ui/screens/Roadmaps.tsx`, `RoadmapDetail.tsx`, `RoadmapEditor.tsx`, `RoadmapNew.tsx` (mới) + component `WeekStrip`, `RoadmapItemRow`, `CheckpointTable`, `CheckpointChart`, `GoalLinkPicker`, `TemplateDialog` | UI | Màn hình phase 8 (route §5.1 v8.0), lazy | services, hooks, roadmap namespace | Không |
+| `ui/components/AppShell.tsx`, `Icon.tsx` (sửa) | UI | Tab/mục nav thứ năm `nav.roadmaps` (key nằm trong `en.json`/`vi.json` chính vì nav ở đường tải lạnh) + một icon | — | Có (≤ 0,3 KB) |
+| `ui/screens/GoalDetail.tsx`, `Goals.tsx` (dialog xoá) (sửa, Should) | UI | Dòng "Thuộc lộ trình …" + link; câu cảnh báo bỏ liên kết khi xoá goal (FR-80) | RoadmapRepository (đọc theo `goalId`) | Không (cả hai màn đã lazy) |
+
+**Quy tắc phụ thuộc mới (lint, như các phase trước):** `src/domain/roadmap*.ts`, `src/services/roadmap-service.ts`, `src/data/dexie/roadmap-repo.ts`, `src/i18n/resources/roadmap.*.json` **không** được import tĩnh từ module nằm trên đường tải lạnh (`src/main.tsx`, `src/app/**`, `src/ui/screens/Today.tsx`, `src/ui/components/**` trừ component roadmap) — chỉ qua `import()` trong `router.tsx` (route lazy) hoặc từ chính các module roadmap. Cưỡng chế bằng ESLint `no-restricted-imports` cho các thư mục trên và bằng AC ngân sách (grep chuỗi mẫu trong JS tải lạnh, M17-AC8).
+
 ## 4. Data model
 
 Kiểu dữ liệu (TypeScript, trong `src/domain/types.ts`):
@@ -972,7 +999,267 @@ Deno.serve((req) => handleDeleteAccount(req, {
 
 **(e) Thiết bị khác của tài khoản đã xoá:** refresh token không còn dùng được → SDK phát `SIGNED_OUT` ngoài ý muốn → `session-expired` → `expired` (FR-40); REST trả 401 → `SYNC_UNAUTHORIZED`. Dữ liệu cục bộ giữ nguyên; người dùng đăng nhập lại (cùng Gmail) sẽ là user **mới**, thiết bị đó có `lastUserId` cũ ≠ user mới → hộp thoại D5 (FR-47) hỏi trước khi đẩy dữ liệu cũ lên — đúng ý "đã xoá thì không tự sống lại".
 
+**(f0 — v8.0)** Bốn bảng roadmap mới (§4.8 g) cũng có `user_id … references auth.users (id) on delete cascade` nên `deleteUser` xoá luôn hàng của chúng trong cùng transaction; **không** sửa Edge Function. NFR-23 v8.0: sau khi xoá, 0 hàng của user ở cả 7 bảng.
+
 **(f) Idempotent và thử lại:** gọi lại sau khi đã xoá → `getUser` thất bại → 401 → client hiện `ACCOUNT_DELETE_SESSION_EXPIRED`; trường hợp hiếm (lần đầu thành công nhưng client timeout) người dùng thấy lỗi phiên dù tài khoản đã xoá — chấp nhận, đăng nhập lại sẽ tạo tài khoản mới trống (ghi README).
+
+### 4.8 Mục tiêu lớn — lộ trình nhiều tuần liên kết một goal (phase 8, M17 … M20; FR-68 … FR-80, A-74 … A-92, ADR-48 … ADR-53)
+
+**Bối cảnh.** User ôn QPT theo lộ trình 21 tuần ở một tracker HTML riêng (tham chiếu hành vi và nội dung mẫu: `docs/plan/ref/qpt-tracker.html` — **chỉ là tài liệu**, không đóng gói vào app, không chép font/CDN của nó, NFR-01) và đếm giờ học bằng một goal trong app. Phase 8 đưa tracker vào app thành menu **"Mục tiêu lớn"** (`en`: "Big goals", A-74; code và route dùng từ `roadmap`). Giờ học của mỗi mục là **giá trị suy ra** từ entry của goal liên kết, không lưu, không nhập tay (A-80).
+
+```text
+#/roadmaps (lazy) ──► RoadmapService ──► RoadmapRepository (Dexie v3: roadmaps, roadmapPhases, roadmapItems, roadmapCheckpoints)
+      │                    │        └──► GoalRepository / EntryRepository (entry của goal liên kết, chỉ đọc)
+      │                    └──► domain/roadmap-progress.ts (thuần: cửa sổ ngày, gán phút, trạng thái, tổng quan, checkpoint)
+      └── i18n namespace `roadmap` (lazy, ADR-53)
+SyncService ──► SYNC_TABLES (goals, entries | roadmaps, roadmap_phases, roadmap_items, roadmap_checkpoints) ──► Supabase (4 bảng mới, RLS)
+BackupService ──► file schemaVersion 2 (đọc được 1)
+```
+
+#### (a) Mô hình domain (`src/domain/roadmap.ts`)
+
+```ts
+export interface Roadmap {
+  id: string;
+  title: string;                       // 1–80 ký tự sau trim
+  note: string;                        // 0–2000, nhiều dòng, hiển thị dạng text (ví dụ "Nhịp học mỗi tuần" của mẫu QPT)
+  goalId: string | null;               // goal liên kết (tối đa 1, A-78); null = chưa liên kết
+  weeklyTargetMinutes: number | null;  // chỉ tiêu giờ/tuần lưu bằng phút nguyên 30–10080 (UI nhập giờ, bước 0,5); null = không có
+  milestoneLabel: string;              // 0–40; '' = UI dùng chữ mặc định "Mốc chính"
+  milestoneDate: ISODate | null;       // mốc chính (vd. tuần thi QPT); null = không hiện "còn N ngày"
+  createdAt: ISODateTime; updatedAt: ISODateTime;
+}
+export interface RoadmapPhase {
+  id: string; roadmapId: string;
+  title: string;                       // 1–80
+  note: string;                        // 0–120 (vd. "Course 1 · 34h")
+  position: number;                    // số thực hữu hạn, sắp tăng dần (ADR-51)
+  createdAt: ISODateTime; updatedAt: ISODateTime;
+}
+export interface RoadmapItem {
+  id: string; roadmapId: string; phaseId: string;
+  title: string;                       // 1–200
+  note: string;                        // 0–1000 (vd. "câu hay sai, phần cần ôn…")
+  position: number;                    // thứ tự trong phase
+  plannedStart: ISODate; plannedEnd: ISODate;   // bắt buộc, plannedEnd ≥ plannedStart, ≤ 366 ngày
+  actualStart: ISODate | null;         // ≤ hôm nay khi ghi
+  actualEnd: ISODate | null;           // ≤ hôm nay khi ghi, ≥ actualStart nếu cả hai có; **khác null ⇔ mục đã hoàn thành** (A-81)
+  createdAt: ISODateTime; updatedAt: ISODateTime;
+}
+export interface RoadmapCheckpoint {
+  id: string; roadmapId: string;
+  title: string;                       // 1–80 (vd. "Checkpoint 2")
+  note: string;                        // 0–280 (vd. "≥ 3/4 mỗi mảng LA, Calc")
+  date: ISODate;                       // ngày của mốc (mẫu: ngày cuối tuần kế hoạch tương ứng)
+  maxScore: number;                    // > 0, ≤ 10000, tối đa 1 chữ số thập phân
+  threshold: number | null;            // 0 … maxScore, ≤ 1 chữ số thập phân; null = không có ngưỡng
+  score: number | null;                // 0 … maxScore, ≤ 1 chữ số thập phân; null = chưa có điểm
+  createdAt: ISODateTime; updatedAt: ISODateTime;
+}
+export const isItemDone = (i: RoadmapItem) => i.actualEnd !== null;
+```
+
+Giới hạn (`config/constants.ts`, dùng chung form ↔ file backup ↔ mapper cloud ↔ SQL, mở rộng `limits-parity.test.ts`): `ROADMAP_MAX = 20` lộ trình còn sống; mỗi lộ trình `PHASE_MAX = 20`, `ITEM_MAX = 200`, `CHECKPOINT_MAX = 50`; độ dài chữ như trên; `ITEM_SPAN_MAX_DAYS = 366`; tổng khoảng kế hoạch của lộ trình (min `plannedStart` → max `plannedEnd`) ≤ `PERIOD_DAYS_MAX` (1827). Mọi chữ do người dùng nhập là dữ liệu, không dịch (FR-35). Validate trả `Result`/`DomainError` theo mã §5.4 v8.0. `positionBetween(a: number | null, b: number | null): number` = trung điểm (đầu danh sách: `b − 1`; cuối: `a + 1`; rỗng: `0`); khi khoảng cách hai vị trí kề < `1e-6`, service đánh lại `0, 1, 2, …` cho cả danh sách anh em trong cùng transaction (ADR-51). Thứ tự hiển thị: phase theo `(position, id)`; mục theo `(thứ tự phase, position, id)` — gọi là **thứ tự mục** `ord(i)`; checkpoint theo `(date, createdAt, id)`.
+
+#### (b) Dexie v3 và repository
+
+```ts
+this.version(3).stores({
+  goals: 'id, dirty', entries: 'id, goalId, date, [goalId+date], dirty', kv: 'key',
+  roadmaps: 'id, goalId, dirty',
+  roadmapPhases: 'id, roadmapId, dirty',
+  roadmapItems: 'id, roadmapId, dirty',
+  roadmapCheckpoints: 'id, roadmapId, dirty',
+}); // không có .upgrade(): bảng mới rỗng, hàng cũ giữ nguyên (ADR-48)
+```
+
+Mỗi hàng mang `deletedAt` + `dirty` như goal/entry (`RoadmapRow = Roadmap & { deletedAt; dirty: SyncFlag }`, tương tự cho 3 loại kia). IndexedDB version đổi 20 → 30; test kiểm `verno 2`/`version 20` phải re-target (TASKS phase 8 "Test cũ bị ảnh hưởng").
+
+```ts
+export interface RoadmapRepository {
+  listLive(): Promise<Roadmap[]>;
+  watchList(): Subscribable<RoadmapSummaryRows>;                 // roadmaps + phases + items + checkpoints còn sống (để tính tổng quan ở danh sách)
+  watchDetail(roadmapId: string): Subscribable<RoadmapAggregate | null>;  // một roadmap + con còn sống (con của phase đã xoá bị loại)
+  getAggregate(roadmapId: string): Promise<RoadmapAggregate | null>;
+  findByGoal(goalId: string): Promise<Roadmap[]>;                // roadmap còn sống đang liên kết goal (index goalId)
+  putRoadmap(r: Roadmap): Promise<void>;  putPhase(p: RoadmapPhase): Promise<void>;
+  putItem(i: RoadmapItem): Promise<void>; putCheckpoint(c: RoadmapCheckpoint): Promise<void>;
+  putMany(rows: Partial<RoadmapAggregateRows>): Promise<void>;   // một transaction (tạo từ mẫu, đánh lại vị trí)
+  deleteRoadmap(id: string): Promise<void>;   // xoá mềm roadmap + mọi phase/mục/checkpoint còn sống, cùng một stamp, một transaction
+  deletePhase(id: string): Promise<void>;     // xoá mềm phase + mục của nó, một transaction
+  deleteItem(id: string): Promise<void>;  deleteCheckpoint(id: string): Promise<void>;
+}
+export interface RoadmapAggregate { roadmap: Roadmap; phases: RoadmapPhase[]; items: RoadmapItem[]; checkpoints: RoadmapCheckpoint[] }
+```
+
+Mọi ghi dùng `nextUpdatedAt` (FR-49), đặt `dirty = 1`. `GoalRepository.deleteWithEntries(id)` mở thêm bảng `roadmaps` trong **cùng** transaction và đặt `goalId = null` (stamp mới, `dirty = 1`) cho mọi roadmap còn sống đang trỏ tới goal đó (A-79). Archive/unarchive goal **không** chạm roadmap.
+
+**RoadmapService** (`src/services/roadmap-service.ts`, tạo trong chunk lazy của route — container chỉ giữ một factory `loadRoadmapService(): Promise<RoadmapService>` bằng `import()`, ADR-53):
+
+```ts
+create(input: RoadmapInput): Promise<Result<Roadmap>>;                    // ROADMAP_LIMIT_REACHED khi đã có 20
+update(id, input: RoadmapInput): Promise<Result<Roadmap>>;               // gồm goalId: kiểm A-78
+remove(id): Promise<Result<void>>;
+addPhase(roadmapId, input) / updatePhase(id, input) / removePhase(id) / movePhase(id, beforeId | null);
+addItem(phaseId, input) / updateItem(id, input) / removeItem(id) / moveItem(id, targetPhaseId, beforeId | null);
+setItemDone(id, done: boolean, today): Promise<Result<RoadmapItem>>;     // done → actualEnd = actualEnd ?? today; bỏ done → actualEnd = null (A-81)
+setItemActual(id, which: 'start' | 'end', date: ISODate | null, today): Promise<Result<RoadmapItem>>;  // 'end' khác null ⇒ đã xong
+addCheckpoint(roadmapId, input) / updateCheckpoint(id, input) / removeCheckpoint(id);
+createFromQptTemplate(opts: { startDate: ISODate; goalId: string | null; locale: Locale }, today): Promise<Result<Roadmap>>;
+watchDetail(id, today): Subscribable<RoadmapView | null>;   // aggregate + goal liên kết + entry của goal → roadmap-progress
+watchList(today): Subscribable<RoadmapListRow[]>;
+```
+
+Thêm mục mới mặc định: `plannedStart` = ngày sau `plannedEnd` của mục cuối cùng của lộ trình (theo `ord`), `plannedEnd` = `plannedStart + 6` (UI đề xuất, người dùng sửa được; A-83). Lộ trình chưa có mục: hôm nay → +6.
+
+#### (c) Giá trị suy ra (`src/domain/roadmap-progress.ts`) — công thức
+
+Ký hiệu: `today` = ngày cục bộ; `E` = entry còn sống của goal liên kết khi liên kết ở trạng thái `linked` hoặc `archived` (dưới đây), `m(d)` = tổng phút của `E` trong ngày `d`; `days(a, b)` = `b − a` (số ngày, có thể âm); `span(a, b) = days(a, b) + 1`.
+
+| Đại lượng | Định nghĩa |
+| :- | :- |
+| `linkState` | `goalId = null` → `none`; goal không tồn tại hoặc là tombstone → `missing`; goal `archived` → `archived`; còn lại `linked`. `none`/`missing` → mọi giá trị giờ là `null` (UI "—" + lối vào liên kết goal); `archived` vẫn tính giờ bình thường (A-79) |
+| Cửa sổ mục `[S_i, E_i]` | `E_i = actualEnd ?? (actualStart ? max(plannedEnd, today) : plannedEnd)`; `S_i = actualStart ?? plannedStart`. `E_i < S_i` → cửa sổ rỗng, mục được 0 phút (A-82) |
+| `explicit_i` | `actualStart !== null || actualEnd !== null` |
+| Gán ngày (chồng khoảng) | Với mỗi ngày `d` có entry: tập ứng viên `C(d) = { i : S_i ≤ d ≤ E_i }`. Rỗng → ngày đó **không** thuộc lộ trình. Ngược lại toàn bộ `m(d)` thuộc **một** mục: ưu tiên `explicit` = true; rồi `S_i` lớn hơn (mục bắt đầu gần nhất); rồi `ord(i)` nhỏ hơn. Mỗi entry được đếm đúng một lần (A-80) |
+| `itemMinutes(i)` | Tổng `m(d)` của các ngày gán cho `i` |
+| `hoursDoneMinutes` | `Σ itemMinutes(i)` (= tổng phút các ngày có ít nhất một ứng viên) |
+| Ngày bắt đầu / kết thúc lộ trình | `start = min plannedStart`, `end = max plannedEnd` (lộ trình không có mục → không có, mọi tổng quan ở trạng thái "chưa có mục") |
+| `totalWeeks` | `ceil(span(start, end) / 7)` |
+| `weeksElapsed` | `today < start` → 0; ngược lại `min(totalWeeks, floor(days(start, today) / 7) + 1)` — tuần của lộ trình là khối 7 ngày tính từ `start` (không theo tuần ISO) |
+| `plannedMinutesToDate` | `weeklyTargetMinutes = null` → `null`; ngược lại `weeklyTargetMinutes × weeksElapsed` ("kế hoạch đến hết tuần này") |
+| `doneCount` / `itemCount` | số mục `actualEnd ≠ null` / số mục |
+| Trạng thái mục | `done` nếu `actualEnd ≠ null`; ngược lại `overdue` nếu `plannedEnd < today`; `current` nếu `plannedStart ≤ today ≤ plannedEnd`; còn lại `upcoming`. Mục `current` (chưa xong hoặc đã xong) được đánh dấu "tuần này" nếu là mục **đầu tiên theo `ord`** có `plannedStart ≤ today ≤ plannedEnd` (`currentItemId`) |
+| `overdueCount` | số mục `overdue` |
+| `weekBased` | có ≥ 1 mục và **mọi** mục có `span(plannedStart, plannedEnd) = 7` |
+| Trạng thái tổng quan `pace` | không có mục → `empty`; `today < start` → `notStarted`; mọi mục đã xong → `completed`; `overdueCount = 0` → `onTrack`; `= 1` → `behind` (mức cảnh báo); `≥ 2` → `behind` (mức nghiêm trọng). Trả `{ kind, overdueCount, weekBased, severity: 'good' \| 'warn' \| 'crit' \| 'idle' }`. Copy: `weekBased` → "Chậm {n} tuần", ngược lại "Chậm {n} mục" (designer chốt, A-84) |
+| Nhãn sớm/trễ của mục | `actualEnd ≠ null`: `diff = days(plannedEnd, actualEnd)`; `0` → `onTime`, `< 0` → `early(−diff)`, `> 0` → `late(diff)`; kèm `studiedDays = span(actualStart, actualEnd)` khi `actualStart ≠ null`. `actualEnd = null` và `actualStart ≠ null` → `inProgress`. Không có ngày thực tế → không nhãn |
+| Thẻ "tuần này" | `currentItemId = null` → `today < start` → `notStarted` (kèm ngày bắt đầu), `today > end` → `finished`; ngược lại: mục, `itemMinutes`, `itemTargetMinutes = weeklyTargetMinutes × ceil(span(plannedStart, plannedEnd)/7)` (null khi không có chỉ tiêu), `daysLeft = max(0, days(today, plannedEnd))`, `done` |
+| Ngày tới mốc chính | `milestoneDate = null` → không hiện; `days(today, milestoneDate)`: `> 0` → "còn N ngày", `= 0` → "hôm nay", `< 0` → "đã qua" (A-85) |
+| Checkpoint | `checkpointState(c)`: `score = null` → `pending`; `threshold = null` → `recorded`; `score ≥ threshold` → `pass`; còn lại `below`; `delta = score − threshold` (khi có cả hai). Biểu đồ: mọi checkpoint cùng `maxScore` → trục điểm thô `0 … maxScore`; khác nhau → trục `% của maxScore` (`chartScale: 'raw' \| 'percent'`) |
+
+Mọi hàm thuần, nhận `today` làm tham số, không đọc đồng hồ. Hiển thị giờ: phút → giờ, 1 chữ số thập phân theo `Intl` (`5,8 giờ` / `5.8 h`; formatter `f.hours(minutes)` mới, nửa xa 0: 345 phút → 5,8), designer chốt nhãn. Hiệu năng (NFR-26): 200 mục + 50 checkpoint + 5.500 entry < 50 ms.
+
+#### (d) Oracle dataset **Q1** (dữ liệu gần với thật của user; "hôm nay" phase 8 = `2026-11-04`, thứ Tư)
+
+Lộ trình từ mẫu QPT (§4.8 e) với `startDate = 2026-10-27`, goal liên kết `gq` "QPT study" (`daily` 60, từ 2026-10-20, không thời hạn). Entry của `gq`: 10-20 **50**, 10-27 **60**, 10-29 **90**, 11-01 **120**, 11-03 **45**, 11-04 **30** phút. W1 `actualStart 2026-10-27`, `actualEnd 2026-11-01`; các mục khác không có ngày thực tế. Checkpoint Diagnostic sửa thành `date 2026-09-24`, `score 5`.
+
+| Kiểm | Kết quả |
+| :- | :- |
+| Cửa sổ W1 / W2 / W3 | `[10-27, 11-01]` / `[11-03, 11-09]` / `[11-10, 11-16]` |
+| `itemMinutes` W1 / W2 / W3 | **270** (60+90+120) / **75** (45+30) / 0; entry 10-20 không thuộc lộ trình |
+| `hoursDoneMinutes` | **345** (hiển thị `5,8 giờ`) |
+| `weeksElapsed` / `plannedMinutesToDate` | 2 / **960** (16 giờ; chỉ tiêu 8 giờ/tuần) |
+| `totalWeeks`, `start`, `end` | 21, 2026-10-27, 2027-03-22 |
+| `doneCount / itemCount` | **1 / 21** |
+| Trạng thái | `onTrack` (W1 xong; không mục nào `plannedEnd < 11-04` mà chưa xong), `weekBased = true` |
+| Nhãn W1 | `early(1)` ("Sớm 1 ngày"), `studiedDays 6` |
+| Thẻ "tuần này" | W2 "Solving systems: …", `itemMinutes 75`, `itemTargetMinutes 480`, `daysLeft 5`, chưa xong |
+| Mốc chính | "Thi QPT" `2027-03-09` → **125** ngày |
+| Checkpoint | Diagnostic `recorded` (5/32, không ngưỡng); CP2 (≥ 20) `pending`; CP2 `score 18` → `below`, `delta −2`; `score 21` → `pass`; `chartScale 'raw'` |
+
+Biến thể: **Q1b** — W1 chỉ có `actualStart 10-27` (chưa xong): cửa sổ W1 `[10-27, 11-04]`, ngày 11-03 và 11-04 thuộc cả W1 và W2 → W1 (explicit) → W1 **345**, W2 **0**; `overdueCount 1` (W1 `plannedEnd 11-02`) → `behind`, severity `warn`, "Chậm 1 tuần"; `doneCount 0`. **Q1c** — Q1b + W2 `actualStart 11-04`: ngày 11-04 có hai ứng viên explicit → `S` lớn hơn (W2) → W1 **315**, W2 **30**; ngày 11-03 chỉ W1. **Q1d** — Q1 với `today 2026-10-26`: `notStarted`, `weeksElapsed 0`, `plannedMinutesToDate 0`, thẻ "tuần này" `notStarted`, mốc 134 ngày. **Q1e** — goal `gq` bị xoá: `linkState missing` (khi xoá trên thiết bị này thì `goalId` đã thành `null` → `none`), mọi giá trị giờ `null`, các giá trị khác như Q1. Builder `datasetQ1(variant)` ở `src/test/builders.ts`; fixture E2E `e2e/fixtures/q1-roadmap-backup.json` (schemaVersion 2).
+
+#### (e) Mẫu "QPT 21 tuần" (`buildQptTemplate`, FR-76)
+
+Đầu vào: `startDate` (người dùng chọn, mặc định hôm nay), `goalId` (tuỳ chọn, theo A-78), ngôn ngữ đang chọn (nội dung mẫu có bản `en` và `vi`, A-86). Mục k (1 … 21): `plannedStart = startDate + 7(k−1)`, `plannedEnd = plannedStart + 6`. Một transaction tạo 32 hàng.
+
+| Trường | Giá trị (`vi`; `en` là bản dịch tương ứng do developer viết theo DESIGN v8.0) |
+| :- | :- |
+| Roadmap | title "QPT 21 tuần"; `weeklyTargetMinutes 480`; `milestoneLabel` "Thi QPT"; `milestoneDate` = `plannedStart` của W20; note = khối "Nhịp học mỗi tuần" của tracker (Thứ 2–4 1h/tối video + ghi chú tay; Thứ 5 1h quiz, ghi câu sai; Thứ 7 2h lab + 10–15 bài tập ngoài; Chủ nhật 1h ôn sổ lỗi, tick tuần; Thứ 6 buffer; "Quiz chưa đạt 80% thì chưa sang module mới.") |
+| Phase 1 … 5 (title / note) | "Phase 1 · Linear Algebra" / "Course 1 · 34h" (W1–W4); "Phase 2 · Calculus" / "Course 2 · 27h" (W5–W8); "Phase 3 · Probability & Statistics" / "Course 3 · 33h" (W9–W12); "Phase 4 · Differential Equations" / "HKUST · Chasnov" (W13–W16); "Phase 5 · Lấp lỗ hổng & thi QPT" / "Mock + hồ sơ" (W17–W21) |
+| Mục W1 … W21 (title) | Nguyên văn mảng `PHASES[].weeks` của `docs/plan/ref/qpt-tracker.html` theo thứ tự (W1 "Systems of linear equations: singular vs non-singular, determinant" … W20 "Thi QPT chính thức", W21 "Buffer; hoàn tất và nộp hồ sơ trước hạn"); note rỗng |
+| Checkpoint (title, date, max, ngưỡng, note) | Diagnostic, `startDate`, 32, —, —; Checkpoint 1, `plannedEnd(W8)`, 32, —, "≥ 3/4 mỗi mảng LA, Calc"; Checkpoint 2, `plannedEnd(W16)`, 32, 20; Mock 1, `plannedEnd(W18)`, 32, 24; Mock 2, `plannedEnd(W19)`, 32, 26. `score` đều null |
+
+Với `startDate 2026-10-27`: W1 10-27–11-02; W8 kết thúc 2026-12-21; W16 2027-02-15; W18 2027-03-01; W19 2027-03-08; W20 2027-03-09–2027-03-15 (khớp tuần thi thật của user); W21 kết thúc 2027-03-22. Các mục "Thứ 2–4…" và bullet "Tuần này" cố định của tracker không chép thành tính năng (chỉ nằm trong note).
+
+#### (f) Backup `schemaVersion 2` (FR-77, ADR-49)
+
+Export luôn ghi `schemaVersion: 2` và thêm bốn mảng bắt buộc `roadmaps`, `roadmapPhases`, `roadmapItems`, `roadmapCheckpoints` (field như §4.8 a, camelCase, chỉ hàng còn sống; con của phase/roadmap không còn sống bị loại; `goalId` trỏ tới goal không có trong file được ghi `null`). Import nhận `1` và `2`; giá trị khác → `IMPORT_UNSUPPORTED_VERSION`.
+
+| File | Kiểm | Thay thế khi xác nhận |
+| :- | :- | :- |
+| `schemaVersion 1` (mọi file cũ) | như hiện tại; không có khoá roadmap (khoá roadmap có mặt trong file v1 bị bỏ qua) | goals, entries, settings như cũ; **roadmap trên máy giữ nguyên**; roadmap nào có `goalId` không còn trong file → `goalId = null` (A-87). D3 nêu số lộ trình được giữ |
+| `schemaVersion 2` | zod strict cho 4 mảng (giới hạn §4.8 a); toàn vẹn: id duy nhất mỗi loại; phase/mục/checkpoint trỏ tới roadmap có trong file; `item.phaseId` là phase **của cùng roadmap**; `roadmap.goalId` null hoặc trỏ tới goal trong file; không hai roadmap cùng một `goalId`; `actualStart/actualEnd ≤ today`; giới hạn số lượng | thay thế **toàn bộ** gồm 4 bảng roadmap (A-07); D3 đếm thêm số lộ trình |
+
+Vi phạm toàn vẹn → `IMPORT_INTEGRITY`; vượt giới hạn nghiệp vụ → `IMPORT_INVALID_SCHEMA` `outOfRange` (cùng quy tắc `RANGE_FIELDS`, thêm các field mới). Đã đăng nhập (FR-51): bản ghi roadmap trong file nhận `updatedAt` = thời điểm import, roadmap hiện có không nằm trong file bị xoá mềm (chỉ với file v2). Bản app trước phase 8 mở file v2 → `IMPORT_UNSUPPORTED_VERSION`, dữ liệu không đổi (chấp nhận, A-88). `parseBackup` tiếp tục là biên zod lazy (ADR-27).
+
+#### (g) Cloud — migration `supabase/migrations/20261104000000_roadmaps.sql` (FR-79)
+
+File mới, idempotent (`create table if not exists`, `create index if not exists`, `drop trigger/policy if exists` trước `create`), không sửa hai file migration cũ:
+
+```sql
+create table if not exists public.roadmaps (
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  id text not null check (char_length(id) between 1 and 64),
+  title text not null check (char_length(title) between 1 and 80),
+  note text not null default '' check (char_length(note) <= 2000),
+  goal_id text check (goal_id is null or char_length(goal_id) between 1 and 64),   -- không FK (ADR-20)
+  weekly_target_minutes integer check (weekly_target_minutes is null or weekly_target_minutes between 30 and 10080),
+  milestone_label text not null default '' check (char_length(milestone_label) <= 40),
+  milestone_date date,
+  created_at timestamptz not null, updated_at timestamptz not null, deleted_at timestamptz,
+  server_updated_at timestamptz not null default clock_timestamp(),
+  primary key (user_id, id)
+);
+create table if not exists public.roadmap_phases (
+  user_id …, id …, roadmap_id text not null check (char_length(roadmap_id) between 1 and 64),
+  title text not null check (char_length(title) between 1 and 80),
+  note text not null default '' check (char_length(note) <= 120),
+  position double precision not null check (position = position and abs(position) < 1e15),  -- loại NaN/vô cực
+  created_at, updated_at, deleted_at, server_updated_at …, primary key (user_id, id)
+);
+create table if not exists public.roadmap_items (
+  user_id …, id …, roadmap_id …, phase_id text not null check (char_length(phase_id) between 1 and 64),
+  title text not null check (char_length(title) between 1 and 200),
+  note text not null default '' check (char_length(note) <= 1000),
+  position double precision not null check (…),
+  planned_start date not null, planned_end date not null,
+  actual_start date, actual_end date,
+  check (planned_end >= planned_start and planned_end - planned_start <= 365),
+  check (actual_start is null or actual_end is null or actual_end >= actual_start),
+  …sync columns, primary key (user_id, id)
+);
+create table if not exists public.roadmap_checkpoints (
+  user_id …, id …, roadmap_id …,
+  title text not null check (char_length(title) between 1 and 80),
+  note text not null default '' check (char_length(note) <= 280),
+  date date not null,
+  max_score numeric(7,1) not null check (max_score > 0 and max_score <= 10000),
+  threshold numeric(7,1) check (threshold is null or (threshold >= 0 and threshold <= max_score)),
+  score numeric(7,1) check (score is null or (score >= 0 and score <= max_score)),
+  …sync columns, primary key (user_id, id)
+);
+-- mỗi bảng: index (user_id, server_updated_at, id); trigger before insert or update … execute function public.sync_before_write()
+--   (hàm có sẵn từ M6, không định nghĩa lại); enable RLS; 3 policy select/insert/update `to authenticated` theo (select auth.uid()) = user_id;
+--   revoke all … from anon, authenticated; grant select, insert, update … to authenticated. Không policy DELETE.
+```
+
+Mapper (`integration/supabase/mapper.ts`): snake_case ↔ camelCase, zod theo cùng giới hạn; `numeric` nhận cả số lẫn chuỗi số (PostgREST có thể trả chuỗi cho `numeric`) rồi chuẩn hoá thành `number`; hàng sai → bỏ qua, đếm `skippedInvalid` (NFR-05). Pre-validate trước khi đẩy như goals/entries (hàng không hợp lệ → `rejected`, `dirty = 2`).
+
+#### (h) Đồng bộ (FR-78, ADR-50, ADR-52)
+
+- **Bảng đăng ký** `SYNC_TABLES` (`src/data/sync-tables.ts`, thuần dữ liệu): `{ remote: 'goals', local: 'goals', group: 'core', parent: null }`, `entries` (`core`, parent goals qua `goalId`), `roadmaps` (`roadmap`), `roadmap_phases` (parent roadmaps qua `roadmapId`), `roadmap_items` (parent roadmaps qua `roadmapId` **và** phase qua `phaseId`), `roadmap_checkpoints` (parent roadmaps). Thứ tự = thứ tự đẩy/kéo (cha trước con). `SyncMeta.cursor` có khoá cho cả 6 bảng; `normalizeSyncMeta` thiếu khoá → `null` (thiết bị đã đồng bộ trước phase 8 kéo toàn bộ 4 bảng mới một lần, không đặt lại goals/entries).
+- **Chu kỳ:** (1) đẩy nhóm `core` như cũ (tối đa 20 lô); (2) đẩy nhóm `roadmap` bằng **lệnh `push` riêng**; (3) kéo `goals`, `entries`, rồi 4 bảng roadmap; (4) dọn mồ côi: entry của goal đã xoá (như cũ) + phase/mục/checkpoint của roadmap đã xoá + mục của phase đã xoá → xoá mềm, `dirty = 1`; `applyRemote` một tombstone roadmap/phase xoá mềm con còn sống ngay trong transaction đó (như goal → entry); (5) tuỳ chọn người dùng; (6) bookkeeping.
+- **Cloud chưa có bảng (ADR-52):** bất kỳ lệnh nào của nhóm `roadmap` nhận 404 `PGRST205`/`42P01` hoặc 403 `42501` → `RemoteError.tableMissing = true` → SyncService bỏ qua phần `roadmap` còn lại của chu kỳ (không `markRejected`, hàng giữ `dirty = 1`), **không** chuyển `expired`, chu kỳ vẫn `ok` nếu nhóm `core` ổn, `SyncStatus.roadmapsUnavailable = true` (UI: dòng gợi ý ở card Account và ở màn Mục tiêu lớn, copy designer). Chu kỳ sau thử lại nhóm `roadmap` bình thường; khi thành công cờ về `false`. Lỗi mạng/5xx/401 của nhóm `roadmap` xử lý như mọi lỗi đồng bộ hiện có.
+- **Đếm chờ:** `watchPendingCount` cộng hàng `dirty = 1` của cả 6 bảng; `countRejected` cả 6 bảng; `markAllDirty` (gộp sang tài khoản khác, FR-47), `clearUserData` (đăng xuất xoá dữ liệu, FR-41), `purgeTombstones` (ADR-29) áp cho cả 6 bảng; `countLive` trả thêm `roadmaps` (D5/đăng xuất có thể nêu, copy designer).
+- **Hội tụ (NFR-12 v8.0):** test ngẫu nhiên 20 seed × 200 thao tác thêm thao tác roadmap (tạo, sửa mục, đánh dấu xong, xoá phase, xoá roadmap, liên kết/bỏ liên kết goal, xoá goal đang liên kết) → tập sống 6 bảng giống nhau trên A, B, remote.
+- **Mock E2E:** `server.mjs` thêm 4 bảng với cùng trigger LWW giả lập; `POST /__test/config { roadmapTables: false }` → mọi request tới 4 bảng trả 404 `{ code: 'PGRST205' }`.
+
+#### (i) Vòng đời liên kết goal (FR-70, A-78, A-79)
+
+| Sự kiện | Hành vi |
+| :- | :- |
+| Liên kết | Picker chỉ liệt kê goal còn sống, chưa archive, chưa liên kết roadmap còn sống khác (goal đang liên kết với chính roadmap này cũng hiện). Service kiểm lại: goal không tồn tại → `GOAL_NOT_FOUND`; đã liên kết roadmap khác → `ROADMAP_GOAL_ALREADY_LINKED` (`params.title` = tên roadmap kia) |
+| Bỏ liên kết | `goalId = null`; giờ thành "—" |
+| Goal bị archive | Liên kết giữ; giờ vẫn tính; UI hiện ghi chú "goal đã lưu trữ" (designer) |
+| Goal bị xoá trên thiết bị này | Cùng transaction: `goalId = null` mọi roadmap trỏ tới (A-79). Hộp thoại xoá goal nêu tên roadmap sẽ mất liên kết (Should, FR-80) |
+| Goal bị xoá ở thiết bị khác (tombstone kéo về) | Không tự sửa roadmap khi kéo; `linkState = missing` → hiển thị như chưa liên kết + câu "goal liên kết đã bị xoá" + lối vào liên kết lại. Thiết bị xoá đã đẩy `goalId = null` nên sau đồng bộ hai bên hội tụ về `none` |
+| Hai roadmap cùng `goalId` sau đồng bộ (hai thiết bị offline cùng liên kết) | Hiển thị và tính bình thường cho cả hai (A-25); lần sửa liên kết kế tiếp vẫn bị A-78 kiểm |
+
+#### (j) i18n lazy và ngân sách (NFR-25, ADR-53)
+
+Chuỗi của mọi màn phase 8 nằm ở namespace i18next `roadmap` (`src/i18n/resources/roadmap.en.json`, `roadmap.vi.json`), nạp bằng `import()` trong `lazy()` của route (`ensureRoadmapNamespace(i18n)` → `addResourceBundle(lng, 'roadmap', …)` cho **cả hai** ngôn ngữ để đổi ngôn ngữ không cần tải thêm); `useT('roadmap')` hoặc key dạng `roadmap:…`. Kiểu `MessageKey` mở rộng cho namespace (typecheck bắt key sai). Parity test (`parity.test.ts`) và quét vi áp cho namespace mới; lint không hardcode như cũ. Chỉ các key **trên đường tải lạnh** nằm trong `en.json`/`vi.json` chính: `nav.roadmaps` và (nếu có) chuỗi `SyncStatus.roadmapsUnavailable` của card Account/StatusRow; mã lỗi `ROADMAP_*` dùng key trong namespace `roadmap` (`roadmap:errors.<CODE>`), vì chỉ màn roadmap hiện chúng. Service worker precache chunk lazy như mọi chunk khác (offline, NFR-02).
 
 ## 5. Interface contract
 
@@ -995,6 +1282,17 @@ App không có HTTP API. Contract gồm: route, repository interface, service, m
 | `<BASE_URL>?auth=callback&code=…` (query, **trước** dấu `#`) | Không phải route: callback OAuth, `bootstrap` xử lý rồi xoá query, điều hướng tới `returnTo` (mặc định `#/settings`) — §5.9 | M6 |
 
 Phase 2 không thêm route mới: card Account nằm trong `#/settings`.
+
+**v8.0 (phase 8, mọi route dưới đây `lazy`, `errorElement: <ViewError />`, ADR-53):**
+
+| Route | Màn hình | Milestone |
+| :- | :- | :- |
+| `#/roadmaps` | Danh sách "Mục tiêu lớn" (tổng quan mỗi lộ trình; trạng thái rỗng có 2 lối tạo) | M17 (đọc), M19 (đầy đủ) |
+| `#/roadmaps/new` | Tạo lộ trình: trống (form roadmap) hoặc **từ mẫu QPT 21 tuần** (chọn ngày bắt đầu + goal liên kết tuỳ chọn) | M19 (trống), M20 (mẫu) |
+| `#/roadmaps/:id` | Chi tiết: tổng quan, dải ô mục, thẻ "tuần này", danh sách phase/mục có thao tác nhanh, checkpoint (M20) | M19, M20 |
+| `#/roadmaps/:id/edit` | Editor cấu trúc: field roadmap (gồm liên kết goal, chỉ tiêu giờ/tuần, mốc chính), thêm/sửa/xoá/sắp xếp phase và mục, checkpoint (M20) | M19, M20 |
+
+Id không tồn tại/đã xoá → trạng thái "không tìm thấy" của màn (copy designer), không crash. Nav (tab bar < 1024 px, sidebar ≥ 1024 px) có mục thứ năm `nav.roadmaps` trỏ `#/roadmaps` (active cho mọi route `/roadmaps*`); vị trí trong thanh do designer chốt.
 
 ### 5.2 Repository interface (`src/data/repositories.ts`)
 
@@ -1182,6 +1480,23 @@ Mọi hàm nghiệp vụ trả `Result<T> = { ok: true; value: T } | { ok: false
 
 Mã `AUTH_*`, `SYNC_*` thêm vào `ErrorCode` (domain/types) và có key `errors.<CODE>` ở cả `en.json`/`vi.json` (copy do designer chốt).
 
+**v8.0 (phase 8, §4.8):** key hiển thị nằm ở namespace `roadmap` (`roadmap:errors.<CODE>[_<variant>]`, ADR-53).
+
+| Code | Khi nào |
+| :- | :- |
+| `ROADMAP_NOT_FOUND` | Id roadmap/phase/mục/checkpoint không tồn tại hoặc đã xoá; `params.kind ∈ {roadmap, phase, item, checkpoint}` |
+| `ROADMAP_TITLE_REQUIRED` | Tiêu đề rỗng sau trim (`field` = `title`) |
+| `ROADMAP_TEXT_TOO_LONG` | Chữ vượt giới hạn §4.8 (a); `field`, `params.max` |
+| `ROADMAP_DATE_INVALID` | Ngày sai định dạng (`variant: 'format'`), kết thúc trước bắt đầu (`'order'`, `field` = `plannedEnd`/`actualEnd`), mục dài hơn 366 ngày (`'itemTooLong'`), tổng khoảng lộ trình > 1827 ngày (`'roadmapTooLong'`) |
+| `DATE_IN_FUTURE` (dùng lại) | `actualStart`/`actualEnd` sau hôm nay |
+| `ROADMAP_TARGET_INVALID` | Chỉ tiêu giờ/tuần ngoài 0,5–168 giờ hoặc không theo bước 0,5 |
+| `ROADMAP_SCORE_INVALID` | `maxScore` ≤ 0 hoặc > 10000 (`variant: 'max'`), ngưỡng/điểm ngoài 0 … max (`'range'`), quá 1 chữ số thập phân (`'precision'`); `field` |
+| `ROADMAP_GOAL_ALREADY_LINKED` | Goal đã liên kết một roadmap còn sống khác; `params.title` = tiêu đề roadmap đó |
+| `GOAL_NOT_FOUND` (dùng lại) | Liên kết tới goal không tồn tại/đã xoá |
+| `ROADMAP_LIMIT_REACHED` | Vượt số lượng: `params.kind ∈ {roadmap, phase, item, checkpoint}`, `params.max` |
+| `IMPORT_UNSUPPORTED_VERSION` (mở rộng) | `schemaVersion` khác 1 và 2 |
+| `IMPORT_INTEGRITY` (mở rộng) | Thêm các vi phạm §4.8 (f) |
+
 Message hiển thị (tiếng Anh và tiếng Việt) do designer chốt trong `DESIGN.md`; code ở trên là cố định để test bám vào. UI ánh xạ code → key `errors.<CODE>` (biến thể thêm hậu tố, vd. `errors.GOAL_TARGET_INVALID_daily`, `errors.GOAL_PERIOD_INVALID_tooLong`) trong `src/ui/error-messages.ts`; tham số (`remaining`, `start`, `end`, `v`) truyền vào `t()` sau khi đã qua formatter của locale. `DomainError.message` chỉ để log, không bao giờ hiển thị.
 
 ### 5.5 Định dạng file backup (schemaVersion 1)
@@ -1208,6 +1523,8 @@ Import: thay thế toàn bộ `goals`, `entries`, `settings`; xoá `activeTimer`
 **v2.0 (M7):** định dạng file **không đổi** (`schemaVersion: 1`). Export chỉ gồm bản ghi còn sống, không có `deletedAt`, `dirty`, `user_id` hay kv `sync`/`loginPrompt`. Import giữ kv `locale`, `sync`, `loginPrompt`; bản ghi hiện có không nằm trong file bị **xoá mềm** (để việc thay thế lan truyền lên cloud). Khi đã đăng nhập, `BackupService.import` đặt `updatedAt` của mọi bản ghi trong file = thời điểm import (A-29) để thắng LWW; chưa đăng nhập thì giữ nguyên như file.
 
 **v4.0 (M11, ADR-32):** định dạng giữ `schemaVersion: 1`. Goal không thời hạn: `"endDate": null` (field luôn có, không bỏ). Ví dụ: `{ "id": "o1", "name": "Meditate", "why": "", "targetType": "daily", "targetMinutes": 10, "startDate": "2026-10-01", "endDate": null, "archived": false, … }`. Quy tắc nhận/từ chối ở §4.6 (e). File cũ không đổi cách đọc.
+
+**v8.0 (phase 8, M17, ADR-49):** export ghi **`schemaVersion: 2`** và thêm `roadmaps`, `roadmapPhases`, `roadmapItems`, `roadmapCheckpoints` (luôn có, có thể rỗng); import đọc **1 và 2**. Quy tắc kiểm và thay thế (file v1 giữ roadmap trên máy, file v2 thay toàn bộ) ở §4.8 (f). Ví dụ phần mới: `"roadmaps": [{ "id": "r1", "title": "QPT 21 tuần", "note": "…", "goalId": "gq", "weeklyTargetMinutes": 480, "milestoneLabel": "Thi QPT", "milestoneDate": "2027-03-09", "createdAt": "…", "updatedAt": "…" }], "roadmapItems": [{ "id": "i1", "roadmapId": "r1", "phaseId": "p1", "title": "…", "note": "", "position": 0, "plannedStart": "2026-10-27", "plannedEnd": "2026-11-02", "actualStart": "2026-10-27", "actualEnd": "2026-11-01", … }]`.
 
 ### 5.6 Notification và Service Worker
 
@@ -1371,6 +1688,8 @@ interface RemoteStore {
 **Gộp khi đăng nhập (FR-47):** `prepareFirstSignIn(userId)`: `sync.lastUserId` null hoặc bằng `userId` → `merge-silently`/`same-user` (bản ghi tạo khi chưa đăng nhập đã có `dirty = 1` nên chu kỳ đầu tự đẩy lên = gộp; nhóm tuỳ chọn đã chọn trên máy cũng `dirty = 1` và đi theo bảng quy tắc §4.4); khác `userId` và `countLive() > 0` → `confirm-merge` (UI hiện hộp thoại; "Add to account" → `confirmMerge()` = `markAllDirty()` + `prefs.markAllDirty()` + reset cursor; "Cancel" → `AuthService.signOut({ keepData: true })`).
 
 **Ánh xạ hàng (`integration/supabase/mapper.ts`):** `snake_case` ↔ `camelCase`; `timestamptz` → `new Date(v).toISOString()` (luôn dạng `YYYY-MM-DDTHH:mm:ss.sssZ`); `date` giữ `YYYY-MM-DD`; zod kiểm từng hàng theo giới hạn domain (độ dài, khoảng phút, enum), hàng sai → bỏ qua và đếm `skippedInvalid` (NFR-05). **v4.0:** `end_date` nullable (chỉ `daily`), bước "đặt lại con trỏ goals một lần" ở đầu chu kỳ — §4.6 (f), ADR-33.
+
+**v8.0 (phase 8, M18):** `RemoteTable` = 6 bảng; `RemoteChanges`, `PushResult.rejected`, `fetchByIds` có thêm 4 mảng (tuỳ chọn ở đầu vào để code/test cũ chỉ có `goals`/`entries` vẫn biên dịch; đầu ra luôn đủ); `pull(table, …)` nhận cả 4 bảng mới. Chu kỳ chạy theo `SYNC_TABLES` (ADR-50) với hai nhóm đẩy tách lệnh và quy tắc "bảng chưa có trên cloud" (ADR-52) — chi tiết §4.8 (h). Con trỏ của bảng mới bắt đầu `null`.
 
 ### 5.11 Mock Supabase cho E2E (v2.0) — `e2e/mock-supabase/server.mjs`
 
@@ -1638,6 +1957,24 @@ Unit/integration test đặt cạnh file nguồn (`*.test.ts(x)`).
 
 `dist-native/`, `dist-native-e2e/` là output build, nằm trong `.gitignore`. Không có thư mục `fastlane/` (ADR-38).
 
+**v8.0 (phase 8) thêm:**
+
+```text
+├── docs/plan/ref/qpt-tracker.html      # tracker HTML gốc của user — CHỈ tham chiếu hành vi/nội dung mẫu, không build, không serve
+├── supabase/migrations/20261104000000_roadmaps.sql
+├── src/
+│   ├── config/constants.ts             # + ROADMAP_* limits
+│   ├── data/sync-tables.ts             # SYNC_TABLES (ADR-50)
+│   ├── data/dexie/roadmap-repo.ts (+ test), db.ts (v3)
+│   ├── domain/roadmap.ts, roadmap-progress.ts, roadmap-template.ts (+ test)
+│   ├── services/roadmap-service.ts (+ test)
+│   ├── i18n/roadmap-namespace.ts, resources/roadmap.en.json, resources/roadmap.vi.json
+│   └── ui/screens/Roadmaps.tsx, RoadmapNew.tsx, RoadmapDetail.tsx, RoadmapEditor.tsx (+ test)
+│       ui/components/roadmap/WeekStrip.tsx, RoadmapItemRow.tsx, CheckpointTable.tsx, CheckpointChart.tsx, GoalLinkPicker.tsx, TemplateDialog.tsx
+├── e2e/m17-roadmap-data.spec.ts, m19-roadmap-ui.spec.ts, m20-qpt-template.spec.ts, cloud/m18-roadmap-sync.spec.ts
+└── e2e/fixtures/q1-roadmap-backup.json (schemaVersion 2), v1-backup-with-roadmap-keys.json
+```
+
 ## 7. Config và biến môi trường
 
 Không có secret. Không biến nào bắt buộc; app chạy với giá trị mặc định khi không có `.env`.
@@ -1745,6 +2082,8 @@ Quy ước test: mỗi test e2e dùng browser context mới (IndexedDB sạch); 
 
 `page.clock` trong spec cloud: chỉ dùng `install`/`fastForward` cho debounce/backoff; request tới mock vẫn là thật. Spec cloud không dùng Google thật; luồng Google thật, project thật, iOS/Android là kiểm thủ công (TASKS "User setup" U10, "NOT VERIFIED" của M6–M8).
 
+**v8.0 (phase 8).** "Hôm nay" cho mọi test phase 8 = **`2026-11-04`** (thứ Tư, `Asia/Ho_Chi_Minh`) trừ khi AC ghi khác; dataset **Q1** và biến thể (§4.8 d). Unit: `roadmap.test.ts` (validate, giới hạn, `positionBetween`), `roadmap-progress.test.ts` (oracle Q1/Q1b … Q1e, chồng khoảng, cửa sổ rỗng, `weekBased`, checkpoint), `roadmap-template.test.ts` (32 hàng, ngày W8/W16/W18/W19/W20, `en`/`vi`), `backup.test.ts` (v1/v2, toàn vẹn), `limits-parity.test.ts` (form ↔ file ↔ mapper cho field mới). Data/service (fake-indexeddb): Dexie v2 → v3 giữ 100% dữ liệu S1; xoá dây chuyền; xoá goal bỏ liên kết trong cùng transaction; A-78. Sync: bộ hợp đồng `remote-store.contract.ts` cho 4 bảng; hai thiết bị + ngẫu nhiên 20 seed có thao tác roadmap; bảng chưa có trên cloud (Fake ném `tableMissing`). E2E `chromium` (en + vi, 360/1440 px) cho danh sách/chi tiết/editor/mẫu; `cloud` hai context cho đồng bộ roadmap và công tắc `roadmapTables: false`. Ngân sách: `e2e/m10-bundle.spec.ts` + bản cloud giữ ≤ 230.000 byte, thêm assert JS tải lạnh **không** chứa chuỗi mẫu của namespace roadmap (vd. key `roadmap.detail.` hoặc literal "Linear Algebra"). Bench `roadmapOverview` (NFR-26).
+
 Quy ước test song ngữ: component test mặc định render ở `en` (helper `renderWithLocale(ui, 'en' | 'vi')`). Test khẳng định chữ nên lấy chuỗi mong đợi từ resource (`t('toast.entrySaved')`) hoặc ghi literal `en` khi AC ghi literal; giá trị định dạng `vi` so với kết quả `Intl` tính trong test hoặc literal sau khi chuẩn hoá khoảng trắng (U+00A0, U+202F → space), vì chi tiết ICU có thể khác nhẹ giữa Node và Chromium.
 
 ## 9. Lệnh chuẩn
@@ -1836,6 +2175,12 @@ Developer phải làm cho tất cả lệnh sau chạy được từ thư mục 
 | (v5.0) Local notification lên lịch trước nên nội dung không phản ánh tiến độ; người dùng không mở app 14 ngày thì hết nhắc | Cao | Thấp | Copy tổng quát (DESIGN); bỏ hôm nay khi đã đạt hết; cửa sổ 14 ngày là chủ ý (A-63); nội dung tiến độ thật là Later |
 | (v5.0) Bản web và bản iOS lệch version (iOS chờ review vài ngày) | Cao | Thấp | Phase 6 không đổi schema/cloud/backup (A-70); quy tắc tương thích ADR-32/33 giữ nguyên |
 | (v5.0) Lộ khoá phát hành qua log/artifact CI | Thấp | Cao | Không `echo` secret; khoá ghi `$RUNNER_TEMP` quyền 600 và xoá `if: always()`; không upload IPA/khoá; GitHub tự che secret trong log; test tĩnh workflow (M13-AC1) |
+| (v8.0) Push bản có đồng bộ roadmap trước khi user chạy migration roadmap → request tới bảng chưa có | Trung bình | Thấp (nếu ADR-52 đúng) / Cao (nếu chặn đồng bộ goal) | ADR-52: nhóm `roadmap` tách lệnh, 404 `PGRST205`/`42P01`, 403 `42501` → bỏ qua nhóm, không `expired`, goals/entries vẫn đồng bộ; điều kiện deploy M18 sau U31; E2E `cloud` với `roadmapTables: false` |
+| (v8.0) Ngân sách tải lạnh `#/today` chỉ còn ~1,4–2 KB (228,x / 230) | Cao | Trung bình | Mọi code/chuỗi roadmap lazy (ADR-53, lint `no-restricted-imports`); trên đường tải lạnh chỉ thêm `nav.roadmaps`, icon, khai báo Dexie v3, bảng `SYNC_TABLES`; đo trước/sau ở M17 (mục tiêu tăng ≤ 0,8 KB) |
+| (v8.0) Dexie v2 → v3 lỗi trên máy thật (iOS WKWebView, Safari) | Thấp | Cao | Chỉ thêm bảng, không `upgrade()`; Dexie rollback khi lỗi → `StorageError`; test v2 → v3 với S1; E2E dựng DB v2 thô rồi mở app (như `m7-migration`) |
+| (v8.0) Gán giờ cho mục khi khoảng ngày chồng nhau gây khó hiểu | Trung bình | Thấp | Quy tắc tất định một-ngày-một-mục §4.8 (c) (ưu tiên mục có ngày thực tế, rồi mục bắt đầu gần nhất); tổng tổng quan = tổng các mục; oracle Q1b/Q1c; designer có dòng giải thích ngắn |
+| (v8.0) Import file v1 (cũ) khi đã đăng nhập làm mất lộ trình ở mọi thiết bị | Thấp | Cao | A-87: file v1 không chạm roadmap (chỉ bỏ liên kết goal không còn); chỉ file v2 thay roadmap; D3 nêu số lộ trình |
+| (v8.0) Bản app cũ (iOS TestFlight/PWA chưa cập nhật) đồng bộ cùng tài khoản | Cao | Thấp | Bản cũ không biết 4 bảng mới nên không đọc/ghi chúng; goals/entries không đổi schema; file backup v2 bị bản cũ từ chối có thông báo (A-88) |
 | (v5.0) Google Play (M16): closed testing 12 người × 14 ngày, Data safety, SHA-1 của app signing key khác upload key làm Google Sign-In lỗi | Trung bình | Trung bình | Chỉ làm khi user chọn; U28 nêu rõ hai SHA-1; kiểm lại quy định Play lúc làm |
 
 ## 11. Quyết định kiến trúc
@@ -1995,8 +2340,27 @@ Bối cảnh: user xem goal thật (30 phút/ngày từ 2026-10-20; 22, 24, 24, 
 **ADR-47 — Một kế hoạch +1 %/ngày dùng chung cho đường lý tưởng, Tiến độ và Nhịp độ (`domain/plan.ts`); goal `total` scale T₀ để kế hoạch bằng đúng tổng (v6.1, phase 7, 2026-11-02; chốt PRD OQ-21). Bổ sung ADR-46.**
 Bối cảnh: ngay sau v6.0, cùng một trang Goal detail hiện hai con số "dự kiến" khác nhau — thẻ Pace `Expected 420 min by today` (chỉ tiêu phẳng `dailyTarget × 14`) cạnh đường lý tưởng 448 phút (chỉ tiêu +1 %/ngày cộng dồn) với dữ liệu thật của user; R1 ngày 4: 120 so với 121,8. User chọn đồng bộ (OQ-21). Lựa chọn: tách số học của kế hoạch ra `src/domain/plan.ts` (`dayTarget`, `cumulativeTarget` công thức đóng, `planStart`), `goal.ts` thêm `planStartOf` và `plannedMinutes(goal, k) = round(cumulativeTarget(T₀, k))`, `totalTarget` viết lại (goal `daily` có hạn: `plannedMinutes(periodDays)`; goal `total`: `targetMinutes`; goal không thời hạn: `plannedMinutes(daysElapsed)`), `stats.ts` `expectedMinutes = plannedMinutes(goal, elapsedDays)`, `curve.ts` dùng `planStartOf` và đổi `CurveData.dailyTarget` → `startTarget`. Goal `total`: T₀ = `targetMinutes × 0.01 / (1.01^periodDays − 1)` (số thực) để `cumulativeTarget(T₀, periodDays) = targetMinutes` — đường lý tưởng kết thúc đúng ở tổng user nhập (G3: 6.000), còn `dailyTarget = ceil(total / N)` giữ nguyên cho ngày đạt, streak, "+1%" và tiến độ ngày trên Today (PRD A-73). Phương án đã loại: (1) **giữ phẳng** cho Pace/Progress — hai con số lệch nhau trên cùng trang, lệch tăng theo thời gian (ngày 365: 10.950 so với 110.350); (2) **chỉ sửa câu chữ** của thẻ ("tối thiểu" / "thử thách +1%") — thêm copy, vẫn hai con số; (3) goal `total` dùng `ceil(total / N)` làm T₀ rồi cộng dồn — kế hoạch ≠ tổng user nhập (G3: 6.355 ≠ 6.000), Progress có thể vượt 100 % trước khi đạt tổng hoặc ngược lại. Hệ quả: Progress/Pace đổi số (G1: 22,1 % thay 25,8 %; `41 min behind` thay 30; O1: 58,5 %, 94, −39), Review đổi theo vì dùng chung `goalStats`, Today không đổi, copy không đổi; `totalTarget` của goal `daily` dài lớn hơn nhiều so với phẳng (30 phút/1827 ngày: ≈ 2,36·10^11 — cùng hệ quả với đường lý tưởng, DESIGN OQ-D21; số nguyên an toàn); test unit/E2E/QC về `goalStats`, `totalTarget`, `CurveData.dailyTarget` đổi số/tên theo oracle §4, §4.5, §4.6; không đổi schema, sync, backup, route, mã lỗi, chữ ký `goalStats`/`curve`.
 
+**ADR-48 — Mục tiêu lớn lưu bằng bốn bảng chuẩn hoá (roadmap, phase, mục, checkpoint), mỗi hàng LWW riêng; Dexie v3 chỉ thêm bảng (v8.0, phase 8).**
+Bối cảnh: user đòi đồng bộ cloud ngay bản đầu "theo đúng mô hình goals/entries" (LWW, tombstone, dirty); thao tác thường gặp là tick một mục, đặt ngày thực tế, nhập điểm — từ điện thoại và máy tính. Lựa chọn: 4 bảng (`roadmaps`, `roadmap_phases`, `roadmap_items`, `roadmap_checkpoints`), khoá `(user_id, id)`, không FK giữa chúng (như ADR-20), cùng trigger `sync_before_write`; Dexie v3 khai báo 4 bảng mới, không `upgrade()`. Hệ quả: hai thiết bị sửa hai mục khác nhau không đè nhau; cần quy tắc mồ côi (con của roadmap/phase đã xoá); một migration SQL mới (U31). Phương án đã loại: một hàng JSONB cho cả lộ trình (LWW cả lộ trình — tick ở máy A bị đè bởi sửa ghi chú ở máy B; khó validate ở SQL); gộp phase vào mảng trong hàng roadmap (sửa phase và mục cùng lúc phải xử lý mục trỏ tới phase không còn trong mảng); lưu trong kv (không đồng bộ được theo bản ghi).
+
+**ADR-49 — File backup `schemaVersion 2`; đọc 1 và 2; file 1 không chạm roadmap (v8.0).**
+Bối cảnh: `fileSchema` gốc không `strict` ở gốc nên bản app cũ đọc file có khoá mới sẽ **lặng lẽ bỏ** dữ liệu roadmap; user muốn "import file cũ vẫn chạy". Lựa chọn: bump lên 2 (bản cũ báo `IMPORT_UNSUPPORTED_VERSION` thay vì mất dữ liệu im lặng), bản mới nhận 1 và 2; file 1 thay goals/entries/settings như cũ nhưng **giữ** roadmap trên máy (chỉ bỏ liên kết goal không còn — A-87), file 2 thay toàn bộ. Hệ quả: một nhánh đọc thêm trong `parseBackup`; D3 nêu số lộ trình. Phương án đã loại: giữ `schemaVersion 1` + khoá tuỳ chọn (như ADR-32) — an toàn với `null` nhưng không an toàn với cả mảng dữ liệu mới; file 1 xoá sạch roadmap (đúng "thay toàn bộ" nhưng một lần import file cũ khi đã đăng nhập sẽ xoá lộ trình trên mọi thiết bị).
+
+**ADR-50 — Sync engine chạy theo bảng đăng ký `SYNC_TABLES` thay vì mã cứng goals/entries (v8.0, M18).**
+Bối cảnh: `SyncService`, `DexieSyncStore`, `RemoteStore`, mock và Fake đều liệt kê tay `goals`/`entries`; thêm 4 bảng bằng copy-paste sẽ nhân đôi logic dễ lệch (con trỏ, mồ côi, purge, pending). Lựa chọn: `src/data/sync-tables.ts` mô tả mỗi bảng (tên local/remote, nhóm, cha + khoá trỏ cha); các vòng lặp đẩy/kéo/mồ côi/purge/đếm duyệt bảng này; API công khai giữ tên field `goals`/`entries` (field mới tuỳ chọn ở đầu vào). Hệ quả: refactor có rủi ro hồi quy → M18 chạy lại toàn bộ test sync M7/M11 không đổi assertion + test hội tụ mở rộng. Phương án đã loại: service đồng bộ riêng cho roadmap (hai engine tranh lock `opb-sync`, hai trạng thái đồng bộ trên UI).
+
+**ADR-51 — Thứ tự phase/mục bằng vị trí số thực (trung điểm), đánh lại khi quá sát (v8.0).**
+Bối cảnh: editor cho sắp xếp; mỗi hàng LWW riêng. Đánh lại số nguyên cho cả danh sách ở mỗi lần kéo thả sẽ ghi nhiều hàng và hai thiết bị sắp xếp cùng lúc dễ trộn lẫn. Lựa chọn: `position` = trung điểm hai hàng kề (chỉ ghi hàng được chuyển); khi khoảng cách < 1e-6 thì đánh lại cả danh sách trong một transaction; tie-break theo `id` nên mọi thiết bị hiển thị cùng thứ tự. Hệ quả: `double precision` trên SQL, kiểm NaN/vô cực. Phương án đã loại: số nguyên đánh lại mọi lần; chuỗi LexoRank (nặng hơn cần thiết cho ≤ 200 mục).
+
+**ADR-52 — Nhóm bảng roadmap đẩy/kéo tách lệnh; "bảng chưa có trên cloud" không phải lỗi phiên (v8.0, M18).**
+Bối cảnh: user tự chạy migration; bản web có thể được deploy trước (hoặc user chạy sót), PostgREST trả 404 `PGRST205`/`42P01` cho bảng không có và 403 `42501` khi thiếu grant — mà 403 hiện bị coi là `SYNC_UNAUTHORIZED` → đăng xuất mềm, và một lỗi bất kỳ làm hỏng cả chu kỳ → goals/entries ngừng đồng bộ. Lựa chọn: đẩy nhóm `core` trước bằng lệnh riêng, rồi nhóm `roadmap`; lỗi `tableMissing` của nhóm `roadmap` → bỏ qua phần còn lại của nhóm, giữ `dirty = 1`, cờ `roadmapsUnavailable`, chu kỳ vẫn thành công; lần sau thử lại. Hệ quả: một cờ trạng thái mới (copy designer); test với mock `roadmapTables: false`. Phương án đã loại: kiểm schema trước mỗi chu kỳ (thêm request); coi là lỗi chung (chặn đồng bộ goal — vi phạm FR-45 tinh thần "không gì chặn").
+
+**ADR-53 — Tính năng Mục tiêu lớn hoàn toàn lazy, kể cả chuỗi dịch (namespace i18next `roadmap`) (v8.0, NFR-25).**
+Bối cảnh: tải lạnh `#/today` đang 228,x / 230 KB và mọi chuỗi `en`/`vi` đang nằm trong bundle chính (khoảng 150 key mới × 2 ngôn ngữ sẽ vượt ngân sách). Lựa chọn: route lazy; domain/service/repository roadmap chỉ được import từ chunk lazy (lint); chuỗi ở `roadmap.en.json`/`roadmap.vi.json` nạp bằng `import()` + `addResourceBundle` cho cả hai ngôn ngữ khi vào route; trên đường tải lạnh chỉ thêm key `nav.roadmaps` (+ chuỗi cờ `roadmapsUnavailable`), icon, khai báo Dexie, `SYNC_TABLES`. Hệ quả: hạ tầng namespace thứ hai cho parity/quét vi/kiểu key; lần đầu mở màn roadmap offline vẫn chạy nhờ SW precache. Phương án đã loại: lazy toàn bộ file dịch theo ngôn ngữ (Later của ADR-27, đụng mọi màn); nâng ngân sách (trái quyết định v3.1).
+
 ## Changelog
 
+- 2026-11-04 — v8.0 (mode `revise`, phase 8 "Mục tiêu lớn", quyết định user 2026-11-04: chuyển tracker QPT 21 tuần vào app thành menu mới, có sync cloud ngay, giờ học suy ra từ goal liên kết, editor + mẫu QPT, checkpoint điểm). §3 thêm **bảng component v8.0** và quy tắc phụ thuộc lazy; §4.7 (f0) bảng mới cascade khi xoá tài khoản; thêm **§4.8** (mô hình 4 thực thể, Dexie v3 + `RoadmapRepository` + `RoadmapService`, bảng công thức suy ra — cửa sổ ngày, quy tắc chồng khoảng một-ngày-một-mục, tổng quan, trạng thái, nhãn sớm/trễ, "tuần này", mốc chính, checkpoint —, oracle **Q1**/Q1b … Q1e, mẫu QPT 21 tuần, backup v2, SQL `20261104000000_roadmaps.sql`, đồng bộ theo `SYNC_TABLES`, vòng đời liên kết goal, i18n lazy); §5.1 4 route `#/roadmaps*` + mục nav thứ năm; §5.4 mã `ROADMAP_*`; §5.5 v8.0; §5.10 v8.0; §6 cây thư mục v8.0; §8 chiến lược test v8.0; §10 sáu rủi ro mới; §11 **ADR-48 … ADR-53**. Bản v7.0 … v7.2 (2026-11-03) chỉ đổi DESIGN/CSS, không đổi ARCHITECTURE nên changelog ở đây nhảy từ v6.1 lên v8.0.
 - 2026-11-02 — v6.1 (mode `revise`, phase 7, quyết định user 2026-11-02 ngay sau v6.0: Nhịp độ/Tiến độ theo cùng kế hoạch +1 %/ngày với đường lý tưởng; PRD v6.1 FR-24, A-73, OQ-21 chốt). §3 thêm hàng **`domain/plan.ts`**, sửa hàng `domain/goal.ts` (`planStartOf`, `plannedMinutes`, `totalTarget`; phụ thuộc plan), `domain/stats.ts` (`expectedMinutes`; phụ thuộc goal), `domain/curve.ts` (`startTarget`, re-export từ plan); §4 "Giá trị suy ra" (`planStartOf`, `plannedMinutes`, `totalTarget` theo kế hoạch, `expectedMinutes`/`pace`, ví dụ G1 và dữ liệu thật); **§4.5** (`T = planStartOf(goal)`, goal `total` scale T₀; đoạn "Chỉ tiêu ngày quyết định đường cong" — Progress/Pace cùng kế hoạch; phạm vi `T > 0`; contract: khối `plan.ts`/`goal.ts`, `CurveData.startTarget` thay `dailyTarget`; oracle R1/O1/S1 thêm số `goalStats`, G3 đổi theo T₀ = 1,631169: `idealMinutes 2535.408`, headline −97,6, `ideal[364].cumulative = 6000`, 03-02 −55,9; dữ liệu thật: 448 / −325 / 3.203 / 3,8 %); **§4.6** (bảng hàm: hàng `planStartOf`/`plannedMinutes` mới, `totalTarget`, `goalStats`; oracle O1: 94 / 58,5 / −39, `startTarget`, 2031 = 79.336.177.010); §6 cây thư mục; §8 unit; §11 ADR-46 ghi chú, thêm **ADR-47** (bối cảnh 420 vs 448; lựa chọn một kế hoạch chung + scale T₀; phương án đã loại: giữ phẳng / chỉ sửa chữ / ceil rồi cộng dồn 6.355 ≠ 6.000; hệ quả). Không đổi schema, sync, backup, route, mã lỗi, copy.
 - 2026-11-02 — v6.0 (mode `revise`, phase 7: đường cong 1% thành **burn-up phút so với mục tiêu**, quyết định user 2026-11-02; FR-27 v6.0). §3 sửa hàng `domain/curve.ts` (phụ thuộc `dailyTarget`); **§4.5 viết lại** (ký hiệu; bảng công thức `target`/`ideal`/`actual`/`gap`/`percent`/headline; đoạn "Lịch sử" M5 → v3.0/ADR-26 → v5.1; `pct` giữ nguyên; phạm vi giá trị; contract chép từ `src/domain/curve.ts` — `IdealPoint.target/cumulative`, `ActualPoint.cumulative/gap/percent`, `CurveData.dailyTarget/totalMinutes/idealMinutes/gapMinutes/headlinePercent`, bỏ `value`/`changePercent`/`baseline`/`previous`/`latestChangePercent`/`actualFactor`/`idealFactor`/`idealPercent`; `dayTarget`, `cumulativeTarget`, `curveYScale`; oracle R1/R3/R4/O1/S1 + dữ liệu thật của user; yêu cầu hiển thị; thang Y phút, yMin = 0; formatter `signedMinutes`/`signed0`/`axisMinutes`, bỏ `factor`/`axisPercent`); §4.6 (c) và hai hàng oracle O1 cập nhật theo v6; §11 ADR-26 ghi "thay bởi ADR-46", thêm **ADR-46** (bối cảnh, lựa chọn, phương án đã loại: từng ngày so với mục tiêu / burndown phút còn lại / giữ v3.0, hệ quả). Không đổi schema, sync, backup, route, mã lỗi.
 - 2026-10-22 — v5.1: §4.5 đường lý tưởng `1.01^(k−1)` thay `1.01^k` (ngày đầu của khoảng +0%, quyết định user 2026-10-22); `idealFactor`/`idealPercent` theo `elapsedDays − 1`. Chữ ký `curve()`, contract `CurveData`, đường "Bạn", thang Y không đổi.

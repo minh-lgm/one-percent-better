@@ -1,0 +1,399 @@
+<title>QPT Study Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: graph-paper notebook — status band on top, 21-cell week strip, then weeks (left) + scores (right) */
+:root{
+  --paper:#f6f8fb; --sheet:#ffffff; --grid:#e3e9f2; --ink:#14213d; --muted:#5b6880; --line:#d3dbe8;
+  --accent:#2952cc; --accent-soft:#e6ecfb;
+  --good:#1f8a5b; --good-soft:#e2f4ea; --warn:#b7791f; --warn-soft:#fbf0dc; --crit:#c2412d; --crit-soft:#fbe5e1;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0e1422; --sheet:#151d2e; --grid:#1b2438; --ink:#e4e9f3; --muted:#93a0b8; --line:#2a3550;
+  --accent:#7d9bff; --accent-soft:#1e2a4d;
+  --good:#4cc38a; --good-soft:#15342a; --warn:#e2b04f; --warn-soft:#3a2e15; --crit:#ef7a66; --crit-soft:#3d1f1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0e1422; --sheet:#151d2e; --grid:#1b2438; --ink:#e4e9f3; --muted:#93a0b8; --line:#2a3550;
+  --accent:#7d9bff; --accent-soft:#1e2a4d;
+  --good:#4cc38a; --good-soft:#15342a; --warn:#e2b04f; --warn-soft:#3a2e15; --crit:#ef7a66; --crit-soft:#3d1f1b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;}
+.wrap{max-width:1120px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:20px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:30px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:18px;font-weight:700}
+.eyebrow{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+.head p{margin:4px 0 0;color:var(--muted)}
+.save{font-size:12px;color:var(--muted)}
+.panel{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:18px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
+.stat{padding:4px 18px;border-left:1px solid var(--line);min-width:0}
+.stat:first-child{border-left:0;padding-left:0}
+.stat .v{font-family:var(--f-mono);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:14px;color:var(--muted);font-weight:400}
+.stat .s{font-size:12.5px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:600}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.good{color:var(--good);background:var(--good-soft)}
+.pill.warn{color:var(--warn);background:var(--warn-soft)}
+.pill.crit{color:var(--crit);background:var(--crit-soft)}
+.pill.idle{color:var(--muted);background:var(--grid)}
+.bar{height:6px;background:var(--grid);border-radius:3px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+/* week strip */
+.strip{display:grid;grid-template-columns:repeat(21,minmax(0,1fr));gap:3px;margin-top:12px}
+.cell{height:30px;border-radius:4px;border:1px solid var(--line);background:var(--sheet);font-family:var(--f-mono);font-size:10.5px;color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+.cell.done{background:var(--accent);border-color:var(--accent);color:var(--sheet)}
+.cell.now{outline:2px solid var(--ink);outline-offset:1px;color:var(--ink);font-weight:600}
+.cell.late{border-color:var(--crit);color:var(--crit)}
+.phases{display:grid;grid-template-columns:4fr 4fr 4fr 4fr 5fr;gap:3px;margin-top:6px}
+.phases span{font-size:11px;color:var(--muted);border-top:2px solid var(--line);padding-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;border:1px solid var(--line)}
+/* main grid */
+.main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start}
+.phase{display:grid;gap:6px}
+.phase+.phase{margin-top:20px}
+.phase-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.phase-h .c{font-size:12px;color:var(--muted)}
+.week{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 12px;align-items:start;padding:10px 10px;border-radius:8px;border:1px solid transparent}
+.week.now{background:var(--accent-soft);border-color:var(--accent)}
+.week input[type=checkbox]{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);cursor:pointer}
+.week .t{font-weight:500}
+.week.isdone .t{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+.week .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tag{font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;background:var(--grid);color:var(--muted)}
+.tag.now{background:var(--accent);color:var(--sheet)}
+.tag.late{background:var(--crit-soft);color:var(--crit)}
+.hrs{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.hrs input{width:58px}
+.note{grid-column:2/4}
+.dates{grid-column:2/4;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:12px;color:var(--muted)}
+.dates label{display:flex;align-items:center;gap:5px}
+.dates input.d{width:92px;font-family:var(--f-mono);font-size:12px;padding:3px 6px}
+.dates input.d.bad{border-color:var(--crit)}
+.dates button{font:inherit;font-size:11px;color:var(--accent);background:none;border:1px solid var(--line);border-radius:6px;padding:2px 7px;cursor:pointer}
+.dates button:hover{border-color:var(--accent)}
+.tag.early{background:var(--good-soft);color:var(--good)}
+.tag.slip{background:var(--warn-soft);color:var(--warn)}
+input[type=number],input[type=text]{font:inherit;color:var(--ink);background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:4px 8px;width:100%}
+input[type=number]{font-family:var(--f-mono);text-align:right}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.note input{font-size:12.5px;border-style:dashed}
+/* scores */
+.side{display:grid;gap:20px}
+.scores{width:100%;border-collapse:collapse;font-size:13px}
+.scores th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:6px 4px;border-bottom:1px solid var(--line)}
+.scores td{padding:7px 4px;border-bottom:1px solid var(--grid);vertical-align:middle}
+.scores td.n{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.scores input{width:64px}
+.chart{width:100%;height:auto;display:block;margin-top:14px}
+.rhythm{display:grid;gap:6px;font-size:13px}
+.rhythm div{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px}
+.rhythm span:first-child{color:var(--muted)}
+.now-card ul{margin:8px 0 0;padding-left:18px}
+.notice{font-size:12.5px;padding:8px 12px;border-radius:8px;background:var(--warn-soft);color:var(--warn)}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}.stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:14px}.stat:nth-child(3){border-left:0;padding-left:0}}
+@media (max-width:560px){.strip{grid-template-columns:repeat(11,minmax(0,1fr))}.phases{display:none}.week{grid-template-columns:auto minmax(0,1fr)}.hrs{grid-column:2}.note{grid-column:2}.dates{grid-column:2}h1{font-size:24px}}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <div>
+      <div class="eyebrow">Math for ML &amp; DS → WorldQuant QPT</div>
+      <h1>QPT Study Tracker</h1>
+      <p>21 tuần · 27/10/2026 → 22/03/2027 · mục tiêu 8 giờ/tuần</p>
+    </div>
+    <div class="save" id="save" aria-live="polite">Đang tải dữ liệu…</div>
+  </header>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <section class="panel" aria-label="Tổng quan">
+    <div class="stats">
+      <div class="stat"><div class="eyebrow">Tiến độ</div><div id="st-status" style="margin-top:6px"></div><div class="s" id="st-status-s"></div></div>
+      <div class="stat"><div class="eyebrow">Tuần hoàn thành</div><div class="v" id="st-done"></div><div class="bar"><i id="st-done-bar" style="width:0"></i></div></div>
+      <div class="stat"><div class="eyebrow">Giờ đã học</div><div class="v" id="st-hrs"></div><div class="s" id="st-hrs-s"></div></div>
+      <div class="stat"><div class="eyebrow">Còn đến thi QPT</div><div class="v" id="st-left"></div><div class="s">Thi chính thức: 09–15/03/2027</div></div>
+    </div>
+    <div class="strip" id="strip" role="list"></div>
+    <div class="phases"><span>Linear Algebra</span><span>Calculus</span><span>Prob &amp; Stats</span><span>Diff Eq</span><span>Lấp lỗ hổng + QPT</span></div>
+    <div class="legend"><span><b style="background:var(--accent);border-color:var(--accent)"></b>Đã xong</span><span><b style="outline:2px solid var(--ink)"></b>Tuần này</span><span><b style="border-color:var(--crit)"></b>Quá hạn chưa tick</span></div>
+  </section>
+
+  <div class="main">
+    <section class="panel" aria-label="Kế hoạch theo tuần" id="weeks"></section>
+    <aside class="side">
+      <section class="panel now-card" id="nowcard"></section>
+      <section class="panel">
+        <h2>Điểm kiểm tra (/32)</h2>
+        <table class="scores"><thead><tr><th>Mốc</th><th>Tuần</th><th style="text-align:right">Ngưỡng</th><th style="text-align:right">Điểm</th></tr></thead><tbody id="scores"></tbody></table>
+        <svg class="chart" id="chart" viewBox="0 0 340 170" role="img" aria-label="Điểm từng mốc so với ngưỡng"></svg>
+      </section>
+      <section class="panel">
+        <h2>Nhịp học mỗi tuần</h2>
+        <div class="rhythm" style="margin-top:10px">
+          <div><span>Thứ 2–4</span><span>1h/tối · video + ghi chú tay</span></div>
+          <div><span>Thứ 5</span><span>1h · quiz, ghi câu sai vào sổ lỗi</span></div>
+          <div><span>Thứ 7</span><span>2h · lab + 10–15 bài tập ngoài</span></div>
+          <div><span>Chủ nhật</span><span>1h · ôn sổ lỗi, tick tuần</span></div>
+          <div><span>Thứ 6</span><span>Buffer</span></div>
+        </div>
+        <p class="save" style="margin:10px 0 0">Quiz chưa đạt 80% thì chưa sang module mới.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+const START = Date.UTC(2026,9,27); // Tue 27/10/2026 (W1 xong sớm 01/11, W2 = tuần 03/11)
+const DAY = 864e5, TARGET_H = 8;
+const PHASES = [
+  {name:"Phase 1 · Linear Algebra", course:"Course 1 · 34h", weeks:[
+    "Systems of linear equations: singular vs non-singular, determinant",
+    "Solving systems: elimination, row echelon form, rank",
+    "Vectors & linear transformations: dot product, nhân ma trận, nghịch đảo",
+    "Determinants in depth & eigenvectors: basis, span, eigenvalue, PCA"]},
+  {name:"Phase 2 · Calculus", course:"Course 2 · 27h", weeks:[
+    "Derivatives & optimization một biến",
+    "Gradients & gradient descent (nhiều biến)",
+    "Optimization in neural networks, Newton's method",
+    "Buffer Noel + Checkpoint 1 + bù tích phân"]},
+  {name:"Phase 3 · Probability & Statistics", course:"Course 3 · 33h", weeks:[
+    "Probability cơ bản & các phân phối",
+    "Describing distributions: kỳ vọng, phương sai, random vector",
+    "Sampling & point estimation: MLE, MAP",
+    "Confidence interval & hypothesis testing"]},
+  {name:"Phase 4 · Differential Equations", course:"HKUST · Chasnov", weeks:[
+    "First-order ODE: separable, linear, Euler method",
+    "Tết: nghỉ hoặc ôn nhẹ, không giao bài mới",
+    "Second-order ODE, Laplace transform",
+    "Systems of ODE + Checkpoint 2"]},
+  {name:"Phase 5 · Lấp lỗ hổng & thi QPT", course:"Mock + hồ sơ", weeks:[
+    "Ôn 2 mảng yếu nhất theo Checkpoint 2",
+    "Discrete math + mock QPT lần 1; gom hồ sơ",
+    "Sửa lỗi từ mock 1 + mock QPT lần 2",
+    "Thi QPT chính thức",
+    "Buffer; hoàn tất và nộp hồ sơ trước hạn"]}
+];
+const WEEKS = []; PHASES.forEach((p,pi)=>p.weeks.forEach(t=>WEEKS.push({n:WEEKS.length+1,title:t,phase:pi})));
+WEEKS.forEach(w=>{w.start=START+(w.n-1)*7*DAY; w.end=w.start+6*DAY;});
+const MILESTONES = [
+  {k:"diag",name:"Diagnostic",week:"24/09",target:null},
+  {k:"cp1",name:"Checkpoint 1",week:"W8",target:null,note:"≥ 3/4 mỗi mảng LA, Calc"},
+  {k:"cp2",name:"Checkpoint 2",week:"W16",target:20},
+  {k:"mock1",name:"Mock 1",week:"W18",target:24},
+  {k:"mock2",name:"Mock 2",week:"W19",target:26}
+];
+
+const isoToUTC = s=>{if(!s)return null;const p=s.split("-");return Date.UTC(+p[0],+p[1]-1,+p[2]);};
+const todayISO = ()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+const isoToVN = s=>{if(!s)return "";const p=s.split("-");return p[2]+"/"+p[1]+"/"+p[0];};
+const parseVN = s=>{const m=s.match(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2}|\d{4}))?$/); if(!m)return null;
+  const d=+m[1], mo=+m[2]; let y=m[3]? (+m[3]<100? 2000+(+m[3]) : +m[3]) : (mo>=7? 2026 : 2027);
+  const t=new Date(Date.UTC(y,mo-1,d)); if(t.getUTCMonth()!==mo-1||t.getUTCDate()!==d)return null;
+  return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0");};
+const fmt = t=>{const d=new Date(t);return String(d.getUTCDate()).padStart(2,"0")+"/"+String(d.getUTCMonth()+1).padStart(2,"0");};
+const nowLocal = ()=>{const d=new Date();return Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());};
+const today = nowLocal();
+const curIdx = Math.floor((today-START)/(7*DAY)); // 0-based
+const curWeek = (curIdx>=0 && curIdx<WEEKS.length)? WEEKS[curIdx] : null;
+
+let state = {weeks:{}, scores:{}};
+const wk = n => {const s=state.weeks["W"+n]||{}; if(!s.actualEnd&&s.doneAt) return Object.assign({},s,{actualEnd:s.doneAt}); return s;};
+
+/* ---------- storage ---------- */
+let ref=null, mode="loading";
+const saveEl=document.getElementById("save");
+const LS_KEY="qpt-tracker-v1";
+function lsLoad(){try{const s=localStorage.getItem(LS_KEY);return s?JSON.parse(s):null;}catch(e){return null;}}
+function lsSave(){try{localStorage.setItem(LS_KEY,JSON.stringify(state));}catch(e){}}
+
+let pending={}, timer=null, writing=false;
+function queue(patch,delay=500){
+  Object.assign(pending,patch);
+  clearTimeout(timer); timer=setTimeout(flush,delay);
+  saveEl.textContent="Đang lưu…";
+}
+async function flush(){
+  if(writing){timer=setTimeout(flush,300);return;}
+  const patch=pending; pending={};
+  if(!Object.keys(patch).length)return;
+  if(mode!=="db"){lsSave();saveEl.textContent="Đã lưu trên trình duyệt này";return;}
+  writing=true;
+  try{await ref.set(JSON.parse(JSON.stringify(state)));saveEl.textContent="Đã lưu · "+new Date().toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});}
+  catch(e){saveEl.textContent="Chưa lưu được: "+(e&&e.message||"lỗi kết nối")+". Thử lại bằng cách sửa ô bất kỳ.";}
+  finally{writing=false;}
+}
+function setWeek(n,patch){
+  const k="W"+n; state.weeks[k]=Object.assign({},state.weeks[k],patch);
+  render(); queue({[k]:1}, patch.done!==undefined?0:600);
+}
+function setScore(k,v){state.scores[k]=v; renderStats(); renderChart(); queue({["s_"+k]:1},600);}
+
+/* ---------- render ---------- */
+function status(){
+  const elapsed = Math.max(0,Math.min(WEEKS.length, WEEKS.filter(w=>w.end<today).length));
+  const doneCount = WEEKS.filter(w=>wk(w.n).done).length;
+  const overdue = WEEKS.filter(w=>w.end<today && !wk(w.n).done).length;
+  const hours = WEEKS.reduce((s,w)=>s+(+wk(w.n).hours||0),0);
+  return {elapsed,doneCount,overdue,hours};
+}
+function renderStats(){
+  const s=status();
+  let cls="good",txt="Đúng tiến độ",sub="Không có tuần nào quá hạn";
+  if(today<START){cls="idle";txt="Chưa bắt đầu";sub="Bắt đầu 27/10/2026";}
+  else if(s.overdue===1){cls="warn";txt="Chậm 1 tuần";sub="Dùng tuần buffer gần nhất để bù";}
+  else if(s.overdue>=2){cls="crit";txt="Chậm "+s.overdue+" tuần";sub="Cân nhắc lùi sang intake tháng 7/2027";}
+  document.getElementById("st-status").innerHTML='<span class="pill '+cls+'">'+txt+'</span>';
+  document.getElementById("st-status-s").textContent=sub;
+  document.getElementById("st-done").innerHTML=s.doneCount+'<small> / '+WEEKS.length+'</small>';
+  document.getElementById("st-done-bar").style.width=(s.doneCount/WEEKS.length*100)+"%";
+  const expH = (s.elapsed + (curWeek?1:0))*TARGET_H;
+  document.getElementById("st-hrs").innerHTML=(Math.round(s.hours*10)/10)+'<small> h</small>';
+  document.getElementById("st-hrs-s").textContent="Kế hoạch đến hết tuần này: "+expH+" h";
+  const qpt=WEEKS[19].start, days=Math.ceil((qpt-today)/DAY);
+  document.getElementById("st-left").innerHTML= days>0? days+'<small> ngày</small>' : '<small>Đã tới tuần thi</small>';
+}
+function renderStrip(){
+  const el=document.getElementById("strip"); el.innerHTML="";
+  WEEKS.forEach(w=>{
+    const b=document.createElement("button"); b.type="button"; b.className="cell"; b.setAttribute("role","listitem");
+    const d=wk(w.n).done, late=w.end<today&&!d, now=curWeek&&curWeek.n===w.n;
+    if(d)b.classList.add("done"); if(late)b.classList.add("late"); if(now)b.classList.add("now");
+    b.textContent=w.n; b.title="W"+w.n+" · "+fmt(w.start)+"–"+fmt(w.end)+" · "+w.title;
+    b.setAttribute("aria-label",b.title+(d?" · đã xong":""));
+    b.onclick=()=>{const t=document.getElementById("w"+w.n); if(t){t.scrollIntoView({behavior:"smooth",block:"center"}); t.querySelector("input").focus({preventScroll:true});}};
+    el.appendChild(b);
+  });
+}
+function renderWeeks(){
+  const host=document.getElementById("weeks"); const active=document.activeElement&&document.activeElement.id;
+  host.innerHTML="";
+  PHASES.forEach((p,pi)=>{
+    const ws=WEEKS.filter(w=>w.phase===pi), dn=ws.filter(w=>wk(w.n).done).length;
+    const sec=document.createElement("div"); sec.className="phase";
+    sec.innerHTML='<div class="phase-h"><h2>'+p.name+'</h2><span class="c mono">'+dn+'/'+ws.length+' · '+p.course+'</span></div>';
+    ws.forEach(w=>{
+      const st=wk(w.n), now=curWeek&&curWeek.n===w.n, late=w.end<today&&!st.done;
+      const row=document.createElement("div"); row.className="week"+(now?" now":"")+(st.done?" isdone":""); row.id="w"+w.n;
+      row.innerHTML=
+        '<input type="checkbox" id="cb'+w.n+'" '+(st.done?"checked":"")+' aria-label="Hoàn thành W'+w.n+'">'+
+        '<label for="cb'+w.n+'"><div class="t"></div><div class="meta"><span class="mono">W'+w.n+' · '+fmt(w.start)+'–'+fmt(w.end)+'</span>'+
+          (now?'<span class="tag now">Tuần này</span>':'')+(late?'<span class="tag late">Quá hạn</span>':'')+'</div></label>'+
+        '<div class="hrs"><input type="number" min="0" max="60" step="0.5" id="h'+w.n+'" placeholder="0" aria-label="Số giờ W'+w.n+'"> h</div>'+
+        '<div class="dates"><label>Bắt đầu <input type="text" class="d" inputmode="numeric" placeholder="dd/mm" id="ds'+w.n+'"></label><button type="button" data-t="s">Hôm nay</button><label>Kết thúc <input type="text" class="d" inputmode="numeric" placeholder="dd/mm" id="de'+w.n+'"></label><button type="button" data-t="e">Hôm nay</button><span class="var"></span></div>'+
+        '<div class="note"><input type="text" id="n'+w.n+'" placeholder="Ghi chú: câu hay sai, phần cần ôn…" aria-label="Ghi chú W'+w.n+'"></div>';
+      row.querySelector(".t").textContent=w.title;
+      const h=row.querySelector("#h"+w.n); h.value = st.hours!=null&&st.hours!==""? st.hours : "";
+      const n=row.querySelector("#n"+w.n); n.value = st.note||"";
+      const ds=row.querySelector("#ds"+w.n), de=row.querySelector("#de"+w.n);
+      ds.value=isoToVN(st.actualStart); de.value=isoToVN(st.actualEnd);
+      const vEl=row.querySelector(".var");
+      if(st.actualEnd){const diff=Math.round((isoToUTC(st.actualEnd)-w.end)/DAY);
+        vEl.className="tag "+(diff<=0?"early":"slip"); vEl.textContent= diff===0?"Đúng hạn": diff<0? "Sớm "+(-diff)+" ngày" : "Trễ "+diff+" ngày";
+        if(st.actualStart){const dur=Math.round((isoToUTC(st.actualEnd)-isoToUTC(st.actualStart))/DAY)+1; vEl.textContent+=" · học "+dur+" ngày";}}
+      else if(st.actualStart){vEl.className="tag"; vEl.textContent="Đang học";}
+      const commit=(inp,field)=>{const raw=inp.value.trim(); if(raw===""){inp.classList.remove("bad"); if(wk(w.n)[field])setWeek(w.n,{[field]:null}); return;}
+        const iso=parseVN(raw); if(!iso){inp.classList.add("bad"); inp.title="Gõ dạng dd/mm hoặc dd/mm/yyyy"; return;}
+        inp.classList.remove("bad"); if(wk(w.n)[field]===iso){inp.value=isoToVN(iso);return;}
+        setWeek(w.n, field==="actualEnd"? {actualEnd:iso, done:true} : {actualStart:iso});};
+      ds.onchange=()=>commit(ds,"actualStart"); de.onchange=()=>commit(de,"actualEnd");
+      ds.onkeydown=de.onkeydown=e=>{if(e.key==="Enter")e.target.blur();};
+      row.querySelector('[data-t="s"]').onclick=()=>{ds.value=isoToVN(todayISO()); commit(ds,"actualStart");};
+      row.querySelector('[data-t="e"]').onclick=()=>{de.value=isoToVN(todayISO()); commit(de,"actualEnd");};
+      row.querySelector("#cb"+w.n).onchange=e=>{const on=e.target.checked, cur=wk(w.n); setWeek(w.n,{done:on, actualEnd: on? (cur.actualEnd||todayISO()) : cur.actualEnd||null, doneAt:null});};
+      h.oninput=e=>{const v=e.target.value===""?null:Math.max(0,+e.target.value); const cur=state.weeks["W"+w.n]||{}; state.weeks["W"+w.n]=Object.assign({},st,cur,{hours:v}, (!cur.actualStart&&v)?{actualStart:todayISO()}:{}); if(!cur.actualStart&&v)ds.value=isoToVN(todayISO()); renderStats(); queue({["W"+w.n]:1},700);};
+      n.oninput=e=>{state.weeks["W"+w.n]=Object.assign({},state.weeks["W"+w.n],{note:e.target.value}); queue({["W"+w.n]:1},900);};
+      sec.appendChild(row);
+    });
+    host.appendChild(sec);
+  });
+  if(active){const a=document.getElementById(active); if(a){a.focus({preventScroll:true}); if(a.setSelectionRange&&a.type==="text"){const L=a.value.length;a.setSelectionRange(L,L);}}}
+}
+function renderNow(){
+  const el=document.getElementById("nowcard");
+  if(!curWeek){
+    el.innerHTML='<div class="eyebrow">Tuần này</div><h2 style="margin-top:4px">'+(today<START?"Plan bắt đầu 27/10/2026":"Đã hết lộ trình 21 tuần")+'</h2>';
+    return;
+  }
+  const st=wk(curWeek.n), h=+st.hours||0, pct=Math.min(100,h/TARGET_H*100);
+  const dayLeft=Math.max(0,Math.ceil((curWeek.end-today)/DAY));
+  el.innerHTML='<div class="eyebrow">Tuần này · W'+curWeek.n+' · '+fmt(curWeek.start)+'–'+fmt(curWeek.end)+'</div>'+
+    '<h2 style="margin-top:4px" id="nowt"></h2>'+
+    '<div class="bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="save" style="margin-top:6px"><span class="mono">'+h+' / '+TARGET_H+' h</span> · còn '+dayLeft+' ngày · '+(st.done?'đã tick xong':'chưa tick')+'</div>'+
+    '<ul><li>Xong video + quiz (≥ 80%) + lab của module</li><li>10–15 bài tập ngoài cho đúng chủ đề</li><li>Ghi câu sai vào ô ghi chú của tuần</li></ul>';
+  document.getElementById("nowt").textContent=curWeek.title;
+}
+function renderScores(){
+  const tb=document.getElementById("scores"); tb.innerHTML="";
+  MILESTONES.forEach(m=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML='<td></td><td class="mono">'+m.week+'</td><td class="n">'+(m.target!=null?"≥ "+m.target:"–")+'</td><td class="n"><input type="number" min="0" max="32" step="1" id="sc-'+m.k+'" aria-label="Điểm '+m.name+'"></td>';
+    tr.firstChild.textContent=m.name; if(m.note){const s=document.createElement("div");s.className="save";s.textContent=m.note;tr.firstChild.appendChild(s);}
+    const inp=tr.querySelector("input"); const v=state.scores[m.k]; inp.value=v!=null?v:"";
+    inp.oninput=e=>{const x=e.target.value===""?null:Math.max(0,Math.min(32,Math.round(+e.target.value)));setScore(m.k,x);};
+    tb.appendChild(tr);
+  });
+  renderChart();
+}
+function renderChart(){
+  const svg=document.getElementById("chart"), W=340,H=170, L=28,R=8,T=12,B=26, cw=(W-L-R)/MILESTONES.length;
+  const y=v=>T+(H-T-B)*(1-v/32);
+  let s="";
+  [0,8,16,24,32].forEach(t=>{s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(t)+'" y2="'+y(t)+'" stroke="var(--grid)" stroke-width="1"/><text x="'+(L-6)+'" y="'+(y(t)+3.5)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="JetBrains Mono, monospace">'+t+'</text>';});
+  MILESTONES.forEach((m,i)=>{
+    const cx=L+cw*i+cw/2, v=state.scores[m.k], bw=Math.min(28,cw*.5);
+    if(v!=null){
+      const ok = m.target==null? null : v>=m.target;
+      const col = ok===false? "var(--crit)" : ok? "var(--good)" : "var(--accent)";
+      s+='<rect x="'+(cx-bw/2)+'" y="'+y(v)+'" width="'+bw+'" height="'+(y(0)-y(v))+'" rx="3" fill="'+col+'" fill-opacity="0.85"/>';
+      s+='<text x="'+cx+'" y="'+(y(v)-4)+'" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--ink)" font-family="JetBrains Mono, monospace">'+v+'</text>';
+    } else {
+      s+='<rect x="'+(cx-bw/2)+'" y="'+(y(0)-2)+'" width="'+bw+'" height="2" fill="var(--line)"/>';
+    }
+    if(m.target!=null) s+='<line x1="'+(cx-bw/2-5)+'" x2="'+(cx+bw/2+5)+'" y1="'+y(m.target)+'" y2="'+y(m.target)+'" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 2"/>';
+    s+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--muted)">'+(m.k==="diag"?"Diag":m.name.replace("Checkpoint ","CP"))+'</text>';
+  });
+  svg.innerHTML=s;
+}
+function render(){renderStats();renderStrip();renderWeeks();renderNow();renderScores();}
+
+/* ---------- boot ---------- */
+render();
+(async()=>{
+  const fallback=(why)=>{
+    mode="local"; const ls=lsLoad(); if(ls){state=Object.assign({weeks:{},scores:{}},ls);}
+    render(); saveEl.textContent="Lưu trên trình duyệt này";
+    const nt=document.getElementById("notice"); nt.hidden=false;
+    nt.textContent=why+" Tiến độ đang lưu tạm trên trình duyệt này và sẽ không đồng bộ sang máy khác.";
+  };
+  let db=null;
+  try{ db = window.claude && window.claude.use ? await window.claude.use("db") : null; }catch(e){db=null;}
+  if(!db){fallback("Không kết nối được kho dữ liệu của trang.");return;}
+  ref=db.doc("tracker/state");
+  let got=false;
+  const to=setTimeout(()=>{if(!got){saveEl.textContent="Tải dữ liệu chậm, đang thử tiếp…";}},10000);
+  ref.onSnapshot(snap=>{
+    got=true; clearTimeout(to); mode="db";
+    if(writing||Object.keys(pending).length)return; // keep local edits until saved
+    const d=snap.exists? snap.data() : null;
+    state={weeks:Object.assign({}, d&&d.weeks), scores:Object.assign({}, d&&d.scores)};
+    render(); saveEl.textContent="Đã đồng bộ";
+  },err=>{
+    got=true; clearTimeout(to);
+    if(err&&err.code==="not_granted"||err&&err.code==="permission_denied"){fallback("Anh đang xem ở chế độ chỉ đọc.");}
+    else {saveEl.textContent="Mất kết nối dữ liệu. Tải lại trang để thử lại.";}
+  });
+})();
+</script>
