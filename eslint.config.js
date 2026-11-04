@@ -42,7 +42,20 @@ const BACKUP_STATIC_RULE = [
 // ARCHITECTURE §3 (v5.0, ADR-35): Capacitor (and Capgo plugins) live in src/integration/native/** only; the web
 // bundle must not contain a byte of them. Reached from outside only through the `import()` in integration/platform.ts.
 const CAPACITOR_RULES = [[pkg(['@capacitor', '@capgo']), '@capacitor/* and @capgo/* may only be imported in src/integration/native/** (ARCH §3 v5.0, ADR-35).']];
-const BOUNDARY_RULES = [ZOD_RULE, ...SUPABASE_RULES, ...CAPACITOR_RULES];
+const BOUNDARY_RULES_CORE = [ZOD_RULE, ...SUPABASE_RULES, ...CAPACITOR_RULES];
+// ARCHITECTURE §3 v8.0 (ADR-53): the big-goals feature is lazy, strings included. Its modules may be imported
+// statically only by each other (and tests); the app reaches them through `import()` in router.tsx / container.ts.
+// `import type` is fine everywhere (types cost nothing).
+const ROADMAP_LAZY_RULE = [
+  // Matched on the specifier as written (`./roadmap`, `../../domain/roadmap-progress`, `./resources/roadmap.vi.json`,
+  // `../ui/screens/Roadmaps`), so the bare module names are what count.
+  '(^|/)(roadmap(-progress|-template|-service|-repo|-errors)?|roadmap\\.(en|vi)\\.json|Roadmap[A-Za-z]*)(\\.[cm]?[jt]sx?)?$',
+  'Big-goals modules are lazy (ADR-53): import them only from other roadmap modules, or through import() in router.tsx / container.ts. `import type` is allowed.',
+  { allowTypeImports: true },
+];
+// Files that are themselves part of the lazy feature.
+// Every layer config below carries the lazy rule; the roadmap modules get the same layer rules without it (end of file).
+const BOUNDARY_RULES = [...BOUNDARY_RULES_CORE, ROADMAP_LAZY_RULE];
 // The `src/integration/native/**` files themselves: every boundary rule except the Capacitor one.
 const NATIVE_DIR_RULES = [ZOD_RULE, ...SUPABASE_RULES];
 // `src/ui/**` reads capabilities and ports from the container; it must not import integration values (types are fine).
@@ -51,6 +64,23 @@ const UI_INTEGRATION_RULE = [dir(['integration']), 'UI must not import src/integ
 const DOMAIN_RULES = [
   [pkg(['react', 'react-dom', 'dexie', 'recharts', 'i18next', 'react-i18next']), 'Domain must stay pure (ARCH §3).'],
   [dir(['data', 'services', 'integration', 'ui', 'app', 'i18n']), 'Domain must not import other app layers (ARCH §3).'],
+];
+
+const SERVICE_RULES = [
+  [pkg(['dexie', 'react', 'react-dom', 'i18next', 'react-i18next']), 'Services must not depend on Dexie/React/i18next (ARCH §3).'],
+  [dir(['dexie']), 'Services use repository interfaces, not the Dexie implementation (ARCH §3).'],
+  [dir(['ui', 'app']), 'Services must not import UI (ARCH §3).'],
+  [dir(['integration']), 'Services receive integrations through the constructor/factory; do not import src/integration (ARCH §3).'],
+  ['(^|/)i18n/(instance|resources)(/|$|\\.)', 'Services receive a Translator; do not import the i18n instance/resources (ARCH §3).'],
+];
+const UI_RULES = [
+  [pkg(['dexie', 'i18next']), 'UI must not import Dexie or i18next directly (ARCH §3).'],
+  [dir(['dexie']), 'UI must not import the Dexie implementation (ARCH §3).'],
+  UI_INTEGRATION_RULE,
+];
+const I18N_RULES = [
+  [pkg(['react', 'react-dom', 'react-i18next']), 'i18n must not import React (ARCH §3).'],
+  [dir(['ui', 'services', 'data', 'app', 'integration']), 'i18n must not import other app layers (ARCH §3).'],
 ];
 
 // M6-P1: `import('@supabase/…')` / `import('…/supabase-client')` must not appear outside the integration folder either.
@@ -208,37 +238,18 @@ export default tseslint.config(
     // Services: only repository interfaces, domain, i18n types/detect/format. Integrations injected.
     files: ['src/services/**/*.ts'],
     ignores: TEST_FILES,
-    rules: restrictImports([
-      [pkg(['dexie', 'react', 'react-dom', 'i18next', 'react-i18next']), 'Services must not depend on Dexie/React/i18next (ARCH §3).'],
-      [dir(['dexie']), 'Services use repository interfaces, not the Dexie implementation (ARCH §3).'],
-      [dir(['ui', 'app']), 'Services must not import UI (ARCH §3).'],
-      [dir(['integration']), 'Services receive integrations through the constructor/factory; do not import src/integration (ARCH §3).'],
-      ['(^|/)i18n/(instance|resources)(/|$|\\.)', 'Services receive a Translator; do not import the i18n instance/resources (ARCH §3).'],
-      ...BOUNDARY_RULES,
-      BACKUP_STATIC_RULE,
-    ]),
+    rules: restrictImports([...SERVICE_RULES, ...BOUNDARY_RULES, BACKUP_STATIC_RULE]),
   },
   {
     // UI: no Dexie, no direct i18next (use hooks), no integration values (v5.0: ports/capabilities via the container).
     files: ['src/ui/**/*.ts', 'src/ui/**/*.tsx'],
     ignores: TEST_FILES,
-    rules: restrictImports([
-      [pkg(['dexie', 'i18next']), 'UI must not import Dexie or i18next directly (ARCH §3).'],
-      [dir(['dexie']), 'UI must not import the Dexie implementation (ARCH §3).'],
-      UI_INTEGRATION_RULE,
-      ...BOUNDARY_RULES,
-      BACKUP_STATIC_RULE,
-    ]),
+    rules: restrictImports([...UI_RULES, ...BOUNDARY_RULES, BACKUP_STATIC_RULE]),
   },
   {
     // i18n: no React, no other layers.
     files: ['src/i18n/**/*.ts'],
-    rules: restrictImports([
-      [pkg(['react', 'react-dom', 'react-i18next']), 'i18n must not import React (ARCH §3).'],
-      [dir(['ui', 'services', 'data', 'app', 'integration']), 'i18n must not import other app layers (ARCH §3).'],
-      ...BOUNDARY_RULES,
-      BACKUP_STATIC_RULE,
-    ]),
+    rules: restrictImports([...I18N_RULES, ...BOUNDARY_RULES, BACKUP_STATIC_RULE]),
   },
 
   // ---- Hardcoded UI text + dangerouslySetInnerHTML (NFR-05, NFR-11) ----
@@ -255,5 +266,35 @@ export default tseslint.config(
     rules: {
       'no-restricted-syntax': ['error', HARDCODED_TEXT_SELECTORS[0], ...DYNAMIC_IMPORT_SELECTORS],
     },
+  },
+
+  // ---- The big-goals modules themselves (ADR-53): same layer rules, without the lazy-containment rule, so they may
+  // import each other statically. Last so they win over the generic configs above. ----
+  {
+    files: ['src/domain/roadmap.ts', 'src/domain/roadmap-progress.ts', 'src/domain/roadmap-template.ts'],
+    rules: restrictImports([...DOMAIN_RULES, ...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+  },
+  {
+    files: ['src/services/roadmap-service.ts'],
+    rules: restrictImports([...SERVICE_RULES, ...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+  },
+  {
+    files: ['src/data/dexie/roadmap-repo.ts'],
+    rules: restrictImports([...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+  },
+  {
+    files: ['src/i18n/roadmap-namespace.ts'],
+    rules: restrictImports([...I18N_RULES, ...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+  },
+  {
+    files: ['src/ui/screens/Roadmap*.tsx', 'src/ui/components/roadmap/**/*.tsx', 'src/ui/components/roadmap/**/*.ts'],
+    rules: restrictImports([...UI_RULES, ...BOUNDARY_RULES_CORE, BACKUP_STATIC_RULE]),
+  },
+  {
+    // Tests and test helpers inside src may import the roadmap modules directly (builders, oracle datasets); the other
+    // boundaries stay as the zod-containment config above sets them.
+    files: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/test/**/*.ts', 'src/test/**/*.tsx'],
+    ignores: ['src/integration/supabase/**', 'src/integration/native/**'],
+    rules: restrictImports([...BOUNDARY_RULES_CORE]),
   },
 );

@@ -16,6 +16,8 @@ export class DexieGoalRepository implements GoalRepository {
   constructor(
     private readonly db: AppDatabase,
     private readonly clock: () => Date = () => new Date(),
+    /** Test seam (NFR-27): runs inside the delete transaction after every write; throw to prove the rollback. */
+    private readonly deleteProbe?: () => void,
   ) {}
 
   getAll(): Promise<Goal[]> {
@@ -34,7 +36,8 @@ export class DexieGoalRepository implements GoalRepository {
 
   async deleteWithEntries(id: string): Promise<void> {
     const now = this.clock();
-    await this.db.transaction('rw', this.db.goals, this.db.entries, async () => {
+    // v8.0 (A-79): roadmaps linked to the goal lose their link in the same transaction (`goalId = null`, new stamp).
+    await this.db.transaction('rw', this.db.goals, this.db.entries, this.db.roadmaps, async () => {
       const goal = await this.db.goals.get(id);
       if (!isLive(goal)) return;
       const entries = (await this.db.entries.where('goalId').equals(id).toArray()).filter(isLive);
@@ -46,6 +49,16 @@ export class DexieGoalRepository implements GoalRepository {
         const rows: EntryRow[] = entries.map((e) => ({ ...e, updatedAt: stamp, deletedAt: stamp, dirty: 1 }));
         await this.db.entries.bulkPut(rows);
       }
+      await this.db.roadmaps
+        .where('goalId')
+        .equals(id)
+        .filter(isLive)
+        .modify((r) => {
+          r.goalId = null;
+          r.updatedAt = nextUpdatedAt(now, r.updatedAt);
+          r.dirty = 1;
+        });
+      this.deleteProbe?.();
     });
   }
 

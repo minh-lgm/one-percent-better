@@ -23,6 +23,8 @@ export interface BackupExport {
 export interface BackupPreview {
   goals: number;
   entries: number;
+  /** v8.0: roadmaps in the file; `null` for a schemaVersion 1 file (none, the device's are kept — A-87). */
+  roadmaps: number | null;
   exportedAt: ISODateTime;
   file: BackupFile;
 }
@@ -30,6 +32,8 @@ export interface BackupPreview {
 export interface BackupCounts {
   goals: number;
   entries: number;
+  /** v8.0: live roadmaps on the device (D3 line, toast counts stay goals/entries). */
+  roadmaps: number;
 }
 
 /** Export / parse / import JSON backups (FR-19, FR-20; ARCHITECTURE §5.3, §5.5). */
@@ -87,7 +91,7 @@ export class BackupService {
     const { parseBackup } = await this.getSchema();
     const parsed = parseBackup(text, sizeBytes, today);
     if (!parsed.ok) return parsed;
-    return ok({ goals: parsed.value.goals.length, entries: parsed.value.entries.length, exportedAt: parsed.value.exportedAt, file: parsed.value });
+    return ok({ goals: parsed.value.goals.length, entries: parsed.value.entries.length, roadmaps: parsed.value.roadmaps?.length ?? null, exportedAt: parsed.value.exportedAt, file: parsed.value });
   }
 
   /**
@@ -100,15 +104,23 @@ export class BackupService {
     const { file } = preview;
     const settings = normalizeSettings({ ...file.settings, lastReminderDate: null });
     const stamp = this.isSignedIn();
-    const goals = stamp ? file.goals.map((g) => ({ ...g, updatedAt: nextUpdatedAt(now, g.updatedAt) })) : file.goals;
-    const entries = stamp ? file.entries.map((e) => ({ ...e, updatedAt: nextUpdatedAt(now, e.updatedAt) })) : file.entries;
-    await this.backups.replaceAll({ goals, entries, settings });
-    return ok({ goals: file.goals.length, entries: file.entries.length });
+    const restamp = <T extends { updatedAt: ISODateTime }>(rows: T[] | undefined): T[] | undefined => (rows && stamp ? rows.map((r) => ({ ...r, updatedAt: nextUpdatedAt(now, r.updatedAt) })) : rows);
+    // v8.0 (ADR-49): a v2 file replaces the four roadmap tables too (undefined = v1 file → the repository keeps them, A-87).
+    await this.backups.replaceAll({
+      goals: restamp(file.goals)!,
+      entries: restamp(file.entries)!,
+      settings,
+      roadmaps: restamp(file.roadmaps),
+      roadmapPhases: restamp(file.roadmapPhases),
+      roadmapItems: restamp(file.roadmapItems),
+      roadmapCheckpoints: restamp(file.roadmapCheckpoints),
+    });
+    return ok({ goals: file.goals.length, entries: file.entries.length, roadmaps: file.roadmaps?.length ?? 0 });
   }
 
-  /** Current goal/entry counts, for the "replaces … (a goals, b entries)" line of D3. */
+  /** Current goal/entry (v8.0: and roadmap) counts, for the "replaces … (a goals, b entries)" line of D3. */
   async counts(): Promise<BackupCounts> {
     const data = await this.backups.exportAll();
-    return { goals: data.goals.length, entries: data.entries.length };
+    return { goals: data.goals.length, entries: data.entries.length, roadmaps: data.roadmaps.length };
   }
 }

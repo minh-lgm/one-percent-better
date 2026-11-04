@@ -10,6 +10,8 @@ export interface ErrorMessage {
 /**
  * Map a `DomainError` to an i18n key + params (DESIGN §7.3). Params are
  * formatted for the current locale before interpolation. `message` is never shown.
+ * v8.0: the big-goals screens use `ui/roadmap-errors.ts` (lazy), which tries the `roadmap` namespace first and
+ * falls back to this mapping (ARCH §4.8 j).
  */
 export function errorMessage(error: DomainError, f: Formatters): ErrorMessage {
   const variant = typeof error.params?.variant === 'string' ? error.params.variant : undefined;

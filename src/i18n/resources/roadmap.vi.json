@@ -1,0 +1,63 @@
+{
+  "noValue": "—",
+  "loading": "Đang tải…",
+  "importLine": "Mục tiêu lớn: {{n}} trong bản sao lưu, hiện có {{cur}} trên thiết bị này. Nhập sẽ thay thế chúng.",
+  "importLineKept": "Mục tiêu lớn: bản sao lưu cũ này không có, nên {{cur}} mục tiêu lớn trên thiết bị này được giữ lại. Liên kết tới mục tiêu không có trong bản sao lưu sẽ bị gỡ.",
+  "list": {
+    "title": "Mục tiêu lớn",
+    "intro": "Những kế hoạch kéo dài nhiều tuần hay nhiều tháng. Giờ học lấy từ mục tiêu bạn liên kết.",
+    "listLabel": "Các lộ trình của bạn",
+    "empty": "Chưa có mục tiêu lớn nào",
+    "emptyBody": "Lộ trình chia một mục tiêu lớn thành các tuần hoặc giai đoạn, theo dõi phần đã xong và cộng giờ bạn ghi ở mục tiêu được liên kết. Hãy bắt đầu từ trống, hoặc nạp kế hoạch QPT 21 tuần.",
+    "row": {
+      "linked": "Mục tiêu: {{goal}}",
+      "linkedArchived": "Mục tiêu: {{goal}} (đã lưu trữ)",
+      "unlinked": "Chưa liên kết mục tiêu",
+      "missing": "Mục tiêu liên kết đã bị xóa",
+      "progress": "Xong {{done}}/{{total}}",
+      "hours": "Đã học {{done}} / {{plan}}",
+      "hoursOnly": "Đã học {{done}}",
+      "hoursNone": "Giờ học: —"
+    }
+  },
+  "pace": {
+    "notStarted": "Chưa bắt đầu",
+    "onTrack": "Đúng tiến độ",
+    "behindWeeks_other": "Chậm {{count}} tuần",
+    "behindItems_other": "Chậm {{count}} mục",
+    "completed": "Hoàn thành",
+    "empty": "Chưa có mục nào"
+  },
+  "milestone": {
+    "defaultLabel": "Mốc chính",
+    "line": "{{label}}: {{when}}",
+    "in_other": "còn {{count}} ngày",
+    "today": "hôm nay",
+    "past": "đã qua"
+  },
+  "errors": {
+    "ROADMAP_NOT_FOUND_roadmap": "Lộ trình này không còn nữa. Có thể nó đã bị xóa.",
+    "ROADMAP_NOT_FOUND_phase": "Giai đoạn này không còn nữa. Có thể nó đã bị xóa.",
+    "ROADMAP_NOT_FOUND_item": "Mục này không còn nữa. Có thể nó đã bị xóa.",
+    "ROADMAP_NOT_FOUND_checkpoint": "Điểm kiểm tra này không còn nữa. Có thể nó đã bị xóa.",
+    "ROADMAP_TITLE_REQUIRED": "Hãy nhập tiêu đề.",
+    "ROADMAP_TEXT_TOO_LONG_title": "Tiêu đề tối đa {{max}} ký tự.",
+    "ROADMAP_TEXT_TOO_LONG_note": "Ghi chú tối đa {{max}} ký tự.",
+    "ROADMAP_TEXT_TOO_LONG_milestoneLabel": "Tên mốc chính tối đa {{max}} ký tự.",
+    "ROADMAP_DATE_INVALID_format": "Hãy nhập một ngày hợp lệ.",
+    "ROADMAP_DATE_INVALID_order": "Ngày kết thúc không được trước ngày bắt đầu.",
+    "ROADMAP_DATE_INVALID_itemTooLong": "Một mục dài tối đa 366 ngày. Hãy chọn khoảng ngắn hơn.",
+    "ROADMAP_DATE_INVALID_roadmapTooLong": "Một lộ trình trải dài tối đa 1.827 ngày (khoảng 5 năm), từ ngày bắt đầu đầu tiên đến ngày kết thúc cuối cùng. Hãy rút ngắn hoặc dời bớt mục.",
+    "DATE_IN_FUTURE": "Ngày thực tế không được sau hôm nay.",
+    "ROADMAP_TARGET_INVALID": "Nhập số giờ mỗi tuần từ 0,5 đến 168, theo bước 0,5.",
+    "ROADMAP_SCORE_INVALID_max": "Điểm tối đa phải lớn hơn 0 và không quá 10.000.",
+    "ROADMAP_SCORE_INVALID_range": "Hãy nhập một số từ 0 đến điểm tối đa.",
+    "ROADMAP_SCORE_INVALID_precision": "Dùng tối đa một chữ số thập phân (ví dụ 7,5).",
+    "ROADMAP_GOAL_ALREADY_LINKED": "Mục tiêu này đã liên kết với \"{{title}}\". Hãy chọn mục tiêu khác, hoặc bỏ liên kết ở đó trước.",
+    "GOAL_NOT_FOUND": "Mục tiêu đó không còn nữa. Hãy chọn mục tiêu khác, hoặc để trống.",
+    "ROADMAP_LIMIT_REACHED_roadmap": "Bạn có thể có tối đa {{max}} lộ trình. Hãy xóa bớt một lộ trình để thêm mới.",
+    "ROADMAP_LIMIT_REACHED_phase": "Một lộ trình có tối đa {{max}} giai đoạn.",
+    "ROADMAP_LIMIT_REACHED_item": "Một lộ trình có tối đa {{max}} mục.",
+    "ROADMAP_LIMIT_REACHED_checkpoint": "Một lộ trình có tối đa {{max}} điểm kiểm tra."
+  }
+}

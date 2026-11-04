@@ -2,6 +2,7 @@
 // implementations (Dexie repositories, Intl, workbox, Notification API) to services and UI.
 import type { i18n } from 'i18next';
 import { createDatabase, openDatabase, type AppDatabase } from '../data/dexie/db';
+import type { PurgeCounts } from '../data/repositories';
 import { DexieBackupRepository } from '../data/dexie/backup-repo';
 import { DexieEntryRepository } from '../data/dexie/entry-repo';
 import { DexieGoalRepository } from '../data/dexie/goal-repo';
@@ -35,6 +36,7 @@ import { LoginPromptService } from '../services/login-prompt-service';
 import type { NotificationPort } from '../services/notification-port';
 import { ReminderService } from '../services/reminder-service';
 import type { RemoteStore } from '../services/remote-store';
+import type { RoadmapService } from '../services/roadmap-service';
 import { SettingsService } from '../services/settings-service';
 import { StatsService } from '../services/stats-service';
 import { SyncService } from '../services/sync-service';
@@ -74,7 +76,12 @@ export interface AppContainer {
   /** Service-worker update notifications (UpdateToast). */
   updates: UpdateStore;
   /** v3.1 (ADR-29): hard-delete old tombstones nobody can still need; run once at startup by `app/maintenance`. */
-  purgeTombstones: (now: Date) => Promise<{ goals: number; entries: number }>;
+  purgeTombstones: (now: Date) => Promise<PurgeCounts>;
+  /**
+   * v8.0 (M17, ADR-53): the big-goals service, built on first use from lazily imported modules (service + Dexie
+   * repository) so nothing of the feature sits on the cold-load path. Memoised; a failed load is retried next call.
+   */
+  loadRoadmapService: () => Promise<RoadmapService>;
   /** v5.0 (ARCH §5.12): what this build/platform can do; the UI reads this instead of importing integration code. */
   capabilities: AppCapabilities;
   /** v5.0 (ARCH §5.15): backup / .ics export: download on the web, share sheet on native. */
@@ -217,6 +224,18 @@ export async function createContainer({
     if (saved && saved !== currentLocale(i18n)) setLocale(i18n, saved);
   }, () => undefined);
 
+  // v8.0 (ADR-53): the only place the app reaches services/roadmap-service and data/dexie/roadmap-repo.
+  let roadmapService: Promise<RoadmapService> | null = null;
+  const loadRoadmapService = () => {
+    roadmapService ??= Promise.all([import('../services/roadmap-service'), import('../data/dexie/roadmap-repo')])
+      .then(([s, r]) => new s.RoadmapService({ roadmaps: new r.DexieRoadmapRepository(db, { clock }), goals: goalRepo, clock }))
+      .catch((e: unknown) => {
+        roadmapService = null;
+        throw e;
+      });
+    return roadmapService;
+  };
+
   return {
     i18n,
     translator,
@@ -245,6 +264,7 @@ export async function createContainer({
     storagePersistence: native ? Promise.resolve<PersistState>('unsupported') : requestPersistentStorage(storage),
     updates: createUpdateStore(),
     purgeTombstones: (now) => syncStore.purgeTombstones(now),
+    loadRoadmapService,
     capabilities,
     fileExport: exportPort,
     readTextFile,

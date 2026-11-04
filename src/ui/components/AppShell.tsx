@@ -9,9 +9,11 @@ import { SyncFeedback } from './SyncFeedback';
 import { ToastRegion } from './Toast';
 import { UpdateToast } from './UpdateToast';
 
-const TABS: Array<{ to: string; icon: IconName; key: 'nav.today' | 'nav.goals' | 'nav.review' | 'nav.settings' }> = [
+// v8.0 (M17, DESIGN §3.1): five items, Big goals third; NavLink keeps it active for every `/roadmaps*` route.
+const TABS: Array<{ to: string; icon: IconName; key: 'nav.today' | 'nav.goals' | 'nav.roadmaps' | 'nav.review' | 'nav.settings' }> = [
   { to: '/today', icon: 'today', key: 'nav.today' },
   { to: '/goals', icon: 'goals', key: 'nav.goals' },
+  { to: '/roadmaps', icon: 'roadmap', key: 'nav.roadmaps' },
   { to: '/review', icon: 'review', key: 'nav.review' },
   { to: '/settings', icon: 'settings', key: 'nav.settings' },
 ];

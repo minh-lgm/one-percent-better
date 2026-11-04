@@ -30,6 +30,11 @@ export interface Formatters {
   /** Hours with one decimal: `4.0 h` / `4,0 giờ` (stats, M4). */
   hours(minutes: number): string;
   /**
+   * v8.0 (DESIGN 7.9.0, roadmaps): hours with at most one decimal, `.0` dropped, half away from zero
+   * (`Math.round(minutes / 6) / 10`): 345 → `5.8 h` / `5,8 giờ`, 960 → `16 h`, 75 → `1.3 h`, 0 → `0 h`.
+   */
+  hoursShort(minutes: number): string;
+  /**
    * Plural phrase with a locale-formatted number: `1 goal`, `16,000 entries` / `16.000 lần ghi`.
    * The plural form is chosen with `Intl.PluralRules` and passed as i18next `context`
    * (`_one` / `_other`), so `count` can be the already formatted string (M3-D2).
@@ -173,6 +178,9 @@ export function createFormatters(locale: Locale, translator: Pick<Translator, 't
     },
     hours(minutes) {
       return t('format.hours', { n: decimal1(minutes / 60) });
+    },
+    hoursShort(minutes) {
+      return t('format.hours', { n: nf(tag, { maximumFractionDigits: 1 }).format(Math.round(minutes / 6) / 10) });
     },
     count(key, n) {
       // A string `count` disables i18next's own plural lookup; `context` picks the suffix instead.

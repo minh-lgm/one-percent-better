@@ -8,6 +8,8 @@ export interface ConfirmDialogProps {
   body: string;
   /** Optional second paragraph (e.g. "Its running timer will be discarded."). */
   extra?: string;
+  /** v8.0 (D3): optional `.hint` paragraph after the body (the "Big goals: …" line, only when roadmaps are involved). */
+  note?: string;
   confirmLabel: string;
   busy?: boolean;
   onConfirm: () => void;
@@ -15,7 +17,7 @@ export interface ConfirmDialogProps {
 }
 
 /** Native `<dialog>` + showModal(); initial focus on Cancel (DESIGN §5, §8). */
-export function ConfirmDialog({ open, title, body, extra, confirmLabel, busy = false, onConfirm, onCancel }: ConfirmDialogProps) {
+export function ConfirmDialog({ open, title, body, extra, note, confirmLabel, busy = false, onConfirm, onCancel }: ConfirmDialogProps) {
   const { t } = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -42,11 +44,17 @@ export function ConfirmDialog({ open, title, body, extra, confirmLabel, busy = f
     return () => dialog.removeEventListener('cancel', handleCancel);
   }, [onCancel]);
 
+  const describedBy = ['confirm-body', extra ? 'confirm-extra' : '', note ? 'confirm-note' : ''].filter(Boolean).join(' ');
   return (
-    <dialog ref={ref} className="dialog" aria-labelledby="confirm-title" aria-describedby={extra ? 'confirm-body confirm-extra' : 'confirm-body'}>
+    <dialog ref={ref} className="dialog" aria-labelledby="confirm-title" aria-describedby={describedBy}>
       <h2 id="confirm-title">{title}</h2>
       <p id="confirm-body">{body}</p>
       {extra ? <p id="confirm-extra">{extra}</p> : null}
+      {note ? (
+        <p id="confirm-note" className="hint" data-testid="confirm-note">
+          {note}
+        </p>
+      ) : null}
       <div className="actions">
         <Button variant="danger" onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>
           {confirmLabel}

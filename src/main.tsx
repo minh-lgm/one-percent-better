@@ -71,7 +71,7 @@ async function start(): Promise<void> {
   const { container } = result;
   root.render(
     <StrictMode>
-      <App container={container} router={createAppRouter()} onFirstRender={markRendered} />
+      <App container={container} router={createAppRouter(container.i18n)} onFirstRender={markRendered} />
     </StrictMode>,
   );
 

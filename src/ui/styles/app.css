@@ -127,7 +127,7 @@ select {
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border-top: 1px solid var(--border);
-  /* 56 px of items + the Home-indicator inset below them (DESIGN "Native shell" 4). */
+  /* 64 px of items (v8.0, was 56 px of items) + the Home-indicator inset below them (DESIGN "Native shell" 4). */
   padding-bottom: var(--safe-bottom);
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
@@ -140,14 +140,16 @@ body.keyboard-open .nav {
 .nav .brand {
   display: none;
 }
+/* v8.0 (DESIGN 3.1): five tabs share the width; items stack from the top (6 + 22 + 2 + 2 x 16 + 2 = 64) so a
+   one-line label ("Big goals") and a two-line one (the Vietnamese "Big goals" label) keep their icons on one row. */
 .nav .item {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
+  justify-content: flex-start;
+  gap: 2px;
   min-height: var(--tabbar-h);
   color: var(--text-muted);
   text-decoration: none;
@@ -155,13 +157,14 @@ body.keyboard-open .nav {
   line-height: 16px;
   font-weight: 600;
   text-align: center;
-  padding: 6px 2px 5px;
+  padding: 6px 2px 2px;
   transition: color var(--dur-fast) var(--ease);
 }
-/* v7: plain icon, the active item is coloured (v7.css). */
+/* v7: plain icon, the active item is coloured (v7.css). v8.0: 22 px in the tab bar (24 px in the sidebar). */
 .nav .ic {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
+  flex: none;
 }
 .nav .item[aria-current='page'] {
   color: var(--on-primary-soft);
@@ -250,6 +253,11 @@ main.wide {
   .nav .item[aria-current='page']:hover {
     background: var(--primary-soft);
     color: var(--on-primary-soft);
+  }
+  /* v8.0 (DESIGN 3.1): sidebar icons stay 24 px (the tab bar uses 22 px). */
+  .nav .ic {
+    width: 24px;
+    height: 24px;
   }
   .content {
     margin-left: var(--nav-w);

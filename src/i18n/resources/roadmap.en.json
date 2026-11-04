@@ -1,0 +1,66 @@
+{
+  "noValue": "—",
+  "loading": "Loading…",
+  "importLine": "Big goals: {{n}} in this backup, {{cur}} on this device now. Importing replaces them.",
+  "importLineKept": "Big goals: this older backup has none, so the {{cur}} on this device are kept. Links to goals that aren't in the backup are removed.",
+  "list": {
+    "title": "Big goals",
+    "intro": "Plans that run for weeks or months. Study time comes from the goal you link.",
+    "listLabel": "Your roadmaps",
+    "empty": "No big goals yet",
+    "emptyBody": "A roadmap breaks a big goal into weeks or stages, tracks what you've finished, and counts the time you log on a goal you link. Start empty, or load the 21-week QPT plan.",
+    "row": {
+      "linked": "Goal: {{goal}}",
+      "linkedArchived": "Goal: {{goal}} (archived)",
+      "unlinked": "No goal linked",
+      "missing": "Linked goal was deleted",
+      "progress": "Done {{done}}/{{total}}",
+      "hours": "Studied {{done}} of {{plan}}",
+      "hoursOnly": "Studied {{done}}",
+      "hoursNone": "Study time: —"
+    }
+  },
+  "pace": {
+    "notStarted": "Not started",
+    "onTrack": "On track",
+    "behindWeeks_one": "{{count}} week behind",
+    "behindWeeks_other": "{{count}} weeks behind",
+    "behindItems_one": "{{count}} item behind",
+    "behindItems_other": "{{count}} items behind",
+    "completed": "Completed",
+    "empty": "No items yet"
+  },
+  "milestone": {
+    "defaultLabel": "Milestone",
+    "line": "{{label}}: {{when}}",
+    "in_one": "{{count}} day left",
+    "in_other": "{{count}} days left",
+    "today": "today",
+    "past": "passed"
+  },
+  "errors": {
+    "ROADMAP_NOT_FOUND_roadmap": "This roadmap doesn't exist anymore. It may have been deleted.",
+    "ROADMAP_NOT_FOUND_phase": "This phase doesn't exist anymore. It may have been deleted.",
+    "ROADMAP_NOT_FOUND_item": "This item doesn't exist anymore. It may have been deleted.",
+    "ROADMAP_NOT_FOUND_checkpoint": "This checkpoint doesn't exist anymore. It may have been deleted.",
+    "ROADMAP_TITLE_REQUIRED": "Enter a title.",
+    "ROADMAP_TEXT_TOO_LONG_title": "The title must be {{max}} characters or fewer.",
+    "ROADMAP_TEXT_TOO_LONG_note": "The note must be {{max}} characters or fewer.",
+    "ROADMAP_TEXT_TOO_LONG_milestoneLabel": "The milestone name must be {{max}} characters or fewer.",
+    "ROADMAP_DATE_INVALID_format": "Enter a valid date.",
+    "ROADMAP_DATE_INVALID_order": "The end date can't be before the start date.",
+    "ROADMAP_DATE_INVALID_itemTooLong": "An item can last up to 366 days. Choose a shorter range.",
+    "ROADMAP_DATE_INVALID_roadmapTooLong": "A roadmap can cover up to 1,827 days (about 5 years), from its first start to its last end. Shorten or move some items.",
+    "DATE_IN_FUTURE": "Actual dates can't be after today.",
+    "ROADMAP_TARGET_INVALID": "Enter hours per week from 0.5 to 168, in steps of 0.5.",
+    "ROADMAP_SCORE_INVALID_max": "The maximum score must be more than 0 and at most 10,000.",
+    "ROADMAP_SCORE_INVALID_range": "Enter a number from 0 up to the maximum score.",
+    "ROADMAP_SCORE_INVALID_precision": "Use at most one decimal place (for example 7.5).",
+    "ROADMAP_GOAL_ALREADY_LINKED": "This goal is already linked to \"{{title}}\". Choose another goal, or unlink it there first.",
+    "GOAL_NOT_FOUND": "That goal doesn't exist anymore. Choose another goal, or leave this empty.",
+    "ROADMAP_LIMIT_REACHED_roadmap": "You can have up to {{max}} roadmaps. Delete one to add another.",
+    "ROADMAP_LIMIT_REACHED_phase": "A roadmap can have up to {{max}} phases.",
+    "ROADMAP_LIMIT_REACHED_item": "A roadmap can have up to {{max}} items.",
+    "ROADMAP_LIMIT_REACHED_checkpoint": "A roadmap can have up to {{max}} checkpoints."
+  }
+}

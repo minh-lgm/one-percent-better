@@ -4,7 +4,7 @@
 // exceptions. Single-flight inside the tab, `LockPort` (Web Locks) across tabs.
 import { PULL_RESET_VERSION } from '../config/constants';
 import type { KvRepository, LocalDataRepository, LocalSyncStore, PullCursor, Subscribable, SyncedPrefsRepository, SyncMeta } from '../data/repositories';
-import { normalizeSyncMeta } from '../data/repositories';
+import { emptyCursors, normalizeSyncMeta } from '../data/repositories';
 import { backoffMs, rewindCursor, type SyncErrorCode, type SyncStatus } from '../domain/sync';
 import type { Locale } from '../i18n/types';
 import type { LockPort } from './lock-port';
@@ -294,7 +294,7 @@ export class SyncService {
     if ((await this.deps.kv.get<unknown>('sync')) != null) {
       await this.deps.kv.update<unknown>('sync', (cur) => {
         const meta = normalizeSyncMeta(cur);
-        return { ...meta, cursor: { goals: null, entries: null }, lastSyncedAt: null, lastError: null, ...(forgetLastUser ? { userId: null, account: null, lastUserId: null } : {}) };
+        return { ...meta, cursor: emptyCursors(), lastSyncedAt: null, lastError: null, ...(forgetLastUser ? { userId: null, account: null, lastUserId: null } : {}) };
       });
     }
     if (forgetLastUser) {
@@ -564,7 +564,7 @@ export class SyncService {
   private async bindUser(userId: string, resetCursor: boolean): Promise<void> {
     await this.deps.kv.update<unknown>('sync', (cur) => {
       const meta = normalizeSyncMeta(cur);
-      return resetCursor ? { ...meta, lastUserId: userId, cursor: { goals: null, entries: null } } : { ...meta, lastUserId: userId };
+      return resetCursor ? { ...meta, lastUserId: userId, cursor: emptyCursors() } : { ...meta, lastUserId: userId };
     });
   }
 

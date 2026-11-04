@@ -11,7 +11,7 @@
   --surface: #f6f2ea; /* v7: sections are flat on the page background */
   --surface-2: #ece6da;
   --surface-raised: #ffffff; /* v7: dialogs, toasts, sheets above the page */
-  --surface-glass: rgba(246, 242, 234, 0.92);
+  --surface-glass: rgba(246, 242, 234, 0.97); /* v8.0: was .92 — with the 64 px bar the muted tab label must keep 4.5:1 over ink buttons scrolled beneath (axe) */
   --border: #e3dcCF;
   --border-input: #b5ac9a;
   --text: #17160f;
@@ -77,7 +77,7 @@
   --chip-h: 32px;
   --content-max: 1240px; /* v7.2: Review (main.wide) at >= 1024 px; 1360 px at >= 1440 px (v7.css) */
   --nav-w: 232px;
-  --tabbar-h: 56px;
+  --tabbar-h: 64px; /* v8.0 (DESIGN §3.1): five tabs, the vi label "Mục tiêu lớn" wraps to two lines */
 
   --z-nav: 20;
   --z-toast: 40;
@@ -94,7 +94,7 @@
     --surface: #171512;
     --surface-2: #221f1a;
     --surface-raised: #221f1a;
-    --surface-glass: rgba(23, 21, 18, 0.92);
+    --surface-glass: rgba(23, 21, 18, 0.97);
     --border: #2c2822;
     --border-input: #6b655a;
     --text: #f3efe6;

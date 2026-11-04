@@ -202,10 +202,10 @@ form.card,
 }
 .nav .item {
   font-weight: 500;
-  gap: 5px;
+  gap: 2px; /* v8.0 (DESIGN §3.1): icon–label gap 2 px in the 64 px tab bar */
 }
 .nav .ic {
-  padding: 2px 10px;
+  padding: 0; /* v8.0: the 22 px icon is drawn at full size (border-box: padding would shrink it) */
   border-radius: 0;
 }
 .nav .item[aria-current='page'] {

@@ -44,3 +44,27 @@ export const PUBLIC_SITE_URL = 'https://minh-lgm.github.io/one-percent-better/';
 export const REMINDER_PLAN_DAYS = 14;
 /** v5.0 (M15): notification ids of the plan are `REMINDER_NOTIFICATION_ID_BASE + dayIndex` (1000 … 1013). */
 export const REMINDER_NOTIFICATION_ID_BASE = 1000;
+
+// ---- v8.0 (phase 8, M17): big goals / roadmaps (ARCHITECTURE §4.8 a) ----
+/** Live roadmaps per device/account. */
+export const ROADMAP_MAX = 20;
+/** Per roadmap. */
+export const ROADMAP_PHASE_MAX = 20;
+export const ROADMAP_ITEM_MAX = 200;
+export const ROADMAP_CHECKPOINT_MAX = 50;
+export const ROADMAP_TITLE_MAX = 80;
+export const ROADMAP_NOTE_MAX = 2000;
+export const ROADMAP_MILESTONE_LABEL_MAX = 40;
+export const PHASE_TITLE_MAX = 80;
+export const PHASE_NOTE_MAX = 120;
+export const ITEM_TITLE_MAX = 200;
+export const ITEM_NOTE_MAX = 1000;
+export const CHECKPOINT_TITLE_MAX = 80;
+export const CHECKPOINT_NOTE_MAX = 280;
+/** Planned span of one item, days inclusive. */
+export const ITEM_SPAN_MAX_DAYS = 366;
+/** Weekly study target, stored in minutes (UI: hours in steps of 0.5, 0.5 … 168 h). */
+export const WEEKLY_TARGET_MIN = 30;
+export const WEEKLY_TARGET_MAX = 10080;
+export const WEEKLY_TARGET_STEP = 30;
+export const CHECKPOINT_SCORE_MAX = 10000;

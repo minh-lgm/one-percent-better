@@ -1,3 +1,4 @@
+import type { Roadmap, RoadmapAggregate, RoadmapCheckpoint, RoadmapItem, RoadmapPhase } from '../domain/roadmap';
 import type { PrefGroupMeta, SyncErrorCode } from '../domain/sync';
 import type { ActiveTimer, Goal, ISODate, ISODateTime, LogEntry, Settings } from '../domain/types';
 import type { Locale } from '../i18n/types';
@@ -43,7 +44,8 @@ export interface SyncMeta {
   lastUserId: string | null;
   /** Shown immediately while offline / before the SDK loads (FR-40). v5.0: `provider` = the native sheet used to sign in (M14). */
   account: { email: string; name: string; provider?: 'google' | 'apple' } | null;
-  cursor: { goals: PullCursor | null; entries: PullCursor | null };
+  /** v8.0 (M17, ADR-50): one keyset cursor per synced table (remote names); a missing key reads as `null`. */
+  cursor: SyncCursors;
   lastSyncedAt: ISODateTime | null;
   lastError: { code: SyncErrorCode; at: ISODateTime } | null;
   /**
@@ -53,11 +55,23 @@ export interface SyncMeta {
   pullResetVersion?: number;
 }
 
+/** The six synced tables, by remote name, in push/pull order (parents first; ARCHITECTURE §4.8 h). */
+export const SYNC_CURSOR_TABLES = ['goals', 'entries', 'roadmaps', 'roadmap_phases', 'roadmap_items', 'roadmap_checkpoints'] as const;
+export type SyncCursorTable = (typeof SYNC_CURSOR_TABLES)[number];
+export type SyncCursors = Record<SyncCursorTable, PullCursor | null>;
+
+/** Every cursor `null` (pull everything). */
+export function emptyCursors(): SyncCursors {
+  const c = {} as SyncCursors;
+  for (const t of SYNC_CURSOR_TABLES) c[t] = null;
+  return c;
+}
+
 export const EMPTY_SYNC_META: SyncMeta = {
   userId: null,
   lastUserId: null,
   account: null,
-  cursor: { goals: null, entries: null },
+  cursor: emptyCursors(),
   lastSyncedAt: null,
   lastError: null,
 };
@@ -66,10 +80,15 @@ export const EMPTY_SYNC_META: SyncMeta = {
 export function normalizeSyncMeta(raw: unknown): SyncMeta {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Record<keyof SyncMeta, unknown>>;
   const account = r.account && typeof r.account === 'object' ? (r.account as { email?: unknown; name?: unknown; provider?: unknown }) : null;
-  const cursor = r.cursor && typeof r.cursor === 'object' ? (r.cursor as { goals?: unknown; entries?: unknown }) : null;
+  const cursor = r.cursor && typeof r.cursor === 'object' ? (r.cursor as Partial<Record<SyncCursorTable, unknown>>) : null;
   const isCursor = (c: unknown): c is PullCursor =>
     !!c && typeof c === 'object' && typeof (c as PullCursor).serverUpdatedAt === 'string' && typeof (c as PullCursor).id === 'string';
   const lastError = r.lastError && typeof r.lastError === 'object' ? (r.lastError as { code?: unknown; at?: unknown }) : null;
+  const cursors = emptyCursors();
+  for (const t of SYNC_CURSOR_TABLES) {
+    const c = cursor?.[t];
+    if (isCursor(c)) cursors[t] = c;
+  }
   return {
     userId: typeof r.userId === 'string' ? r.userId : null,
     lastUserId: typeof r.lastUserId === 'string' ? r.lastUserId : null,
@@ -77,7 +96,7 @@ export function normalizeSyncMeta(raw: unknown): SyncMeta {
       account && typeof account.email === 'string'
         ? { email: account.email, name: typeof account.name === 'string' ? account.name : '', ...(account.provider === 'google' || account.provider === 'apple' ? { provider: account.provider } : {}) }
         : null,
-    cursor: { goals: isCursor(cursor?.goals) ? cursor.goals : null, entries: isCursor(cursor?.entries) ? cursor.entries : null },
+    cursor: cursors,
     lastSyncedAt: typeof r.lastSyncedAt === 'string' ? r.lastSyncedAt : null,
     lastError: lastError && typeof lastError.code === 'string' && typeof lastError.at === 'string' ? { code: lastError.code as SyncErrorCode, at: lastError.at } : null,
     ...(typeof r.pullResetVersion === 'number' && Number.isFinite(r.pullResetVersion) ? { pullResetVersion: r.pullResetVersion } : {}),
@@ -118,17 +137,34 @@ export interface TimerRepository {
   saveTimerEntry(expected: ActiveTimer, entry: LogEntry, maxDayMinutes: number): Promise<SaveTimerEntryOutcome>;
 }
 
+/** v8.0 (M17, ADR-49): the four roadmap collections of a `schemaVersion 2` file. */
+export interface RoadmapBackupData {
+  roadmaps: Roadmap[];
+  roadmapPhases: RoadmapPhase[];
+  roadmapItems: RoadmapItem[];
+  roadmapCheckpoints: RoadmapCheckpoint[];
+}
+
 export interface BackupData {
   goals: Goal[];
   entries: LogEntry[];
   settings: Settings;
 }
 
+/** What `exportAll` returns: always the four roadmap arrays (live rows, orphans dropped). */
+export type BackupExportData = BackupData & RoadmapBackupData;
+
+/**
+ * What `replaceAll` takes. Roadmap arrays absent (`undefined`) = a `schemaVersion 1` file: the four roadmap tables are
+ * untouched except that links to goals no longer present become `null` (A-87). Present (even empty) = replace them too.
+ */
+export type BackupReplaceData = BackupData & Partial<RoadmapBackupData>;
+
 /** M3: whole-database export and atomic replace (ADR-08). */
 export interface BackupRepository {
-  exportAll(): Promise<BackupData>;
-  /** One transaction over goals + entries + kv; rolls back on error. Keeps kv `locale` (ADR-12), removes `activeTimer`. */
-  replaceAll(data: BackupData): Promise<void>;
+  exportAll(): Promise<BackupExportData>;
+  /** One transaction over goals + entries + kv (+ the roadmap tables); rolls back on error. Keeps kv `locale` (ADR-12), removes `activeTimer`. */
+  replaceAll(data: BackupReplaceData): Promise<void>;
 }
 
 /** M6 (ARCHITECTURE §5.2): local user data as a whole, for "sign out and remove data" (FR-41). */
@@ -139,8 +175,70 @@ export interface LocalDataRepository {
    * `locale` (the UI language stays) and `loginPrompt`. Any failure rolls everything back.
    */
   clearUserData(): Promise<void>;
-  /** Number of live goals/entries (sign-out / merge dialogs). */
-  countLive(): Promise<{ goals: number; entries: number }>;
+  /** Number of live goals/entries (sign-out / merge dialogs); v8.0: live roadmaps too. */
+  countLive(): Promise<{ goals: number; entries: number; roadmaps: number }>;
+}
+
+// ---- v8.0 (M17): roadmap rows and repository (ARCHITECTURE §4.8 b) ----
+
+export type RoadmapRow = Roadmap & { deletedAt: ISODateTime | null; dirty: SyncFlag };
+export type RoadmapPhaseRow = RoadmapPhase & { deletedAt: ISODateTime | null; dirty: SyncFlag };
+export type RoadmapItemRow = RoadmapItem & { deletedAt: ISODateTime | null; dirty: SyncFlag };
+export type RoadmapCheckpointRow = RoadmapCheckpoint & { deletedAt: ISODateTime | null; dirty: SyncFlag };
+
+/** Live roadmap rows of a device plus what the list needs to derive hours: the linked goals and their live entries. */
+export interface RoadmapListData extends RoadmapBackupData {
+  /** Live goals currently linked by at least one live roadmap (archived included). */
+  goals: Goal[];
+  /** Live entries of those goals. */
+  entries: LogEntry[];
+}
+
+export interface RoadmapDetailData extends RoadmapAggregate {
+  /** The linked goal when it is live (archived included); `null` when unlinked or gone (tombstone). */
+  goal: Goal | null;
+  entries: LogEntry[];
+}
+
+/** Rows written together by `putMany` (template, renumbering); each array optional. */
+export type RoadmapRowsInput = Partial<{ roadmaps: Roadmap[]; phases: RoadmapPhase[]; items: RoadmapItem[]; checkpoints: RoadmapCheckpoint[] }>;
+
+/**
+ * Four tables on Dexie v3 (ADR-48). Reads skip tombstones and children of tombstoned parents; every write sets
+ * `dirty = 1`; deletes are soft and cascade (roadmap → phases/items/checkpoints, phase → items) inside one
+ * transaction with one stamp.
+ */
+export interface RoadmapRepository {
+  listLive(): Promise<Roadmap[]>;
+  getAggregate(roadmapId: string): Promise<RoadmapAggregate | null>;
+  /** Live roadmaps linked to `goalId`. */
+  findByGoal(goalId: string): Promise<Roadmap[]>;
+  /** Live child rows by id (`undefined` when missing or tombstoned). */
+  getPhase(id: string): Promise<RoadmapPhase | undefined>;
+  getItem(id: string): Promise<RoadmapItem | undefined>;
+  getCheckpoint(id: string): Promise<RoadmapCheckpoint | undefined>;
+  watchList(): Subscribable<RoadmapListData>;
+  watchDetail(roadmapId: string): Subscribable<RoadmapDetailData | null>;
+  putRoadmap(r: Roadmap): Promise<void>;
+  putPhase(p: RoadmapPhase): Promise<void>;
+  putItem(i: RoadmapItem): Promise<void>;
+  putCheckpoint(c: RoadmapCheckpoint): Promise<void>;
+  /** One transaction. */
+  putMany(rows: RoadmapRowsInput): Promise<void>;
+  deleteRoadmap(id: string): Promise<void>;
+  deletePhase(id: string): Promise<void>;
+  deleteItem(id: string): Promise<void>;
+  deleteCheckpoint(id: string): Promise<void>;
+}
+
+/** Rows purged per table by `LocalSyncStore.purgeTombstones` (v8.0: six tables). */
+export interface PurgeCounts {
+  goals: number;
+  entries: number;
+  roadmaps: number;
+  roadmapPhases: number;
+  roadmapItems: number;
+  roadmapCheckpoints: number;
 }
 
 // ---- M7: sync rows, local sync store, synced preferences (ARCHITECTURE §4.1, §4.2, §5.2) ----
@@ -212,7 +310,7 @@ export interface LocalSyncStore {
    * transaction over goals + entries + kv (kv `sync` is read inside it to know whether the device
    * ever synced). Returns how many rows went per table; a failure rolls everything back.
    */
-  purgeTombstones(now: Date): Promise<{ goals: number; entries: number }>;
+  purgeTombstones(now: Date): Promise<PurgeCounts>;
 }
 
 export type { PrefGroupMeta };

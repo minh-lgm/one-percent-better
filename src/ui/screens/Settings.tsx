@@ -30,6 +30,7 @@ import { useFormat } from '../hooks/useFormat';
 import { useNow } from '../hooks/useNow';
 import { useOnline } from '../hooks/useOnline';
 import { useServices } from '../hooks/useServices';
+import { ensureRoadmapNamespace } from '../../i18n/roadmap-namespace';
 import { useSubscribable } from '../hooks/useSubscribable';
 import { useT } from '../hooks/useT';
 import { useToast } from '../hooks/useToast';
@@ -59,6 +60,8 @@ interface ImportState {
   preview: BackupPreview;
   counts: BackupCounts;
   opener: HTMLElement | null;
+  /** v8.0 (D3): the "Big goals: …" line can be shown (file or device has roadmaps and the `roadmap` namespace loaded). */
+  roadmapLine: boolean;
 }
 
 /** "Saved to your account" note on the Language / Reminders cards (DESIGN SettingsSyncNote, M7). */
@@ -78,7 +81,9 @@ export function Settings() {
   const toast = useToast();
   const id = useId();
   const now = useNow();
-  const { storagePersistence, settingsService, notifications, reminderService, backupService, goalService, authService, syncService, loginPromptService, capabilities, fileExport, readTextFile } = useServices();
+  const { storagePersistence, settingsService, notifications, reminderService, backupService, goalService, authService, syncService, loginPromptService, capabilities, fileExport, readTextFile, i18n } = useServices();
+  // v8.0 (D3, ADR-53): the roadmap line's strings live in the lazy namespace; `tr` is only called once it is loaded.
+  const { t: tr } = useT('roadmap');
   // v5.0 (DESIGN 7.8.1, S7 "tiếp"): native variants are chosen from `capabilities` only.
   const native = capabilities.platform !== 'web';
   // M15 (DESIGN 7.8.4): the OS delivers scheduled reminders → 3 permission states, iOS Settings guidance, no .ics.
@@ -231,7 +236,9 @@ export function Settings() {
         return;
       }
       const counts = await backupService.counts();
-      setImporting({ preview: parsed.value, counts, opener: importButton.current });
+      // v8.0 (D3): the roadmap line appears only when the file or the device has roadmaps; load its strings then.
+      const roadmapLine = ((parsed.value.roadmaps ?? 0) > 0 || counts.roadmaps > 0) && (await ensureRoadmapNamespace(i18n).then(() => true, () => false));
+      setImporting({ preview: parsed.value, counts, opener: importButton.current, roadmapLine });
     } catch {
       setImportError('read');
     } finally {
@@ -288,6 +295,13 @@ export function Settings() {
   // D3 signed-in variant (FR-51): the import also replaces the account's copy; `expired` uses the standard D3.
   const importBody = importBodyParams ? t(signedIn ? 'import.bodySignedIn' : 'import.body', importBodyParams) : '';
   const importExtra = importing && signedIn && !online ? t('import.offlineNote') : undefined;
+  // v8.0 (DESIGN "Phase 8 — chỉnh màn cũ", D3): v2 file → "n in this backup, cur on this device"; v1 file → "kept".
+  // No roadmaps anywhere → the dialog is byte-for-byte the pre-phase-8 one.
+  const importNote = importing?.roadmapLine
+    ? importing.preview.roadmaps === null
+      ? tr('importLineKept', { cur: f.number(importing.counts.roadmaps) })
+      : tr('importLine', { n: f.number(importing.preview.roadmaps), cur: f.number(importing.counts.roadmaps) })
+    : undefined;
 
   // ---- Account (M6, FR-39 … FR-41; M7 sync; M14 native providers + delete account) ----
   function signIn(provider: AuthProvider = 'google') {
@@ -642,6 +656,7 @@ export function Settings() {
         title={t(importing && signedIn ? 'import.titleSignedIn' : 'import.title')}
         body={importBody}
         extra={importExtra}
+        note={importNote}
         confirmLabel={t('import.confirm')}
         busy={busy === 'import'}
         onConfirm={() => void confirmImport()}

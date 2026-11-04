@@ -30,6 +30,8 @@ const PATHS = {
   cloudDot: <><path d="M7 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117.2 8.6 4.5 4.5 0 0117 18z" /><path d="M12 13.5h.01" strokeWidth="3.5" /></>,
   cloudOff: <><path d="M7 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117.2 8.6 4.5 4.5 0 0117 18z" /><path d="M4 4l16 16" /></>,
   warn: <path d="M12 4l9 16H3zM12 10v4M12 17h.01" />,
+  // v8.0 (M17, DESIGN §3.1): Big goals — a winding path between two dots.
+  roadmap: <><circle cx="6" cy="18" r="2" /><circle cx="18" cy="6" r="2" /><path d="M8 18h6.5a3 3 0 0 0 0-6h-5a3 3 0 0 1 0-6H16" /></>,
 } as const;
 
 export type IconName = keyof typeof PATHS;

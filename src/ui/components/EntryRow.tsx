@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LogEntry } from '../../domain/types';
 import { useFormat } from '../hooks/useFormat';
-import { useT } from '../hooks/useT';
+import { useT, type TFn } from '../hooks/useT';
 import { Badge } from './Badge';
 import { Button, IconButton } from './Button';
 
@@ -15,7 +15,7 @@ export interface EntryRowProps {
   showSource?: boolean;
 }
 
-export function entrySummary(entry: Pick<LogEntry, 'minutes' | 'note'>, t: ReturnType<typeof useT>['t'], f: ReturnType<typeof useFormat>): string {
+export function entrySummary(entry: Pick<LogEntry, 'minutes' | 'note'>, t: TFn, f: ReturnType<typeof useFormat>): string {
   const minutes = f.minutes(entry.minutes);
   return entry.note ? t('entry.row.summary', { minutes, note: entry.note }) : t('entry.row.summaryNoNote', { minutes });
 }

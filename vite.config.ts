@@ -68,6 +68,28 @@ export default defineConfig(({ mode }) => {
       target: 'es2022',
       sourcemap: false,
       outDir: mode === 'native' ? 'dist-native' : mode === 'native-e2e' ? 'dist-native-e2e' : 'dist',
+      rolldownOptions: {
+        output: {
+          // v8.0 (M17, NFR-25): the small modules shared by the entry and the lazy big-goals chunks (config/constants,
+          // domain/types|text|dates|goal|plan, i18n/types|format, date-fns) would otherwise be emitted as 100–500 B chunks
+          // of their own, each costing a request plus wrapper/gzip overhead on the cold load. One `core` chunk instead.
+          advancedChunks: {
+            groups: [
+              {
+                name: 'core',
+                test: (id: string) => {
+                  const p = id.replace(/\\/g, '/');
+                  return (
+                    /\/src\/(config\/constants|domain\/(types|text|dates|goal|plan)|i18n\/(types|format)|ui\/hooks\/(useT|useFormat))\.ts$/.test(p) ||
+                    /\/node_modules\/(date-fns|react-i18next)\//.test(p) ||
+                    /vite\/preload-helper|rolldown[:-]runtime/.test(p)
+                  );
+                },
+              },
+            ],
+          },
+        },
+      },
     },
     preview: {
       port: 4173,

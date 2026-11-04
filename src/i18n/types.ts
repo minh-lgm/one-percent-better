@@ -1,4 +1,5 @@
 import type en from './resources/en.json';
+import type roadmapEn from './resources/roadmap.en.json';
 
 export type Locale = 'en' | 'vi';
 export const LOCALES: readonly Locale[] = ['en', 'vi'] as const;
@@ -24,6 +25,11 @@ type StripPlural<K extends string> = K extends `${infer Base}_one`
 
 /** Every translation key (plural suffixes collapsed to their base key). */
 export type MessageKey = StripPlural<Leaves<typeof en>>;
+
+/** v8.0 (M17, ADR-53): keys of the lazy `roadmap` namespace, without the `roadmap:` prefix (`useT('roadmap')`). */
+export type RoadmapKey = StripPlural<Leaves<typeof roadmapEn>>;
+/** The same keys as the main `t()` sees them (`t('roadmap:list.title')`). */
+export type RoadmapMessageKey = `roadmap:${RoadmapKey}`;
 
 export type TParams = Record<string, string | number>;
 

@@ -2,8 +2,9 @@ import Dexie, { liveQuery, type Table, type Transaction } from 'dexie';
 import { normalizeSettings } from '../../domain/settings';
 import { DEFAULT_SETTINGS, StorageError } from '../../domain/types';
 import { isLocale } from '../../i18n/types';
+import type { Roadmap, RoadmapCheckpoint, RoadmapItem, RoadmapPhase } from '../../domain/roadmap';
 import type { Goal, LogEntry } from '../../domain/types';
-import type { EntryRow, GoalRow, KvKey, PrefsSyncState, Subscribable } from '../repositories';
+import type { EntryRow, GoalRow, KvKey, PrefsSyncState, RoadmapCheckpointRow, RoadmapItemRow, RoadmapPhaseRow, RoadmapRow, Subscribable } from '../repositories';
 
 export interface KvRecord {
   key: KvKey;
@@ -19,16 +20,21 @@ export interface AppDatabaseOptions {
 }
 
 /**
- * Dexie schema (ARCHITECTURE §4, §4.2). v1: plain goals/entries/kv. v2 (M7, ADR-20): every
+ * Dexie schema (ARCHITECTURE §4, §4.2, §4.8 b). v1: plain goals/entries/kv. v2 (M7, ADR-20): every
  * goal/entry row carries `deletedAt` (soft delete) and `dirty` (indexed: rows waiting to be pushed);
  * kv gains `prefsSync`. Dexie runs `upgrade` in the `versionchange` transaction: any failure rolls
- * IndexedDB back to v1 untouched (NFR-14).
+ * IndexedDB back to v1 untouched (NFR-14). v3 (M17, ADR-48): four roadmap tables, no `upgrade()` —
+ * the new stores start empty and every existing row stays as it is (IndexedDB version 30).
  */
 export class AppDatabase extends Dexie {
   /** Insert type accepts plain domain objects (tests seed rows without the sync markers; such rows read as live). */
   goals!: Table<GoalRow, string, Goal & Partial<GoalRow>>;
   entries!: Table<EntryRow, string, LogEntry & Partial<EntryRow>>;
   kv!: Table<KvRecord, KvKey>;
+  roadmaps!: Table<RoadmapRow, string, Roadmap & Partial<RoadmapRow>>;
+  roadmapPhases!: Table<RoadmapPhaseRow, string, RoadmapPhase & Partial<RoadmapPhaseRow>>;
+  roadmapItems!: Table<RoadmapItemRow, string, RoadmapItem & Partial<RoadmapItemRow>>;
+  roadmapCheckpoints!: Table<RoadmapCheckpointRow, string, RoadmapCheckpoint & Partial<RoadmapCheckpointRow>>;
 
   constructor(name: string, options: AppDatabaseOptions = {}) {
     super(name);
@@ -44,8 +50,19 @@ export class AppDatabase extends Dexie {
         kv: 'key',
       })
       .upgrade((tx) => upgradeToV2(tx, options.upgradeProbe));
+    // v3: only the new stores are declared; Dexie carries the v2 stores over unchanged (ADR-48).
+    this.version(3).stores({
+      roadmaps: 'id, goalId, dirty',
+      roadmapPhases: 'id, roadmapId, dirty',
+      roadmapItems: 'id, roadmapId, dirty',
+      roadmapCheckpoints: 'id, roadmapId, dirty',
+    });
   }
 }
+
+/** The four roadmap tables, in parent → child order (cascades, purge, clear). */
+export const ROADMAP_TABLES = ['roadmaps', 'roadmapPhases', 'roadmapItems', 'roadmapCheckpoints'] as const;
+export type RoadmapTableName = (typeof ROADMAP_TABLES)[number];
 
 /** v1 → v2 (ARCHITECTURE §4.2): existing rows become live + dirty (first sign-in pushes = merge); pref markers per A-36. */
 export async function upgradeToV2(tx: Transaction, probe?: () => void): Promise<void> {

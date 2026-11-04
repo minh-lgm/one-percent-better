@@ -1,3 +1,4 @@
+import type { Table } from 'dexie';
 import { TOMBSTONE_RETENTION_DAYS } from '../../config/constants';
 import { isPurgeableTombstone, nextUpdatedAt, resolveIncoming, sameVersion } from '../../domain/sync';
 import type { Goal, LogEntry } from '../../domain/types';
@@ -10,11 +11,12 @@ import {
   type EntryRow,
   type GoalRow,
   type LocalSyncStore,
+  type PurgeCounts,
   type RemoteChanges,
   type Subscribable,
   type SyncRecord,
 } from '../repositories';
-import { fromLiveQuery, type AppDatabase } from './db';
+import { fromLiveQuery, ROADMAP_TABLES, type AppDatabase } from './db';
 
 /**
  * `LocalSyncStore` on Dexie v2 (ARCHITECTURE §5.2, §5.10, ADR-20/21). `applyRemote` is one
@@ -170,22 +172,23 @@ export class DexieSyncStore implements LocalSyncStore {
     return this.db.transaction('r', this.db.goals, this.db.entries, async () => (await this.db.goals.where('dirty').equals(2).count()) + (await this.db.entries.where('dirty').equals(2).count()));
   }
 
-  purgeTombstones(now: Date): Promise<{ goals: number; entries: number }> {
-    return this.db.transaction('rw', this.db.goals, this.db.entries, this.db.kv, async () => {
+  purgeTombstones(now: Date): Promise<PurgeCounts> {
+    // v8.0 (M17): the same rule on the four roadmap tables (ADR-29).
+    const tables = ['goals', 'entries', ...ROADMAP_TABLES] as const;
+    return this.db.transaction('rw', [...tables.map((t) => this.db[t]), this.db.kv], async () => {
       const raw = await this.db.kv.get('sync');
       const meta = raw ? normalizeSyncMeta(raw.value) : null;
       const rule = { neverSynced: !meta || (meta.userId === null && meta.lastUserId === null), retentionDays: TOMBSTONE_RETENTION_DAYS };
-      const goalIds: string[] = [];
-      await this.db.goals.filter((g) => isPurgeableTombstone(g, now, rule)).each((g) => {
-        goalIds.push(g.id);
-      });
-      const entryIds: string[] = [];
-      await this.db.entries.filter((e) => isPurgeableTombstone(e, now, rule)).each((e) => {
-        entryIds.push(e.id);
-      });
-      if (goalIds.length > 0) await this.db.goals.bulkDelete(goalIds);
-      if (entryIds.length > 0) await this.db.entries.bulkDelete(entryIds);
-      return { goals: goalIds.length, entries: entryIds.length };
+      const counts = {} as PurgeCounts;
+      for (const t of tables) {
+        const ids: string[] = [];
+        await (this.db[t] as Table<{ id: string; deletedAt: string | null; dirty: 0 | 1 | 2 }, string>).filter((r) => isPurgeableTombstone(r, now, rule)).each((r) => {
+          ids.push(r.id);
+        });
+        if (ids.length > 0) await this.db[t].bulkDelete(ids);
+        counts[t] = ids.length;
+      }
+      return counts;
     });
   }
 }
