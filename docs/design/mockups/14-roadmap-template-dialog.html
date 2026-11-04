@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hộp thoại mẫu QPT — 1% Better (mockup D7, DESIGN v8.0)</title>
+<style>
+/* v7 tokens (DESIGN 6.1). The app self-hosts Fraunces + Manrope; this offline mockup falls back to Georgia / system-ui. */
+:root{color-scheme:light dark;
+--font:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--font-display:"Fraunces",Georgia,"Times New Roman",serif;
+--bg:#F6F2EA;--surface:#F6F2EA;--surface-2:#ECE6DA;--surface-raised:#FFFFFF;--border:#E3DCCF;--border-input:#B5AC9A;
+--text:#17160F;--text-muted:#6F6A5E;--primary:#AD3D1A;--primary-soft:#F6DED3;--on-primary-soft:#8A2F12;
+--btn-bg:#17160F;--btn-fg:#F6F2EA;--danger:#A32D2D;--danger-soft:#F8E1DF;--on-danger-soft:#7A1D1D;--info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;--scrim:rgba(23,22,15,.5);
+--r-md:10px;--r-full:999px;--tap:44px}
+@media (prefers-color-scheme:dark){:root{
+--bg:#171512;--surface:#171512;--surface-2:#221F1A;--surface-raised:#221F1A;--border:#2C2822;--border-input:#6B655A;
+--text:#F3EFE6;--text-muted:#A39C8E;--primary:#E8663C;--primary-soft:#3A2419;--on-primary-soft:#F5B9A3;
+--btn-bg:#F3EFE6;--btn-fg:#171512;--danger:#FF8A80;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;--info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;--scrim:rgba(0,0,0,.6)}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/24px var(--font);-webkit-text-size-adjust:100%}
+h1,h2,p{margin:0}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.muted{color:var(--text-muted)}
+.eyebrow,.fld label{font:600 12px/16px var(--font);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+main{max-width:720px;margin:0 auto;padding:24px 16px}
+h1{font:400 36px/40px var(--font-display)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:11px 20px;border:1px solid transparent;border-radius:var(--r-full);font:600 15px/20px var(--font);cursor:pointer;text-align:center;background:none;color:var(--text)}
+.btn.primary{background:var(--btn-bg);color:var(--btn-fg)}.btn.secondary{border-color:color-mix(in srgb,var(--text) 25%,transparent)}
+.btn[aria-disabled=true]{opacity:.6;cursor:default}
+.fld{margin-top:18px}.fld label{display:block;margin-bottom:6px}
+.input{font:400 17px/24px var(--font);color:var(--text);background:transparent;border:0;border-bottom:1px solid var(--border-input);padding:8px 0;min-height:44px;width:100%;border-radius:0}
+.input:focus-visible{outline:none;border-bottom:2px solid var(--text);padding-bottom:7px}
+.input[aria-invalid=true]{border-bottom-color:var(--danger)}
+.hint{font-size:14px;line-height:20px;color:var(--text-muted);margin-top:6px}
+.err{display:flex;gap:6px;align-items:flex-start;font-size:14px;line-height:20px;color:var(--danger);margin-top:6px}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r-md);background:var(--danger-soft);color:var(--on-danger-soft);font-size:14px;line-height:20px}
+.prev{margin-top:10px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface-2);font-size:14px;line-height:20px;font-variant-numeric:tabular-nums}
+/* dialog = bottom sheet < 640 px, centred 480 px dialog >= 640 px; body scrolls inside, button row sticks to the bottom */
+dialog{border:0;padding:0;background:var(--surface-raised);color:var(--text);box-shadow:0 12px 40px rgba(20,30,25,.22);width:100%;max-width:100%;max-height:calc(100dvh - 16px);margin:auto 0 0;border-radius:20px 20px 0 0;overflow:hidden}
+dialog[open]{display:flex;flex-direction:column}
+/* Mockup only: the dialog is opened non-modally (show()) with a manual scrim so the control bar above stays usable.
+   In the app it is a real modal <dialog> + showModal() (focus trap, inert page, ::backdrop = --scrim). */
+dialog{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:50}
+body::after{content:"";position:fixed;inset:0;background:var(--scrim);z-index:40;display:none}
+body.dim::after{display:block}
+.mock-bar{position:relative;z-index:60;background:var(--bg)}
+@media (min-width:640px){dialog{width:480px;margin:auto;border-radius:20px;left:50%;right:auto;top:50%;bottom:auto;transform:translate(-50%,-50%)}}
+.d-body{padding:24px 24px 8px;overflow:auto}
+.d-body h2{font:400 26px/32px var(--font-display);margin-bottom:8px}.d-body>p{color:var(--text-muted)}
+.d-foot{display:flex;flex-direction:column-reverse;gap:8px;padding:12px 24px 24px;background:var(--surface-raised);border-top:1px solid var(--border)}
+.d-foot .btn{width:100%}
+@media (min-width:640px){.d-foot{flex-direction:row;justify-content:flex-end}.d-foot .btn{width:auto}}
+.mock-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-bottom:16px;padding:12px;border:1px dashed var(--border-input);border-radius:var(--r-md);font-size:14px;line-height:20px}
+.mock-bar select,.mock-bar button{font:inherit;min-height:44px;padding:0 10px;background:var(--surface-raised);color:var(--text);border:1px solid var(--border-input);border-radius:8px}
+.mock-note{margin-top:24px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<main id="main">
+  <div class="mock-bar">
+    <label>Ngôn ngữ / Language <select id="lang"><option value="vi">Tiếng Việt</option><option value="en">English</option></select></label>
+    <label>Trạng thái / State <select id="st">
+      <option value="ok">Mặc định (27/10/2026, chọn QPT study)</option><option value="today">Mặc định mở (ngày = hôm nay 04/11/2026)</option>
+      <option value="linked">Lỗi: mục tiêu đã thuộc lộ trình khác</option><option value="limit">Lỗi: đã đủ 20 lộ trình</option><option value="busy">Đang tạo…</option></select></label>
+    <button type="button" id="open">Mở lại / Reopen</button>
+  </div>
+  <h1 data-k="list.title"></h1>
+  <p class="muted" style="margin-top:8px" data-k="list.intro"></p>
+  <p class="mock-note">Mockup D7 (DESIGN v8.0, M20): <code>TemplateDialog</code> mở từ trạng thái rỗng, danh sách và <code>#/roadmaps/new</code>. Dưới 640 px là bottom sheet (cuộn trong, hàng nút dính đáy); từ 640 px là hộp thoại 480 px. Focus ban đầu ở ô "Ngày bắt đầu".</p>
+</main>
+<dialog id="dlg" aria-labelledby="d-t" aria-describedby="d-b"></dialog>
+<script>
+const D={
+en:{'list.title':'Big goals','list.intro':'Plans that run for weeks or months. Study time comes from the goal you link.',
+'tpl.title':'Create from QPT 21-week template','tpl.body':'Creates a 21-week plan with 5 phases, 21 weekly items, 5 score checkpoints and an 8-hour weekly target. You can edit everything afterwards.',
+'tpl.startLabel':'Start date','tpl.preview':'Week 1: {{start}}. Week 20 (QPT exam): {{exam}}. The last week ends {{end}}.',
+'ed.goalLabel':'Linked goal (optional)','ed.goalNone':'No goal','ed.goalHint':"Study time is counted from this goal's entries. Archived goals and goals already used by another roadmap aren't listed.",
+'tpl.langNote':"Created in {{language}}. Changing the app language later won't translate it.",'ed.create':'Create roadmap','ed.cancel':'Cancel','tpl.creating':'Creating…',
+'errors.ROADMAP_GOAL_ALREADY_LINKED':'This goal is already linked to "{{title}}". Choose another goal, or unlink it there first.',
+'errors.ROADMAP_LIMIT_REACHED_roadmap':'You can have up to {{max}} roadmaps. Delete one to add another.','lang':'English'},
+vi:{'list.title':'Mục tiêu lớn','list.intro':'Những kế hoạch kéo dài nhiều tuần hay nhiều tháng. Giờ học lấy từ mục tiêu bạn liên kết.',
+'tpl.title':'Tạo từ mẫu QPT 21 tuần','tpl.body':'Tạo kế hoạch 21 tuần gồm 5 giai đoạn, 21 mục theo tuần, 5 điểm kiểm tra và chỉ tiêu 8 giờ mỗi tuần. Bạn có thể sửa mọi thứ sau đó.',
+'tpl.startLabel':'Ngày bắt đầu','tpl.preview':'Tuần 1: {{start}}. Tuần 20 (thi QPT): {{exam}}. Tuần cuối kết thúc ngày {{end}}.',
+'ed.goalLabel':'Mục tiêu liên kết (không bắt buộc)','ed.goalNone':'Không liên kết','ed.goalHint':'Giờ học được tính từ các lần ghi của mục tiêu này. Không liệt kê mục tiêu đã lưu trữ hoặc đã thuộc lộ trình khác.',
+'tpl.langNote':'Tạo bằng {{language}}. Đổi ngôn ngữ app sau này sẽ không dịch lại nội dung này.','ed.create':'Tạo lộ trình','ed.cancel':'Hủy','tpl.creating':'Đang tạo…',
+'errors.ROADMAP_GOAL_ALREADY_LINKED':'Mục tiêu này đã liên kết với "{{title}}". Hãy chọn mục tiêu khác, hoặc bỏ liên kết ở đó trước.',
+'errors.ROADMAP_LIMIT_REACHED_roadmap':'Bạn có thể có tối đa {{max}} lộ trình. Hãy xóa bớt một lộ trình để thêm mới.','lang':'Tiếng Việt'}};
+let L='vi';
+const t=(k,v)=>{let s=D[L][k]??D.en[k]??k;for(const x in v)s=s.split('{{'+x+'}}').join(v[x]);return s};
+const P=s=>Date.parse(s+'T00:00:00Z'),F=ms=>new Date(ms).toISOString().slice(0,10);
+const fd=s=>L==='vi'?s.split('-').reverse().join('/'):s;
+const IC='<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg>';
+function build(){
+ L=document.getElementById('lang').value;document.documentElement.lang=L;
+ document.querySelectorAll('[data-k]').forEach(e=>e.textContent=t(e.dataset.k));
+ const st=document.getElementById('st').value;const start=st==='today'?'2026-11-04':'2026-10-27';
+ const exam=F(P(start)+19*7*864e5),end=F(P(start)+21*7*864e5-864e5);
+ const busy=st==='busy';
+ let err='';
+ if(st==='linked')err=`<div class="alert" role="alert">${IC}<span>${t('errors.ROADMAP_GOAL_ALREADY_LINKED',{title:'Spanish B1'})}</span></div>`;
+ if(st==='limit')err=`<div class="alert" role="alert">${IC}<span>${t('errors.ROADMAP_LIMIT_REACHED_roadmap',{max:20})}</span></div>`;
+ document.getElementById('dlg').innerHTML=`<div class="d-body"><h2 id="d-t">${t('tpl.title')}</h2><p id="d-b">${t('tpl.body')}</p>
+  <div class="fld"><label for="t-start">${t('tpl.startLabel')}</label><input class="input" id="t-start" type="date" value="${start}" aria-describedby="t-prev" ${busy?'disabled':''} autofocus>
+   <p class="prev" id="t-prev">${t('tpl.preview',{start:fd(start),exam:fd(exam),end:fd(end)})}</p></div>
+  <div class="fld"><label for="t-goal">${t('ed.goalLabel')}</label><select class="input" id="t-goal" aria-describedby="t-goal-h" ${st==='linked'?'aria-invalid="true"':''} ${busy?'disabled':''}><option>${t('ed.goalNone')}</option><option ${st==='ok'||st==='today'?'selected':''}>QPT study</option><option ${st==='linked'?'selected':''}>Spanish</option><option>Guitar</option></select><p class="hint" id="t-goal-h">${t('ed.goalHint')}</p></div>
+  <p class="hint" style="margin:16px 0 8px">${t('tpl.langNote',{language:t('lang')})}</p>
+  ${err?`<div style="margin:12px 0 8px">${err}</div>`:''}</div>
+  <div class="d-foot"><button class="btn primary" type="button" ${busy?'aria-disabled="true" aria-busy="true"':''}>${busy?t('tpl.creating'):t('ed.create')}</button><button class="btn secondary" type="button" id="d-cancel" ${busy?'disabled':''}>${t('ed.cancel')}</button></div>`;
+ document.getElementById('d-cancel').onclick=()=>{document.getElementById('dlg').close();document.body.classList.remove('dim')};
+ const i=document.getElementById('t-start');i.oninput=()=>{const s=i.value;if(!s)return;const e2=F(P(s)+19*7*864e5),e3=F(P(s)+21*7*864e5-864e5);document.getElementById('t-prev').textContent=t('tpl.preview',{start:fd(s),exam:fd(e2),end:fd(e3)})};
+}
+function open(){build();const d=document.getElementById('dlg');if(!d.open)d.show();document.body.classList.add('dim');document.getElementById('t-start').focus()}
+document.getElementById('lang').onchange=()=>{document.getElementById('dlg').close();open()};document.getElementById('st').onchange=()=>{document.getElementById('dlg').close();open()};
+document.getElementById('open').onclick=open;open();
+</script>
+</body>
+</html>

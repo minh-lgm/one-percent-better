@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mục tiêu lớn — 1% Better (mockup S11, DESIGN v8.0)</title>
+<style>
+/* v7 tokens (DESIGN 6.1). Fonts: the app self-hosts Fraunces + Manrope; this mockup has no network, so it falls back to Georgia / system-ui. */
+:root{color-scheme:light dark;
+--font:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--font-display:"Fraunces",Georgia,"Times New Roman",serif;
+--bg:#F6F2EA;--surface:#F6F2EA;--surface-2:#ECE6DA;--surface-raised:#FFFFFF;--surface-glass:rgba(246,242,234,.92);--border:#E3DCCF;--border-input:#B5AC9A;
+--text:#17160F;--text-muted:#6F6A5E;--primary:#AD3D1A;--primary-hover:#8F3114;--on-primary:#FFFFFF;--primary-soft:#F6DED3;--on-primary-soft:#8A2F12;
+--btn-bg:#17160F;--btn-fg:#F6F2EA;--danger:#A32D2D;--danger-soft:#F8E1DF;--on-danger-soft:#7A1D1D;--info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;
+--r-md:10px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:64px}
+@media (prefers-color-scheme:dark){:root{
+--bg:#171512;--surface:#171512;--surface-2:#221F1A;--surface-raised:#221F1A;--surface-glass:rgba(23,21,18,.92);--border:#2C2822;--border-input:#6B655A;
+--text:#F3EFE6;--text-muted:#A39C8E;--primary:#E8663C;--primary-hover:#F07D56;--on-primary:#171512;--primary-soft:#3A2419;--on-primary-soft:#F5B9A3;
+--btn-bg:#F3EFE6;--btn-fg:#171512;--danger:#FF8A80;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;--info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/24px var(--font);-webkit-text-size-adjust:100%}
+h1,h2,h3,p,ul,dl,dd{margin:0}ul{padding:0;list-style:none}
+a{color:var(--primary)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;background:var(--surface-raised);padding:8px 12px;border-radius:var(--r-md);z-index:60}.skip:focus{top:8px}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.muted{color:var(--text-muted)}
+.eyebrow{font:600 12px/16px var(--font);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+/* shell: tab bar < 1024 px (5 items, 64 px, labels may wrap to 2 lines), sidebar >= 1024 px */
+.nav{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;background:var(--surface-glass);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.nav .brand{display:none}
+.nav .item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;min-height:var(--tabbar-h);padding:6px 2px 2px;color:var(--text-muted);font:500 12px/16px var(--font);text-align:center;text-decoration:none}
+.nav .item .ic{width:22px;height:22px}
+.nav .item[aria-current=page]{color:var(--primary);font-weight:600}
+.mark{display:inline-grid;place-items:center;width:32px;height:32px;padding:2px;border-radius:9px;background:#fff;flex:none}.mark img{display:block;width:100%;height:100%;object-fit:contain}
+.content{min-width:0}
+main{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--tabbar-h) + 80px)}
+@media (min-width:1024px){
+.nav{top:0;right:auto;width:var(--nav-w);flex-direction:column;justify-content:flex-start;gap:4px;padding:24px 12px;border-top:0;border-right:1px solid var(--border);background:var(--bg)}
+.nav .brand{display:flex;align-items:center;gap:10px;padding:0 12px 20px;font:400 18px/24px var(--font-display);color:var(--text);text-decoration:none}
+.nav .item{flex:none;flex-direction:row;justify-content:flex-start;align-items:center;gap:12px;min-height:var(--tap);padding:0 14px;border-radius:var(--r-full);font-size:15px;text-align:left}
+.nav .item .ic{width:24px;height:24px}
+.nav .item:hover{background:var(--surface-2)}
+.nav .item[aria-current=page]{background:var(--primary-soft);color:var(--on-primary-soft)}
+.content{margin-left:var(--nav-w)}main{max-width:1040px;padding:32px 48px 96px}}
+@media (min-width:1440px){main{max-width:1180px;padding:40px 56px 96px}}
+/* page */
+h1{font:400 36px/40px var(--font-display);letter-spacing:-.01em}
+@media (min-width:640px){h1{font-size:44px;line-height:48px}}@media (min-width:1024px){h1{font-size:48px;line-height:52px}}
+.page-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin:8px 0 24px}
+.page-head .intro{margin-top:8px;max-width:56ch}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:11px 20px;border:1px solid transparent;border-radius:var(--r-full);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;text-align:center;background:none;color:var(--text)}
+.btn.primary{background:var(--btn-bg);color:var(--btn-fg)}
+.btn.secondary{border-color:color-mix(in srgb,var(--text) 25%,transparent)}.btn.secondary:hover{background:color-mix(in srgb,var(--text) 6%,transparent)}
+@media (max-width:639px){.page-head .btn-row{width:100%}.page-head .btn{width:100%}}
+/* list rows: flat, hairline between */
+.list{border-top:1px solid var(--border)}
+.rm{border-bottom:1px solid var(--border)}
+.rm>a{display:block;padding:20px 0;color:inherit;text-decoration:none}
+.rm>a:hover .rm-title{text-decoration:underline;text-underline-offset:3px}
+.rm-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.rm-title{font:400 24px/30px var(--font-display);min-width:0;overflow-wrap:anywhere}
+.rm-goal{margin-top:2px;color:var(--text-muted);font-size:14px;line-height:20px;overflow-wrap:anywhere}
+.bar{height:6px;background:var(--border);border-radius:3px;margin:14px 0 10px;overflow:hidden}.bar i{display:block;height:100%;background:var(--primary)}
+.rm-stats{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:15px;line-height:22px;font-variant-numeric:tabular-nums}
+.rm-stats .dash{color:var(--text-muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 12px 3px 8px;border-radius:var(--r-full);font:600 13px/20px var(--font);background:var(--surface-2);color:var(--text);white-space:normal}
+.chip .ic{width:16px;height:16px}
+.chip.good{background:var(--primary-soft);color:var(--on-primary-soft)}
+.chip.warn{background:var(--primary-soft);color:var(--on-primary-soft);box-shadow:inset 0 0 0 1.5px var(--primary)}
+.chip.crit{background:var(--danger-soft);color:var(--on-danger-soft)}
+.chip.idle{background:var(--surface-2);color:var(--text)}
+@media (min-width:1024px){.rm>a{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:8px 40px;align-items:center}.rm-top{min-width:0}.bar{margin:0 0 8px}.rm-side{min-width:0}}
+/* notices */
+.note{display:flex;gap:10px;align-items:flex-start;margin:0 0 20px;padding:12px 14px;border-radius:var(--r-md);background:var(--info-soft);color:var(--info);font-size:14px;line-height:20px}
+.empty{padding:40px 0 24px;max-width:56ch}.empty h2{font:400 28px/34px var(--font-display);margin-bottom:8px}.empty p{color:var(--text-muted)}.empty .btn-row{margin-top:20px}
+.sk{height:96px;border-bottom:1px solid var(--border);display:grid;align-content:center;gap:10px}.sk i{display:block;height:14px;border-radius:7px;background:var(--surface-2)}
+.err{padding:32px 0;max-width:56ch}.err h2{font:400 24px/30px var(--font-display);margin-bottom:8px}
+.mock-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-bottom:12px;padding:12px;border:1px dashed var(--border-input);border-radius:var(--r-md);font-size:14px;line-height:20px}
+.mock-bar select{font:inherit;min-height:44px;padding:0 8px;background:var(--surface-raised);color:var(--text);border:1px solid var(--border-input);border-radius:8px}
+.mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-k="a11y.skip">Bỏ qua tới nội dung</a>
+<nav class="nav" aria-label="Chính">
+  <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="../../../public/brand-mark-96.png" width="28" height="28" alt=""></span><span>1% Better per Day</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></svg><span data-k="nav.today">Hôm nay</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/></svg><span data-k="nav.goals">Mục tiêu</span></a>
+  <a class="item" href="#/roadmaps" aria-current="page"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6.5a3 3 0 0 0 0-6h-5a3 3 0 0 1 0-6H16"/></svg><span data-k="nav.roadmaps">Mục tiêu lớn</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20v-8M12 20V5M19 20v-12"/></svg><span data-k="nav.review">Tổng kết</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span data-k="nav.settings">Cài đặt</span></a>
+</nav>
+<div class="content"><main id="main" tabindex="-1">
+  <div class="mock-bar">
+    <label>Ngôn ngữ / Language <select id="lang"><option value="vi">Tiếng Việt</option><option value="en">English</option></select></label>
+    <label>Trạng thái / State <select id="state">
+      <option value="list">Danh sách (Q1 + 2)</option><option value="empty">Rỗng (2 lối tạo)</option><option value="loading">Đang tải</option>
+      <option value="error">Lỗi đọc</option><option value="unavail">Danh sách + cloud chưa có bảng</option></select></label>
+  </div>
+  <div class="page-head">
+    <div><h1 data-k="list.title">Mục tiêu lớn</h1><p class="intro muted" data-k="list.intro"></p></div>
+    <div class="btn-row" id="head-actions"></div>
+  </div>
+  <div id="view"></div>
+  <p class="mock-note">Mockup S11 (DESIGN v8.0, M17 danh sách đọc; M19 nút tạo; M20 nút mẫu). Hôm nay = 04/11/2026. Dòng Q1: 1/21, Đúng tiến độ, 5,8 / 16 giờ, 125 ngày tới "Thi QPT". Tab bar 64 px: nhãn "Mục tiêu lớn" xuống 2 dòng ở 360 px (DESIGN 3.1, 3.7).</p>
+</main></div>
+<script>
+const D={
+en:{'a11y.skip':'Skip to content','nav.today':'Today','nav.goals':'Goals','nav.roadmaps':'Big goals','nav.review':'Review','nav.settings':'Settings',
+'list.title':'Big goals','list.intro':'Plans that run for weeks or months. Study time comes from the goal you link.',
+'list.createBlank':'Create empty roadmap','list.createTemplate':'Create from QPT 21-week template',
+'list.empty':'No big goals yet','list.emptyBody':"A roadmap breaks a big goal into weeks or stages, tracks what you've finished, and counts the time you log on a goal you link. Start empty, or load the 21-week QPT plan.",
+'list.listLabel':'Your roadmaps','list.row.linked':'Goal: {{goal}}','list.row.unlinked':'No goal linked','list.row.progress':'Done {{done}}/{{total}}',
+'list.row.hours':'Studied {{done}} of {{plan}}','list.row.hoursOnly':'Studied {{done}}','list.row.hoursNone':'Study time: —',
+'milestone.line':'{{label}}: {{when}}','pace.onTrack':'On track','pace.notStarted':'Not started','pace.completed':'Completed',
+'unavail':"Big goals can't sync yet because your account is missing their tables. Changes to them stay on this device and upload once that's fixed. Goals and entries sync as usual.",
+'err.title':"Couldn't load this view",'err.body':'Check your connection if you just updated the app, then try again.','err.retry':'Try again',
+'h':'{{n}} h','days':'{{count}} days left','weeks_behind':'{{count}} items behind','loading':'Loading…'},
+vi:{'a11y.skip':'Chuyển tới nội dung','nav.today':'Hôm nay','nav.goals':'Mục tiêu','nav.roadmaps':'Mục tiêu lớn','nav.review':'Tổng kết','nav.settings':'Cài đặt',
+'list.title':'Mục tiêu lớn','list.intro':'Những kế hoạch kéo dài nhiều tuần hay nhiều tháng. Giờ học lấy từ mục tiêu bạn liên kết.',
+'list.createBlank':'Tạo lộ trình trống','list.createTemplate':'Tạo từ mẫu QPT 21 tuần',
+'list.empty':'Chưa có mục tiêu lớn nào','list.emptyBody':'Lộ trình chia một mục tiêu lớn thành các tuần hoặc giai đoạn, theo dõi phần đã xong và cộng giờ bạn ghi ở mục tiêu được liên kết. Hãy bắt đầu từ trống, hoặc nạp kế hoạch QPT 21 tuần.',
+'list.listLabel':'Các lộ trình của bạn','list.row.linked':'Mục tiêu: {{goal}}','list.row.unlinked':'Chưa liên kết mục tiêu','list.row.progress':'Xong {{done}}/{{total}}',
+'list.row.hours':'Đã học {{done}} / {{plan}}','list.row.hoursOnly':'Đã học {{done}}','list.row.hoursNone':'Giờ học: —',
+'milestone.line':'{{label}}: {{when}}','pace.onTrack':'Đúng tiến độ','pace.notStarted':'Chưa bắt đầu','pace.completed':'Hoàn thành',
+'unavail':'Mục tiêu lớn chưa đồng bộ được vì tài khoản của bạn chưa có bảng dữ liệu cho chúng. Thay đổi ở đó vẫn nằm trên thiết bị này và sẽ được tải lên khi sự cố được khắc phục. Mục tiêu và lần ghi vẫn đồng bộ như thường.',
+'err.title':'Không tải được màn này','err.body':'Hãy kiểm tra kết nối nếu bạn vừa cập nhật app, rồi thử lại.','err.retry':'Thử lại',
+'h':'{{n}} giờ','days':'còn {{count}} ngày','weeks_behind':'Chậm {{count}} mục','loading':'Đang tải…'}};
+let L='vi';
+const t=(k,v)=>{let s=D[L][k]??D.en[k]??k;for(const x in v)s=s.split('{{'+x+'}}').join(v[x]);return s};
+const nf=n=>new Intl.NumberFormat(L==='vi'?'vi-VN':'en-US',{maximumFractionDigits:1}).format(n);
+const hrs=min=>t('h',{n:nf(Math.round(min/6)/10)});
+const svg={good:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',idle:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',warn:'<path d="M12 4l9 16H3zM12 10v4M12 17h.01"/>',crit:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/>'};
+const chip=(k,txt)=>`<span class="chip ${k}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${svg[k==='good'?'good':k]}</svg>${txt}</span>`;
+const ROWS=[
+ {title:'QPT 21 tuần',goal:'QPT study',done:1,total:21,pace:['good',t=>t('pace.onTrack')],min:345,plan:960,ms:['Thi QPT',125]},
+ {title:'Spanish B1',goal:'Spanish',done:0,total:3,pace:['idle',t=>t('pace.notStarted')],min:50,plan:null,ms:['Exam',209]},
+ {title:'Portfolio',goal:null,done:4,total:10,pace:['crit',t=>t('weeks_behind',{count:2})],min:null,plan:null,ms:null}];
+function row(r){
+ const goal=r.goal?t('list.row.linked',{goal:r.goal}):t('list.row.unlinked');
+ const hours=r.min==null?t('list.row.hoursNone'):(r.plan?t('list.row.hours',{done:hrs(r.min),plan:hrs(r.plan)}):t('list.row.hoursOnly',{done:hrs(r.min)}));
+ const ms=r.ms?`<span>${t('milestone.line',{label:r.ms[0],when:t('days',{count:r.ms[1]})})}</span>`:'';
+ return `<li class="rm"><a href="12-roadmap-detail.html"><div class="rm-top"><div class="rm-head"><h2 class="rm-title">${r.title}</h2>${chip(r.pace[0],r.pace[1](t))}</div><p class="rm-goal">${goal}</p></div>
+ <div class="rm-side"><div class="bar" aria-hidden="true"><i style="width:${Math.round(r.done/r.total*100)}%"></i></div>
+ <div class="rm-stats"><span>${t('list.row.progress',{done:r.done,total:r.total})}</span><span class="${r.min==null?'dash':''}">${hours}</span>${ms}</div></div></a></li>`}
+function actions(){return `<a class="btn primary" href="13-roadmap-editor.html">${t('list.createBlank')}</a><a class="btn secondary" href="14-roadmap-template-dialog.html">${t('list.createTemplate')}</a>`}
+function render(){
+ L=document.getElementById('lang').value;document.documentElement.lang=L;
+ document.querySelectorAll('[data-k]').forEach(e=>e.textContent=t(e.dataset.k));
+ const s=document.getElementById('state').value,v=document.getElementById('view'),h=document.getElementById('head-actions');
+ h.innerHTML=(s==='empty'||s==='loading'||s==='error')?'':actions();
+ const unav=s==='unavail'?`<p class="note" role="status"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg><span>${t('unavail')}</span></p>`:'';
+ if(s==='empty')v.innerHTML=`<div class="empty"><h2>${t('list.empty')}</h2><p>${t('list.emptyBody')}</p><div class="btn-row">${actions()}</div></div>`;
+ else if(s==='loading')v.innerHTML=`<div role="status" aria-busy="true"><span class="sr-only">${t('loading')}</span>${'<div class="sk"><i style="width:45%"></i><i style="width:80%"></i></div>'.repeat(3)}</div>`;
+ else if(s==='error')v.innerHTML=`<div class="err" role="alert"><h2>${t('err.title')}</h2><p class="muted">${t('err.body')}</p><div class="btn-row" style="margin-top:16px"><button class="btn primary" type="button">${t('err.retry')}</button></div></div>`;
+ else v.innerHTML=unav+`<ul class="list" aria-label="${t('list.listLabel')}">${ROWS.map(row).join('')}</ul>`;
+}
+document.getElementById('lang').onchange=render;document.getElementById('state').onchange=render;render();
+</script>
+</body>
+</html>

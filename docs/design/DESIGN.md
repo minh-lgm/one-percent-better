@@ -1,6 +1,6 @@
 # Design — 1% Better per Day
 
-Phiên bản: **v7.2** (mode `revise`, 2026-11-03 — cột nội dung desktop rộng hơn: `main` 1040 px ở ≥ 1024, 1180 px ở ≥ 1440; `main.wide` (Review) 1240 / 1360 px; chỉ CSS, §3.2). Trước đó v7.1 (4 chi tiết mockup, xem Changelog) và **v7.0** (mode `revise`, 2026-11-03 — **redesign "A — Tối giản, chữ lớn"**, user duyệt trên Figma page "Redesign v7 — review" rồi "Duyệt, code đi"). Bảng màu mới kem / mực / cam đất (§6.1 v7), font Fraunces (số lớn, tiêu đề) + Manrope (chữ) tự host (§6.2 v7), section phẳng tách bằng hairline thay card có viền, nút pill, ô nhập gạch chân, nhãn nhóm chữ hoa nhỏ. **Không đổi key copy, route, test id, ARIA hay API component** — mọi thay đổi nằm ở `tokens.css` + file mới `src/ui/styles/v7.css` (ghi đè `app.css`). Mockup HTML `docs/design/mockups/*` và Figma page "Mobile 360" vẫn là v6.x (OQ-D31). Trước đó **v6.1** (mode `revise`, 2026-11-02, ngay sau v6.0: **Tiến độ và Nhịp độ theo cùng kế hoạch +1 %/ngày với đường lý tưởng** — PRD OQ-21 chốt, FR-24 v6.1, A-73; ARCH v6.1 §4 / ADR-47. **Không đổi chữ key nào, không đổi layout/token**; chỉ đổi **số ví dụ** ở S4, S6, §3.4, §8.2, cột "dùng ở đâu" của `stat.progressSub` / `stat.progressSubOpen` / `stat.paceExpected` (§7.6.4), thêm A-D80; chi tiết ở Changelog v6.1). Trước đó **v6.0** (mode `revise`, 2026-11-02: **phase 7 — đường cong 1% trên Goal detail thành burn-up phút so với mục tiêu** (lý tưởng = chỉ tiêu ngày +1%/ngày cộng dồn; "Bạn" = phút đã ghi cộng dồn; headline = % so với lý tưởng; tooltip phút ngày đó + tổng); chỉ S4, §5 `CurveChart`, §6 `--chart-zero`, §7.1, §7.4, §7.6.4 (1 key mới, 21 key sửa, 4 key bỏ), §8, §10, §11; PRD v6.0 FR-27 / A-42 / OQ-21, ARCH v6.0 §4.5 / ADR-46; chi tiết ở Changelog v6.0). Trước đó **v5.0** (mode `revise`, 2026-10-21: **M12-T7 — toàn bộ phần UI/copy/hình ảnh của phase 6, app iOS lên App Store bằng Capacitor**, dùng cho M12 … M15; PRD v5.0 FR-58 … FR-67, NFR-18 … NFR-24, A-57 … A-71, OQ-12 … OQ-20; ARCH v5.0 §5.12 … §5.16, §4.7; TASKS v5.0 M12 … M15. **Không đổi layout, token màu cũ, key cũ nào; bản web giống hệt v4.0.** Thêm: biến thể native + bảng kiểm kê chuỗi web phải thay/ẩn (mục 7.8.1), nút **Sign in with Apple** (A1/A10, LoginPromptBanner, ExportSignInHint), lối vào **Delete account** + hộp thoại **D6** + panel thu hồi Apple thủ công (S7, 7.8.3), copy notification lên lịch trước + quyền iOS + **quyết định ẩn card `.ics` khi `scheduledNotifications`** (7.8.4), icon / launch screen / status bar (mục 5 "Native shell", S10), quy tắc safe area (mục 5), `support.html` + `privacy.html` en/vi (7.8.6), hồ sơ App Store `en-US` + `vi` (7.8.7), 5 screenshot + dataset demo (7.8.8), rà 360 px `vi` (3.6), a11y (8.3), **57 key mới** (en + vi, không key cũ nào đổi chữ), 6 token mới (`--apple-bg/-text`, `--safe-top/right/bottom/left`); chi tiết ở Changelog v5.0). Trước đó **v4.0** (mode `revise`, 2026-10-19: M11-T7 — thêm lựa chọn thứ ba **"Không có thời hạn"** (`No end date`) cho section Ends của form goal, chỉ với chỉ tiêu Phút mỗi ngày; kéo theo hàng goal ở Goals/Goal detail ("từ {start}"), "Day {k}" không tổng, bỏ Range, Stat Progress "tới hôm nay", hai câu lỗi mới; **12 key mới, không đổi chữ key cũ**; mọi goal có hạn hiển thị y như v3.1; chi tiết ở S2, S3, S4, S6, 7.3, 7.6.2 … 7.6.4, 7.6.6, 8.2, Changelog v4.0; PRD v4.0 FR-56/FR-57 A-47 … A-56, ARCH v4.0 §4.6, TASKS v4.0 M11). Trước đó **v3.1** (mode `revise`, 2026-10-17: M10-T8 — không thêm tính năng; **ghi nhận deviation đã ship** của phase 2/3 [brand mark ảnh logo, quy tắc một toast, hint Export chỉ khi online, `empty.day.noGoals` không dấu chấm] và **chốt copy/quy tắc còn mở**: 7 key hàng bị cloud từ chối, `settings.about.privacyLink`, `errors.IMPORT_INVALID_SCHEMA_outOfRange`, `errors.EXPORT_FAILED`, nhãn giá trị cột BarChart, câu chữ heatmap 1024–1191 px; chi tiết ở Changelog v3.1; PRD v3.1 A-44 … A-46, ARCH v3.1 ADR-28/30, TASKS v3.1 M10). Trước đó **v3.0** (mode `revise`, 2026-10-13: phase 3 — đường cong "Bạn" tính theo phút so với ngày có ghi trước, FR-27 v3.0; PRD v3.0, ARCHITECTURE v3.0 §4.5, TASKS v3.0 M9). **v3.0 chỉ đổi Goal detail (S4)**: headline, phụ đề, biểu đồ đường cong, bảng dữ liệu, chú thích và các key `goal.detail.*` / `empty.detail.curve` (xem Changelog); mọi màn khác, token màu/cỡ chữ, bố cục và copy giữ nguyên. Trước đó v2.0 (2026-10-12: phase 2 — đăng nhập Google tuỳ chọn + đồng bộ cloud; app build không cấu hình cloud giống hệt v1.1) và v1.1 (2026-10-09, thêm tiếng Việt). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
+Phiên bản: **v8.0** (mode `revise`, 2026-11-04 — **phase 8 "Mục tiêu lớn" / Big goals**, task M17-T7, cho M17 … M20; PRD v8.0 FR-68 … FR-80, A-74 … A-92, OQ-22 … OQ-24 [user chốt: giữ giả định mặc định]; ARCH v8.1 §4.8 / ADR-48 … ADR-53. **Thêm**: mục nav thứ năm (§3.1), 4 màn + 1 hộp thoại mới S11 … S14, D7 (§4), thay đổi nhỏ ở Goal detail / D2 / D3 / card Account (§4 "Phase 8 — chỉnh màn cũ"), 16 dòng component (§5), **không token màu mới** (§6 v8.0), mục 7.9 (**bảng copy 2 nguồn**: 6 key vào resource chính, 282 key `en` / 268 key `vi` vào namespace lazy `roadmap`), a11y 8.4, mockup 11 … 14. Mọi màn/key cũ giữ nguyên, trừ `--tabbar-h` 56 → 64 px (§3.1) và dòng D3 chỉ xuất hiện khi có lộ trình. Chi tiết ở Changelog v8.0). Trước đó **v7.2** (mode `revise`, 2026-11-03 — cột nội dung desktop rộng hơn: `main` 1040 px ở ≥ 1024, 1180 px ở ≥ 1440; `main.wide` (Review) 1240 / 1360 px; chỉ CSS, §3.2). Trước đó v7.1 (4 chi tiết mockup, xem Changelog) và **v7.0** (mode `revise`, 2026-11-03 — **redesign "A — Tối giản, chữ lớn"**, user duyệt trên Figma page "Redesign v7 — review" rồi "Duyệt, code đi"). Bảng màu mới kem / mực / cam đất (§6.1 v7), font Fraunces (số lớn, tiêu đề) + Manrope (chữ) tự host (§6.2 v7), section phẳng tách bằng hairline thay card có viền, nút pill, ô nhập gạch chân, nhãn nhóm chữ hoa nhỏ. **Không đổi key copy, route, test id, ARIA hay API component** — mọi thay đổi nằm ở `tokens.css` + file mới `src/ui/styles/v7.css` (ghi đè `app.css`). Mockup HTML `docs/design/mockups/*` và Figma page "Mobile 360" vẫn là v6.x (OQ-D31). Trước đó **v6.1** (mode `revise`, 2026-11-02, ngay sau v6.0: **Tiến độ và Nhịp độ theo cùng kế hoạch +1 %/ngày với đường lý tưởng** — PRD OQ-21 chốt, FR-24 v6.1, A-73; ARCH v6.1 §4 / ADR-47. **Không đổi chữ key nào, không đổi layout/token**; chỉ đổi **số ví dụ** ở S4, S6, §3.4, §8.2, cột "dùng ở đâu" của `stat.progressSub` / `stat.progressSubOpen` / `stat.paceExpected` (§7.6.4), thêm A-D80; chi tiết ở Changelog v6.1). Trước đó **v6.0** (mode `revise`, 2026-11-02: **phase 7 — đường cong 1% trên Goal detail thành burn-up phút so với mục tiêu** (lý tưởng = chỉ tiêu ngày +1%/ngày cộng dồn; "Bạn" = phút đã ghi cộng dồn; headline = % so với lý tưởng; tooltip phút ngày đó + tổng); chỉ S4, §5 `CurveChart`, §6 `--chart-zero`, §7.1, §7.4, §7.6.4 (1 key mới, 21 key sửa, 4 key bỏ), §8, §10, §11; PRD v6.0 FR-27 / A-42 / OQ-21, ARCH v6.0 §4.5 / ADR-46; chi tiết ở Changelog v6.0). Trước đó **v5.0** (mode `revise`, 2026-10-21: **M12-T7 — toàn bộ phần UI/copy/hình ảnh của phase 6, app iOS lên App Store bằng Capacitor**, dùng cho M12 … M15; PRD v5.0 FR-58 … FR-67, NFR-18 … NFR-24, A-57 … A-71, OQ-12 … OQ-20; ARCH v5.0 §5.12 … §5.16, §4.7; TASKS v5.0 M12 … M15. **Không đổi layout, token màu cũ, key cũ nào; bản web giống hệt v4.0.** Thêm: biến thể native + bảng kiểm kê chuỗi web phải thay/ẩn (mục 7.8.1), nút **Sign in with Apple** (A1/A10, LoginPromptBanner, ExportSignInHint), lối vào **Delete account** + hộp thoại **D6** + panel thu hồi Apple thủ công (S7, 7.8.3), copy notification lên lịch trước + quyền iOS + **quyết định ẩn card `.ics` khi `scheduledNotifications`** (7.8.4), icon / launch screen / status bar (mục 5 "Native shell", S10), quy tắc safe area (mục 5), `support.html` + `privacy.html` en/vi (7.8.6), hồ sơ App Store `en-US` + `vi` (7.8.7), 5 screenshot + dataset demo (7.8.8), rà 360 px `vi` (3.6), a11y (8.3), **57 key mới** (en + vi, không key cũ nào đổi chữ), 6 token mới (`--apple-bg/-text`, `--safe-top/right/bottom/left`); chi tiết ở Changelog v5.0). Trước đó **v4.0** (mode `revise`, 2026-10-19: M11-T7 — thêm lựa chọn thứ ba **"Không có thời hạn"** (`No end date`) cho section Ends của form goal, chỉ với chỉ tiêu Phút mỗi ngày; kéo theo hàng goal ở Goals/Goal detail ("từ {start}"), "Day {k}" không tổng, bỏ Range, Stat Progress "tới hôm nay", hai câu lỗi mới; **12 key mới, không đổi chữ key cũ**; mọi goal có hạn hiển thị y như v3.1; chi tiết ở S2, S3, S4, S6, 7.3, 7.6.2 … 7.6.4, 7.6.6, 8.2, Changelog v4.0; PRD v4.0 FR-56/FR-57 A-47 … A-56, ARCH v4.0 §4.6, TASKS v4.0 M11). Trước đó **v3.1** (mode `revise`, 2026-10-17: M10-T8 — không thêm tính năng; **ghi nhận deviation đã ship** của phase 2/3 [brand mark ảnh logo, quy tắc một toast, hint Export chỉ khi online, `empty.day.noGoals` không dấu chấm] và **chốt copy/quy tắc còn mở**: 7 key hàng bị cloud từ chối, `settings.about.privacyLink`, `errors.IMPORT_INVALID_SCHEMA_outOfRange`, `errors.EXPORT_FAILED`, nhãn giá trị cột BarChart, câu chữ heatmap 1024–1191 px; chi tiết ở Changelog v3.1; PRD v3.1 A-44 … A-46, ARCH v3.1 ADR-28/30, TASKS v3.1 M10). Trước đó **v3.0** (mode `revise`, 2026-10-13: phase 3 — đường cong "Bạn" tính theo phút so với ngày có ghi trước, FR-27 v3.0; PRD v3.0, ARCHITECTURE v3.0 §4.5, TASKS v3.0 M9). **v3.0 chỉ đổi Goal detail (S4)**: headline, phụ đề, biểu đồ đường cong, bảng dữ liệu, chú thích và các key `goal.detail.*` / `empty.detail.curve` (xem Changelog); mọi màn khác, token màu/cỡ chữ, bố cục và copy giữ nguyên. Trước đó v2.0 (2026-10-12: phase 2 — đăng nhập Google tuỳ chọn + đồng bộ cloud; app build không cấu hình cloud giống hệt v1.1) và v1.1 (2026-10-09, thêm tiếng Việt). Nguồn: `docs/plan/PRD.md`, `ARCHITECTURE.md`, `TASKS.md`.
 Loại app: **GUI** (PWA một người dùng, mobile-first 360 px, dùng tốt trên desktop 1440 px). **UI song ngữ English (`en`) / Tiếng Việt (`vi`)**: mặc định theo `navigator.language`, đổi trong Settings (FR-32 … FR-36). Tài liệu bằng tiếng Việt. **Nguồn sự thật của mọi chuỗi UI là mục 7 (bảng key `en` / `vi`); developer copy nguyên văn từ đó vào `en.json` / `vi.json`.** Các khối "Copy" trong mục 4 là bản `en` để đọc nhanh theo ngữ cảnh; nếu lệch với mục 7 thì mục 7 thắng.
 
 Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 px, tự theo sáng/tối của hệ thống): xem `docs/design/mockups/index.html`. Các mockup viết bằng `en`; riêng Today có thêm bản `vi`. **(v3.1)** Brand mark trong nav của mọi mockup nạp ảnh `public/brand-mark-96.png` của repo bằng đường dẫn tương đối `../../../public/brand-mark-96.png` (không qua mạng; ngoại lệ có chủ đích của quy tắc "tự chứa" vì không nhúng được ảnh dạng base64 trong lượt làm này — nếu mở file mockup ngoài repo thì ô trắng sẽ trống, phần còn lại không ảnh hưởng).
@@ -19,6 +19,12 @@ Mockup HTML tĩnh (mỗi file tự chứa, không CDN, responsive 360 → 1440 p
 | `mockups/09-account.html` | **Mới (v2):** bảng tham chiếu mọi trạng thái của card Account, nút Google, SyncIndicator, LoginPromptBanner, ExportSignInHint, dialog D3 (đã đăng nhập), D4, D5. Có nút đổi `English` / `Tiếng Việt` (bản `vi` đầy đủ để kiểm 360 px) và sáng/tối. **v5.0:** thêm mục 7 … 11 ở cuối trang: Account trên iOS (nút Apple đặt trên nút Google, A1/A2/A3/A4/A5/A10, đăng nhập bằng Apple với email relay), nút Apple (5 trạng thái, sáng + tối), LoginPromptBanner và ExportSignInHint trên iOS, lối vào **Delete account** (bật / tắt khi offline / tắt khi hết phiên), **D6** (xoá dữ liệu máy mặc định, giữ dữ liệu, có bước Apple, đang xoá, 4 lỗi `ACCOUNT_DELETE_*`), kết quả (toast, panel thu hồi Apple thủ công) | M6, M7, M8; **M14 (v5.0)** |
 | `mockups/08-settings.html` (v5.0) | Cùng file Settings ở trên, thêm chọn **Platform**: `Web`, `iOS app (M12–M14)` (không lên lịch thông báo, tài khoản ẩn), `iOS app (M15)` (thông báo lên lịch, không card `.ics`); biến thể native của Language, Reminders, Backup (share sheet), Storage, About (link Privacy + Support), sơ đồ safe area iPhone | **M12 … M15 (v5.0)** |
 | `mockups/10-store-screenshots.html` | **Mới (v5.0):** phác bố cục **5 screenshot App Store** (440×956 CSS px, thu nhỏ 50 % để xem): Today, Today có timer, Goal detail (đường cong), Review (heatmap), Goals; đổi `en` / `vi`; theme sáng/tối theo kế hoạch ở 7.8.8; heatmap sinh từ công thức dataset demo; không khung máy, không chữ quảng cáo | M15 |
+| `mockups/11-roadmaps.html` | **Mới (v8.0, look v7):** S11 danh sách Mục tiêu lớn: dataset Q1 + 2 hàng khác, trạng thái rỗng 2 lối tạo, loading, lỗi, dòng "cloud chưa có bảng"; tab bar 5 mục 64 px / sidebar; chọn `en`/`vi` | M17, M19, M20 |
+| `mockups/12-roadmap-detail.html` | **Mới (v8.0):** S13 chi tiết lộ trình dữ liệu Q1 (số liệu **tính** bằng đúng quy tắc ARCH §4.8 c): tổng quan, dải ô, thẻ "tuần này", phase/mục + thao tác nhanh, checkpoint bảng + biểu đồ, ghi chú; chọn tình huống (Q1 đúng tiến độ, Q1b chậm 1 tuần, chậm 2 tuần, Q1d chưa bắt đầu, goal đã xoá, goal lưu trữ, chưa liên kết, hoàn thành) và điểm CP2 (chưa có / 18 / 21); `en`/`vi` | M19, M20 |
+| `mockups/13-roadmap-editor.html` | **Mới (v8.0):** S12 tạo trống + S14 editor: field lộ trình, phase/mục/checkpoint, nút lên/xuống (focus ở lại, thông báo vị trí), form mục có lỗi inline, hộp thoại xoá phase/lộ trình; `en`/`vi` | M19 |
+| `mockups/14-roadmap-template-dialog.html` | **Mới (v8.0):** D7 hộp thoại mẫu QPT: ngày bắt đầu + xem trước ngày tuần 1/20/cuối, picker goal, ghi chú ngôn ngữ, lỗi `ROADMAP_GOAL_ALREADY_LINKED`/`ROADMAP_LIMIT_REACHED`, đang tạo; bottom sheet < 640 px; `en`/`vi` | M20 |
+
+Mockup 11 … 14 (v8.0) dùng **look v7** (kem / mực / cam đất, số Fraunces, section phẳng) với font dự phòng Georgia + system-ui vì mockup chạy offline không nhúng font (app thật tự host Fraunces + Manrope, §6.2); mockup 01 … 10 vẫn là look v6.x (OQ-D31). Hôm nay trong mockup phase 8 = **04/11/2026**. Mở ở 360 px và 1440 px: cùng một file, bố cục đổi theo breakpoint.
 
 Mockup dùng một đoạn JS nhỏ inline: (a) sinh heatmap/biểu đồ từ dataset S1 (đúng số liệu trong `TASKS.md`); (b) **v2:** nút đổi giao diện sáng/tối (đặt `data-theme` trên `<html>`, mặc định theo hệ điều hành), bộ chọn trạng thái tài khoản (bật/tắt khối bằng thuộc tính `data-acct`), và ở `09-account.html` đổi `en`/`vi`. Không có request mạng, không CDN, không font ngoài; logo chữ G của Google là SVG inline.
 
@@ -384,12 +390,69 @@ Bỏ HÔM NAY khi mọi goal đang chạy đã đạt hoặc đã qua giờ nh�
 
 ---
 
+### Phase 8 — Mục tiêu lớn / Big goals (v8.0)
+
+Thuật ngữ: **menu** = "Big goals" / "Mục tiêu lớn" (A-74); **đối tượng** = "roadmap" / "lộ trình" (đúng chữ PRD: "Tạo lộ trình trống", "Thuộc lộ trình …"); **phase** = "phase" / "giai đoạn"; **item** = "item" / "mục" (khi mọi mục đủ 7 ngày: "week" / "tuần", A-84); **checkpoint** = "checkpoint" / "điểm kiểm tra". Tên phase, tên mục, tên checkpoint trong mẫu QPT là **dữ liệu người dùng** (giữ nguyên tiếng Anh/Việt lẫn lộn như tracker), không dịch khi đổi ngôn ngữ (FR-35, A-86).
+
+### F20 — Tạo lộ trình trống và dựng cấu trúc (US-29, US-32, FR-69, FR-70, FR-74) — M19
+
+```text
+[Big goals] --> <?> chưa có lộ trình ?
+   |  có: bấm "Create empty roadmap"            không (empty state): cũng "Create empty roadmap"
+   v
+[#/roadmaps/new: form lộ trình] --(!) lỗi inline theo field (tiêu đề rỗng, chỉ tiêu 0,3 h, goal đã thuộc lộ trình khác) --> sửa --> lại
+   | "Create roadmap"  (toast "Roadmap created")        (có lối phụ "Create from QPT 21-week template" -> F21)
+   v
+[#/roadmaps/:id/edit] --> thêm phase --> thêm mục (đề xuất 7 ngày ngay sau mục cuối, A-83) --> lên/xuống, đổi phase --> thêm checkpoint
+   |  mỗi thao tác lưu ngay (offline-first); "Add item" khi đủ 200 mục -> (!) ROADMAP_LIMIT_REACHED_item
+   v
+[ "Done" ] --> [#/roadmaps/:id chi tiết]
+```
+
+### F21 — Tạo lộ trình từ mẫu QPT 21 tuần (US-32, FR-76) — M20
+
+```text
+[Big goals rỗng | danh sách | #/roadmaps/new] --"Create from QPT 21-week template"--> [D7 TemplateDialog]
+   |  ngày bắt đầu (mặc định hôm nay) + xem trước "Tuần 1 / Tuần 20 (thi QPT) / tuần cuối" ; goal (tuỳ chọn)
+   |--(!) goal đã thuộc lộ trình khác -> lỗi trong dialog, chọn goal khác hoặc "No goal"
+   |--(!) đã đủ 20 lộ trình -> lỗi trong dialog (xoá bớt một lộ trình)
+   | "Create roadmap" (một transaction 32 hàng, nút "Creating…")
+   v
+[#/roadmaps/:id chi tiết, 0/21] + toast "Roadmap created from the QPT template"
+```
+
+### F22 — Dùng hằng ngày: xem tiến độ, tick tuần, ghi ngày thực tế, nhập điểm (US-29, US-31, US-33, FR-72, FR-73, FR-75) — M19/M20
+
+```text
+[Big goals] --> bấm lộ trình --> [Chi tiết]
+   |  đọc 4 chỉ số (nhịp độ, tuần xong, giờ học, ngày tới mốc) + thẻ "This week"
+   |--> tick mục ---------------------> "xong" ⇔ có ngày kết thúc thực tế (mặc định hôm nay); bỏ tick -> xoá ngày kết thúc, mục về "đang học" nếu còn ngày bắt đầu
+   |--> "Dates & note" -> "Today" ở ngày bắt đầu/kết thúc ; ghi chú (lưu khi rời ô)
+   |        (!) ngày kết thúc thực tế sau hôm nay -> lỗi inline DATE_IN_FUTURE; ngày kết thúc < ngày bắt đầu -> lỗi inline
+   |--> bấm ô trong dải -> cuộn tới mục và focus
+   |--> nhập điểm checkpoint ngay ở bảng -> "Passed / Below threshold −2 / Recorded"; (!) điểm > tối đa -> lỗi inline
+```
+
+### F23 — Liên kết goal, goal bị archive/xoá (US-30, FR-70, FR-80, A-78, A-79) — M19
+
+```text
+Editor/D7: chọn goal (chỉ goal chưa archive, chưa thuộc lộ trình khác) --> giờ học xuất hiện
+Goal detail: "Part of roadmap QPT 21 weeks" (link) <--> Chi tiết lộ trình: "Goal: QPT study" (link)
+Archive goal           --> liên kết giữ, giờ vẫn tính, thẻ "archived" cạnh tên goal
+Xoá goal (Goals/Detail) --> D2 nêu "linked to roadmap X ... roadmap stays, loses its link, study time shows —"  --> xác nhận --> goalId = null
+Goal bị xoá ở máy khác --> Chi tiết: "The linked goal was deleted" + "Link a goal" (tới editor); sau đồng bộ hội tụ về "No goal linked"
+```
+
+---
+
 ## 3. Sơ đồ màn hình và điều hướng
 
 ### 3.1 Điều hướng
 
-- **< 1024 px**: thanh tab dưới cố định, 4 mục: `Today`, `Goals`, `Review`, `Settings`. Cao 56 px + safe-area.
-- **≥ 1024 px**: sidebar trái rộng 232 px: **(v3.1) brand** = `BrandMark` (ảnh logo trên ô trắng bo góc 32 px, xem mục 5 "Brand") + chữ `app.name` **"1% Better per Day"** (một dòng, đậm 700, `--text`; xuống dòng được nếu chữ phóng 200 %), 4 mục như trên. Brand là link về `#/today` với `aria-label` = `app.name`. **Thanh tab dưới < 1024 px không có brand** (như cũ).
+- **(v8.0) 5 mục, thứ tự cố định `Today · Goals · Big goals · Review · Settings`** (mục mới đứng **thứ ba**, ngay sau `Goals` vì cùng họ "mục tiêu"; `Settings` luôn cuối). Mục mới: `nav.roadmaps` = **"Big goals"** (`en`) / **"Mục tiêu lớn"** (`vi`), trỏ `#/roadmaps`, **active với mọi route `#/roadmaps*`** (kể cả `/new`, `/:id`, `/:id/edit`). Icon mới `roadmap` (một đường quanh co nối hai chấm; cùng nét 2 px, 24 × 24 như bộ `Icon.tsx`, khác hẳn icon `goals` là hai vòng tròn đồng tâm): `<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6.5a3 3 0 0 0 0-6h-5a3 3 0 0 1 0-6H16"/>`. Màn con (`/new`, `/:id`, `/:id/edit`) giữ tab `Big goals` sáng. Tab Review chỉ từ M4 như cũ; mục `Big goals` có từ **M17**.
+- **(v8.0) Vừa 360 px ở `vi` — giải pháp đã chốt (số đo ở 3.7):** (1) tab bar < 1024 px cao **64 px** (`--tabbar-h` 56 → 64; mọi chỗ dùng `var(--tabbar-h)` — padding dưới `main`, toast, `scroll-padding-bottom` — tự theo); (2) 5 tab chia đều (72 px mỗi tab ở 360 px, chữ 12/16, trọng lượng 500/600 như v7); (3) **nhãn không bị rút gọn và không ẩn**: `Mục tiêu lớn` (12 ký tự, ≈ 74–79 px > 68 px chỗ trống) **được xuống 2 dòng** (`Mục tiêu` / `lớn`) — quy tắc 3.4 vốn cho nhãn xuống dòng; (4) để hai kiểu nhãn (1 dòng và 2 dòng) vẫn thẳng hàng, mỗi tab xếp **từ trên xuống** (`justify-content: flex-start`; padding `6px 2px 2px`; icon **22 px** thay 24 px; khoảng icon–chữ 2 px; 6 + 22 + 2 + 2 × 16 + 2 = 64), nên icon của cả 5 tab cùng một hàng ngang và chữ bắt đầu cùng một độ cao; (5) `en` "Big goals" (9 ký tự ≈ 58 px) luôn một dòng. Không ẩn chữ vì tab chỉ có icon vi phạm "màu/icon không phải kênh duy nhất" và người dùng không phân biệt được `Goals` với `Big goals`. Từ 400 px trở lên thường vừa một dòng; layout không phụ thuộc điều đó. Nhãn tab `vi` **≤ 10 ký tự** của 3.4 được **sửa** thành "≤ 10 ký tự, riêng `nav.roadmaps` [12 ký tự] được xuống 2 dòng".
+- **< 1024 px**: thanh tab dưới cố định, **(v8.0: 5 mục)** `Today`, `Goals`, `Big goals`, `Review`, `Settings`. Cao **64 px** (v8.0; trước đó 56) + safe-area.
+- **≥ 1024 px**: sidebar trái rộng 232 px: **(v3.1) brand** = `BrandMark` (ảnh logo trên ô trắng bo góc 32 px, xem mục 5 "Brand") + chữ `app.name` **"1% Better per Day"** (một dòng, đậm 700, `--text`; xuống dòng được nếu chữ phóng 200 %), **5 mục** như trên (v8.0; mỗi mục một dòng, icon 24 px, chữ 15 px — `Mục tiêu lớn` vừa 232 px), Brand là link về `#/today` với `aria-label` = `app.name`. **Thanh tab dưới < 1024 px không có brand** (như cũ).
 - Tab đang chọn: màu `--primary`, chữ đậm, có vạch/nền (không chỉ dựa vào màu), `aria-current="page"`.
 - **Tab `Review` chỉ hiện từ M4** (chưa có route). Mục ở M1–M3 chỉ có 3 tab. Link "Log a past day" trên Today chỉ hiện từ M3. Link tên goal → Goal detail chỉ có từ M3.
 - Màn hình con (Goal form, Goal detail, Day) giữ nguyên tab cha được tô sáng: Goal form và Goal detail → `Goals`; Day → `Today`.
@@ -445,6 +508,10 @@ Không có thanh cuộn ngang ở `documentElement` ở 360–1440 px (NFR-06). 
 | **M12** *(v5.0, M12-T2/T3 đọc mục này; không màn mới, không token mới trừ `--safe-*` ở M13)* | **Biến thể native của chuỗi** theo bảng kiểm kê 7.8.1: card Reminders (không `settings.reminders.ios`, `limit` còn, chip "Not supported" + `settings.permission.nativeUnsupportedDesc`), Language (`settings.language.nativeNote`), Backup (`settings.backup.shareHint`, `backup.banner.neverNative`, `errors.EXPORT_FAILED_native`, `toast.icsShared`), Storage (`settings.storage.native*`), About (`settings.about.descNative`), S9 (`storageError.*Native`); ẩn `UpdateToast`; ẩn card Account (tài khoản `unavailable`). Quyết định hiển thị theo `capabilities` ở 7.8.1. Link ngoài app có chữ ẩn `a11y.opensExternal`. Share sheet: F19 (huỷ = im lặng). **15 key** (7.8.1) |
 | **M13** *(v5.0, M13-T3/T4)* | Icon, launch screen/splash, màu status bar (S10, mục 5 "Native shell"); quy tắc **safe area** cho thanh trên, tab bar, toast, dialog/bottom sheet, trang đầy màn hình; bàn phím; không nảy; token `--safe-top/right/bottom/left`. Không có chuỗi mới |
 | **M14** *(v5.0, M14-T5)* | `AppleSignInButton`; card Account trên iOS (A1/A2/A3/A4/A5/A10 có nút Apple + hai ghi chú); `LoginPromptBanner` và `ExportSignInHint` có nút Apple trên iOS; lối vào **Delete account**; **D6** `DeleteAccountDialog`; panel thu hồi Apple thủ công; toast sau xoá; 4 lỗi `ACCOUNT_DELETE_*`; `errors.AUTH_FAILED_native`. Chuỗi: 7.8.2, 7.8.3 (**33 key**) |
+| **M17** *(v8.0, M17-T4/T5 đọc mục này)* | **Nav**: mục thứ năm `nav.roadmaps` + icon `roadmap` + tab bar 64 px (3.1, 3.7). **Danh sách S11** chỉ đọc (hàng lộ trình, chip trạng thái, trạng thái rỗng **chỉ có câu giải thích**, nút tạo ẩn ở M17; loading/lỗi). **Hạ tầng**: route lazy `#/roadmaps`, namespace `roadmap` (7.9). **D3**: dòng lộ trình `import.roadmaps` / `import.roadmapsKept` (4 "Phase 8 — chỉnh màn cũ"). Chuỗi: `nav.roadmaps`, 2 key `import.*` (resource chính, 7.9.1) + `loading`, `noValue`, `list.*`, `pace.*` (trừ câu phụ), `milestone.line/in/today/past` (namespace, 7.9.2) |
+| **M18** *(v8.0, M18-T3)* | Chỉ dòng `settings.account.roadmapsUnavailable` (card Account và đầu danh sách S11, cùng key, cùng chữ; 4 "Phase 8 — chỉnh màn cũ"). Không màn mới |
+| **M19** *(v8.0)* | **S13 chi tiết** (tổng quan, `WeekStrip`, thẻ "This week", `PhaseSection`, `RoadmapItemRow` + thao tác nhanh, ghi chú, câu giải thích cách tính giờ, không-tìm-thấy, `linkState`); **S12/S14** tạo trống + editor (field, `GoalLinkPicker`, phase/mục, nút lên/xuống, xoá có xác nhận, lỗi inline); nút tạo ở S11; **Goal detail** dòng "Part of roadmap" + **D2** nêu lộ trình (`goal.detail.roadmapLabel`, `goal.delete.roadmapNote`); 23 key lỗi `roadmap:errors.*`. Chuỗi: 7.9.2 (nhóm `list`, `detail`, `overview`, `strip`, `now`, `phase`, `item`, `tag`, `note`, `howHours`, `new`, `ed`, `count`, `toast`, `errors`, `notFound`) |
+| **M20** *(v8.0)* | **D7 `TemplateDialog`** (mở từ S11 rỗng, S11 có dữ liệu, S12); nội dung mẫu QPT `vi` + `en` (7.9.3 — là **dữ liệu**, không qua `t()`); **checkpoint**: `CheckpointTable` (nhập điểm nhanh) + `CheckpointChart` (SVG thuần) ở S13, form checkpoint ở S14. Chuỗi: 7.9.2 (nhóm `cp`, `tpl`) |
 | **M15** *(v5.0, M15-T3/T4/T5)* | Settings Reminders native (3 trạng thái quyền, hướng dẫn mở Cài đặt iOS, ẩn card `.ics`); `notification.nativeTitle/nativeBody`; About có link Privacy + Support (cả web và native); `public/support.html` + `public/privacy.html` (7.8.6); hồ sơ App Store (7.8.7); screenshot + dataset demo (7.8.8). Chuỗi: 7.8.4, 7.8.5 (**9 key**) |
 
 ### 3.4 Bố cục với chuỗi tiếng Việt (rà 360 px)
@@ -549,6 +616,34 @@ Chuỗi `vi` thường dài hơn `en` khoảng 10–30 % (nhất là câu hướ
 | Tab bar + safe area dưới, iPhone SE (không có thanh Home) | `--safe-bottom` = 0 | tab bar 56 px | Không thêm khoảng trống nào khi inset = 0 (iPhone SE, web) |
 
 **Kiểm chứng** (M12-AC11, M14-AC6/AC11, M15-AC5): Playwright 360×740 ở `vi-VN`: Settings ở project `native-web` (M12) và Settings + D6 + panel thu hồi ở project `cloud` (bản web, mock; D6 và panel dùng chung cho web và native): `document.documentElement.scrollWidth <= clientWidth`. Card Account iOS (A1, A5 email relay, A10), D6 có khối Apple và Alert lỗi, Reminders native: kiểm bằng component test với `capabilities` iOS (không có E2E native thật, NFR-24) và bằng mockup. Mockup tham chiếu: `mockups/09-account.html` mục 7 … 11 bật `Tiếng Việt`, mở ở 360 px.
+
+### 3.7 Rủi ro 360 px cho thành phần phase 8 (v8.0)
+
+Áp dụng 7 quy tắc chung của 3.4 và 3.5 (dialog cuộn trong + hàng nút dính đáy). Nội dung ở 360 px: 328 px; trong hàng danh sách ≈ 328 px (không card). Chuỗi `vi` là bản dài nhất; **tên lộ trình, phase, mục, ghi chú là dữ liệu người dùng** (mục dài nhất của mẫu QPT bản `vi` 70 ký tự) nên mọi chỗ chứa chúng dùng `overflow-wrap: anywhere` và không bao giờ `nowrap`/`…`. Mockup tham chiếu: `11-roadmaps.html`, `12-roadmap-detail.html`, `13-roadmap-editor.html`, `14-roadmap-template-dialog.html` bật `Tiếng Việt`, mở ở 360 px.
+
+| Vị trí | Chuỗi / dữ liệu | Ước lượng | Xử lý |
+| :- | :- | :- | :- |
+| **Tab bar 5 mục** (`vi`) | `Hôm nay` (7), `Mục tiêu` (8), **`Mục tiêu lớn` (12)**, `Tổng kết` (8), `Cài đặt` (7); 360 / 5 = 72 px, trừ padding 2 × 2 = 68 px, chữ 12 px Manrope 500 ≈ 6,2–6,6 px/ký tự | 4 nhãn ≈ 44–56 px (vừa); `Mục tiêu lớn` ≈ 74–79 px > 68 | **Xuống 2 dòng** (không rút gọn, không ẩn chữ), tab bar 64 px, xếp từ trên xuống, icon 22 px (3.1). Với font hệ thống (Segoe UI, ≈ 68 px) có thể vừa một dòng — bố cục không phụ thuộc. Zoom chữ 200 %: cả 5 nhãn có thể 2 dòng, thanh cao thêm (quy tắc 3.4) |
+| S11 hàng lộ trình | tiêu đề Fraunces 24/30 (dữ liệu, vd. `Ôn thi QPT 21 tuần cùng Minh`), chip `Chậm 2 tuần` (11) / `Đúng tiến độ` (12) | tiêu đề ≤ 2–3 dòng; chip ≈ 120 px | `.rm-head` `flex-wrap`: chip xuống dưới tên nếu không đủ chỗ; chip `white-space: normal` |
+| S11 dòng số liệu | `Xong 1/21` · `Đã học 5,8 giờ / 16 giờ` · `Thi QPT: còn 125 ngày` | 75 + 190 + 170 + 2 × 20 = 475 px > 328 | `flex-wrap`, khoảng cách 4 px dọc / 20 px ngang: xuống 2–3 dòng; không cắt |
+| S13 tổng quan, lưới 2 × 2 (mỗi ô ≈ 156 px) | số Fraunces 600 40/44 `1/21`, `5,8` + đơn vị nhỏ `giờ`, `125` + `ngày nữa`; chip `Chậm 2 tuần`; phụ đề `Kế hoạch đến hết tuần này: 16 giờ` (33 ký tự) | `5,8 giờ` ≈ 90 + 36 px vừa; chip ≈ 120 px; phụ đề 2–3 dòng | Số lớn + đơn vị nhỏ (16 px) trên cùng dòng; phụ đề 14/20 xuống dòng; ô chỉ số "Nhịp độ" cao hơn các ô khác nên 2 ô cùng hàng `align-items: start`. Giá trị chữ (không phải số, vd. `Hôm nay` / `Đã qua` của mốc) dùng 26/32 |
+| S13 dải ô | 21 ô, 7 cột × 3 hàng ở < 640 px: mỗi ô ≈ (328 − 6 × 4) / 7 = 43,4 × 44 px, khoảng 4 px | 3 hàng × 44 + 2 × 4 = 140 px | Đúng 21 tuần = 3 hàng đầy (trùng 3 tháng); lộ trình khác số mục: hàng cuối thiếu ô, canh trái. Ô ≈ 43 × 44 px đạt vùng chạm; khoảng 4 px (< 8 px) là ngoại lệ có chủ đích như heatmap, vì mọi thao tác của ô đều có ở hàng mục (vùng chạm 44 px, cách nhau bằng hairline). Từ 640 px: ô 44 × 44 px, `repeat(auto-fill, 44px)`, khoảng 4 px (21 ô vừa một hàng từ ≈ 1000 px nội dung) |
+| S13 chú giải dải ô | `Đã xong`, `Tuần này`, `Quá hạn chưa xong` | ≈ 60 + 70 + 120 + 2 × 16 = 280 px | `flex-wrap`, vừa một hàng ở 328 px |
+| S13 thẻ "Tuần này" | eyebrow `Tuần này · W2 · 03/11 – 09/11/2026` (33), tiêu đề mục (≤ 70 ký tự, Fraunces 24/30 → 3 dòng), `75/480 phút`, `Còn 5 ngày` | số `75/480 phút` Fraunces 28 ≈ 190 px + `Còn 5 ngày` ≈ 80 px = 270 | `.row` `flex-wrap; justify-content: space-between`; nút `Đánh dấu xong` rộng theo nội dung (≥ 44 px cao) |
+| S13 hàng mục (cột chữ = 328 − 44 − 4 = 280 px) | tiêu đề 70 ký tự đậm 16 px ≈ 3 dòng; tag `Sớm 1 ngày · học 6 ngày` (23) ≈ 170 px + tag `Tuần này` ≈ 76 px; meta `Kế hoạch 27/10 – 01/11/2026 · 4,5 giờ` (37) ≈ 280 px | sát 280 px | Tag `flex-wrap` 4 px / 6 px; meta là `<div>` thường xuống dòng; ngày dùng `tabular-nums`; nút `Ngày & ghi chú` (ghost, 44 px cao) dưới meta |
+| S13 chi tiết mục (mở) | hai trường ngày (`input[type=date]` 22 px Fraunces ≈ 150 px) + nút `Hôm nay` (≈ 90 px) + `Xóa` (≈ 60 px) | 150 + 8 + 90 + 8 + 60 = 316 px > 280 | `.in` `flex-wrap`: nút xuống dưới ô ngày, cả hai ≥ 44 px; ở < 640 px hai trường xếp dọc (1 cột), ≥ 640 px hai cột |
+| S13 bảng checkpoint (3 cột) | cột Mốc: tên + `W8 · ≥ 3/4 mỗi mảng LA, Calc`; cột Ngưỡng `≥ 20`; cột Điểm: ô nhập 64 px + `/ 32` + nhãn `Dưới ngưỡng` + `−2` | 115 + 56 + 150 = 321 px, sát 328 | Bảng thật (`<table>`), cột Mốc `overflow-wrap: anywhere`; nhãn trạng thái xuống dưới ô điểm (`flex-wrap`); `th` 12 px chữ hoa tracking .1em, `Ngưỡng` (6) và `Điểm` (4) vừa; không có chiều rộng cố định cho cột 1 |
+| S13 biểu đồ checkpoint | SVG `viewBox` 354 × 168, 5 cột | thu theo bề rộng (≈ 328 px: tỉ lệ 0,93) → chữ trục 11 px × 0,93 ≈ 10,2 px | Nhãn trục viết tắt (`Diag`, `CP1`, `CP2`, `Mock 1`, `Mock 2`) và nhãn điểm 12 px nằm trên cột; thông tin đầy đủ có ở bảng và tóm tắt SR. Chiều rộng tối thiểu nội dung SVG: không cuộn ngang. Nếu > 8 checkpoint: nhãn trục xoay 0°, chỉ giữ 8 nhãn cách đều, giá trị đầy đủ ở bảng |
+| S13 / S14 hàng thao tác mục (editor) | `↑` `↓` (44 px tròn, 4 px) + `Sửa` + `Xóa` | 44 + 6 + 44 + 6 + 56 + 6 + 52 = 214 px | `.tools` `flex-wrap` 6 px; tên + ngày mục một khối `flex: 1 1 200px` trên cùng, nút xuống dòng dưới nếu thiếu chỗ. Khoảng cách nút ≥ 8 px được thay bằng 6 px + vùng chạm 44 px (hai nút icon tròn không chồng nhau) |
+| S14 form mục | 2 ô ngày cạnh nhau ở ≥ 640 px; 1 cột ở < 640 px; select `Giai đoạn` | cột đơn 280 px (form có padding 16 px) | Nhãn field dài (`Bắt đầu theo kế hoạch`, 22 ký tự chữ hoa 12 px tracking ≈ 230 px) xuống dòng được; counter `0/200` canh phải, xuống dòng nếu thiếu chỗ (`.lr` `flex-wrap`) |
+| S12/S14 field chỉ tiêu | nhãn `Chỉ tiêu giờ học mỗi tuần (giờ, không bắt buộc)` (49 ký tự, chữ hoa) | ≈ 410 px → 2 dòng | Nhãn xuống 2 dòng; ô số `8ch` + đơn vị `giờ` cùng hàng |
+| D7 (bottom sheet) | tiêu đề `Tạo từ mẫu QPT 21 tuần` (23, Fraunces 26 → 2 dòng), thân ≈ 190 ký tự (7 dòng), ô ngày, xem trước `Tuần 1: 27/10/2026. Tuần 20 (thi QPT): 09/03/2027. Tuần cuối kết thúc ngày 22/03/2027.` (≈ 100 ký tự, 3–4 dòng), picker goal + hint ≈ 130 ký tự (5 dòng), ghi chú ngôn ngữ ≈ 90 ký tự (3 dòng), Alert lỗi ≈ 110 ký tự | cao ≈ 780–840 px > 740 px | `max-height: calc(100dvh - 16px)`: phần thân cuộn **trong** dialog (vùng cuộn `tabindex="0"`), hàng nút dính đáy; Alert lỗi nằm **trên** hàng nút và `scrollIntoView({block: 'nearest'})` khi xuất hiện |
+| D2 xoá goal đang liên kết | thân hiện tại ≈ 90 ký tự + `goal.delete.roadmapNote` ≈ 150 ký tự | ≈ 9–10 dòng | Hai đoạn `<p>` liên tiếp, cách 8 px; dialog giữ quy tắc cuộn trong + nút dính đáy của 3.5 |
+| D3 thêm dòng lộ trình | `import.roadmaps` ≈ 100 ký tự / `import.roadmapsKept` ≈ 130 ký tự | thêm 4–5 dòng | `<p>` thường dưới thân hiện có; dialog cuộn trong như D3 đã đăng nhập |
+| Dòng `roadmapsUnavailable` (card Account, đầu S11) | ≈ 190 ký tự `vi` | 7–8 dòng ở 294 px (card) | `.hint` có icon `info` 16 px đầu dòng, `flex`, `min-width: 0`; không `nowrap`; ở S11 là `<p role="status">` nền `--info-soft` chữ `--info` |
+| Toast `vi` | `Đã tạo lộ trình từ mẫu QPT` (26) | 1–2 dòng | `max-width: calc(100vw - 32px)`; nằm trên tab bar 64 px (`bottom: calc(var(--tabbar-h) + safe + 12px)`) |
+
+**Kiểm chứng** (M17-AC9, M19-AC7, M20-AC6): Playwright 360×740 ở `vi-VN`: `#/roadmaps` (Q1), `#/roadmaps/rq` (Q1, Q1b; dải 21 ô, thẻ, mục có ngày thực tế, mở chi tiết mục), `#/roadmaps/new`, `#/roadmaps/rq/edit` (có form mục mở), D7, bảng checkpoint, D2 xoá goal `gq`, D3 có dòng lộ trình: `document.documentElement.scrollWidth <= clientWidth`; tab bar: 5 nút, mỗi nút `getBoundingClientRect().width ≥ 44`, icon của 5 tab cùng `top` (±1 px).
 
 ---
 
@@ -1135,6 +1230,198 @@ Quy ước chung cho mọi màn hình:
   - StorageError: `Can't open local storage` / `1% Better keeps your data in your browser's storage, and it isn't available right now. This often happens in private or incognito windows, or when site data is blocked in browser settings. Nothing has been changed.` / bước: `1. Open the app in a regular (non-private) window.` `2. Allow site data and cookies for this site in your browser settings.` `3. Reload the page.` / nút `Try again`.
   - ErrorBoundary: `Something went wrong` / `The app ran into an unexpected problem. Your data is still stored on this device.` / nút `Reload app`, `Go to Today`.
 
+### Phase 8 — Mục tiêu lớn (v8.0): S11 … S14, D7 và chỉnh màn cũ
+
+Quy ước chung của 4 màn mới: (a) **tất cả route `lazy`** với `errorElement` `ViewError` (key `errors.loadViewTitle/Body` có sẵn ở resource chính — **dùng lại**, không thêm key); (b) chuỗi lấy từ namespace `roadmap` (7.9.2) trừ ba chỗ ghi rõ (nav, `roadmapsUnavailable`, dòng D3/Goal); (c) **không dùng card có viền**: mỗi khối là một `section` phẳng, ngăn bằng hairline `1px --border` ở trên, tiêu đề khối là eyebrow chữ hoa (`h2.eyebrow`); (d) mọi số/ngày/giờ đi qua formatter ở 7.9.0; (e) **trạng thái không có quyền: không áp dụng** (app một người dùng, không phân quyền); các trạng thái còn lại (default / loading / empty / error / success) đều có; (f) mọi hành động ghi lưu ngay (offline-first, không nút "Save" ở chi tiết); (g) hôm nay = ngày cục bộ, ví dụ số liệu trong tài liệu = dataset Q1 (ARCH §4.8 d), hôm nay 2026-11-04.
+
+### S11 — Roadmaps (danh sách "Big goals")  (Milestone: M17 [đọc: hàng + trạng thái rỗng chỉ câu giải thích]; M18 [dòng `roadmapsUnavailable`]; M19 [nút "Create empty roadmap"]; M20 [nút "Create from QPT 21-week template"]. User story: US-29, US-31, FR-68)
+
+- **Mục đích:** Xem mọi lộ trình một cái nhìn: trạng thái nhịp độ, tiến độ, giờ, mốc. Primary action: **`Create empty roadmap`** (nút mực); lối thứ hai `Create from QPT 21-week template` là nút secondary (viền mảnh). Đường dẫn: `#/roadmaps` (tab `Big goals`).
+- **Layout:**
+
+```text
+< 640 px                                   ≥ 1024 px (cột 1040/1180)
+┌───────────────────────────────────┐     ┌──────────────────────────────────────────────────────┐
+│ Big goals            (h1 Fraunces)│     │ Big goals                         [Create empty roadmap][From QPT…]
+│ Plans that run for weeks…  (muted)│     │ Plans that run for weeks or months…                  │
+│ [Create empty roadmap]  (full)    │     │ ──────────────────────────────────────────────────── │
+│ [Create from QPT 21-week tpl](full)│    │ QPT 21 weeks     [✓ On track]   ▬▬▬░░░░░░░░░░░░░░░░░ │
+│ ───────────────────────────────── │     │ Goal: QPT study                 Done 1/21 · Studied 5.8 h of 16 h
+│ QPT 21 weeks   [✓ On track]       │     │                                 · QPT exam: 125 days left │
+│ Goal: QPT study                   │     │ ──────────────────────────────────────────────────── │
+│ ▬▬░░░░░░░░░░░░░░░░░░ (6 px)       │     │ Spanish B1  [◔ Not started] …                        │
+│ Done 1/21 · Studied 5.8 h of 16 h │     └──────────────────────────────────────────────────────┘
+│ · QPT exam: 125 days left         │
+│ ───────────────────────────────── │
+│ Spanish B1 …                      │
+└───────────────────────────────────┘
+```
+  Mỗi hàng là **một link** (`<a>` bao cả hàng, vùng chạm = cả hàng) tới `#/roadmaps/:id`; không có nút phụ trong hàng (xoá nằm ở editor). Thứ tự: `createdAt` tăng (FR-68). Tiêu đề lộ trình = Fraunces 24/30, `overflow-wrap: anywhere`; chip trạng thái bên phải tiêu đề (xuống dưới tiêu đề khi hẹp); dòng goal (14/20, `--text-muted`); thanh tiến độ 6 px `--border` nền / `--primary` đầy = xong/tổng (`aria-hidden`, số đã có bằng chữ); dòng số liệu 15/22 `tabular-nums`: `Done 1/21` · `Studied 5.8 h of 16 h` · `QPT exam: 125 days left`. Từ 1024 px mỗi hàng là lưới 2 cột (trái: tiêu đề + goal; phải: thanh + số liệu).
+- **Component dùng:** PageHeader, `RoadmapRow` (mới), `PaceChip` (mới), Button, EmptyState, Skeleton, ErrorState/`ViewError`, Banner/`.note` cho dòng `roadmapsUnavailable`, ToastRegion.
+- **Trạng thái:**
+  - *default*: danh sách `<ul aria-label="Your roadmaps">`.
+  - *loading*: 3 skeleton hàng (cao 96 px), `role="status"` + chữ ẩn `roadmap:loading`, không nút tạo.
+  - *empty* (0 lộ trình): `h2` "No big goals yet" + câu giải thích + **hai nút** (hai lối tạo): `Create empty roadmap` (primary) và `Create from QPT 21-week template` (secondary), xếp dọc rộng đầy ở < 640 px, cạnh nhau ≥ 640 px. **M17: chỉ có câu giải thích, chưa có nút** (vì chưa có đích); nút xuất hiện ở M19 (trống) và M20 (mẫu). Đầu trang không lặp hai nút khi rỗng.
+  - *error*: đọc lỗi → `ViewError` (nút `Try again` có sẵn) trong khung `<main>`; tab bar còn.
+  - *success*: toast sau khi quay về từ editor sau xoá (`toast.deleted`).
+  - *cloud chưa có bảng* (M18, `SyncStatus.roadmapsUnavailable`): ngay dưới đầu trang một dòng `<p class="note" role="status">` nền `--info-soft`, chữ `--info`, icon `info` — **cùng key và cùng chữ với card Account** (`settings.account.roadmapsUnavailable`, resource chính). Danh sách bên dưới bình thường.
+  - Biến thể hàng: **chưa liên kết** → dòng goal `No goal linked` (không link) và dòng giờ `Study time: —`; **goal đã xoá** (`missing`) → `Linked goal was deleted`; **goal archived** → `Goal: Read (archived)`; **không có chỉ tiêu** → `Studied 5.8 h` (không `of …`); **không mốc chính** → bỏ cụm mốc; **mốc hôm nay/đã qua** → `QPT exam: today` / `QPT exam: passed`.
+  - Chip nhịp độ (mọi chỗ): `Not started` (xám, icon đồng hồ), `On track` (`--primary-soft`/`--on-primary-soft`, icon dấu tích), `{n} week(s) behind` / `{n} item(s) behind` — **mức cảnh báo (n = 1)**: nền `--primary-soft` + viền trong 1,5 px `--primary`, icon tam giác; **mức nghiêm trọng (n ≥ 2)**: nền `--danger-soft`, chữ `--on-danger-soft`, icon tròn dấu chấm than; `Completed` (`--primary-soft`, dấu tích). Màu không phải kênh duy nhất: mỗi mức có **icon khác nhau + chữ khác nhau + n**.
+- **Tương tác:** bấm hàng → `#/roadmaps/:id`; `Create empty roadmap` → `#/roadmaps/new`; `Create from QPT 21-week template` → mở D7 tại chỗ (không đổi route); Enter/Space trên link như mọi link.
+- **Copy:** 7.9.2 nhóm `list`, `pace`, `milestone`; resource chính `nav.roadmaps`, `settings.account.roadmapsUnavailable`.
+
+### S12 — RoadmapNew (tạo lộ trình trống)  (Milestone: M19 [trống]; M20 [lối phụ mẫu QPT]. User story: US-29, US-32, FR-69, FR-70, FR-74)
+
+- **Mục đích:** Tạo một lộ trình mới chỉ với thông tin cơ bản, rồi tiếp tục ở editor. Primary action: `Create roadmap`. Đường dẫn: `#/roadmaps/new` (tab `Big goals`).
+- **Layout** (cột đọc 720 px, canh trái ở desktop):
+
+```text
+← (quay lại danh sách là tab Big goals; không có nút back riêng)
+New roadmap                         (h1)
+┌ banner xám (--surface-2) ───────────────────────────────┐
+│ Prefer a ready-made plan?  Create from QPT 21-week template│   (M20; link/nút mở D7)
+└─────────────────────────────────────────────────────────┘
+TITLE                                    0/80
+[ e.g. Spanish B1 ________________________ ]
+NOTES (OPTIONAL)                         0/2000
+[ textarea 4 dòng ]  Shown as plain text on the roadmap. Good for a weekly routine.
+LINKED GOAL (OPTIONAL)
+[ No goal ▾ ]  Study time is counted from this goal's entries. Archived goals and goals already used by another roadmap aren't listed.
+WEEKLY STUDY TARGET (HOURS, OPTIONAL)
+[ 8 ] h    Steps of 0.5, from 0.5 to 168. …
+MILESTONE NAME (OPTIONAL)   0/40      MILESTONE DATE (OPTIONAL)
+[ e.g. Exam ____ ]                    [ dd/mm/yyyy ]  Shows a countdown on the roadmap.
+[Create roadmap]
+After you create the roadmap, you can add phases, items and checkpoints.
+```
+- **Component dùng:** PageHeader, TextField (counter), TextArea, `GoalLinkPicker` (mới; `Select` + hint), NumberField (suffix `h`), DateField, Button, Alert, Banner.
+- **Trạng thái:** *default* (form rỗng); *error* — lỗi inline dưới field + `role="alert"` ở đầu form `ed.summary` ("Fix {n} fields to save."), focus vào field lỗi đầu tiên (lỗi: `ROADMAP_TITLE_REQUIRED`, `ROADMAP_TEXT_TOO_LONG_*`, `ROADMAP_TARGET_INVALID`, `ROADMAP_GOAL_ALREADY_LINKED` [dưới picker], `GOAL_NOT_FOUND` [dưới picker], `ROADMAP_LIMIT_REACHED_roadmap` [Alert đầu form], `WRITE_FAILED` [Alert đầu form, chữ có sẵn `errors.WRITE_FAILED`]); *saving* (nút `Saving…` dùng `ed.saving`, `aria-busy`); *success* → điều hướng `#/roadmaps/:id/edit` + toast `Roadmap created`, focus `<h1>` của editor. *Loading/empty*: không có (form dùng ngay; picker goal đọc `useLiveQuery` — trong lúc đọc, select hiện `No goal` và `aria-busy`). Không goal nào để chọn → select chỉ có `No goal` + câu `ed.goalNoGoals` và link `ed.goalNoGoalsLink` tới `#/goals/new`.
+- **Tương tác:** `Create roadmap` → validate toàn bộ → tạo (`RoadmapService.create`) → editor; Enter trong ô một dòng = submit; chỉ tiêu nhập theo định dạng số locale (`8,5` ở `vi`); ngày bằng `<input type="date">` (như Goal form).
+- **Copy:** 7.9.2 nhóm `new`, `ed` (field lộ trình), `list.createTemplate`, `errors`.
+
+### S13 — RoadmapDetail  (Milestone: M19 [xem + thao tác nhanh]; M20 [checkpoint]. User story: US-29, US-30, US-31, US-33, FR-70, FR-71, FR-72, FR-73, FR-75)
+
+- **Mục đích:** Trả lời trong một cái nhìn "mình đúng tiến độ không, tuần này học gì, đã học bao nhiêu giờ, còn bao nhiêu ngày", và cho phép làm việc hằng ngày ngay tại đây. Primary action: **đánh dấu xong mục hiện tại** (`Mark done` trong thẻ "This week"); `Edit roadmap` là secondary ở đầu trang. Đường dẫn: `#/roadmaps/:id` (tab `Big goals`).
+- **Layout** — mobile (một cột, thứ tự từ trên xuống): back link → h1 + dòng goal + `Edit roadmap` → **Overview** → **Dải ô** → **This week** → **Phases & items** → **Checkpoints** (bảng, biểu đồ) → **Notes** → **How study time is counted** (`<details>`):
+
+```text
+← All big goals
+QPT 21 weeks                                   [Edit roadmap]
+Goal: QPT study  (link → #/goals/gq)           [archived] nếu goal đã lưu trữ
+───────────────────────────────────────────────────────────
+OVERVIEW
+PACE                    WEEKS DONE
+[✓ On track]            1/21   ▬░░░░░░░░░ (thanh 6 px)
+Nothing is overdue.
+STUDY TIME              QPT EXAM            (nhãn = tên mốc của người dùng)
+5.8 h                   125 days left       (số Fraunces 40/44, đơn vị 16 nhỏ)
+Planned through this    On 09/03/2027
+week: 16 h
+───────────────────────────────────────────────────────────
+[1][2][3][4][5][6][7]      ô 44×44: ✓ xong · ring cam = tuần này · ! đỏ = quá hạn · số = sắp tới
+[8]…[14]  [15]…[21]        legend: ■ Done  ▣ This week  ▣ Overdue, not done
+───────────────────────────────────────────────────────────
+THIS WEEK · W2 · 03/11 – 09/11/2026
+Solving systems: elimination, row echelon form, rank        (Fraunces 24/30)
+75/480 min                                    5 days left
+▬▬░░░░░░ progressbar        [Mark done]
+───────────────────────────────────────────────────────────
+PHASE 1 · LINEAR ALGEBRA                      Done 1/4
+Course 1 · 34h
+ ☑ Systems of linear equations: …     [Early by 1 day · studied 6 days]
+    Planned 2026-10-27 – 11-02 · 4.5 h                     [Dates & note]
+ ☐ Solving systems: …                 [This week]
+    Planned 2026-11-03 – 11-09 · 1.3 h                     [Dates & note ▾]
+      ACTUAL START [date][Today][Clear]   ACTUAL END [date][Today][Clear]
+      NOTE [textarea]
+ …
+CHECKPOINTS (bảng 3 cột + biểu đồ cột)   NOTES   HOW STUDY TIME IS COUNTED
+```
+  **Desktop ≥ 1024 px:** đầu trang, Overview (4 chỉ số một hàng) và Dải ô (21 ô một hàng, 44 px, khoảng 4 px) chiếm **cả chiều ngang**; dưới đó lưới 2 cột `minmax(0,1fr) 360px` (≥ 1440 px: 400 px) cách 48 px: **cột trái** = thẻ This week + Phases & items; **cột phải** (`aside`) = Checkpoints (bảng + biểu đồ), Notes, How study time is counted. Thẻ "This week" ở cột trái (đầu danh sách) để mục hiện tại luôn nằm cạnh danh sách mục.
+- **Component dùng:** PageHeader (back link), `PaceChip`, `OverviewMetrics` (mới), `WeekStrip` (mới), `ThisWeekCard` (mới), `PhaseSection` + `RoadmapItemRow` (mới), `DateField` + nút `Today`, TextArea, `CheckpointTable` + `CheckpointChart` (mới, M20), `<details>`, Skeleton, EmptyState/ErrorState, Alert (lỗi inline), Toast.
+- **Overview — 4 chỉ số (FR-72):** (1) **Pace** = `PaceChip` + câu phụ; (2) **Weeks done** (hoặc **Items done** nếu không phải lộ trình theo tuần, A-84) = `{done}/{total}` + thanh; (3) **Study time** = số giờ + `Planned through this week: {plan}` (chỉ khi có chỉ tiêu); (4) **mốc chính**: nhãn eyebrow = tên mốc của người dùng (rỗng → `Milestone`), số ngày + `days left`, dòng `On {date}`; ẩn cả ô khi không đặt mốc (lưới còn 3 ô; từ 640 px 3 cột). Giá trị Study time hiển thị `—` (chữ, không số 0) khi `linkState` là `none`/`missing`.
+- **Trạng thái nhịp độ — mọi biến thể (nguyên tắc: màu + icon + chữ):**
+
+| `pace.kind` | Chip (`en`) | Icon | Nền / chữ (token v7) | Câu phụ (`en`) |
+| :- | :- | :- | :- | :- |
+| `notStarted` | `Not started` | đồng hồ | `--surface-2` / `--text` | `Starts 2026-10-27` |
+| `onTrack` | `On track` | dấu tích | `--primary-soft` / `--on-primary-soft` | `Nothing is overdue.` |
+| `behind`, `warn` (n = 1) | `1 week behind` (`1 item behind` nếu không theo tuần) | tam giác `!` | `--primary-soft` + viền trong 1,5 px `--primary` / `--on-primary-soft` | `Use a spare week or day to catch up.` |
+| `behind`, `crit` (n ≥ 2) | `2 weeks behind` (`2 items behind`) | tròn `!` | `--danger-soft` / `--on-danger-soft` | `Consider moving your planned dates or milestone.` |
+| `completed` | `Completed` | dấu tích | `--primary-soft` / `--on-primary-soft` | `Every item is finished.` |
+| `empty` (không có mục) | `No items yet` | đồng hồ | `--surface-2` | `Add items while editing the roadmap to start tracking.` — toàn màn thay phần Dải/This week/Phases bằng EmptyState (`detail.noItems` / `detail.noItemsBody`) + nút `Edit roadmap` |
+
+  Chữ "weeks" chỉ dùng khi **mọi** mục dài đúng 7 ngày (A-84), ngược lại "items". Không có mức "good" riêng ngoài `onTrack`; đỏ chỉ ở mức nghiêm trọng (n ≥ 2, "lỗi/nguy cơ"), cảnh báo n = 1 dùng cam đất (`--primary`) theo nguyên tắc "một màu nhấn".
+- **Giờ "—" (FR-70, FR-71):** `none` → mọi giá trị giờ là `—`; ô Study time có câu `Link a goal to count study time.` + link `Link a goal` → `#/roadmaps/:id/edit` (focus vào picker); `missing` → `—` + `The linked goal was deleted.` + cùng link; `archived` → số giờ **bình thường** + câu `The linked goal is archived. Its time still counts.` và thẻ `archived` cạnh tên goal ở đầu trang; hàng mục: `—` thay giờ; thẻ This week: `—` thay `x/y min`, **không** thanh tiến độ giờ.
+- **Dải ô (FR-73):** `<ul role="list" aria-label="Roadmap items, in order">`, mỗi ô là `<li><button>`; trạng thái xong = nền `--text` (mực) + dấu tích; "tuần này" = vòng đôi `--primary` (2 px) + nền `--primary-soft` (hoặc chỉ vòng nếu đã xong); quá hạn chưa xong = nền `--danger-soft`, viền `--danger` + dấu `!`; sắp tới = viền `--border-input` + số thứ tự. **Số ô > 21** xuống dòng theo lưới (7 cột ở < 640 px; `auto-fill` ô 44 px từ 640 px); ô hàng cuối canh trái. Bấm/Enter/Space → cuộn mục vào giữa viewport (`scrollIntoView({block:'center'})`, tôn trọng `prefers-reduced-motion`: `behavior: 'auto'`) và **focus hàng mục** (`tabindex="-1"`, vòng focus 2 px). Chú giải 3 mục dưới dải.
+- **Thẻ "This week" (FR-73):** mục `currentItemId` — eyebrow `This week · W2 · {range}` (`Current item` nếu không theo tuần), tiêu đề mục, `{done}/{target} min` (số Fraunces 28/32) + `{n} days left` (`Last day` khi 0), thanh tiến độ giờ (`role="progressbar"`, chỉ khi có chỉ tiêu **và** goal), nút `Mark done` / `Mark as not done` (secondary, 44 px). **Trước lộ trình:** eyebrow `This week` + câu `Starts {date}. First up: {title}.`; **sau lộ trình:** `The planned dates ended on {date}.`; **trong lộ trình nhưng hôm nay không thuộc khoảng nào** (lộ trình có khe giữa các mục): `Nothing is planned for today.` (xem Ghi chú cho planner). Vùng thẻ không phải live region.
+- **Phase / mục (FR-73):** mỗi phase là `<section aria-label="{title}">` có `h3` Fraunces 22/28, ghi chú phase 14/20 `--text-muted`, đếm `Done 1/4` canh phải. Mỗi mục `RoadmapItemRow` (lưới `44px minmax(0,1fr)`): cột 1 = checkbox (vùng 44×44, `accent-color: --text`, tên truy cập `Mark {title} as done`); cột 2 = tiêu đề (đậm 600, dữ liệu), hàng tag, hàng meta (`Planned {range} · {giờ}`), ghi chú mục (nếu có; `white-space: pre-wrap`, hiện đủ, **không cắt `…`**), nút ghost `Dates & note` (`aria-expanded`, `aria-controls`). Tag: `This week` (`--primary-soft` + vòng), `Overdue` (`--danger-soft`), nhãn kết quả khi đã xong: `Early by {n} day(s)` (`--primary-soft`) / `On time` (`--surface-2`) / `Late by {n} day(s)` (`--danger-soft`), kèm ` · studied {n} day(s)` khi có ngày bắt đầu thực tế; `In progress` (`--surface-2`) khi có ngày bắt đầu nhưng chưa xong. Khi mở `Dates & note`: hai trường `Actual start` / `Actual end` (DateField kiểu Fraunces 22/28, gạch chân) mỗi trường kèm nút `Today` (secondary nhỏ) và `Clear` (ghost nhỏ), rồi ô `Note` (textarea, counter `{n}/1000`, lưu khi rời ô). Mục hiện tại **mở sẵn**; các mục khác đóng. Hàng nút dưới trường ngày xuống dòng được.
+- **Quy tắc thao tác nhanh (A-81):** tick → `actualEnd = actualEnd ?? hôm nay`; bỏ tick → xoá `actualEnd` (giữ `actualStart`); đặt/xoá `actualEnd` bằng ô ngày = tick/bỏ tick tương ứng; đổi ngày không bao giờ làm focus nhảy. Cập nhật tức thì (< 100 ms): tổng quan, dải ô, thẻ This week, nhãn mục, giờ, đếm phase đổi cùng lúc; không toast (kết quả nhìn thấy ngay); vùng `role="status"` ẩn đọc `item.statusDone` / `item.statusUndone`.
+- **Checkpoint (FR-75, M20):** `CheckpointTable` (`<table>` thật, 3 cột `Checkpoint` | `Threshold` | `Score`): cột 1 = tên đậm + dòng phụ `W8` (tuần của lộ trình chứa ngày đó; ngoài khoảng → ngày đầy đủ, vd. Diagnostic `24/09/2026`) + ghi chú; cột 2 = `≥ 20` / `—`; cột 3 = ô nhập điểm (Fraunces 22/28, canh phải, `inputmode="decimal"`, hậu tố `/ 32`) + dòng trạng thái: `Passed` / `Below threshold` + delta có dấu (`−2`, `+1`) / `Recorded` / `No score yet`. Nhập điểm lưu khi rời ô hoặc Enter; xoá ô → `No score yet`; lỗi `ROADMAP_SCORE_INVALID_range/precision` inline dưới ô (`aria-invalid`, `aria-describedby`). `CheckpointChart` (SVG thuần, **không Recharts**): một cột mỗi checkpoint theo thứ tự ngày, `chartScale: 'raw'` → trục `0 … maxScore`; `'percent'` (có checkpoint khác max) → trục % và dòng chú `cp.scalePercent`. Kiểu cột (không dựa vào màu): **Passed** = đặc `--text`; **Below threshold** = vạch chéo `--danger` trên nền `--danger-soft` + viền `--danger`; **Recorded** (không ngưỡng) = đặc `--primary`; **No score yet** = khung nét đứt `--border-input` cao 24 px; **vạch ngưỡng** = đoạn nét đứt `--text` 2 px vượt hai bên cột 6 px; nhãn điểm 12 px trên đỉnh cột. Legend 5 mục. Tóm tắt SR ở `aria-label` của `<svg role="img">` + bảng bên cạnh là bản dữ liệu đầy đủ.
+- **Ghi chú lộ trình (FR-73):** eyebrow `Notes`, nội dung `white-space: pre-wrap; overflow-wrap: anywhere`, **render dạng text** (`<b>x</b>` hiện nguyên văn — không HTML). Ẩn khối khi rỗng.
+- **Câu giải thích cách tính giờ:** `<details>` `How study time is counted` (đóng sẵn); thân: quy tắc một-ngày-một-mục (7.9.2 `howHours.body`).
+- **Trạng thái:** *default*; *loading* (skeleton: h1, 4 ô số, dải, 3 hàng); *not found* (id không tồn tại/đã xoá, kể cả bị xoá ở máy khác): ErrorState `Big goal not found` + nút `Go to Big goals`; *error* đọc: `ViewError`; *empty* (không mục): xem bảng Pace; *success*: không toast (thấy ngay). Giới hạn số lượng chỉ xuất hiện ở editor (S14).
+- **Tương tác:** tick/`Mark done`/`Today`/`Clear`/ghi chú/điểm → lưu ngay; ô dải → cuộn+focus; `Edit roadmap` → `#/roadmaps/:id/edit`; link goal → `#/goals/:goalId`; `Link a goal` → editor.
+- **Copy:** 7.9.2 nhóm `detail`, `overview`, `pace`, `milestone`, `strip`, `now`, `phase`, `item`, `tag`, `cp`, `note`, `howHours`, `notFound`.
+
+### S14 — RoadmapEditor  (Milestone: M19 [phase, mục, field]; M20 [checkpoint]. User story: US-29, US-32, FR-69, FR-70, FR-74, FR-75)
+
+- **Mục đích:** Sửa cấu trúc lộ trình: thông tin chung, phase, mục (kể cả ngày kế hoạch), checkpoint, liên kết goal; sắp xếp; xoá. Primary action: **`Done`** (về chi tiết) cho cả trang; trong form con là `Save details` / `Save item` / `Save phase` / `Save checkpoint`. Đường dẫn: `#/roadmaps/:id/edit`.
+- **Layout** (cột đọc 720 px; mọi nhóm là section phẳng):
+
+```text
+Edit roadmap                                       (h1)
+[ Form thông tin: Title · Notes · Linked goal · Weekly target · Milestone name + date ]   [Save details]
+───────────────────────────────────────────────────────────
+PHASES
+ Grammar                                           [↑][↓] [Edit phase] [Delete phase]
+ Course 1 · 34h
+  Present tenses            2026-11-04 – 11-10     [↑][↓] [Edit] [Delete]
+  Past tenses               2026-11-11 – 11-17     [↑][↓] [Edit] [Delete]
+  Subjunctive               2026-11-18 – 11-24     [↑][↓] [Edit] [Delete]
+   ┌ form mục (khi Edit/Add) ──────────────────────────────────┐
+   │ ITEM TITLE                                  0/200          │
+   │ PLANNED START [date]  PLANNED END [date]  (lỗi inline)     │
+   │ PHASE [Grammar ▾]      ITEM NOTE (OPTIONAL) 0/1000         │
+   │ [Save item] [Cancel]                                       │
+   └────────────────────────────────────────────────────────────┘
+  [Add item]
+ Vocabulary …
+[Add phase]
+───────────────────────────────────────────────────────────
+CHECKPOINTS                                                    (M20)
+ Mock 1 · 2027-03-01 · max 32 · threshold 24     [Edit] [Delete]
+[Add checkpoint]
+───────────────────────────────────────────────────────────
+DELETE THIS ROADMAP   [Delete roadmap]   (danger-ghost)
+[Done]
+```
+- **Component dùng:** PageHeader, TextField/TextArea/NumberField/DateField, `GoalLinkPicker`, `PhaseEditor` + `ItemEditor` + `CheckpointEditor` (mới, form con inline nền `--surface-2`, bo 10 px), `MoveButtons` (mới, hai `IconButton` tròn 44 px), `ConfirmDialog` (D8 … D11, nút `danger`, `initialFocus: cancel`), Alert, Toast.
+- **Quy tắc form:** (1) field lộ trình có nút `Save details` riêng (không lưu tự động vì có validate nhiều field); (2) form con phase/mục/checkpoint mở **inline ngay dưới hàng** (một form mở tại một thời điểm: mở form khác thì đóng form cũ nếu không có thay đổi, nếu có thay đổi thì giữ và focus vào form đang mở — không mất dữ liệu gõ dở); (3) `Add item` mặc định `plannedStart` = ngày sau `plannedEnd` của mục cuối **của cả lộ trình**, `plannedEnd` = `plannedStart` + 6 (A-83; lộ trình chưa có mục: hôm nay → +6), kèm hint `ed.itemDatesHint` chỉ ở form thêm; thêm/xoá/sắp xếp **không** dời ngày các mục khác; (4) lỗi hiển thị inline theo field, `ed.summary` `role="alert"` trên đầu form con, focus vào field lỗi đầu tiên, không lưu khi còn lỗi; (5) `Add item` ở 200 mục / `Add phase` ở 20 / `Add checkpoint` ở 50 / tạo lộ trình thứ 21 → `ROADMAP_LIMIT_REACHED_*` Alert ngay trên nút (không vô hiệu nút trước — người dùng thấy lý do khi thử).
+- **Picker goal (A-78):** `<select>` chỉ liệt kê: `No goal`, goal **chưa archive và chưa thuộc lộ trình khác** (cả goal `ended`/`upcoming`), và goal đang liên kết với **chính lộ trình này** (kể cả đã archive: hiện `{name} (archived)`, đang chọn). Goal đã thuộc lộ trình khác và goal archived khác **không liệt kê** (hint nói rõ). Goal liên kết đã bị xoá (`missing`) → select hiện `No goal` và dòng `ed.goalMissing`. Đổi goal không cần xác nhận (giờ tính lại tức thì).
+- **Sắp xếp bằng nút (FR-74, ADR-51):** mỗi phase và mỗi mục có hai nút `↑` `↓` (icon mũi tên, tên truy cập `Move {title} up` / `Move {title} down`, vùng 44 × 44, khoảng 6 px). Nút ở đầu/cuối danh sách anh em dùng `aria-disabled="true"` (vẫn focus được, bấm không làm gì, opacity .4 nhưng **vẫn đạt tương phản chữ/icon của trạng thái vô hiệu** — icon là thông tin phụ). Sau khi chuyển: **focus ở lại đúng nút vừa bấm trên cùng mục** (mục di chuyển, nút đi theo), vùng `role="status"` ẩn đọc `{title} moved to position {pos} of {total}`. Chuyển mục sang phase khác: trong form `Edit` của mục, select `Phase` (mục chuyển sang **cuối** phase đích). Kéo thả: **không làm** (A-D84).
+- **Trạng thái:** *default*; *loading* (skeleton form); *not found* (như S13, `ROADMAP_NOT_FOUND_roadmap`); *error ghi* (`errors.WRITE_FAILED` Alert đầu form, dữ liệu gõ giữ nguyên); *empty cấu trúc*: chưa có phase → `ed.noPhases`; phase chưa có mục → `ed.noItemsInPhase`; chưa checkpoint → `ed.noCheckpoints`; *saving* (nút `Saving…`); *success*: toast `Roadmap saved` (Save details), `Done` về chi tiết không toast.
+- **Xoá (D8 … D11, luôn qua `ConfirmDialog`):** D8 xoá lộ trình (`Delete "{title}"?` — nêu `{phases}`, `{items}`, `{checkpoints}` của lộ trình, nêu goal và lần ghi **không bị ảnh hưởng**, nút `Delete roadmap`); D9 xoá phase (nêu **số mục** bị xoá cùng: `This deletes the phase and its {count} item(s).`; phase rỗng: câu riêng; nút `Delete phase`); D10 xoá mục (`Delete "{title}"?`, nút `Delete item`); D11 xoá checkpoint (`Delete "{title}"?`, nút `Delete checkpoint`). Mọi dialog: focus ban đầu `Cancel`; Esc = Cancel; xác nhận xoá lộ trình → toast `Roadmap deleted` + về `#/roadmaps` (focus `<h1>`); xoá phase/mục/checkpoint → toast tương ứng, focus về nút `Add …` của khối (hoặc `<h3>` phase kề trước).
+- **Tương tác tóm tắt:** `Save details` lưu field; `Add phase` → form phase (Title, Note) → `Save phase`; `Add item` → form mục; `↑`/`↓` đổi thứ tự ngay; `Edit` mở form; `Delete` → D9/D10/D11; `Delete roadmap` → D8; `Done` → `#/roadmaps/:id`.
+- **Copy:** 7.9.2 nhóm `ed`, `count`, `toast`, `errors`, `notFound`.
+
+### D7 — TemplateDialog (mẫu "QPT 21 tuần")  (Milestone: M20. User story: US-32, FR-76)
+
+- **Mục đích:** Tạo lộ trình QPT bằng một thao tác. Mở từ S11 (rỗng và có dữ liệu) và S12. Primary action: `Create roadmap`.
+- **Layout:** `ConfirmDialog` kiểu form: < 640 px **bottom sheet** (rộng đầy, bo trên 20 px, cuộn trong, hàng nút dính đáy), ≥ 640 px hộp thoại giữa 480 px (mockup `14-roadmap-template-dialog.html`). Thứ tự: tiêu đề (Fraunces 26/32) → thân giải thích → `Start date` (DateField, mặc định hôm nay) + khối xem trước (nền `--surface-2`, 14/20, `tabular-nums`): `Week 1: … Week 20 (QPT exam): … The last week ends …` cập nhật ngay khi đổi ngày → `Linked goal (optional)` (cùng `GoalLinkPicker` + hint) → ghi chú ngôn ngữ (`.hint`) → Alert lỗi (nếu có) → hàng nút (`Create roadmap` primary, `Cancel` secondary; xếp dọc rộng đầy ở < 640 px với primary **trên**, ≥ 640 px cạnh nhau canh phải).
+- **Trạng thái:** *default*; *busy* (`Creating…`, nút `aria-disabled`, mọi field `disabled`, Esc/backdrop bị chặn đến khi xong — một transaction 32 hàng nên rất nhanh); *error*: `ROADMAP_GOAL_ALREADY_LINKED` (nêu tên lộ trình kia), `ROADMAP_LIMIT_REACHED_roadmap`, `ROADMAP_DATE_INVALID_format` (ngày rỗng/sai; ở dưới ô ngày), `WRITE_FAILED` — dialog **ở lại** với dữ liệu đã nhập; *success*: đóng, toast `Roadmap created from the QPT template`, điều hướng `#/roadmaps/:id` (focus `<h1>`).
+- **Tương tác:** focus ban đầu ở ô `Start date`; Esc = Cancel; xác nhận gọi `createFromQptTemplate`; ngôn ngữ nội dung = ngôn ngữ app lúc tạo (7.9.3); sau đó là dữ liệu người dùng.
+- **Copy:** 7.9.2 nhóm `tpl`, `ed` (goal), `errors`; nội dung mẫu: 7.9.3.
+
+### Phase 8 — chỉnh màn cũ (v8.0)
+
+| Màn | Thay đổi | Chuỗi | Ghi chú bố cục |
+| :- | :- | :- | :- |
+| **S4 Goal detail** (M19-T4) | Ngay dưới phần thông tin goal (trên hàng nút `Edit/Archive/Delete`) thêm **một dòng** khi goal đang thuộc lộ trình còn sống: `Part of roadmap` + link tên lộ trình → `#/roadmaps/:id`. Hai lộ trình cùng trỏ một goal (hội tụ sau đồng bộ, ARCH §4.8 i): chỉ hiện lộ trình có `createdAt` sớm nhất. Goal không thuộc lộ trình: **không đổi gì** (DOM giữ nguyên) | `goal.detail.roadmapLabel` (resource chính) + tên lộ trình (dữ liệu) | `<p>` 14/20 `--text-muted` có icon `roadmap` 16 px; link `--primary` gạch chân, vùng chạm ≥ 44 px (`display: inline-flex; min-height: 44px`); xuống dòng được, tên `overflow-wrap: anywhere` |
+| **D2 Delete goal** (Goals + Goal detail, M19-T4) | Nếu goal đang thuộc lộ trình: thêm **một đoạn** trong thân, sau câu hiện có (và sau câu timer nếu có): `This goal is part of the roadmap "{{title}}". The roadmap stays, but it loses its link and shows study time as —.` Nhiều lộ trình: `{{title}}` nối bằng `, `. Nút/tiêu đề/focus không đổi | `goal.delete.roadmapNote` (resource chính) | đoạn `<p>` riêng cách 8 px; hiện chỉ khi có lộ trình liên kết (D2 cũ giữ nguyên DOM khi không có) |
+| **D3 Import preview** (M17-T4) | Thêm **một đoạn** sau thân, **chỉ khi** file hoặc máy có ≥ 1 lộ trình. File `schemaVersion 2`: `import.roadmaps` ("Big goals: {{n}} in this backup, {{cur}} on this device now. Importing replaces them."). File `schemaVersion 1` và máy có lộ trình: `import.roadmapsKept`. Cả hai không có lộ trình: **không đổi DOM/copy** (M3/M7/M10 pass). Áp dụng cả biến thể đã đăng nhập (thân `bodySignedIn` đã nói "mọi thiết bị") | `import.roadmaps`, `import.roadmapsKept` (resource chính) | đoạn `<p>` `.hint` 14/20 dưới thân; số `{{n}}`, `{{cur}}` qua `useFormat().int` |
+| **Card Account A5 (đã đăng nhập) + S11** (M18-T3) | Khi `SyncStatus.roadmapsUnavailable`: một dòng `.hint` có icon `info` ngay dưới khối `dl` đồng bộ (thứ tự: `dl` → dòng này → `Sync now`); không đổi Alert, không đổi `SyncIndicator` (vẫn `Synced`), không chuyển `expired`. Ở S11: `<p class="note" role="status">` dưới đầu trang | `settings.account.roadmapsUnavailable` (resource chính, **một key dùng ở cả hai chỗ**) | `.hint` thường, `min-width: 0`, không `nowrap` (3.7) |
+
 ---
 
 ## 5. Component
@@ -1192,6 +1479,21 @@ Tất cả là component React thuần dùng CSS custom properties của mục 6
 | `AccountCard` *(sửa v5.0)* | Thêm: nút Apple (iOS), dòng nhà cung cấp theo identity, khối Delete account, `AppleRevokePanel` | `auth`, `sync`, `online`, `lastError?`, **`capabilities`** | A1 … A10 + delete (enabled / offline / expired) | Settings (M14) |
 | `LoginPromptBanner`, `ExportSignInHint` *(sửa v5.0)* | Dùng `SignInButtons`; `ExportSignInHint` dùng `exportHint.textNative` khi `capabilities.nativeShare` | như v2 | như v2 | Today (M8), Settings Backup (M14) |
 | `UpdateToast` *(sửa v5.0)* | **Không render** khi `capabilities.serviceWorker === false` (native): app chỉ cập nhật qua App Store | — | — | AppShell (M12) |
+| `AppShell` *(sửa v8.0)* | `TABS` thêm `{ to: '/roadmaps', icon: 'roadmap', key: 'nav.roadmaps' }` **ở vị trí thứ ba**; active cho `pathname.startsWith('/roadmaps')`; tab bar 64 px, nhãn được xuống 2 dòng, xếp từ trên xuống (3.1) | như cũ | tab active, offline, (v2) đã đăng nhập | tất cả (M17) |
+| `Icon` `roadmap` *(mới v8.0)* | Icon nav và dòng "Part of roadmap": đường quanh co nối hai chấm, nét 2 px (path ở 3.1) | `name="roadmap"` | — | AppShell, Goal detail (M17, M19) |
+| `PaceChip` *(mới v8.0)* | Chip nhịp độ có icon + chữ (`Not started`, `On track`, `{n} weeks/items behind`, `Completed`, `No items yet`) | `pace: { kind, overdueCount, weekBased, severity: 'idle' \| 'good' \| 'warn' \| 'crit' }` | 5 kiểu (bảng ở S13); `white-space: normal`; luôn có chữ | S11, S13 (M17, M19) |
+| `RoadmapRow` *(mới v8.0)* | Một hàng danh sách S11 (link cả hàng): tiêu đề, goal, chip, thanh, số liệu | `row: RoadmapListRow` (ARCH §4.8 b) | default, goal chưa liên kết / đã xoá / archived, không chỉ tiêu, không mốc, mốc hôm nay / đã qua | S11 (M17) |
+| `OverviewMetrics` *(mới v8.0)* | 4 chỉ số tổng quan (Pace, Weeks/Items done, Study time, mốc chính) | `overview`, `linkState`, `goal?` | mọi biến thể giờ "—" (none, missing), archived, không chỉ tiêu, không mốc (3 ô) | S13 (M19) |
+| `WeekStrip` *(mới v8.0)* | Dải ô một ô mỗi mục: `ul[role=list] > li > button`, nhãn truy cập đầy đủ, bấm → cuộn + focus mục; chú giải 3 mục | `items`, `currentItemId`, `onSelect(id)`, `weekBased` | ô: xong / tuần này (cũng xong) / quá hạn / sắp tới; focus-visible; > 21 ô xuống dòng | S13 (M19) |
+| `ThisWeekCard` *(mới v8.0)* | Thẻ mục hiện tại: tiêu đề, `{done}/{target} min`, ngày còn lại, thanh giờ, nút `Mark done` | `view: ThisWeekView` (`notStarted \| item \| finished \| gap`) | trước lộ trình, mục hiện tại (chưa xong / đã xong), sau lộ trình, khe giữa các mục, giờ "—" | S13 (M19) |
+| `PhaseSection` *(mới v8.0)* | Một phase: `h3`, ghi chú, đếm `Done x/y`, các `RoadmapItemRow` | `phase`, `items` | default; phase rỗng (không ẩn: hiện tiêu đề + ghi chú + `Done 0/0`; câu `ed.noItemsInPhase` chỉ ở editor) | S13 (M19) |
+| `RoadmapItemRow` *(mới v8.0)* | Một mục: checkbox 44 px, tiêu đề, tag, meta, ghi chú, vùng `Dates & note` (2 DateField + `Today` + `Clear`, textarea) | `item`, `state`, `minutes \| null`, `label`, `today`, `onTick`, `onDate(which, value)`, `onNote` | đóng / mở; chưa bắt đầu / tuần này / quá hạn / đang học / xong (sớm, đúng hạn, trễ); lỗi inline `DATE_IN_FUTURE` / `order`; giờ "—"; focus giữ khi render lại | S13 (M19) |
+| `GoalLinkPicker` *(mới v8.0)* | `<select>` chọn goal liên kết theo A-78 + hint + dòng `missing`/không có goal | `value`, `goals` (đã lọc), `currentGoal?`, `error?`, `onChange` | default, có lỗi (`ROADMAP_GOAL_ALREADY_LINKED`, `GOAL_NOT_FOUND`), goal hiện tại archived (`{name} (archived)`), goal đã xoá, không có goal nào | S12, S14, D7 (M19) |
+| `MoveButtons` *(mới v8.0)* | Cặp nút `↑` `↓` tròn 44 px sắp xếp bằng bàn phím; `aria-disabled` ở đầu/cuối; sau khi chuyển giữ focus trên chính nút bấm; thông báo `role="status"` | `title`, `index`, `count`, `onMove(dir)` | default, đầu danh sách (↑ vô hiệu), cuối (↓ vô hiệu), focus-visible, hover | S14 (M19) |
+| `PhaseEditor` / `ItemEditor` / `CheckpointEditor` *(mới v8.0)* | Form con inline trong S14 (nền `--surface-2`, bo 10 px): field, counter, lỗi inline, `Save …` + `Cancel` | `mode: 'add' \| 'edit'`, `defaultValues`, `phases` (chỉ ItemEditor, cho select `Phase`) | default, lỗi theo field, saving | S14 (M19; checkpoint M20) |
+| `CheckpointTable` *(mới v8.0)* | `<table>` 3 cột, ô nhập điểm nhanh, trạng thái + delta | `checkpoints`, `weekOf(date)`, `onScore(id, value \| null)` | pass, below (+ delta), recorded, pending; lỗi `range`/`precision` | S13 (M20) |
+| `CheckpointChart` *(mới v8.0)* | Biểu đồ cột SVG thuần: điểm, vạch ngưỡng, `chartScale raw/percent`, legend, tóm tắt SR | `points`, `scale` | 4 kiểu cột (đặc ink / vạch chéo / đặc cam / khung nét đứt) + vạch ngưỡng; rỗng (0 checkpoint): ẩn cả khối | S13 (M20) |
+| `TemplateDialog` *(mới v8.0, D7)* | Hộp thoại tạo từ mẫu QPT | `today`, `goals`, `onCreate({ startDate, goalId })`, `onCancel` | open, preview cập nhật, busy, error (goal đã liên kết, đủ 20, ngày sai) | S11, S12 (M20) |
 
 **SyncIndicator — 6 trạng thái** (5 trạng thái của PRD FR-50 + `signing-in`; chưa đăng nhập hoặc cloud tắt = **ẩn**, không render). Ưu tiên khi nhiều điều kiện cùng đúng: `expired` > `signing-in` > `error` > `offline/pending` > `syncing` > `synced`.
 
@@ -1432,6 +1734,32 @@ Heatmap: ô 11 px + khoảng 2 px (mobile < 640 px; cuộn ngang trong vùng ch�
 | `--safe-left` | `env(safe-area-inset-left, 0px)` | (như sáng) | vùng an toàn trái |
 
 Nút Apple là ngoại lệ thứ hai (sau nút Google) của quy tắc "chỉ dùng token màu của app": theo hướng dẫn của Apple, đen hoặc trắng thuần, không dùng `--primary`. Màu của tài nguyên native (icon nền `#FFFFFF`; nền launch screen = `--bg` sáng `#F7F6F2` / tối `#121513`; ô trắng `#FFFFFF` trong splash tối) không thêm token: là giá trị tệp ảnh/storyboard, ghi ở mục 5 "Native shell". Không thêm token chữ, khoảng cách, bo góc, đổ bóng.
+
+**(v8.0) Phase 8 — không thêm token màu nào; một giá trị kích thước đổi.** Mọi trạng thái của lộ trình dùng bảng v7 (6.1), gồm cả chip nhịp độ "cảnh báo / nghiêm trọng" theo yêu cầu "`--primary`/`--danger` + soft":
+
+| Trạng thái | Nền | Chữ / icon | Viền thêm | Dùng ở |
+| :- | :- | :- | :- | :- |
+| Pace `notStarted`, `empty`; tag "upcoming"; tag `On time`, `In progress` | `--surface-2` | `--text` | — | `PaceChip`, `RoadmapItemRow` |
+| Pace `onTrack`, `completed`; tag `Early by …` | `--primary-soft` | `--on-primary-soft` | — | như trên |
+| Pace `behind` mức **cảnh báo** (n = 1); tag "tuần này" | `--primary-soft` | `--on-primary-soft` | `inset 0 0 0 1.5px --primary` | `PaceChip`, tag, ô dải "tuần này" |
+| Pace `behind` mức **nghiêm trọng** (n ≥ 2); tag `Overdue`, `Late by …`; ô dải quá hạn | `--danger-soft` | `--on-danger-soft` (ô dải: viền `--danger`) | — | như trên |
+| Ô dải xong; cột checkpoint `pass` | `--text` (mực) | `--bg` (dấu tích) | — | `WeekStrip`, `CheckpointChart` |
+| Cột checkpoint `below` | vạch chéo `--danger` trên `--danger-soft` | nhãn điểm `--text` | viền `--danger` 1,5 px | `CheckpointChart` |
+| Cột checkpoint `recorded` (không ngưỡng) | `--primary` | nhãn điểm `--text` | — | `CheckpointChart` |
+| Cột checkpoint `pending` | trong suốt | nhãn `—` | nét đứt `--border-input` 1,5 px | `CheckpointChart` |
+| Vạch ngưỡng | — | — | nét đứt `--text` 2 px | `CheckpointChart` |
+| Dòng "cloud chưa có bảng" ở S11 | `--info-soft` | `--info` | — | S11 (`.note`) |
+
+Quy tắc: **đỏ chỉ ở mức nghiêm trọng, tag trễ/quá hạn và cột dưới ngưỡng** (đều là "cần chú ý" thật, có chữ); cảnh báo mức 1 và "tuần này" dùng cam đất — màu nhấn duy nhất của v7. Không có màu "tốt" riêng ngoài `--primary-soft`. Màu không bao giờ là kênh duy nhất (icon + chữ + n; cột checkpoint có hoạ tiết + nhãn điểm + dòng trạng thái ở bảng).
+
+| Token kích thước | v7.2 | **v8.0** | Lý do |
+| :- | :- | :- | :- |
+| `--tabbar-h` | 56 px | **64 px** (< 1024 px) | 5 tab, nhãn `vi` `Mục tiêu lớn` xuống 2 dòng (3.1, 3.7). Ảnh hưởng gián tiếp: `main` padding dưới, `scroll-padding-bottom`, vị trí toast (đều dùng `var(--tabbar-h)`) |
+| icon tab | 24 px | 22 px (tab bar) / 24 px (sidebar) | vừa 64 px |
+| ô dải `WeekStrip` | — | 44 × 44 px (khoảng 4 px) | 3.7 |
+| chip nhịp độ | — | `min-height` 28 px, padding `3px 12px 3px 8px`, chữ 13/20 600, icon 16 px, `--r-full` | như `Badge` v7 |
+
+Số liệu tương phản bổ sung ở 8.4. Thang chữ: tiêu đề lộ trình ở S13 và S11 dùng `h1` Fraunces 36/40 (44/48 ≥ 640 px, 48/52 ≥ 1024 px) như mọi h1 v7; số chỉ số tổng quan Fraunces 600 40/44 (đơn vị đi kèm Manrope 16/24 `--text-muted`); giá trị dạng chữ (mốc "Today"/"Passed") 26/32; số `75/480 min` ở thẻ This week Fraunces 600 28/32; tên phase Fraunces 22/28; tiêu đề thẻ This week Fraunces 24/30; điểm checkpoint Fraunces 22/28; tag 12/18 600.
 
 ---
 
@@ -2503,6 +2831,435 @@ Lý do chọn: ảnh 1–2 là việc dùng hằng ngày (ghi nhanh, timer); ả
 
 **Giá trị kiểm** (developer dùng làm assert trong `store-metadata`/fixture test): `demo-read` 2026-01-01 = 20 phút; 2026-01-03 không có entry; 2026-10-08 = 40. `demo-guitar` 2026-08-01 = 8; 2026-08-06 không có; 2026-10-08 = 21; 2026-10-09 = 22. `demo-spanish` 2026-06-01 = 10; 2026-06-05 không có; 2026-10-09 = 10. `demo-stretch` 2026-09-01 = 10; 2026-09-04 không có. Mọi entry thoả giới hạn (phút 1 … 1.440, ngày nằm trong thời gian goal, không có ngày tương lai). Không dùng dữ liệu cá nhân; "Ana" là tên hư cấu.
 
+### 7.9 Phase 8 — Mục tiêu lớn / Big goals (v8.0, M17 … M20)
+
+#### 7.9.0 Quy tắc: hai nguồn, key, định dạng
+
+**Hai nguồn chuỗi (ADR-53, ARCH §4.8 j).** Developer copy **nguyên văn** hai cột `en` / `vi` của các bảng 7.9.1 và 7.9.2 vào:
+
+| Nguồn | File | Gồm | Vì sao |
+| :- | :- | :- | :- |
+| **A — resource chính** (đường tải lạnh) | `src/i18n/resources/en.json`, `vi.json`, namespace mặc định | **6 key** (7.9.1): `nav.roadmaps`, `settings.account.roadmapsUnavailable`, `import.roadmaps`, `import.roadmapsKept`, `goal.detail.roadmapLabel`, `goal.delete.roadmapNote` | chỉ những chuỗi mà màn **không lazy-load namespace** `roadmap` mới có (nav, card Account, Settings D3, Goal detail/D2). `i18n/instance.ts` import tĩnh cả hai file nên **mọi key ở đây nằm trong JS tải lạnh** (ngân sách còn ≈ 1,5 KB) |
+| **B — namespace lazy `roadmap`** | `src/i18n/resources/roadmap.en.json`, `roadmap.vi.json` | mọi chuỗi còn lại (7.9.2), gồm cả `roadmap:errors.*` | nạp bằng `ensureRoadmapNamespace` trong `lazy()` của route `#/roadmaps*`, cho cả hai ngôn ngữ |
+
+**Phương án giảm tải lạnh (không đổi chữ):** nếu số đo M17/M19 cho thấy 6 key A vượt ngân sách, **4 key** `import.roadmaps`, `import.roadmapsKept`, `goal.detail.roadmapLabel`, `goal.delete.roadmapNote` chuyển sang namespace `roadmap` (đổi tên `import.*` → `roadmap:importLine`, `…`), kèm `ensureRoadmapNamespace` ngay trước khi hiển thị (chỉ khi thật sự có lộ trình liên kết — dòng D3 và Goal detail vốn chỉ hiện khi có lộ trình); `nav.roadmaps` và `settings.account.roadmapsUnavailable` **phải** ở A (hiện trước khi namespace nạp). Copy giữ nguyên.
+
+**Quy tắc key** (kế thừa 7.0): key trong namespace `roadmap` đặt theo nhóm `list.*`, `pace.*`, `milestone.*`, `detail.*`, `overview.*`, `strip.*`, `now.*`, `phase.*`, `item.*`, `tag.*`, `cp.*`, `note.*`, `howHours.*`, `new.*`, `notFound.*`, `ed.*`, `count.*`, `toast.*`, `tpl.*`, `errors.*` và hai key gốc `noValue`, `loading`. **Không key nào là tiền tố (theo dấu `.`) của key khác.** Tham số `{{name}}`; số nhiều theo chuẩn i18next v4: `en` có `_one` + `_other`, `vi` chỉ `_other` (cột `vi` của dòng `_one` ghi `—`, không tạo key). Mã lỗi: `roadmap:errors.<CODE>` hoặc `roadmap:errors.<CODE>_<variant>`; `GOAL_NOT_FOUND` và `DATE_IN_FUTURE` **cũng có bản riêng** trong `roadmap:errors.*` (chữ của resource chính — "log time for a future date", "This goal doesn't exist anymore" — sai ngữ cảnh lộ trình), nên `error-messages.ts` phải tra namespace `roadmap` trước khi tới resource chính cho mọi lỗi sinh từ `RoadmapService`. Dòng `(= en)` miễn test quét "không lẫn tiếng Anh".
+
+**Định dạng (formatter mới / dùng lại, tất cả qua `useFormat()`):**
+
+| Loại | `en` | `vi` | Ví dụ (Q1) |
+| :- | :- | :- | :- |
+| **Giờ từ phút** `f.hours(minutes)` + đơn vị `format.hours` (resource chính, **có sẵn**) | tối đa **1 chữ số thập phân**, bỏ `.0`, làm tròn nửa ra xa 0 (`Math.round(phút / 6) / 10`), nhóm hàng nghìn theo locale; `{{n}} h` | cùng quy tắc; dấu phẩy thập phân; `{{n}} giờ` | 345 → `5.8 h` / `5,8 giờ`; 270 → `4.5 h`; 75 → `1.3 h` / `1,3 giờ`; 960 → `16 h` / `16 giờ`; 0 → `0 h`; 4 500 phút → `75 h` |
+| Phút (thẻ This week) | `75/480 min` (key `now.minutesOfTarget`) | `75/480 phút` | 75 phút, chỉ tiêu 8 giờ × 1 tuần = 480 |
+| Ngày ngắn đầy đủ (`f.dateShort`, **có sẵn**) | `YYYY-MM-DD` | `dd/MM/yyyy` | `2027-03-09` / `09/03/2027` |
+| Ngày–tháng (`f.dayMonth`, **mới**, nhãn truy cập dải ô) | `MM/dd` | `dd/MM` | `11/03` / `03/11` |
+| Khoảng ngày của mục (`f.itemRange(a, b)`, **mới**) | cùng năm: `YYYY-MM-DD – MM-DD`; khác năm: `YYYY-MM-DD – YYYY-MM-DD` | cùng năm: `dd/MM – dd/MM/yyyy`; khác năm: `dd/MM/yyyy – dd/MM/yyyy`; nối bằng ` – ` | W2: `2026-11-03 – 11-09` / `03/11 – 09/11/2026`; W20: `2027-03-09 – 03-15` / `09/03 – 15/03/2027`; W10 (qua năm): `2026-12-29 – 2027-01-04` |
+| Điểm checkpoint (`f.score(n)`, **mới**) | tối đa 1 chữ số thập phân, bỏ `.0`: `5`, `7.5`, `32` | `5`, `7,5`, `32` | ô nhập điểm đọc/ghi theo locale; `7,5` ở `vi` lưu `7.5` |
+| Delta có dấu (dùng lại `signed0`) | `−2`, `+1`, `+0` (U+2212) | giống | CP2 18 / ngưỡng 20 → `−2` |
+| Số nguyên, đếm | `1,234` | `1.234` | `{{done}}/{{total}}` qua `f.int` |
+
+**Cách chọn biến thể chuỗi.** `weekBased` (mọi mục đủ 7 ngày): dùng `pace.behindWeeks_*`, `overview.doneWeeks`, `now.eyebrowWeek`, `now.eyebrowIndexed`, `now.progressLabel`, `tag.currentWeek`, `strip.state.currentWeek`; ngược lại `pace.behindItems_*`, `overview.doneItems`, `now.eyebrowItem`, `now.eyebrow`, `now.progressLabelItem`, `tag.currentItem`, `strip.state.current`. Mức pace: `warn` → `pace.subWarn`; `crit` → `pace.subCrit`. `linkState`: `none` → `overview.hoursNone`; `missing` → `overview.hoursMissing`; `archived` → `overview.hoursArchived`; hàng danh sách: `list.row.unlinked` / `list.row.missing` / `list.row.linkedArchived`. Khoảng cách mốc chính: `> 0` → `milestone.in_*` (hàng) và số + `milestone.unit_*` (chi tiết); `= 0` → `milestone.today` / `milestone.todayValue`; `< 0` → `milestone.past` / `milestone.pastValue`. Checkpoint: `cp.state.<pass|below|recorded|pending>` và `cp.sr.<…>` cùng khoá.
+
+#### 7.9.1 Nguồn A — 6 key vào resource chính (`en.json` / `vi.json`)
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `nav.roadmaps` | M17 | nhãn tab / sidebar thứ ba; cũng dùng làm tên trang cho `doc.title` | `Big goals` | `Mục tiêu lớn` |
+| `settings.account.roadmapsUnavailable` | M18 | `.hint` trong card Account (A5) **và** `<p role="status">` đầu S11, khi `SyncStatus.roadmapsUnavailable` | `Big goals can't sync yet because your account is missing their tables. Changes to them stay on this device and upload once that's fixed. Goals and entries sync as usual.` | `Mục tiêu lớn chưa đồng bộ được vì tài khoản của bạn chưa có bảng dữ liệu cho chúng. Thay đổi ở đó vẫn nằm trên thiết bị này và sẽ được tải lên khi sự cố được khắc phục. Mục tiêu và lần ghi vẫn đồng bộ như thường.` |
+| `import.roadmaps` | M17 | D3, thân; **chỉ khi** file `schemaVersion 2` hoặc máy có ≥ 1 lộ trình. `{{n}}` = số lộ trình trong file, `{{cur}}` = trên máy | `Big goals: {{n}} in this backup, {{cur}} on this device now. Importing replaces them.` | `Mục tiêu lớn: {{n}} trong bản sao lưu, hiện có {{cur}} trên thiết bị này. Nhập sẽ thay thế chúng.` |
+| `import.roadmapsKept` | M17 | D3, khi file `schemaVersion 1` và máy có ≥ 1 lộ trình. `{{cur}}` = số lộ trình trên máy | `Big goals: this older backup has none, so the {{cur}} on this device are kept. Links to goals that aren't in the backup are removed.` | `Mục tiêu lớn: bản sao lưu cũ này không có, nên {{cur}} mục tiêu lớn trên thiết bị này được giữ lại. Liên kết tới mục tiêu không có trong bản sao lưu sẽ bị gỡ.` |
+| `goal.detail.roadmapLabel` | M19 | Goal detail: nhãn trước link tên lộ trình (`Part of roadmap` + link) | `Part of roadmap` | `Thuộc lộ trình` |
+| `goal.delete.roadmapNote` | M19 | D2 (Goals + Goal detail): đoạn thêm khi goal đang thuộc lộ trình; `{{title}}` = tên lộ trình (nhiều → nối `, `) | `This goal is part of the roadmap "{{title}}". The roadmap stays, but it loses its link and shows study time as —.` | `Mục tiêu này thuộc lộ trình "{{title}}". Lộ trình vẫn được giữ, nhưng sẽ mất liên kết và hiện giờ học là —.` |
+
+Không key nào dùng số nhiều (số ở `{{n}}`, `{{cur}}` là số thuần; tên "mục tiêu lớn" không đổi theo số). Hàng xóm có sẵn được **dùng lại, không đổi**: `errors.loadViewTitle/Body` (ViewError), `errors.WRITE_FAILED`, `errors.IMPORT_*`, `format.hours`, `format.minutes`, `format.dateRange`, `common.loading`, `settings.language.option.*`. Các key A đều có cả `en` và `vi`; `nav.roadmaps` ≤ 12 ký tự ở `vi` (ngoại lệ có chủ đích của quy tắc ≤ 10, 3.1).
+
+#### 7.9.2 Nguồn B — namespace `roadmap` (`roadmap.en.json` / `roadmap.vi.json`)
+
+Các bảng dưới có cùng cột như 7.6: `Key` (không gồm tiền tố namespace), `MS`, `Ngữ cảnh`, `en`, `vi`.
+
+**Gốc, danh sách S11, không-tìm-thấy**
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `noValue` | M17 | giá trị không có (giờ khi chưa liên kết, chỉ tiêu, ngưỡng) | `—` | `—` (= en) |
+| `loading` | M17 | chữ ẩn của skeleton (S11, S13, S14) | `Loading…` | `Đang tải…` |
+| `list.title` | M17 | h1 S11 | `Big goals` | `Mục tiêu lớn` |
+| `list.intro` | M17 | câu dưới h1 | `Plans that run for weeks or months. Study time comes from the goal you link.` | `Những kế hoạch kéo dài nhiều tuần hay nhiều tháng. Giờ học lấy từ mục tiêu bạn liên kết.` |
+| `list.listLabel` | M17 | `aria-label` của `<ul>` | `Your roadmaps` | `Các lộ trình của bạn` |
+| `list.empty` | M17 | tiêu đề trạng thái rỗng | `No big goals yet` | `Chưa có mục tiêu lớn nào` |
+| `list.emptyBody` | M17 | thân trạng thái rỗng | `A roadmap breaks a big goal into weeks or stages, tracks what you've finished, and counts the time you log on a goal you link. Start empty, or load the 21-week QPT plan.` | `Lộ trình chia một mục tiêu lớn thành các tuần hoặc giai đoạn, theo dõi phần đã xong và cộng giờ bạn ghi ở mục tiêu được liên kết. Hãy bắt đầu từ trống, hoặc nạp kế hoạch QPT 21 tuần.` |
+| `list.createBlank` | M19 | nút primary (đầu trang, trạng thái rỗng) | `Create empty roadmap` | `Tạo lộ trình trống` |
+| `list.createTemplate` | M20 | nút secondary (S11, banner S12); tiêu đề D7 dùng `tpl.title` | `Create from QPT 21-week template` | `Tạo từ mẫu QPT 21 tuần` |
+| `list.row.linked` | M17 | dòng goal của hàng | `Goal: {{goal}}` | `Mục tiêu: {{goal}}` |
+| `list.row.linkedArchived` | M17 | goal đã archive | `Goal: {{goal}} (archived)` | `Mục tiêu: {{goal}} (đã lưu trữ)` |
+| `list.row.unlinked` | M17 | `linkState none` | `No goal linked` | `Chưa liên kết mục tiêu` |
+| `list.row.missing` | M17 | `linkState missing` | `Linked goal was deleted` | `Mục tiêu liên kết đã bị xóa` |
+| `list.row.progress` | M17 | xong/tổng | `Done {{done}}/{{total}}` | `Xong {{done}}/{{total}}` |
+| `list.row.hours` | M17 | giờ đã học / kế hoạch; `{{done}}`, `{{plan}}` đã gồm đơn vị | `Studied {{done}} of {{plan}}` | `Đã học {{done}} / {{plan}}` |
+| `list.row.hoursOnly` | M17 | có goal, không chỉ tiêu | `Studied {{done}}` | `Đã học {{done}}` |
+| `list.row.hoursNone` | M17 | không goal / goal đã xoá | `Study time: —` | `Giờ học: —` |
+| `notFound.title` | M19 | S13/S14 id không tồn tại | `Big goal not found` | `Không tìm thấy mục tiêu lớn` |
+| `notFound.body` | M19 | thân | `This roadmap doesn't exist anymore. It may have been deleted on another device.` | `Lộ trình này không còn nữa. Có thể nó đã bị xóa trên thiết bị khác.` |
+| `notFound.action` | M19 | nút → `#/roadmaps` | `Go to Big goals` | `Đến Mục tiêu lớn` |
+
+**Nhịp độ và mốc chính (dùng ở S11 và S13)**
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `pace.notStarted` | M17 | chip, trước ngày bắt đầu | `Not started` | `Chưa bắt đầu` |
+| `pace.onTrack` | M17 | chip, không mục quá hạn | `On track` | `Đúng tiến độ` |
+| `pace.behindWeeks_one` | M17 | chip cảnh báo, lộ trình theo tuần, `{{count}}` = 1 | `{{count}} week behind` | — |
+| `pace.behindWeeks_other` | M17 | chip, `{{count}}` ≥ 2 (nghiêm trọng) | `{{count}} weeks behind` | `Chậm {{count}} tuần` |
+| `pace.behindItems_one` | M17 | như trên, không theo tuần (A-84) | `{{count}} item behind` | — |
+| `pace.behindItems_other` | M17 | | `{{count}} items behind` | `Chậm {{count}} mục` |
+| `pace.completed` | M17 | chip, mọi mục xong | `Completed` | `Hoàn thành` |
+| `pace.empty` | M17 | chip, lộ trình không có mục | `No items yet` | `Chưa có mục nào` |
+| `pace.subNotStarted` | M19 | câu phụ; `{{date}}` = ngày bắt đầu | `Starts {{date}}` | `Bắt đầu {{date}}` |
+| `pace.subOnTrack` | M19 | câu phụ | `Nothing is overdue.` | `Không có gì quá hạn.` |
+| `pace.subWarn` | M19 | câu phụ, mức cảnh báo (câu gợi ý tổng quát, A-84) | `Use a spare week or day to catch up.` | `Dùng một tuần hoặc ngày dự phòng để bù.` |
+| `pace.subCrit` | M19 | câu phụ, mức nghiêm trọng | `Consider moving your planned dates or milestone.` | `Cân nhắc dời các ngày kế hoạch hoặc mốc chính.` |
+| `pace.subCompleted` | M19 | câu phụ | `Every item is finished.` | `Mọi mục đều đã xong.` |
+| `pace.subEmpty` | M19 | câu phụ | `Add items while editing the roadmap to start tracking.` | `Hãy thêm mục khi sửa lộ trình để bắt đầu theo dõi.` |
+| `milestone.defaultLabel` | M19 | nhãn mốc khi người dùng để trống tên | `Milestone` | `Mốc chính` |
+| `milestone.line` | M17 | dòng mốc ở hàng S11 | `{{label}}: {{when}}` | `{{label}}: {{when}}` (= en) |
+| `milestone.in_one` | M17 | `{{when}}` khi còn 1 ngày | `{{count}} day left` | — |
+| `milestone.in_other` | M17 | `{{when}}` | `{{count}} days left` | `còn {{count}} ngày` |
+| `milestone.today` | M17 | `{{when}}` khi mốc là hôm nay | `today` | `hôm nay` |
+| `milestone.past` | M17 | `{{when}}` khi mốc đã qua | `passed` | `đã qua` |
+| `milestone.unit_one` | M19 | đơn vị nhỏ cạnh số lớn ở S13 (`{{count}}` = 1) | `day left` | — |
+| `milestone.unit_other` | M19 | | `days left` | `ngày nữa` |
+| `milestone.todayValue` | M19 | giá trị chữ ở S13 | `Today` | `Hôm nay` |
+| `milestone.pastValue` | M19 | giá trị chữ ở S13 | `Passed` | `Đã qua` |
+| `milestone.date` | M19 | dòng phụ dưới số ngày; `{{date}}` ngày ngắn đầy đủ | `On {{date}}` | `Ngày {{date}}` |
+
+**Chi tiết S13: đầu trang, tổng quan, dải ô, thẻ "This week"**
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `detail.back` | M19 | link đầu trang (kèm `←`) | `All big goals` | `Tất cả mục tiêu lớn` |
+| `detail.edit` | M19 | nút secondary → editor; cũng là nút của EmptyState "chưa có mục" | `Edit roadmap` | `Sửa lộ trình` |
+| `detail.goal` | M19 | nhãn trước link tên goal | `Goal` | `Mục tiêu` |
+| `detail.goalArchived` | M19 | tag cạnh tên goal đã archive | `archived` | `đã lưu trữ` |
+| `detail.goalNone` | M19 | `none` | `No goal linked` | `Chưa liên kết mục tiêu` |
+| `detail.goalMissing` | M19 | `missing` | `The linked goal was deleted` | `Mục tiêu liên kết đã bị xóa` |
+| `detail.noItems` | M19 | tiêu đề EmptyState (lộ trình không mục) | `No items yet` | `Chưa có mục nào` |
+| `detail.noItemsBody` | M19 | thân | `Add phases and items to start tracking this roadmap.` | `Hãy thêm giai đoạn và mục để bắt đầu theo dõi lộ trình này.` |
+| `overview.label` | M19 | tiêu đề section (eyebrow) | `Overview` | `Tổng quan` |
+| `overview.pace` | M19 | nhãn ô 1 | `Pace` | `Nhịp độ` |
+| `overview.doneWeeks` | M19 | nhãn ô 2 (theo tuần) | `Weeks done` | `Tuần đã xong` |
+| `overview.doneItems` | M19 | nhãn ô 2 (không theo tuần) | `Items done` | `Mục đã xong` |
+| `overview.doneValue` | M19 | giá trị ô 2 | `{{done}}/{{total}}` | `{{done}}/{{total}}` (= en) |
+| `overview.hours` | M19 | nhãn ô 3 | `Study time` | `Giờ đã học` |
+| `overview.hoursPlan` | M19 | câu phụ ô 3 (khi có chỉ tiêu); `{{plan}}` gồm đơn vị | `Planned through this week: {{plan}}` | `Kế hoạch đến hết tuần này: {{plan}}` |
+| `overview.hoursNone` | M19 | câu phụ ô 3, chưa liên kết | `Link a goal to count study time.` | `Liên kết một mục tiêu để tính giờ học.` |
+| `overview.hoursMissing` | M19 | câu phụ, goal đã xoá | `The linked goal was deleted.` | `Mục tiêu liên kết đã bị xóa.` |
+| `overview.hoursArchived` | M19 | câu phụ, goal archive | `The linked goal is archived. Its time still counts.` | `Mục tiêu liên kết đã được lưu trữ. Giờ học vẫn được tính.` |
+| `overview.linkGoal` | M19 | link sau câu none/missing → editor | `Link a goal` | `Liên kết mục tiêu` |
+| `strip.label` | M19 | `aria-label` của `<ul>` dải ô | `Roadmap items, in order` | `Các mục của lộ trình, theo thứ tự` |
+| `strip.cell` | M19 | tên truy cập mỗi ô: tiêu đề, khoảng ngày (`f.dayMonth`), trạng thái | `{{title}}, {{start}} – {{end}}: {{state}}` | `{{title}}, {{start}} – {{end}}: {{state}}` (= en) |
+| `strip.state.done` | M19 | `{{state}}` | `done` | `đã xong` |
+| `strip.state.currentWeek` | M19 | `{{state}}`, theo tuần | `this week` | `tuần này` |
+| `strip.state.current` | M19 | `{{state}}`, không theo tuần | `current` | `đang diễn ra` |
+| `strip.state.overdue` | M19 | `{{state}}` | `overdue, not done` | `quá hạn, chưa xong` |
+| `strip.state.upcoming` | M19 | `{{state}}` | `upcoming` | `sắp tới` |
+| `strip.legend.done` | M19 | chú giải | `Done` | `Đã xong` |
+| `strip.legend.current` | M19 | chú giải (không theo tuần dùng `tag.currentItem`) | `This week` | `Tuần này` |
+| `strip.legend.overdue` | M19 | chú giải | `Overdue, not done` | `Quá hạn chưa xong` |
+| `now.eyebrowWeek` | M19 | eyebrow thẻ, theo tuần | `This week` | `Tuần này` |
+| `now.eyebrowItem` | M19 | eyebrow thẻ, không theo tuần | `Current item` | `Mục hiện tại` |
+| `now.eyebrowIndexed` | M19 | `{{label}}` = một trong hai trên, `{{n}}` thứ tự, `{{range}}` = `f.itemRange` | `{{label}} · W{{n}} · {{range}}` | `{{label}} · W{{n}} · {{range}}` (= en) |
+| `now.eyebrow` | M19 | không theo tuần (không `W{{n}}`) | `{{label}} · {{range}}` | `{{label}} · {{range}}` (= en) |
+| `now.minutesOfTarget` | M19 | số lớn thẻ (có chỉ tiêu và goal) | `{{done}}/{{target}} min` | `{{done}}/{{target}} phút` |
+| `now.minutesOnly` | M19 | có goal, không chỉ tiêu | `{{done}} min studied` | `Đã học {{done}} phút` |
+| `now.progressLabel` | M19 | `aria-label` thanh giờ (theo tuần) | `Study time this week` | `Giờ học tuần này` |
+| `now.progressLabelItem` | M19 | (không theo tuần) | `Study time for this item` | `Giờ học của mục này` |
+| `now.progressValue` | M19 | `aria-valuetext` | `{{done}} of {{target}} minutes` | `{{done}} trên {{target}} phút` |
+| `now.daysLeft_one` | M19 | `{{count}}` = 1 | `{{count}} day left` | — |
+| `now.daysLeft_other` | M19 | `{{count}}` ≥ 1 (≥ 2 ở en) | `{{count}} days left` | `Còn {{count}} ngày` |
+| `now.lastDay` | M19 | `daysLeft = 0` | `Last day` | `Ngày cuối` |
+| `now.beforeStart` | M19 | trước lộ trình (Q1d) | `Starts {{date}}. First up: {{title}}.` | `Bắt đầu {{date}}. Mục đầu tiên: {{title}}.` |
+| `now.after` | M19 | sau lộ trình | `The planned dates ended on {{date}}.` | `Các ngày kế hoạch đã kết thúc ngày {{date}}.` |
+| `now.gap` | M19 | trong lộ trình nhưng hôm nay không thuộc mục nào | `Nothing is planned for today.` | `Hôm nay không có mục nào trong kế hoạch.` |
+
+**Phase, mục, nhãn (S13)**
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `phase.progress` | M19 | đếm cạnh tên phase | `Done {{done}}/{{total}}` | `Xong {{done}}/{{total}}` |
+| `item.markDone` | M19 | nút thẻ This week | `Mark done` | `Đánh dấu xong` |
+| `item.undoDone` | M19 | nút khi mục đã xong | `Mark as not done` | `Bỏ đánh dấu xong` |
+| `item.checkAria` | M19 | tên truy cập checkbox của hàng | `Mark {{title}} as done` | `Đánh dấu xong: {{title}}` |
+| `item.statusDone` | M19 | vùng `role="status"` ẩn sau khi tick | `{{title}} marked done` | `Đã đánh dấu xong: {{title}}` |
+| `item.statusUndone` | M19 | sau khi bỏ tick | `{{title}} marked not done` | `Đã bỏ đánh dấu xong: {{title}}` |
+| `item.planned` | M19 | meta; `{{range}}` = `f.itemRange` | `Planned {{range}}` | `Kế hoạch {{range}}` |
+| `item.hoursLabel` | M19 | chữ ẩn trước giờ của mục | `Study time` | `Giờ học` |
+| `item.details` | M19 | nút mở/đóng vùng ngày + ghi chú | `Dates & note` | `Ngày & ghi chú` |
+| `item.actualStart` | M19 | label DateField | `Actual start` | `Bắt đầu thực tế` |
+| `item.actualEnd` | M19 | label DateField | `Actual end` | `Kết thúc thực tế` |
+| `item.today` | M19 | chữ nút | `Today` | `Hôm nay` |
+| `item.todayAriaStart` | M19 | tên truy cập nút (chứa chữ hiển thị, WCAG 2.5.3) | `Today: set actual start of {{title}}` | `Hôm nay: đặt ngày bắt đầu thực tế của {{title}}` |
+| `item.todayAriaEnd` | M19 | | `Today: set actual end of {{title}}` | `Hôm nay: đặt ngày kết thúc thực tế của {{title}}` |
+| `item.clear` | M19 | chữ nút xoá ngày | `Clear` | `Xóa` |
+| `item.clearAriaStart` | M19 | tên truy cập | `Clear actual start of {{title}}` | `Xóa ngày bắt đầu thực tế của {{title}}` |
+| `item.clearAriaEnd` | M19 | xoá ngày kết thúc = bỏ tick | `Clear actual end of {{title}}` | `Xóa ngày kết thúc thực tế của {{title}}` |
+| `item.noteLabel` | M19 | label textarea | `Note` | `Ghi chú` |
+| `item.notePlaceholder` | M19 | placeholder | `Mistakes, topics to review…` | `Câu hay sai, phần cần ôn…` |
+| `item.noteCounter` | M19 | bộ đếm (S13 và S14) | `{{n}}/1000` | `{{n}}/1000` (= en) |
+| `tag.currentWeek` | M19 | tag mục hiện tại (theo tuần) | `This week` | `Tuần này` |
+| `tag.currentItem` | M19 | (không theo tuần; cũng chú giải dải ô) | `Now` | `Hiện tại` |
+| `tag.overdue` | M19 | quá hạn chưa xong | `Overdue` | `Quá hạn` |
+| `tag.inProgress` | M19 | có ngày bắt đầu, chưa xong | `In progress` | `Đang học` |
+| `tag.onTime` | M19 | xong đúng `plannedEnd` | `On time` | `Đúng hạn` |
+| `tag.early_one` | M19 | xong sớm 1 ngày | `Early by {{count}} day` | — |
+| `tag.early_other` | M19 | | `Early by {{count}} days` | `Sớm {{count}} ngày` |
+| `tag.late_one` | M19 | | `Late by {{count}} day` | — |
+| `tag.late_other` | M19 | | `Late by {{count}} days` | `Trễ {{count}} ngày` |
+| `tag.studied_one` | M19 | khi có ngày bắt đầu thực tế | `studied {{count}} day` | — |
+| `tag.studied_other` | M19 | | `studied {{count}} days` | `học {{count}} ngày` |
+| `tag.combine` | M19 | ghép nhãn sớm/trễ + học | `{{label}} · {{studied}}` | `{{label}} · {{studied}}` (= en) |
+| `note.title` | M19 | eyebrow ghi chú lộ trình | `Notes` | `Ghi chú` |
+| `howHours.summary` | M19 | `<details>` | `How study time is counted` | `Cách tính giờ học` |
+| `howHours.body` | M19 | quy tắc một-ngày-một-mục (FR-71, A-80) | `Study time comes from the entries on the linked goal. Each day's minutes count toward one item: the one you've started or finished on that date, otherwise the one whose planned dates include it. Days outside every item aren't counted here (they still count on the goal).` | `Giờ học lấy từ các lần ghi của mục tiêu được liên kết. Mỗi ngày chỉ tính cho một mục: mục bạn đã bắt đầu hoặc đã xong vào ngày đó, nếu không có thì mục có ngày kế hoạch bao gồm ngày ấy. Ngày nằm ngoài mọi mục không tính ở đây (vẫn tính ở mục tiêu).` |
+
+**Checkpoint (S13 bảng + biểu đồ, M20)**
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `cp.title` | M20 | eyebrow section | `Checkpoints` | `Điểm kiểm tra` |
+| `cp.colName` | M20 | `th` | `Checkpoint` | `Mốc` |
+| `cp.colThreshold` | M20 | `th` | `Threshold` | `Ngưỡng` |
+| `cp.colScore` | M20 | `th` | `Score` | `Điểm` |
+| `cp.week` | M20 | tuần của lộ trình chứa ngày (A-91); ngoài khoảng → ngày ngắn đầy đủ | `W{{n}}` | `W{{n}}` (= en) |
+| `cp.threshold` | M20 | ô ngưỡng; không ngưỡng → `noValue` | `≥ {{value}}` | `≥ {{value}}` (= en) |
+| `cp.outOf` | M20 | hậu tố ô điểm | `/ {{max}}` | `/ {{max}}` (= en) |
+| `cp.scoreAria` | M20 | tên truy cập ô nhập điểm | `Score for {{title}} (out of {{max}})` | `Điểm của {{title}} (trên {{max}})` |
+| `cp.saved` | M20 | vùng `role="status"` ẩn sau khi lưu điểm | `Score saved for {{title}}` | `Đã lưu điểm của {{title}}` |
+| `cp.state.pass` | M20 | `score ≥ threshold` | `Passed` | `Đạt` |
+| `cp.state.below` | M20 | `score < threshold` (kèm delta `−2`) | `Below threshold` | `Dưới ngưỡng` |
+| `cp.state.recorded` | M20 | có điểm, không ngưỡng | `Recorded` | `Đã ghi` |
+| `cp.state.pending` | M20 | chưa có điểm | `No score yet` | `Chưa có điểm` |
+| `cp.chartTitle` | M20 | `figcaption` | `Scores vs. thresholds` | `Điểm so với ngưỡng` |
+| `cp.legendThreshold` | M20 | chú giải vạch | `Threshold` | `Ngưỡng` |
+| `cp.scalePercent` | M20 | chú thích khi `chartScale 'percent'` | `Scores are shown as a percent of each checkpoint's maximum.` | `Điểm được hiển thị theo phần trăm của điểm tối đa mỗi mốc.` |
+| `cp.sr.intro_one` | M20 | `aria-label` SVG; `{{items}}` = các câu dưới nối `; ` | `{{count}} checkpoint, in date order. {{items}}` | — |
+| `cp.sr.intro_other` | M20 | | `{{count}} checkpoints, in date order. {{items}}` | `{{count}} điểm kiểm tra, theo thứ tự ngày. {{items}}` |
+| `cp.sr.pass` | M20 | | `{{title}}: {{score}} of {{max}}, threshold {{threshold}}, passed` | `{{title}}: {{score}} trên {{max}}, ngưỡng {{threshold}}, đạt` |
+| `cp.sr.below` | M20 | | `{{title}}: {{score}} of {{max}}, threshold {{threshold}}, below threshold` | `{{title}}: {{score}} trên {{max}}, ngưỡng {{threshold}}, dưới ngưỡng` |
+| `cp.sr.recorded` | M20 | | `{{title}}: {{score}} of {{max}}, no threshold` | `{{title}}: {{score}} trên {{max}}, không có ngưỡng` |
+| `cp.sr.pending` | M20 | | `{{title}}: no score yet` | `{{title}}: chưa có điểm` |
+
+**Tạo mới (S12), editor (S14), hộp thoại xoá (D8 … D11), đếm, toast**
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `new.title` | M19 | h1 S12 | `New roadmap` | `Lộ trình mới` |
+| `new.srForm` | M19 | `aria-label` form S12 | `New roadmap form` | `Biểu mẫu lộ trình mới` |
+| `new.templateHint` | M20 | banner đầu S12 (trước nút `list.createTemplate`) | `Prefer a ready-made plan?` | `Muốn dùng kế hoạch dựng sẵn?` |
+| `new.afterCreate` | M19 | `.hint` dưới nút Create | `After you create the roadmap, you can add phases, items and checkpoints.` | `Sau khi tạo lộ trình, bạn có thể thêm giai đoạn, mục và điểm kiểm tra.` |
+| `ed.titleEdit` | M19 | h1 S14 | `Edit roadmap` | `Sửa lộ trình` |
+| `ed.srForm` | M19 | `aria-label` form thông tin S14 | `Edit roadmap form` | `Biểu mẫu sửa lộ trình` |
+| `ed.summary_one` | M19 | `role="alert"` đầu form | `Fix {{count}} field to save.` | — |
+| `ed.summary_other` | M19 | | `Fix {{count}} fields to save.` | `Hãy sửa {{count}} ô để lưu.` |
+| `ed.saving` | M19 | nút khi lưu | `Saving…` | `Đang lưu…` |
+| `ed.titleLabel` | M19 | label | `Title` | `Tiêu đề` |
+| `ed.titlePlaceholder` | M19 | placeholder | `e.g. Spanish B1` | `Ví dụ: Tiếng Tây Ban Nha B1` |
+| `ed.titleCounter` | M19 | bộ đếm 80 (lộ trình, phase, checkpoint) | `{{n}}/80` | `{{n}}/80` (= en) |
+| `ed.noteLabel` | M19 | label | `Notes (optional)` | `Ghi chú (không bắt buộc)` |
+| `ed.noteCounter` | M19 | | `{{n}}/2000` | `{{n}}/2000` (= en) |
+| `ed.noteHint` | M19 | `.hint` | `Shown as plain text on the roadmap. Good for a weekly routine.` | `Hiện dạng chữ thường trên lộ trình. Hợp để ghi nhịp học mỗi tuần.` |
+| `ed.goalLabel` | M19 | label picker (cũng ở D7) | `Linked goal (optional)` | `Mục tiêu liên kết (không bắt buộc)` |
+| `ed.goalNone` | M19 | tuỳ chọn đầu | `No goal` | `Không liên kết` |
+| `ed.goalHint` | M19 | `.hint` (A-78) | `Study time is counted from this goal's entries. Archived goals and goals already used by another roadmap aren't listed.` | `Giờ học được tính từ các lần ghi của mục tiêu này. Không liệt kê mục tiêu đã lưu trữ hoặc đã thuộc lộ trình khác.` |
+| `ed.goalArchivedOption` | M19 | tuỳ chọn khi goal đang liên kết đã archive | `{{name}} (archived)` | `{{name}} (đã lưu trữ)` |
+| `ed.goalMissing` | M19 | goal liên kết đã bị xoá | `The linked goal was deleted. Choose another goal, or leave this empty.` | `Mục tiêu liên kết đã bị xóa. Hãy chọn mục tiêu khác, hoặc để trống.` |
+| `ed.goalNoGoals` | M19 | khi máy chưa có goal nào | `You have no goals to link yet.` | `Bạn chưa có mục tiêu nào để liên kết.` |
+| `ed.goalNoGoalsLink` | M19 | link → `#/goals/new` | `New goal` | `Mục tiêu mới` |
+| `ed.targetLabel` | M19 | label | `Weekly study target (hours, optional)` | `Chỉ tiêu giờ học mỗi tuần (giờ, không bắt buộc)` |
+| `ed.targetHint` | M19 | `.hint` | `Steps of 0.5, from 0.5 to 168. Used for the plan-to-date and this-week figures.` | `Bước 0,5, từ 0,5 đến 168. Dùng để tính kế hoạch đến nay và giờ tuần này.` |
+| `ed.hoursSuffix` | M19 | hậu tố ô số | `h` | `giờ` |
+| `ed.milestoneLabelLabel` | M19 | label tên mốc | `Milestone name (optional)` | `Tên mốc chính (không bắt buộc)` |
+| `ed.milestoneLabelPlaceholder` | M19 | placeholder | `e.g. Exam` | `Ví dụ: Thi QPT` |
+| `ed.milestoneLabelCounter` | M19 | | `{{n}}/40` | `{{n}}/40` (= en) |
+| `ed.milestoneDateLabel` | M19 | label | `Milestone date (optional)` | `Ngày mốc chính (không bắt buộc)` |
+| `ed.milestoneHint` | M19 | `.hint` | `Shows a countdown on the roadmap.` | `Hiện số ngày còn lại trên lộ trình.` |
+| `ed.create` | M19 | nút S12, D7 | `Create roadmap` | `Tạo lộ trình` |
+| `ed.saveDetails` | M19 | nút S14 | `Save details` | `Lưu thông tin` |
+| `ed.done` | M19 | nút cuối S14 → chi tiết | `Done` | `Xong` |
+| `ed.cancel` | M19 | nút Hủy (form con, dialog) | `Cancel` | `Hủy` |
+| `ed.phasesTitle` | M19 | eyebrow | `Phases` | `Giai đoạn` |
+| `ed.noPhases` | M19 | chưa có phase | `No phases yet. Add a phase, then add items to it.` | `Chưa có giai đoạn nào. Hãy thêm một giai đoạn, rồi thêm mục vào đó.` |
+| `ed.addPhase` | M19 | nút | `Add phase` | `Thêm giai đoạn` |
+| `ed.editPhase` | M19 | chữ nút | `Edit phase` | `Sửa giai đoạn` |
+| `ed.editPhaseAria` | M19 | tên truy cập | `Edit phase {{title}}` | `Sửa giai đoạn {{title}}` |
+| `ed.deletePhase` | M19 | chữ nút (cũng là nút xác nhận D9) | `Delete phase` | `Xóa giai đoạn` |
+| `ed.deletePhaseAria` | M19 | tên truy cập | `Delete phase {{title}}` | `Xóa giai đoạn {{title}}` |
+| `ed.phaseTitleLabel` | M19 | label | `Phase title` | `Tên giai đoạn` |
+| `ed.phaseNoteLabel` | M19 | label | `Phase note (optional)` | `Ghi chú giai đoạn (không bắt buộc)` |
+| `ed.phaseNotePlaceholder` | M19 | placeholder | `e.g. Course 1 · 34h` | `Ví dụ: Khóa 1 · 34h` |
+| `ed.phaseNoteCounter` | M19 | | `{{n}}/120` | `{{n}}/120` (= en) |
+| `ed.savePhase` | M19 | nút | `Save phase` | `Lưu giai đoạn` |
+| `ed.addItem` | M19 | nút cuối mỗi phase | `Add item` | `Thêm mục` |
+| `ed.noItemsInPhase` | M19 | phase rỗng | `No items in this phase.` | `Giai đoạn này chưa có mục nào.` |
+| `ed.editItem` | M19 | chữ nút | `Edit` | `Sửa` |
+| `ed.editItemAria` | M19 | tên truy cập | `Edit {{title}}` | `Sửa {{title}}` |
+| `ed.deleteItem` | M19 | chữ nút | `Delete` | `Xóa` |
+| `ed.deleteItemAria` | M19 | tên truy cập | `Delete {{title}}` | `Xóa {{title}}` |
+| `ed.itemTitleLabel` | M19 | label | `Item title` | `Tên mục` |
+| `ed.itemTitleCounter` | M19 | | `{{n}}/200` | `{{n}}/200` (= en) |
+| `ed.plannedStart` | M19 | label | `Planned start` | `Bắt đầu theo kế hoạch` |
+| `ed.plannedEnd` | M19 | label | `Planned end` | `Kết thúc theo kế hoạch` |
+| `ed.itemPhaseLabel` | M19 | label select (chuyển phase) | `Phase` | `Giai đoạn` |
+| `ed.itemNoteLabel` | M19 | label | `Item note (optional)` | `Ghi chú mục (không bắt buộc)` |
+| `ed.itemDatesHint` | M19 | `.hint` chỉ ở form thêm mục (A-83) | `We suggested 7 days right after the last item. Change them if you need to.` | `Đã gợi ý 7 ngày ngay sau mục cuối. Bạn có thể đổi nếu cần.` |
+| `ed.saveItem` | M19 | nút | `Save item` | `Lưu mục` |
+| `ed.moveUpAria` | M19 | tên truy cập nút `↑` (phase và mục) | `Move {{title}} up` | `Chuyển {{title}} lên` |
+| `ed.moveDownAria` | M19 | `↓` | `Move {{title}} down` | `Chuyển {{title}} xuống` |
+| `ed.movedStatus` | M19 | `role="status"` ẩn sau khi chuyển | `{{title}} moved to position {{pos}} of {{total}}` | `Đã chuyển {{title}} tới vị trí {{pos}}/{{total}}` |
+| `ed.addCp` | M20 | nút | `Add checkpoint` | `Thêm điểm kiểm tra` |
+| `ed.noCheckpoints` | M20 | chưa có checkpoint | `No checkpoints yet.` | `Chưa có điểm kiểm tra nào.` |
+| `ed.cpRow` | M20 | dòng phụ hàng checkpoint không ngưỡng | `{{date}} · max {{max}}` | `{{date}} · tối đa {{max}}` |
+| `ed.cpRowThreshold` | M20 | có ngưỡng | `{{date}} · max {{max}} · threshold {{threshold}}` | `{{date}} · tối đa {{max}} · ngưỡng {{threshold}}` |
+| `ed.editCpAria` | M20 | tên truy cập (chữ hiển thị `ed.editItem`) | `Edit {{title}}` | `Sửa {{title}}` |
+| `ed.deleteCpAria` | M20 | | `Delete {{title}}` | `Xóa {{title}}` |
+| `ed.cpNameLabel` | M20 | label | `Name` | `Tên` |
+| `ed.cpDateLabel` | M20 | label | `Date` | `Ngày` |
+| `ed.cpMaxLabel` | M20 | label | `Maximum score` | `Điểm tối đa` |
+| `ed.cpThresholdLabel` | M20 | label | `Threshold (optional)` | `Ngưỡng đạt (không bắt buộc)` |
+| `ed.cpScoreLabel` | M20 | label | `Score (optional)` | `Điểm (không bắt buộc)` |
+| `ed.cpNoteLabel` | M20 | label | `Note (optional)` | `Ghi chú (không bắt buộc)` |
+| `ed.cpNoteCounter` | M20 | | `{{n}}/280` | `{{n}}/280` (= en) |
+| `ed.cpNumberHint` | M20 | `.hint` dưới ô số | `Up to one decimal place.` | `Tối đa một chữ số thập phân.` |
+| `ed.saveCp` | M20 | nút | `Save checkpoint` | `Lưu điểm kiểm tra` |
+| `ed.dangerTitle` | M19 | eyebrow khối xoá | `Delete this roadmap` | `Xóa lộ trình này` |
+| `ed.deleteRoadmap` | M19 | nút khối xoá và nút xác nhận D8 | `Delete roadmap` | `Xóa lộ trình` |
+| `ed.deleteRoadmapTitle` | M19 | D8 tiêu đề | `Delete "{{title}}"?` | `Xóa "{{title}}"?` |
+| `ed.deleteRoadmapBody` | M19 | D8; `{{phases}}`, `{{items}}`, `{{checkpoints}}` = `count.*` | `This deletes the roadmap with its {{phases}}, {{items}} and {{checkpoints}}. Your goal and its entries are not affected. This can't be undone.` | `Thao tác này xóa lộ trình cùng {{phases}}, {{items}} và {{checkpoints}}. Mục tiêu và các lần ghi của nó không bị ảnh hưởng. Không thể hoàn tác.` |
+| `ed.deleteRoadmapBodyEmpty` | M19 | D8 khi lộ trình không có con | `This deletes the roadmap. Your goal and its entries are not affected. This can't be undone.` | `Thao tác này xóa lộ trình. Mục tiêu và các lần ghi của nó không bị ảnh hưởng. Không thể hoàn tác.` |
+| `ed.deletePhaseTitle` | M19 | D9 | `Delete phase "{{title}}"?` | `Xóa giai đoạn "{{title}}"?` |
+| `ed.deletePhaseBody_one` | M19 | D9, `{{count}}` = 1 mục | `This deletes the phase and its {{count}} item. This can't be undone.` | — |
+| `ed.deletePhaseBody_other` | M19 | D9 | `This deletes the phase and its {{count}} items. This can't be undone.` | `Thao tác này xóa giai đoạn và {{count}} mục của nó. Không thể hoàn tác.` |
+| `ed.deletePhaseBodyEmpty` | M19 | D9 phase rỗng | `This deletes the empty phase. This can't be undone.` | `Thao tác này xóa giai đoạn trống. Không thể hoàn tác.` |
+| `ed.deleteItemTitle` | M19 | D10 | `Delete "{{title}}"?` | `Xóa "{{title}}"?` |
+| `ed.deleteItemBody` | M19 | D10 | `This deletes the item with its dates and note. This can't be undone.` | `Thao tác này xóa mục cùng ngày và ghi chú của nó. Không thể hoàn tác.` |
+| `ed.deleteItemConfirm` | M19 | D10 nút | `Delete item` | `Xóa mục` |
+| `ed.deleteCpTitle` | M20 | D11 | `Delete "{{title}}"?` | `Xóa "{{title}}"?` |
+| `ed.deleteCpBody` | M20 | D11 | `This deletes the checkpoint and its score. This can't be undone.` | `Thao tác này xóa điểm kiểm tra và điểm đã ghi. Không thể hoàn tác.` |
+| `ed.deleteCpConfirm` | M20 | D11 nút | `Delete checkpoint` | `Xóa điểm kiểm tra` |
+| `count.phases_one` | M19 | cụm đếm dùng trong D8 | `{{count}} phase` | — |
+| `count.phases_other` | M19 | | `{{count}} phases` | `{{count}} giai đoạn` |
+| `count.items_one` | M19 | | `{{count}} item` | — |
+| `count.items_other` | M19 | | `{{count}} items` | `{{count}} mục` |
+| `count.checkpoints_one` | M19 | | `{{count}} checkpoint` | — |
+| `count.checkpoints_other` | M19 | | `{{count}} checkpoints` | `{{count}} điểm kiểm tra` |
+| `toast.created` | M19 | sau Create (S12) | `Roadmap created` | `Đã tạo lộ trình` |
+| `toast.saved` | M19 | sau Save details | `Roadmap saved` | `Đã lưu lộ trình` |
+| `toast.deleted` | M19 | sau D8 | `Roadmap deleted` | `Đã xóa lộ trình` |
+| `toast.phaseDeleted` | M19 | sau D9 | `Phase deleted` | `Đã xóa giai đoạn` |
+| `toast.itemDeleted` | M19 | sau D10 | `Item deleted` | `Đã xóa mục` |
+| `toast.checkpointDeleted` | M20 | sau D11 | `Checkpoint deleted` | `Đã xóa điểm kiểm tra` |
+| `toast.templateCreated` | M20 | sau D7 | `Roadmap created from the QPT template` | `Đã tạo lộ trình từ mẫu QPT` |
+
+**D7 — hộp thoại mẫu QPT (M20)**
+
+| Key | MS | Ngữ cảnh | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `tpl.title` | M20 | tiêu đề | `Create from QPT 21-week template` | `Tạo từ mẫu QPT 21 tuần` |
+| `tpl.body` | M20 | thân | `Creates a 21-week plan with 5 phases, 21 weekly items, 5 score checkpoints and an 8-hour weekly target. You can edit everything afterwards.` | `Tạo kế hoạch 21 tuần gồm 5 giai đoạn, 21 mục theo tuần, 5 điểm kiểm tra và chỉ tiêu 8 giờ mỗi tuần. Bạn có thể sửa mọi thứ sau đó.` |
+| `tpl.startLabel` | M20 | label (mặc định hôm nay) | `Start date` | `Ngày bắt đầu` |
+| `tpl.preview` | M20 | xem trước, ngày ngắn đầy đủ: bắt đầu, `startDate + 19 × 7`, `startDate + 21 × 7 − 1` | `Week 1: {{start}}. Week 20 (QPT exam): {{exam}}. The last week ends {{end}}.` | `Tuần 1: {{start}}. Tuần 20 (thi QPT): {{exam}}. Tuần cuối kết thúc ngày {{end}}.` |
+| `tpl.languageName` | M20 | tên ngôn ngữ hiện tại, truyền vào `tpl.langNote` | `English` | `Tiếng Việt` |
+| `tpl.langNote` | M20 | `.hint` (A-86) | `Created in {{language}}. Changing the app language later won't translate it.` | `Tạo bằng {{language}}. Đổi ngôn ngữ app sau này sẽ không dịch lại nội dung này.` |
+| `tpl.creating` | M20 | nút khi bận | `Creating…` | `Đang tạo…` |
+
+**Lỗi `roadmap:errors.*` (ARCH §5.4 v8.0; hiển thị inline theo field hoặc Alert đầu form/dialog)**
+
+| Key | MS | Field / nơi hiện | `en` | `vi` |
+| :- | :- | :- | :- | :- |
+| `errors.ROADMAP_NOT_FOUND_roadmap` | M19 | Alert (S13/S14 khi ghi) | `This roadmap doesn't exist anymore. It may have been deleted.` | `Lộ trình này không còn nữa. Có thể nó đã bị xóa.` |
+| `errors.ROADMAP_NOT_FOUND_phase` | M19 | Alert | `This phase doesn't exist anymore. It may have been deleted.` | `Giai đoạn này không còn nữa. Có thể nó đã bị xóa.` |
+| `errors.ROADMAP_NOT_FOUND_item` | M19 | Alert | `This item doesn't exist anymore. It may have been deleted.` | `Mục này không còn nữa. Có thể nó đã bị xóa.` |
+| `errors.ROADMAP_NOT_FOUND_checkpoint` | M20 | Alert | `This checkpoint doesn't exist anymore. It may have been deleted.` | `Điểm kiểm tra này không còn nữa. Có thể nó đã bị xóa.` |
+| `errors.ROADMAP_TITLE_REQUIRED` | M19 | `title` của lộ trình, phase, mục, checkpoint | `Enter a title.` | `Hãy nhập tiêu đề.` |
+| `errors.ROADMAP_TEXT_TOO_LONG_title` | M19 | `title`; `{{max}}` 80/200 | `The title must be {{max}} characters or fewer.` | `Tiêu đề tối đa {{max}} ký tự.` |
+| `errors.ROADMAP_TEXT_TOO_LONG_note` | M19 | `note` (lộ trình 2000, phase 120, mục 1000, checkpoint 280) | `The note must be {{max}} characters or fewer.` | `Ghi chú tối đa {{max}} ký tự.` |
+| `errors.ROADMAP_TEXT_TOO_LONG_milestoneLabel` | M19 | `milestoneLabel` (40) | `The milestone name must be {{max}} characters or fewer.` | `Tên mốc chính tối đa {{max}} ký tự.` |
+| `errors.ROADMAP_DATE_INVALID_format` | M19 | mọi ô ngày | `Enter a valid date.` | `Hãy nhập một ngày hợp lệ.` |
+| `errors.ROADMAP_DATE_INVALID_order` | M19 | `plannedEnd` hoặc `actualEnd` | `The end date can't be before the start date.` | `Ngày kết thúc không được trước ngày bắt đầu.` |
+| `errors.ROADMAP_DATE_INVALID_itemTooLong` | M19 | `plannedEnd` | `An item can last up to 366 days. Choose a shorter range.` | `Một mục dài tối đa 366 ngày. Hãy chọn khoảng ngắn hơn.` |
+| `errors.ROADMAP_DATE_INVALID_roadmapTooLong` | M19 | `plannedEnd`/`plannedStart` | `A roadmap can cover up to 1,827 days (about 5 years), from its first start to its last end. Shorten or move some items.` | `Một lộ trình trải dài tối đa 1.827 ngày (khoảng 5 năm), từ ngày bắt đầu đầu tiên đến ngày kết thúc cuối cùng. Hãy rút ngắn hoặc dời bớt mục.` |
+| `errors.DATE_IN_FUTURE` | M19 | `actualStart`/`actualEnd` | `Actual dates can't be after today.` | `Ngày thực tế không được sau hôm nay.` |
+| `errors.ROADMAP_TARGET_INVALID` | M19 | chỉ tiêu giờ/tuần | `Enter hours per week from 0.5 to 168, in steps of 0.5.` | `Nhập số giờ mỗi tuần từ 0,5 đến 168, theo bước 0,5.` |
+| `errors.ROADMAP_SCORE_INVALID_max` | M20 | `maxScore` | `The maximum score must be more than 0 and at most 10,000.` | `Điểm tối đa phải lớn hơn 0 và không quá 10.000.` |
+| `errors.ROADMAP_SCORE_INVALID_range` | M20 | `threshold`, `score` | `Enter a number from 0 up to the maximum score.` | `Hãy nhập một số từ 0 đến điểm tối đa.` |
+| `errors.ROADMAP_SCORE_INVALID_precision` | M20 | `maxScore`, `threshold`, `score` | `Use at most one decimal place (for example 7.5).` | `Dùng tối đa một chữ số thập phân (ví dụ 7,5).` |
+| `errors.ROADMAP_GOAL_ALREADY_LINKED` | M19 | picker goal (S12, S14, D7); `{{title}}` = lộ trình kia | `This goal is already linked to "{{title}}". Choose another goal, or unlink it there first.` | `Mục tiêu này đã liên kết với "{{title}}". Hãy chọn mục tiêu khác, hoặc bỏ liên kết ở đó trước.` |
+| `errors.GOAL_NOT_FOUND` | M19 | picker goal | `That goal doesn't exist anymore. Choose another goal, or leave this empty.` | `Mục tiêu đó không còn nữa. Hãy chọn mục tiêu khác, hoặc để trống.` |
+| `errors.ROADMAP_LIMIT_REACHED_roadmap` | M19 | Alert S12/D7; `{{max}}` 20 | `You can have up to {{max}} roadmaps. Delete one to add another.` | `Bạn có thể có tối đa {{max}} lộ trình. Hãy xóa bớt một lộ trình để thêm mới.` |
+| `errors.ROADMAP_LIMIT_REACHED_phase` | M19 | Alert trên `Add phase`; 20 | `A roadmap can have up to {{max}} phases.` | `Một lộ trình có tối đa {{max}} giai đoạn.` |
+| `errors.ROADMAP_LIMIT_REACHED_item` | M19 | Alert trên `Add item`; 200 | `A roadmap can have up to {{max}} items.` | `Một lộ trình có tối đa {{max}} mục.` |
+| `errors.ROADMAP_LIMIT_REACHED_checkpoint` | M20 | Alert trên `Add checkpoint`; 50 | `A roadmap can have up to {{max}} checkpoints.` | `Một lộ trình có tối đa {{max}} điểm kiểm tra.` |
+
+Lỗi ghi chung (`WRITE_FAILED`) và `STORAGE_*` dùng lại key resource chính. Mỗi lỗi nằm **ngay dưới field** (icon `alert` 16 px + chữ `--danger`, `id` nối `aria-describedby`, `aria-invalid="true"`), trừ các lỗi Alert đầu form/dialog đã ghi ở cột 3; sau submit lỗi, focus vào field lỗi đầu tiên và `ed.summary_*` (`role="alert"`) đếm số field lỗi.
+
+#### 7.9.3 Nội dung mẫu "QPT 21 tuần" (dữ liệu, không qua `t()`; M20-T1)
+
+Là **dữ liệu người dùng** sinh lúc tạo: chọn bản theo ngôn ngữ app lúc tạo, sau đó giữ nguyên (A-86). Bản `vi` **nguyên văn** mảng `PHASES[].weeks` và các chuỗi liên quan của `docs/plan/ref/qpt-tracker.html` (test M20-AC1 so khớp với file tham chiếu); bản `en` do designer dịch dưới đây (phần tiếng Anh sẵn có của tracker giữ nguyên).
+
+| Trường | `vi` (nguyên văn tracker) | `en` |
+| :- | :- | :- |
+| Tiêu đề lộ trình | `QPT 21 tuần` | `QPT 21 weeks` |
+| Tên mốc chính | `Thi QPT` | `QPT exam` |
+| Chỉ tiêu | 8 giờ/tuần (`weeklyTargetMinutes 480`) | giống |
+| Ghi chú lộ trình (nhịp học; xuống dòng bằng `\n`) | `Nhịp học mỗi tuần` / `Thứ 2–4: 1h/tối · video + ghi chú tay` / `Thứ 5: 1h · quiz, ghi câu sai vào sổ lỗi` / `Thứ 7: 2h · lab + 10–15 bài tập ngoài` / `Chủ nhật: 1h · ôn sổ lỗi, tick tuần` / `Thứ 6: Buffer` / `Quiz chưa đạt 80% thì chưa sang module mới.` | `Weekly rhythm` / `Mon–Wed: 1 h each evening · video + handwritten notes` / `Thu: 1 h · quiz, log wrong answers in your mistakes notebook` / `Sat: 2 h · lab + 10–15 extra exercises` / `Sun: 1 h · review the mistakes notebook, tick off the week` / `Fri: buffer` / `Quiz below 80% means no new module yet.` |
+| Phase 1 (W1–W4) | `Phase 1 · Linear Algebra` — `Course 1 · 34h` | giống |
+| Phase 2 (W5–W8) | `Phase 2 · Calculus` — `Course 2 · 27h` | giống |
+| Phase 3 (W9–W12) | `Phase 3 · Probability & Statistics` — `Course 3 · 33h` | giống |
+| Phase 4 (W13–W16) | `Phase 4 · Differential Equations` — `HKUST · Chasnov` | giống |
+| Phase 5 (W17–W21) | `Phase 5 · Lấp lỗ hổng & thi QPT` — `Mock + hồ sơ` | `Phase 5 · Close the gaps & sit the QPT` — `Mock + application` |
+
+| Tuần | `vi` (nguyên văn) | `en` |
+| :- | :- | :- |
+| W1 | `Systems of linear equations: singular vs non-singular, determinant` | giống |
+| W2 | `Solving systems: elimination, row echelon form, rank` | giống |
+| W3 | `Vectors & linear transformations: dot product, nhân ma trận, nghịch đảo` | `Vectors & linear transformations: dot product, matrix multiplication, inverse` |
+| W4 | `Determinants in depth & eigenvectors: basis, span, eigenvalue, PCA` | giống |
+| W5 | `Derivatives & optimization một biến` | `Derivatives & optimization in one variable` |
+| W6 | `Gradients & gradient descent (nhiều biến)` | `Gradients & gradient descent (several variables)` |
+| W7 | `Optimization in neural networks, Newton's method` | giống |
+| W8 | `Buffer Noel + Checkpoint 1 + bù tích phân` | `Christmas buffer + Checkpoint 1 + integral catch-up` |
+| W9 | `Probability cơ bản & các phân phối` | `Basic probability & distributions` |
+| W10 | `Describing distributions: kỳ vọng, phương sai, random vector` | `Describing distributions: expected value, variance, random vectors` |
+| W11 | `Sampling & point estimation: MLE, MAP` | giống |
+| W12 | `Confidence interval & hypothesis testing` | giống |
+| W13 | `First-order ODE: separable, linear, Euler method` | giống |
+| W14 | `Tết: nghỉ hoặc ôn nhẹ, không giao bài mới` | `Lunar New Year: rest or light review, no new material` |
+| W15 | `Second-order ODE, Laplace transform` | giống |
+| W16 | `Systems of ODE + Checkpoint 2` | giống |
+| W17 | `Ôn 2 mảng yếu nhất theo Checkpoint 2` | `Review the 2 weakest areas from Checkpoint 2` |
+| W18 | `Discrete math + mock QPT lần 1; gom hồ sơ` | `Discrete math + QPT mock 1; gather application documents` |
+| W19 | `Sửa lỗi từ mock 1 + mock QPT lần 2` | `Fix mistakes from mock 1 + QPT mock 2` |
+| W20 | `Thi QPT chính thức` | `Official QPT exam` |
+| W21 | `Buffer; hoàn tất và nộp hồ sơ trước hạn` | `Buffer; finish and submit the application before the deadline` |
+
+| Checkpoint | Ngày | Tối đa / ngưỡng | Ghi chú `vi` | Ghi chú `en` |
+| :- | :- | :- | :- | :- |
+| `Diagnostic` | `startDate` | 32 / — | — | — |
+| `Checkpoint 1` | kết thúc W8 | 32 / — | `≥ 3/4 mỗi mảng LA, Calc` | `≥ 3/4 per area: LA, Calc` |
+| `Checkpoint 2` | kết thúc W16 | 32 / 20 | — | — |
+| `Mock 1` | kết thúc W18 | 32 / 24 | — | — |
+| `Mock 2` | kết thúc W19 | 32 / 26 | — | — |
+
+Tên checkpoint, tên phase "Phase n ·" và các thuật ngữ kỹ thuật (Linear Algebra, ODE, MLE…) giữ tiếng Anh ở cả hai bản vì là tên môn/khoá học. Ghi chú nhịp học có thể sửa tự do sau khi tạo.
+
+#### 7.9.4 Số key theo nguồn
+
+| Nguồn | `en` | `vi` | Ghi chú |
+| :- | :- | :- | :- |
+| A — resource chính (`en.json` / `vi.json`) | **6** | **6** | `roadmapsUnavailable` dùng chung cho hai chỗ hiển thị (card Account, đầu S11) |
+| B — namespace `roadmap` (`roadmap.en.json` / `roadmap.vi.json`) | **282** | **268** | `en` đếm cả `_one` và `_other`; `vi` chỉ `_other`, nên ít hơn đúng bằng số dòng `_one` (**14**). Theo bảng: gốc + danh sách 20, nhịp độ + mốc 25, chi tiết/tổng quan/dải ô/thẻ tuần này 44, phase/mục/tag/ghi chú 35, checkpoint 22, tạo mới + editor + đếm + toast 106, D7 7, lỗi 23 |
+| Tổng | **288** | **274** | mỗi key có cả `en` và `vi` (trừ 14 dòng `_one` của `vi`); QC đếm bằng số dòng bảng 7.9.1 + 7.9.2 |
+
 ---
 
 ## 8. Accessibility
@@ -2696,6 +3453,66 @@ Kiểm bằng `@axe-core/playwright` (0 serious/critical) ở `en` và `vi`, sá
 - **Màu không là kênh duy nhất:** chip quyền thông báo (`Not asked yet` / `Allowed` / `Blocked`) luôn có chữ; chip Storage native trung tính có chữ; nút vô hiệu luôn kèm lý do bằng chữ.
 - **`<html lang>`** vẫn khớp ngôn ngữ đang hiển thị trên native; nhãn Apple/Google lấy theo ngôn ngữ đang chọn của app (không theo ngôn ngữ iOS).
 
+### 8.4 Phase 8 — Mục tiêu lớn (v8.0, M17 … M20)
+
+Kiểm bằng `@axe-core/playwright` (0 serious/critical) ở `en` và `vi`, sáng và tối, cho: `#/roadmaps` (có dữ liệu, rỗng), `#/roadmaps/rq` (Q1, Q1b, có checkpoint, có một mục mở `Dates & note`), `#/roadmaps/new`, `#/roadmaps/rq/edit` (có form mục mở và có lỗi), D7, D8 … D11; và kiểm bàn phím thủ công theo danh sách dưới.
+
+**Tương phản (tính tay trên bảng v7, QC xác nhận bằng axe):**
+
+| Cặp | Sáng | Tối |
+| :- | :- | :- |
+| `--on-primary-soft` trên `--primary-soft` (chip `On track`, tag `Early by …`, tag "This week") | ≈ 7,4:1 | > 7:1 |
+| Vòng `--primary` quanh chip/tag cảnh báo, trên `--primary-soft` (non-text ≥ 3:1) | ≈ 4,7:1 | > 4,5:1 |
+| `--on-danger-soft` trên `--danger-soft` (chip mức nghiêm trọng, tag `Overdue`/`Late by …`) | ≈ 5,5:1 | > 7:1 |
+| Dấu tích `--bg` trên ô dải xong `--text` | ≈ 14,8:1 | > 14:1 |
+| Số `--text-muted` trên `--bg` (ô sắp tới, meta mục, câu phụ) | ≈ 4,8:1 | ≈ 7,2:1 |
+| Cột checkpoint: `--text` / `--primary` / `--danger` trên `--bg` (non-text ≥ 3:1) | ≈ 14,8 / 5,4 / 6,4:1 | > 7:1 |
+| Nhãn điểm `--text` trên `--bg`; nhãn trục `--text-muted` 11 px (đi kèm bảng) | ≈ 14,8:1; ≈ 4,8:1 | > 7:1 |
+| Dòng `roadmapsUnavailable`: `--info` trên `--info-soft` | ≈ 6,9:1 | > 7:1 |
+
+Hai thành phần dùng `--border-input` (≈ 2:1 theo tính tay) **không** dựa vào đường viền để nhận biết: viền ô dải "sắp tới" (ô có số và là `button` trong `list`, nhận diện bằng chữ + vòng focus 2 px `--focus`) và khung nét đứt của cột `pending` (có nhãn `—` và dòng trạng thái "No score yet" ở bảng). Xem OQ-D83.
+
+**Dải ô (`WeekStrip`)**
+
+- `<ul role="list" aria-label="Roadmap items, in order">` (có `role="list"` tường minh vì `list-style: none` làm Safari/VoiceOver bỏ ngữ nghĩa danh sách); mỗi ô là `<li>` chứa `<button type="button">`. **Tên truy cập đầy đủ** = `strip.cell` = `{tiêu đề mục}, {dd/MM} – {dd/MM}: {trạng thái}` (vd. `Solving systems: elimination, row echelon form, rank, 03/11 – 09/11: this week`); số thứ tự và dấu tích/`!` hiển thị là `aria-hidden` (đã nằm trong tên). SR đọc "danh sách 21 mục".
+- **Tab stop:** roving tabindex — chỉ **một** ô có `tabindex="0"` (ô "tuần này", nếu không có thì ô đầu tiên chưa xong, nếu không thì ô đầu); `←`/`→` (và `↑`/`↓` nhảy một hàng) chuyển focus giữa các ô, `Home`/`End` tới ô đầu/cuối; Enter/Space = cuộn tới mục và **focus hàng mục** (`tabindex="-1"`). Tránh 21 điểm dừng Tab. Mockup tĩnh chưa làm roving (mỗi ô Tab được) — code theo đặc tả này.
+- Trạng thái không chỉ bằng màu: xong = dấu tích; quá hạn = `!`; "tuần này" = vòng đôi **và** chữ trong tên truy cập; chú giải 3 mục là chữ hiển thị.
+
+**Mục (`RoadmapItemRow`) và thao tác nhanh**
+
+- Checkbox là `<input type="checkbox">` thật; tên = `item.checkAria`; trạng thái `checked` = đã có ngày kết thúc. Tick/bỏ tick → vùng `<div class="sr-only" role="status" aria-live="polite" aria-atomic="true">` (luôn có trong DOM, một vùng cho cả trang) đọc `item.statusDone` / `item.statusUndone`; **focus ở lại checkbox** dù danh sách render lại (giữ theo `id` mục).
+- Nút `Dates & note`: `aria-expanded` + `aria-controls`; tên truy cập nối `aria-labelledby="{id nút} {id tiêu đề mục}"` để SR nghe "Dates & note, Solving systems…"; vùng mở là `role="group"` có `aria-labelledby` = tiêu đề mục.
+- Nút `Today` / `Clear`: tên truy cập `item.todayAria*` / `item.clearAria*` — **chứa chữ hiển thị** (WCAG 2.5.3) và nêu mục nào. `<input type="date">` có `<label>` hiển thị (`Actual start` / `Actual end`); lỗi `DATE_IN_FUTURE` / `order` nối `aria-describedby`, `aria-invalid="true"`, focus ở ô vừa nhập; không toast.
+- Ghi chú: `<textarea>` có label `Note`, lưu khi `blur`; lưu thất bại → Alert `role="alert"` ngay dưới ô, nội dung gõ giữ nguyên.
+- Nhãn sớm/trễ/đang học là chữ trong luồng đọc (không `aria-hidden`); tag "This week" và "Overdue" có chữ.
+
+**Thẻ "This week", tổng quan**
+
+- Mỗi ô chỉ số là một nhóm `eyebrow` + giá trị (không phải `dl` — giá trị là `div`; tên nhãn đứng trước giá trị theo thứ tự DOM). `Pace` chip: icon `aria-hidden`, chữ là tên truy cập. Số lớn kèm đơn vị là một dòng văn bản (`1/21`, `5,8 giờ`, `125 ngày nữa`).
+- Thanh giờ của thẻ: `role="progressbar"` + `aria-valuemin/max/now` + `aria-valuetext` = `now.progressValue` + `aria-label` = `now.progressLabel`. Thanh trong hàng danh sách S11 là trang trí (`aria-hidden`) vì số `Done 1/21` đã có bằng chữ.
+- Giờ "—": chữ `—` được SR đọc là "gạch ngang"/"em dash" — luôn đi kèm câu giải thích (`overview.hoursNone/Missing`) nên không mất nghĩa; `aria-label` không cần thêm.
+
+**Checkpoint (bảng + biểu đồ)**
+
+- `<table>` thật với `<th scope="col">`; không `role` thừa. Ô điểm: `<input inputmode="decimal">` có tên truy cập `cp.scoreAria` (nêu mốc và điểm tối đa); Enter hoặc blur = lưu, **Esc = khôi phục giá trị cũ**; lỗi nối `aria-describedby`; sau lưu: `cp.saved` qua vùng `role="status"` chung; trạng thái (`Passed`/`Below threshold`/…) và delta là **chữ** cạnh ô, không chỉ màu.
+- Biểu đồ: `<figure>` + `<figcaption>` (`cp.chartTitle`) + `<svg role="img" aria-label="…">` = tóm tắt `cp.sr.*` đủ **tên, điểm, tối đa, ngưỡng, kết quả** từng mốc theo thứ tự ngày; bản dữ liệu tương đương là chính bảng bên trên (luôn hiện). Không dùng tooltip hover (mọi giá trị đã hiện bằng chữ). Legend là chữ + mẫu.
+
+**Editor (S12, S14) và sắp xếp bằng bàn phím**
+
+- Field: mọi `input`/`select`/`textarea` có `<label>` hiển thị (eyebrow chữ hoa), field bắt buộc (tiêu đề lộ trình/phase/mục/checkpoint, ngày kế hoạch, tên, ngày và điểm tối đa của checkpoint) có `required` + dấu `*` kèm chữ ẩn `a11y.required` — key **có sẵn** ở resource chính, cùng cách Goal form (không thêm key). Lỗi nối `aria-describedby`, `aria-invalid`; submit lỗi → focus field lỗi đầu tiên, `ed.summary_*` `role="alert"`.
+- **Nút lên/xuống** (`MoveButtons`): `<button type="button">` thật, tên truy cập `ed.moveUpAria` / `ed.moveDownAria` (nêu tên mục/phase), vùng 44 × 44, thứ tự Tab: `↑` → `↓` → `Edit` → `Delete` của từng hàng. Enter/Space = chuyển một bước. **Sau khi chuyển, mục đã đổi vị trí nhưng focus ở lại nút vừa bấm của chính mục đó** (giữ theo `id`, không theo chỉ số) để bấm lặp nhiều lần; vùng `role="status"` đọc `ed.movedStatus` (vị trí mới/tổng). Ở đầu danh sách `↑` là `aria-disabled="true"` (vẫn focus được, không mất vị trí, SR đọc "dimmed/unavailable"); cuối danh sách tương tự với `↓`. Mục chuyển trong **cùng phase**; đổi phase bằng select `Phase` trong form `Edit`.
+- Form con mở inline: `role="group"` + `aria-labelledby`; mở form → focus vào ô tiêu đề; `Cancel`/Esc đóng form và trả focus về nút `Edit`/`Add` đã mở; `Save` thành công → trả focus về nút `Edit` của hàng (hoặc hàng mới thêm).
+- Picker goal: `<select>` có label + `aria-describedby` = hint; `ROADMAP_GOAL_ALREADY_LINKED` hiện dưới picker và nối `aria-describedby`; lựa chọn đang chọn `{name} (archived)` đọc đúng chữ.
+- Xoá: `ConfirmDialog` (D8 … D11) — `<dialog>` + `showModal()`, `aria-labelledby` tiêu đề, `aria-describedby` thân (nêu **số mục** cho D9, số phase/mục/checkpoint cho D8), focus ban đầu `Cancel`, Esc = Cancel, nút xác nhận `danger`. Sau xoá phase/mục/checkpoint: focus về nút `Add …` của khối; xoá lộ trình: focus `<h1>` của `#/roadmaps`.
+- **D7** như D4/D5: focus ban đầu ô `Start date`; khối xem trước nối `aria-describedby` của ô ngày (SR nghe ngày tuần 1/20/cuối khi đổi); Alert lỗi `role="alert"` trên hàng nút; busy: `aria-busy`, mọi control `disabled` trừ nút xác nhận `aria-disabled`.
+
+**Điều hướng, route, ngôn ngữ**
+
+- Tab bar/sidebar: 5 `<a>`; `Big goals` có `aria-current="page"` ở mọi `#/roadmaps*`; mỗi tab ≥ 44 px chiều rộng (72 px ở 360 px) và 64 px cao; chữ hiển thị là tên truy cập (nhãn 2 dòng vẫn là một tên). Đổi route: focus `<h1>`, `document.title` = `doc.title` với `{{page}}` = `nav.roadmaps` (S11) hoặc tiêu đề lộ trình (S13, S14), `Edit roadmap` / `New roadmap`.
+- `<html lang>` và mọi chuỗi như 8 (cả `vi`): `aria-label`, chữ ẩn, `figcaption`, tóm tắt SVG đều lấy từ 7.9; tên lộ trình, phase, mục, ghi chú, tên checkpoint là dữ liệu — **không** gắn `lang`.
+- `prefers-reduced-motion`: `scrollIntoView` dùng `behavior: 'auto'`, thanh tiến độ không chuyển tiếp, không animation nào khác ở phase 8.
+- Phóng chữ 200 % và reflow 320 px: nhãn tab 2 dòng (bar cao thêm nếu cần), dải ô xuống thêm hàng, bảng checkpoint và hàng nút xuống dòng; không `overflow: hidden` trên khối có chiều cao cố định (3.4 quy tắc 5, dấu thanh tiếng Việt).
+
 ---
 
 ## 9. Interface spec (cho CLI/API/bot)
@@ -2816,6 +3633,25 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **A-D79 (v6.0, bỏ biến thể một ngày có ghi).** Không còn `subStart`: với phút cộng dồn, câu `Today: 5 min. Total 5 min, ideal 30 min (−25 min).` đã đủ nghĩa ngay ở ngày ghi đầu tiên (không có "điểm xuất phát" riêng vì gốc là ngày 1 của goal). Tooltip cũng không cần biến thể "ngày đầu" (`tooltipBase`) hay "so với ngày trước" (`tooltipChange`): mọi ngày có ghi đọc cùng một câu `tooltipLogged` (phút ngày đó, tổng, lý tưởng) — ít key hơn, SR đọc nhất quán.
 - **A-D80 (v6.1, Tiến độ/Nhịp độ theo kế hoạch).** Thẻ Progress và Pace dùng **cùng kế hoạch +1 %/ngày** với đường lý tưởng (PRD OQ-21 chốt, FR-24 v6.1, ARCH ADR-47): `{{n}}` của `stat.paceExpected` và `{{total}}` của `stat.progressSubOpen` = lý tưởng cộng dồn tới hôm nay làm tròn phút (O1: 94 — cùng số với `The ideal line is at 94 min.`); `{{total}}` của `stat.progressSub` = kế hoạch cộng dồn cả khoảng (G1: 1.084), riêng goal `total` = đúng tổng user nhập (6.000). **Copy không đổi một chữ**: `Expected {{n}} min by today`, `{{current}} of {{total}} min`, `… expected so far`, `review.progressNote*` vốn đã nói "dự kiến/tới hôm nay/toàn bộ thời gian" nên vẫn đúng; không cần giải thích "+1%" trong thẻ vì phần "Cách đọc con số" của S4 đã nêu và đường cong hiện ngay cạnh. Hệ quả hiển thị: số lớn hơn phẳng (goal dài: `Expected` của ngày 365 với 30 phút/ngày ≈ 110.350) — `format.minutes`/`format.duration` đã nhóm hàng nghìn và chuyển giờ (`Chậm 5 giờ 25 phút`); thẻ Pace vẫn chiếm cả hàng < 640 px (§3.4). Mockup 07 và Figma: cùng tình trạng OQ-D29.
 
+**Assumptions của phase 8 (v8.0, Mục tiêu lớn)** — user đã chốt OQ-22 … OQ-24 theo giả định mặc định (2026-11-04); các điểm dưới là quyết định thiết kế nhỏ, dễ sửa.
+
+- **A-D81 (vị trí và icon nav).** Mục `Big goals` đứng **thứ ba** (sau `Goals`, trước `Review`): cùng họ "mục tiêu", `Settings` giữ cuối. Icon mới `roadmap` (đường quanh co nối hai chấm) khác hẳn icon `goals` (hai vòng đồng tâm) vì nhãn `vi` `Mục tiêu` / `Mục tiêu lớn` rất giống nhau. Active với mọi `#/roadmaps*`.
+- **A-D82 (vừa 360 px ở `vi`).** Chọn tab bar **64 px, nhãn xuống 2 dòng, xếp từ trên xuống, icon 22 px** thay vì rút gọn nhãn (không có từ ngắn đúng nghĩa; user chốt chữ "Mục tiêu lớn") hay ẩn chữ (icon-only làm `Mục tiêu`/`Mục tiêu lớn` khó phân biệt, vi phạm "không chỉ dựa vào icon"). Cái giá: 8 px cao hơn ở mọi trang (3.1, 3.7) và `--tabbar-h` đổi 56 → 64.
+- **A-D83 (thuật ngữ).** Menu = "Big goals" / "Mục tiêu lớn" (A-74); đối tượng = "roadmap" / "lộ trình"; phase = "giai đoạn"; item = "mục", "tuần" khi lộ trình theo tuần (A-84); checkpoint = "điểm kiểm tra" (theo tracker "Điểm kiểm tra"); mốc chính = "Mốc chính" khi người dùng không đặt tên. Ví dụ `vi` của PRD/TASKS ("Thuộc lộ trình …", "Tạo lộ trình trống", "Tạo từ mẫu QPT 21 tuần", "Đúng tiến độ", "Chậm N tuần") được dùng nguyên văn.
+- **A-D84 (sắp xếp).** Chỉ nút lên/xuống (FR-74 cho phép bỏ kéo thả); mục chỉ chuyển trong phase, đổi phase bằng select trong form `Edit` (mục xuống cuối phase đích). Lý do: bàn phím/SR tốt hơn, một đường duy nhất, không thêm thư viện (ngân sách).
+- **A-D85 (lưu ngay).** Ở editor mỗi thao tác cấu trúc (thêm/sửa/xoá/di chuyển phase, mục, checkpoint) **lưu ngay** (service có API từng thao tác, offline-first); chỉ field lộ trình có nút `Save details` (nhiều field + validate chéo). `#/roadmaps/new` chỉ có field lộ trình và sau `Create roadmap` chuyển sang editor để thêm phase/mục; `Done` về chi tiết. (Demo M19 của TASKS nói "lưu → chi tiết hiện 0/3": tương ứng bấm `Done`.)
+- **A-D86 (picker goal).** Goal đã thuộc lộ trình khác và goal archived **ẩn** (AC M19-AC5 yêu cầu "không liệt kê") + hint nêu lý do; goal đang liên kết với chính lộ trình (kể cả archived) luôn hiện và đang chọn. Không dùng tuỳ chọn khoá (select gốc, đỡ chữ).
+- **A-D87 (dải ô).** 7 cột × 44 px ở < 640 px (21 ô = 3 hàng đầy), `auto-fill` 44 px từ 640 px; roving tabindex + phím mũi tên (8.4); ô "sắp tới" viền mảnh + số. Khoảng 4 px < 8 px là ngoại lệ (như heatmap) vì mọi thao tác đều có ở hàng mục.
+- **A-D88 (màu trạng thái).** Cảnh báo (n = 1) = cam đất (`--primary-soft` + vòng `--primary`); nghiêm trọng (n ≥ 2) = `--danger-soft`. Không thêm màu mới (yêu cầu). "On track" cũng cam đất nhạt (v7 chỉ có một màu nhấn); phân biệt `On track` với cảnh báo bằng **vòng + icon + chữ**.
+- **A-D89 (giờ).** `f.hours`: tối đa 1 chữ số thập phân, **bỏ `.0`** (`16 h`, `4.5 h`, `0 h`) — khớp AC ("`5.8` và `16`", "W3 giờ `0`"). Khác `Total hours` của Review (luôn 1 chữ số, `4.0 h`) có chủ đích: đó là thống kê, đây là số hạng ngắn trong câu.
+- **A-D90 (khoảng ngày).** `f.itemRange` lược năm ở vế trước (`vi`) hoặc vế sau (`en`) khi cùng năm, để dòng meta của mục (≤ 280 px) không tràn. Nhãn truy cập ô dải dùng `f.dayMonth` (không năm) vì vị trí trong dải đã cho thứ tự.
+- **A-D91 (lỗi dùng chung).** `DATE_IN_FUTURE` và `GOAL_NOT_FOUND` có bản riêng `roadmap:errors.*` vì chữ của resource chính nói về "log time" / "this goal"; lỗi sinh từ `RoadmapService` luôn tra namespace `roadmap` trước.
+- **A-D92 (Goal detail / D2 / D3).** Goal thuộc nhiều lộ trình (hội tụ sau đồng bộ): Goal detail chỉ hiện lộ trình `createdAt` sớm nhất, D2 nêu tất cả. D3 thêm **một đoạn riêng** (không sửa `import.body`) để test M3/M7/M10 pass nguyên (DOM không đổi khi không có lộ trình). Số lộ trình hiện trong đoạn mới, không nằm trong câu "N mục tiêu, M lần ghi" cũ.
+- **A-D93 (mẫu `en`).** Dịch phần tiếng Việt của tracker sang tiếng Anh tự nhiên; giữ nguyên thuật ngữ kỹ thuật và tên khoá học; "Tết" → "Lunar New Year", "Buffer Noel" → "Christmas buffer". Tên checkpoint không dịch.
+- **A-D94 (checkpoint chart).** SVG thuần (không Recharts, ADR-53 giữ chunk nhỏ): 5 kiểu cột phân biệt bằng hoạ tiết/nhãn; thang `raw` hoặc `percent` theo `chartScale`; ≤ 50 cột (giới hạn FR-75) nên nhãn trục tự thưa khi > 8.
+- **A-D95 (mockup).** Mockup 11 … 14 dùng look v7 và font dự phòng; số liệu mockup 12 được **tính** bằng cùng quy tắc ARCH §4.8 (c) từ dataset Q1 (không gõ cứng) để QC đối chiếu: 1/21, `5,8 giờ`, 16 giờ, 125 ngày, W1 `Sớm 1 ngày · học 6 ngày`, W2 `75/480 phút` còn 5 ngày. Mockup tĩnh không làm roving tabindex của dải ô.
+- **A-D96 (6 key chính).** Chỉ 6 chuỗi nằm trên đường tải lạnh (7.9.1); hai trong số đó (`nav.roadmaps`, `settings.account.roadmapsUnavailable`) bắt buộc; bốn còn lại có phương án chuyển sang namespace nếu số đo vượt ngân sách (7.9.0).
+
 ---
 
 ## 11. Open questions
@@ -2850,6 +3686,12 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 - **OQ-D28 (cho developer, thông tin, v5.0).** Glyph Apple trong nút Sign in with Apple phải lấy từ tài nguyên chính thức của Apple (Apple Design Resources / trang hướng dẫn nút); mockup `09-account.html` dùng một glyph thay thế chỉ để dàn trang. Developer M14 không tự vẽ lại logo; nếu chưa có tệp chính thức thì dùng một SVG glyph Apple đơn sắc (đen hoặc trắng, đúng tỉ lệ) và ghi vào handoff để thay bằng tệp chính thức trước khi nộp review (App Review xem nút này). Không tải glyph từ mạng (NFR-01).
 - **OQ-D29 (cho orchestrator/developer, nhỏ, v6.0).** Mockup `docs/design/mockups/07-goal-detail.html` (7 tình huống v3: số liệu %, vạch 0%, `×5.4`) và Figma chưa cập nhật theo v6.0 (burn-up phút); nguồn chốt là S4 + 7.6.4 của tài liệu này và code đã chạy. Cập nhật mockup/Figma ở lần designer revise kế tiếp; không chặn phase 7.
 - **OQ-D30 (cho user, v6.2).** Mockup `docs/design/mockups/*.html` và Figma vẫn theo kiểu v6.1 (viền tab 3 px, segment vuông, card không tint). Có cập nhật mockup/Figma theo UI v6.2 không? Mặc định: chưa, cho tới khi user duyệt bản revamp trên nhánh `feat/ui-revamp-v6.2`.
+- **OQ-D82 (cho planner, v8.0).** ARCH §4.8 (c) "Thẻ tuần này" chỉ định nghĩa `currentItemId = null` cho `today < start` (`notStarted`) và `today > end` (`finished`). Lộ trình có **khe** giữa các mục (người dùng tự sửa ngày, A-83 không tự dời) có ngày `start ≤ today ≤ end` mà không mục nào chứa → chưa có kind. DESIGN thêm kind `gap` với chuỗi `now.gap` ("Nothing is planned for today."); cần ARCH/TASKS thêm vào `ThisWeekView` và test.
+- **OQ-D83 (cho planner/developer, thông tin, v8.0 — lỗi tài liệu v7).** Bảng tương phản mục 8 ghi `--border-input` trên `--surface` "≈ 3,6:1 (non-text ≥ 3:1)", nhưng với giá trị v7 (`#B5AC9A` trên `#F6F2EA`) tính tay chỉ ≈ 2,0:1 (tối `#6B655A` trên `#171512` ≈ 3,1:1). Gạch chân ô nhập, viền radio/segment dùng token này. Phase 8 không dựa vào nó để nhận biết thành phần (8.4) nên không bị ảnh hưởng, nhưng WCAG 1.4.11 cho ô nhập có thể không đạt; đề xuất đổi sáng thành `#8C8472` (≈ 3,3:1) ở lần revise v7.x, không làm trong phase 8.
+- **OQ-D84 (cho planner/QC, v8.0).** M19-AC4 viết khoảng ngày `en` là `2026-11-04 – 2026-11-10`, `11-11 – 11-17`, `11-18 – 11-24`. DESIGN 7.9.0 `f.itemRange` cho `2026-11-04 – 11-10`, `2026-11-11 – 11-17`, `2026-11-18 – 11-24` (lược năm vế sau khi cùng năm). Nên QC so khớp theo DESIGN (hoặc dùng regex `\d{4}-\d{2}-\d{2} – (\d{4}-)?\d{2}-\d{2}`).
+- **OQ-D85 (cho planner, v8.0).** `--tabbar-h` đổi 56 → 64 px (3.1) kéo theo test đo chiều cao tab bar / vị trí toast / `scroll-padding` (safe-area M13, e2e `native-web`, `tests/qc/**` brand/nav). Đề nghị thêm các test này vào bảng "Test cũ bị ảnh hưởng" của TASKS phase 8 (developer sửa `src/**`/`e2e/**`, QC re-target `tests/qc/**`). Nếu không muốn đổi chiều cao, phương án thay thế là nhãn `vi` cho tab này rút thành `Mục tiêu lớn` ở 11 px (vi phạm "không nhỏ hơn 12 px", không đề xuất).
+- **OQ-D86 (cho planner, v8.0).** Cách tra lỗi: `error-messages.ts` hiện ánh xạ `ErrorCode` → key `errors.<CODE>` ở resource chính. Với phase 8 cần quy tắc "lỗi sinh từ `RoadmapService` → `roadmap:errors.<CODE>[_<variant>]`" cho cả `DATE_IN_FUTURE` và `GOAL_NOT_FOUND` (7.9.0, A-D91); TASKS M17-T5/M19 chưa nêu.
+- **OQ-D87 (cho planner, thông tin, v8.0).** TASKS M17 Demo nói D3 "nêu 6 goal, 29 entry, 1 lộ trình". DESIGN giữ nguyên câu `import.body` (N mục tiêu, M lần ghi) và thêm **đoạn riêng** cho lộ trình (`import.roadmaps`) để các test D3 cũ không đổi; số lộ trình vì thế nằm ở đoạn thứ hai, không trong cùng câu.
 - **Phase 6 (v5.0): không phát hiện luồng PRD thiếu.** Lưu ý thông tin: PRD FR-62 nói banner trong app giữ nguyên; trên native pre-M15 và khi quyền bị chặn app vẫn có `ReminderBanner` kiểu web (chỉ khi app mở), thiết kế không đổi.
 - **Không phát hiện luồng PRD thiếu cho FR-56/FR-57.** Lưu ý thông tin (không phải câu hỏi): PRD A-53 nói đổi sang `total` khi đang "không thời hạn" thì form "không cho lưu ở trạng thái đó"; thiết kế thực hiện bằng cách khoá radio + tự chuyển Ends (A-D52, A-D53) nên trạng thái đó không bao giờ tồn tại trong form, `openEndedTotal` chỉ là lớp dự phòng.
 
@@ -2857,6 +3699,25 @@ Không áp dụng — app có giao diện đồ hoạ (PWA). **(v2)** Trang đă
 
 ## Changelog
 
+- 2026-11-04 — **v8.0** (mode `revise`, task **M17-T7**: UI/copy của cả phase 8 "Mục tiêu lớn / Big goals", cho M17 … M20; PRD v8.0 FR-68 … FR-80, A-74 … A-92, OQ-22 … OQ-24 đã chốt giữ giả định mặc định; ARCH v8.1 §4.8 / ADR-48 … ADR-53). **Không đổi** màn/key/test id cũ nào ngoài hai điểm ghi dưới (tab bar cao hơn, D3/D2/Goal detail thêm đoạn có điều kiện).
+  - **Nav (§3.1, 3.7, §5, §6):** mục thứ năm `Big goals` / `Mục tiêu lớn` ở vị trí **thứ ba**, icon mới `roadmap`; tab bar **64 px** (`--tabbar-h` 56 → 64), 5 tab chia đều, nhãn `Mục tiêu lớn` xuống 2 dòng, xếp từ trên xuống, icon 22 px; `en` một dòng. (M17-T5)
+  - **Màn mới (§4):** S11 danh sách + rỗng 2 lối + loading/lỗi/dòng cloud chưa có bảng (M17, M18, M19, M20); S12 tạo trống (M19); S13 chi tiết: 4 chỉ số, mọi biến thể nhịp độ (Chưa bắt đầu / Đúng tiến độ / Chậm N tuần·mục cảnh báo-nghiêm trọng / Hoàn thành / chưa có mục), giờ "—" khi chưa liên kết·đã xoá·(lưu trữ vẫn tính), dải ô, thẻ "This week" (trước/trong/sau lộ trình, khe), phase + mục + thao tác nhanh, nhãn sớm/đúng hạn/trễ·học N ngày/đang học, checkpoint bảng + biểu đồ + nhập điểm, ghi chú, câu giải thích cách tính giờ (M19, M20); S14 editor: field, picker goal, phase/mục/checkpoint, nút lên/xuống, xoá có xác nhận nêu số mục, lỗi inline (M19, M20); D7 hộp thoại mẫu QPT (M20); D8 … D11 xác nhận xoá.
+  - **Màn cũ chỉnh (§4 "Phase 8 — chỉnh màn cũ"):** Goal detail dòng "Part of roadmap …"; D2 đoạn nêu lộ trình; D3 đoạn số lộ trình (chỉ khi có lộ trình); dòng `roadmapsUnavailable` ở card Account và S11. Flow F20 … F23 (§2).
+  - **Component (§5):** 16 dòng mới/sửa (`AppShell`, `Icon roadmap`, `PaceChip`, `RoadmapRow`, `OverviewMetrics`, `WeekStrip`, `ThisWeekCard`, `PhaseSection`, `RoadmapItemRow`, `GoalLinkPicker`, `MoveButtons`, `PhaseEditor/ItemEditor/CheckpointEditor`, `CheckpointTable`, `CheckpointChart`, `TemplateDialog`). **Token (§6):** không màu mới; bảng ánh xạ trạng thái → token; `--tabbar-h` 64.
+  - **Copy (§7.9):** nguồn A (resource chính) **6 key** `en` + `vi`: `nav.roadmaps`, `settings.account.roadmapsUnavailable`, `import.roadmaps`, `import.roadmapsKept`, `goal.detail.roadmapLabel`, `goal.delete.roadmapNote`; nguồn B (namespace `roadmap`) **282 key `en` / 268 key `vi`** (14 dòng `_one` không có ở `vi`) gồm 23 lỗi `roadmap:errors.*`; định dạng giờ/ngày/khoảng/điểm; nội dung mẫu QPT `vi` nguyên văn tracker + `en` do designer dịch (7.9.3).
+  - **A11y (§8.4):** dải ô `list`/`listitem` có nhãn đầy đủ + roving tabindex; nút `Today` nêu mục nào; checkbox giữ focus; biểu đồ checkpoint có tóm tắt SR + bảng; nút lên/xuống giữ focus theo mục + `role="status"`; dialog; tương phản tính tay.
+  - **Mockup (§ đầu file, `mockups/index.html`):** `11-roadmaps.html`, `12-roadmap-detail.html` (số liệu Q1 tính bằng quy tắc ARCH §4.8 c; 8 tình huống), `13-roadmap-editor.html`, `14-roadmap-template-dialog.html`; look v7, offline, không CDN, `en`/`vi`, 360–1440 px.
+  - **Assumptions A-D81 … A-D96; Open questions OQ-D82 … OQ-D87** (§10, §11).
+  - **Ghi chú cho planner** (thấy khi đối chiếu plan; designer không sửa `docs/plan/**`):
+    1. **Khe giữa các mục** chưa có kind trong `ThisWeekView` (ARCH §4.8 c) → DESIGN thêm `gap` + chuỗi `now.gap` (OQ-D82).
+    2. **`--tabbar-h` 56 → 64** nên cần thêm test tab bar/toast/safe-area vào bảng "Test cũ bị ảnh hưởng" (OQ-D85).
+    3. **Lỗi dùng chung:** `DATE_IN_FUTURE` / `GOAL_NOT_FOUND` cần bản riêng trong `roadmap:errors.*`; `error-messages.ts` cần quy tắc tra namespace (OQ-D86, A-D91).
+    4. **Ví dụ ngày `en` của M19-AC4** khác `f.itemRange` (OQ-D84). Demo M19 "lưu" = nút `Done` của editor (lưu từng thao tác) (A-D85).
+    5. **D3:** số lộ trình nằm ở đoạn riêng, không trong câu "N mục tiêu, M lần ghi" (OQ-D87).
+    6. **`f.hours`** bỏ ".0" (`16`, `0`) nên khác `Total hours` của Review (A-D89); M17-AC2/M19-AC2 đã khớp.
+    7. **Bảng tương phản v7 (mục 8) ghi sai `--border-input` ≈ 3,6:1** (thực ≈ 2:1) — không thuộc phase 8 (OQ-D83).
+    8. **Nội dung mẫu:** ghi chú lộ trình gồm cả dòng tiêu đề "Nhịp học mỗi tuần" / "Weekly rhythm" (ARCH §4.8 e nói "khối Nhịp học mỗi tuần") — planner/dev xác nhận có muốn dòng tiêu đề trong `note`.
+    9. **Số key:** TASKS M17-T7/M17-AC10 chỉ yêu cầu bảng phân loại; số liệu thực tế nằm ở 7.9.4 (6 + 282 `en`, 6 + 268 `vi`). Ngân sách tải lạnh chỉ bị ảnh hưởng bởi 6 key A (ước ≈ 0,3 kB gzip cả `en` + `vi`; developer đo).
 - 2026-11-03 — **v7.2** (mode `revise`, user: "trên web, width của các table hay content đang nhỏ quá"): cột nội dung desktop rộng hơn, chỉ CSS (`v7.css` khối "Content width", `--content-max` 1240): `main` 720 → 1040 px (padding 32/48) ở ≥ 1024 px và 1180 px (padding 40/56) ở ≥ 1440 px; `main.wide` (Review) 1240 / 1360 px. Không đổi copy/test id; e2e desktop (m4, m5, m10, m11) xanh, bundle 228,5 kB.
 - 2026-11-03 — **v7.1** (mode `revise`, 4 chi tiết còn lại của mockup Figma hướng A, đóng OQ-D31 phần copy): `today.tagline` (mới), `goals.rowVsIdeal` (mới, Goals hiện `% so với lý tưởng` mỗi goal đã bắt đầu), `goal.form.hintDaily` nêu ngày đầu / ngày cuối / tổng, `goal.detail.eyebrow` = "So với đường lý tưởng" và `headline`/`headlineDown` chỉ còn `{{value}}%` (số Fraunces 72/88 px). Test/QC/e2e đổi assertion theo. Splash iOS và mockup HTML/Figma "Mobile 360" vẫn v6.x.
 - 2026-11-03 — **v7.0** (mode `revise`, **redesign hướng A "Tối giản, chữ lớn"** — user chọn A giữa hai hướng vẽ trên Figma page "Redesign v7 — review" (frames A1–A7 sáng + A1/A2 tối) rồi duyệt code; nhánh `feat/ui-redesign-v7`). Chỉ lớp hình ảnh: `tokens.css` đổi giá trị (§6.1 v7), file mới `src/ui/styles/v7.css` ghi đè `app.css`, font tự host Fraunces + Manrope (§6.2 v7), `index.html`/manifest `theme-color` mới. **Không đổi key copy, route, test id, ARIA, API component**; vitest/QC/e2e giữ nguyên assertion. Hình thức: section phẳng tách hairline (`.card` hết viền/bóng), nút pill (primary = mực), ô nhập gạch chân với nhãn eyebrow, segment pill, tab bar phẳng với mục đang chọn màu cam đất, sidebar desktop pill, số lớn Fraunces (hero Today 72–88 px, headline S4 40–56 px, StatCard 26 px), hàng stat 3 cột có hairline trên/dưới, heatmap ô bo 4 px không viền. Chưa làm so với mockup Figma (OQ-D31): "% so với lý tưởng" trên hàng Goals, tagline italic dưới "Hôm nay", form "Kế hoạch +1%" nêu ngày 1/ngày cuối, headline tách số khỏi chữ (cần đổi key copy), mockup HTML + Figma "Mobile 360" + splash iOS vẫn v6.x.

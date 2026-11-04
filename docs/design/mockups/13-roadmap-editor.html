@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sửa lộ trình — 1% Better (mockup S12 + S14, DESIGN v8.0)</title>
+<style>
+/* v7 tokens (DESIGN 6.1). The app self-hosts Fraunces + Manrope; this offline mockup falls back to Georgia / system-ui. */
+:root{color-scheme:light dark;
+--font:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--font-display:"Fraunces",Georgia,"Times New Roman",serif;
+--bg:#F6F2EA;--surface:#F6F2EA;--surface-2:#ECE6DA;--surface-raised:#FFFFFF;--surface-glass:rgba(246,242,234,.92);--border:#E3DCCF;--border-input:#B5AC9A;
+--text:#17160F;--text-muted:#6F6A5E;--primary:#AD3D1A;--on-primary:#FFFFFF;--primary-soft:#F6DED3;--on-primary-soft:#8A2F12;
+--btn-bg:#17160F;--btn-fg:#F6F2EA;--danger:#A32D2D;--on-danger:#FFFFFF;--danger-soft:#F8E1DF;--on-danger-soft:#7A1D1D;--info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;--scrim:rgba(23,22,15,.5);
+--r-md:10px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:64px}
+@media (prefers-color-scheme:dark){:root{
+--bg:#171512;--surface:#171512;--surface-2:#221F1A;--surface-raised:#221F1A;--surface-glass:rgba(23,21,18,.92);--border:#2C2822;--border-input:#6B655A;
+--text:#F3EFE6;--text-muted:#A39C8E;--primary:#E8663C;--on-primary:#171512;--primary-soft:#3A2419;--on-primary-soft:#F5B9A3;
+--btn-bg:#F3EFE6;--btn-fg:#171512;--danger:#FF8A80;--on-danger:#3B0A07;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;--info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;--scrim:rgba(0,0,0,.6)}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/24px var(--font);-webkit-text-size-adjust:100%}
+h1,h2,h3,p,ul,dl,dd,fieldset{margin:0}ul{padding:0;list-style:none}fieldset{border:0;padding:0;min-width:0}
+a{color:var(--primary)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;background:var(--surface-raised);padding:8px 12px;border-radius:var(--r-md);z-index:60}.skip:focus{top:8px}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.muted{color:var(--text-muted)}
+.eyebrow,.fld label,legend{font:600 12px/16px var(--font);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.nav{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;background:var(--surface-glass);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.nav .brand{display:none}
+.nav .item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;min-height:var(--tabbar-h);padding:6px 2px 2px;color:var(--text-muted);font:500 12px/16px var(--font);text-align:center;text-decoration:none}
+.nav .item .ic{width:22px;height:22px}.nav .item[aria-current=page]{color:var(--primary);font-weight:600}
+.mark{display:inline-grid;place-items:center;width:32px;height:32px;padding:2px;border-radius:9px;background:#fff;flex:none}.mark img{display:block;width:100%;height:100%;object-fit:contain}
+.content{min-width:0}main{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--tabbar-h) + 80px)}
+@media (min-width:1024px){
+.nav{top:0;right:auto;width:var(--nav-w);flex-direction:column;justify-content:flex-start;gap:4px;padding:24px 12px;border-top:0;border-right:1px solid var(--border);background:var(--bg)}
+.nav .brand{display:flex;align-items:center;gap:10px;padding:0 12px 20px;font:400 18px/24px var(--font-display);color:var(--text);text-decoration:none}
+.nav .item{flex:none;flex-direction:row;justify-content:flex-start;align-items:center;gap:12px;min-height:var(--tap);padding:0 14px;border-radius:var(--r-full);font-size:15px;text-align:left}
+.nav .item .ic{width:24px;height:24px}.nav .item:hover{background:var(--surface-2)}.nav .item[aria-current=page]{background:var(--primary-soft);color:var(--on-primary-soft)}
+.content{margin-left:var(--nav-w)}main{max-width:1040px;padding:32px 48px 96px}}
+@media (min-width:1440px){main{max-width:1180px;padding:40px 56px 96px}}
+/* editor column: readable measure, left aligned on desktop */
+.col{max-width:720px}
+h1{font:400 36px/40px var(--font-display);letter-spacing:-.01em}@media (min-width:640px){h1{font-size:44px;line-height:48px}}@media (min-width:1024px){h1{font-size:48px;line-height:52px}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:11px 20px;border:1px solid transparent;border-radius:var(--r-full);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;text-align:center;background:none;color:var(--text)}
+.btn.primary{background:var(--btn-bg);color:var(--btn-fg)}.btn.secondary{border-color:color-mix(in srgb,var(--text) 25%,transparent)}.btn.secondary:hover{background:color-mix(in srgb,var(--text) 6%,transparent)}
+.btn.danger{background:var(--danger);color:var(--on-danger)}.btn.dghost{color:var(--danger)}.btn.ghost{color:var(--primary)}.btn.sm{padding:8px 14px;font-size:14px}
+.btn[aria-disabled=true]{opacity:.45;cursor:default}
+.ib{width:44px;height:44px;display:inline-grid;place-items:center;border:1px solid color-mix(in srgb,var(--text) 22%,transparent);border-radius:50%;background:transparent;color:var(--text);cursor:pointer;padding:0}
+.ib[aria-disabled=true]{opacity:.4;cursor:default}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px}
+.sec{padding:24px 0;border-top:1px solid var(--border)}.sec>h2{margin-bottom:14px}
+.fld{margin-bottom:20px}.fld label,.fld legend{display:block;margin-bottom:6px}
+.lr{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px}.lr .cnt{font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.input{font:400 17px/24px var(--font);color:var(--text);background:transparent;border:0;border-bottom:1px solid var(--border-input);padding:8px 0;min-height:44px;width:100%;min-width:0;border-radius:0}
+.input:hover{border-bottom-color:var(--text)}.input:focus-visible{outline:none;border-bottom:2px solid var(--text);padding-bottom:7px}
+.input[aria-invalid=true]{border-bottom-color:var(--danger)}
+input.input.n{font:400 24px/30px var(--font-display);width:8ch}
+select.input{padding-right:24px}textarea.input{min-height:96px;resize:vertical}
+.hint{font-size:14px;line-height:20px;color:var(--text-muted);margin-top:6px}
+.err{display:flex;gap:6px;align-items:flex-start;font-size:14px;line-height:20px;color:var(--danger);margin-top:6px}
+.two{display:grid;grid-template-columns:1fr;gap:0 24px}@media (min-width:640px){.two{grid-template-columns:1fr 1fr}}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r-md);background:var(--danger-soft);color:var(--on-danger-soft);font-size:14px;line-height:20px;margin-bottom:16px}
+.banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r-md);background:var(--surface-2);font-size:15px;line-height:22px;margin-bottom:20px}
+/* phase + item cards */
+.ph{padding:16px 0;border-top:1px solid var(--border)}
+.ph-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 12px}
+.ph h3{font:400 22px/28px var(--font-display);overflow-wrap:anywhere}.ph .pn{font-size:14px;line-height:20px;color:var(--text-muted)}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.it{padding:12px 0;border-top:1px solid var(--border)}
+.it-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.it-t{min-width:0;flex:1 1 200px}.it-t b{font-weight:600;overflow-wrap:anywhere;display:block}.it-t span{font-size:14px;line-height:20px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.form{margin-top:12px;padding:16px;border-radius:var(--r-md);background:var(--surface-2)}
+.form .input{background:transparent}
+.dz{padding:24px 0;border-top:1px solid var(--border)}
+/* dialog */
+dialog{border:0;border-radius:20px;padding:24px;background:var(--surface-raised);color:var(--text);max-width:480px;width:calc(100% - 32px);box-shadow:0 12px 40px rgba(20,30,25,.22)}
+dialog::backdrop{background:var(--scrim)}
+dialog h2{font:400 26px/32px var(--font-display);margin-bottom:8px}dialog p{color:var(--text-muted)}
+dialog .btn-row{margin-top:20px;flex-direction:column-reverse}dialog .btn{width:100%}
+@media (min-width:640px){dialog .btn-row{flex-direction:row;justify-content:flex-end}dialog .btn{width:auto}}
+.mock-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-bottom:16px;padding:12px;border:1px dashed var(--border-input);border-radius:var(--r-md);font-size:14px;line-height:20px}
+.mock-bar select{font:inherit;min-height:44px;padding:0 8px;background:var(--surface-raised);color:var(--text);border:1px solid var(--border-input);border-radius:8px}
+.mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-k="a11y.skip">Chuyển tới nội dung</a>
+<nav class="nav" aria-label="Chính">
+  <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="../../../public/brand-mark-96.png" width="28" height="28" alt=""></span><span>1% Better per Day</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></svg><span data-k="nav.today">Hôm nay</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/></svg><span data-k="nav.goals">Mục tiêu</span></a>
+  <a class="item" href="11-roadmaps.html" aria-current="page"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6.5a3 3 0 0 0 0-6h-5a3 3 0 0 1 0-6H16"/></svg><span data-k="nav.roadmaps">Mục tiêu lớn</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20v-8M12 20V5M19 20v-12"/></svg><span data-k="nav.review">Tổng kết</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span data-k="nav.settings">Cài đặt</span></a>
+</nav>
+<div class="content"><main id="main" tabindex="-1"><div class="col">
+  <div class="mock-bar">
+    <label>Ngôn ngữ / Language <select id="lang"><option value="vi">Tiếng Việt</option><option value="en">English</option></select></label>
+    <label>Màn hình / Screen <select id="mode">
+      <option value="edit">Sửa lộ trình (#/roadmaps/:id/edit)</option>
+      <option value="errors">Sửa — lỗi inline ở mục đang sửa</option>
+      <option value="new">Tạo trống (#/roadmaps/new)</option></select></label>
+  </div>
+  <p><a class="btn ghost" href="12-roadmap-detail.html" id="back">←</a></p>
+  <h1 id="h1" tabindex="-1"></h1>
+  <div id="view"></div>
+  <p class="sr-only" role="status" aria-live="polite" id="live"></p>
+  <p class="mock-note">Mockup S12 (tạo trống) + S14 (editor), DESIGN v8.0, M19. Sắp xếp bằng nút lên/xuống: bấm hoặc Enter/Space, focus ở lại nút của mục vừa chuyển, vùng trạng thái ẩn đọc vị trí mới. "Xóa giai đoạn" mở hộp thoại xác nhận nêu số mục. Mục 3 ("Subjunctive") có thể mở ở chế độ lỗi inline.</p>
+</div></main></div>
+<dialog id="dlg" aria-labelledby="dlg-t" aria-describedby="dlg-b">
+  <h2 id="dlg-t"></h2><p id="dlg-b"></p>
+  <div class="btn-row"><button class="btn danger" type="button" id="dlg-ok"></button><button class="btn secondary" type="button" id="dlg-no" autofocus></button></div>
+</dialog>
+<script>
+const D={
+en:{'a11y.skip':'Skip to content','nav.today':'Today','nav.goals':'Goals','nav.roadmaps':'Big goals','nav.review':'Review','nav.settings':'Settings',
+'detail.back':'Back to roadmap','ed.titleEdit':'Edit roadmap','new.title':'New roadmap','new.templateHint':'Prefer a ready-made plan?','list.createTemplate':'Create from QPT 21-week template',
+'new.afterCreate':'After you create the roadmap, you can add phases, items and checkpoints.',
+'ed.summary':'Fix {{count}} fields to save.','ed.titleLabel':'Title','ed.titlePlaceholder':'e.g. Spanish B1','ed.noteLabel':'Notes (optional)','ed.noteHint':'Shown as plain text on the roadmap. Good for a weekly routine.',
+'ed.goalLabel':'Linked goal (optional)','ed.goalNone':'No goal','ed.goalHint':"Study time is counted from this goal's entries. Archived goals and goals already used by another roadmap aren't listed.",
+'ed.targetLabel':'Weekly study target (hours, optional)','ed.targetHint':'Steps of 0.5, from 0.5 to 168. Used for the plan-to-date and this-week figures.',
+'ed.milestoneLabelLabel':'Milestone name (optional)','ed.milestoneLabelPlaceholder':'e.g. Exam','ed.milestoneDateLabel':'Milestone date (optional)','ed.milestoneHint':'Shows a countdown on the roadmap.',
+'ed.create':'Create roadmap','ed.saveDetails':'Save details','ed.done':'Done','ed.deleteRoadmap':'Delete roadmap',
+'ed.phasesTitle':'Phases','ed.addPhase':'Add phase','ed.editPhase':'Edit phase','ed.deletePhase':'Delete phase','ed.addItem':'Add item','ed.editItem':'Edit','ed.deleteItem':'Delete',
+'ed.moveUpAria':'Move {{title}} up','ed.moveDownAria':'Move {{title}} down','ed.movedStatus':'{{title}} moved to position {{pos}} of {{total}}',
+'ed.itemTitleLabel':'Item title','ed.plannedStart':'Planned start','ed.plannedEnd':'Planned end','ed.itemNoteLabel':'Item note (optional)','ed.itemPhaseLabel':'Phase','ed.saveItem':'Save item','ed.cancel':'Cancel',
+'ed.deletePhaseTitle':'Delete phase "{{title}}"?','ed.deletePhaseBodyN':"This deletes the phase and its {{count}} items. This can't be undone.",'ed.deletePhaseConfirm':'Delete phase',
+'ed.noItemsInPhase':'No items in this phase.','ed.cpTitle':'Checkpoints','ed.addCp':'Add checkpoint','ed.dangerTitle':'Delete this roadmap','errors.ROADMAP_DATE_INVALID_order':"The end date can't be before the start date.",'errors.ROADMAP_TITLE_REQUIRED':'Enter a title.',
+'errors.ROADMAP_LIMIT_REACHED_item':'A roadmap can have up to {{max}} items.',
+'cpName':'Mock 1 · 2027-03-01 · max 32 · threshold 24','phaseNote':'Phase note','noValueH':'h'},
+vi:{'a11y.skip':'Chuyển tới nội dung','nav.today':'Hôm nay','nav.goals':'Mục tiêu','nav.roadmaps':'Mục tiêu lớn','nav.review':'Tổng kết','nav.settings':'Cài đặt',
+'detail.back':'Quay lại lộ trình','ed.titleEdit':'Sửa lộ trình','new.title':'Lộ trình mới','new.templateHint':'Muốn dùng kế hoạch dựng sẵn?','list.createTemplate':'Tạo từ mẫu QPT 21 tuần',
+'new.afterCreate':'Sau khi tạo lộ trình, bạn có thể thêm giai đoạn, mục và điểm kiểm tra.',
+'ed.summary':'Hãy sửa {{count}} ô để lưu.','ed.titleLabel':'Tiêu đề','ed.titlePlaceholder':'Ví dụ: Tiếng Tây Ban Nha B1','ed.noteLabel':'Ghi chú (không bắt buộc)','ed.noteHint':'Hiện dạng chữ thường trên lộ trình. Hợp để ghi nhịp học mỗi tuần.',
+'ed.goalLabel':'Mục tiêu liên kết (không bắt buộc)','ed.goalNone':'Không liên kết','ed.goalHint':'Giờ học được tính từ các lần ghi của mục tiêu này. Không liệt kê mục tiêu đã lưu trữ hoặc đã thuộc lộ trình khác.',
+'ed.targetLabel':'Chỉ tiêu giờ học mỗi tuần (giờ, không bắt buộc)','ed.targetHint':'Bước 0,5, từ 0,5 đến 168. Dùng để tính kế hoạch đến nay và giờ tuần này.',
+'ed.milestoneLabelLabel':'Tên mốc chính (không bắt buộc)','ed.milestoneLabelPlaceholder':'Ví dụ: Thi QPT','ed.milestoneDateLabel':'Ngày mốc chính (không bắt buộc)','ed.milestoneHint':'Hiện số ngày còn lại trên lộ trình.',
+'ed.create':'Tạo lộ trình','ed.saveDetails':'Lưu thông tin','ed.done':'Xong','ed.deleteRoadmap':'Xóa lộ trình',
+'ed.phasesTitle':'Giai đoạn','ed.addPhase':'Thêm giai đoạn','ed.editPhase':'Sửa giai đoạn','ed.deletePhase':'Xóa giai đoạn','ed.addItem':'Thêm mục','ed.editItem':'Sửa','ed.deleteItem':'Xóa',
+'ed.moveUpAria':'Chuyển {{title}} lên','ed.moveDownAria':'Chuyển {{title}} xuống','ed.movedStatus':'Đã chuyển {{title}} tới vị trí {{pos}}/{{total}}',
+'ed.itemTitleLabel':'Tên mục','ed.plannedStart':'Bắt đầu theo kế hoạch','ed.plannedEnd':'Kết thúc theo kế hoạch','ed.itemNoteLabel':'Ghi chú mục (không bắt buộc)','ed.itemPhaseLabel':'Giai đoạn','ed.saveItem':'Lưu mục','ed.cancel':'Hủy',
+'ed.deletePhaseTitle':'Xóa giai đoạn "{{title}}"?','ed.deletePhaseBodyN':'Thao tác này xóa giai đoạn và {{count}} mục của nó. Không thể hoàn tác.','ed.deletePhaseConfirm':'Xóa giai đoạn',
+'ed.noItemsInPhase':'Giai đoạn này chưa có mục nào.','ed.cpTitle':'Điểm kiểm tra','ed.addCp':'Thêm điểm kiểm tra','ed.dangerTitle':'Xóa lộ trình này','errors.ROADMAP_DATE_INVALID_order':'Ngày kết thúc không được trước ngày bắt đầu.','errors.ROADMAP_TITLE_REQUIRED':'Hãy nhập tiêu đề.',
+'errors.ROADMAP_LIMIT_REACHED_item':'Một lộ trình có tối đa {{max}} mục.',
+'cpName':'Mock 1 · 01/03/2027 · tối đa 32 · ngưỡng 24','phaseNote':'Ghi chú giai đoạn','noValueH':'giờ'}};
+let L='vi';
+const t=(k,v)=>{let s=D[L][k]??D.en[k]??k;for(const x in v)s=s.split('{{'+x+'}}').join(v[x]);return s};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const fd=s=>L==='vi'?s.split('-').reverse().join('/'):s;
+let phases=[{id:'p1',title:'Grammar',note:'Course 1 · 34h',items:[{id:'i1',title:'Present tenses',ps:'2026-11-04',pe:'2026-11-10'},{id:'i2',title:'Past tenses',ps:'2026-11-11',pe:'2026-11-17'},{id:'i3',title:'Subjunctive',ps:'2026-11-18',pe:'2026-11-24'}]},{id:'p2',title:'Vocabulary',note:'',items:[{id:'i4',title:'Travel words',ps:'2026-11-25',pe:'2026-12-01'}]}];
+let editing='i3',pendingFocus=null;
+const UP='<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M6 11l6-6 6 6"/></svg>',DN='<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(180deg)"><path d="M12 19V6M6 11l6-6 6 6"/></svg>';
+function field(id,label,val,extra=''){return `<div class="fld"><label for="${id}">${label}</label><input class="input" id="${id}" value="${esc(val)}" ${extra}></div>`}
+function details(mode){
+ const create=mode==='new';
+ return `${create?`<div class="banner"><span>${t('new.templateHint')}</span> <a href="14-roadmap-template-dialog.html"><b>${t('list.createTemplate')}</b></a></div>`:''}
+ <form class="sec" style="border-top:0;padding-top:0" onsubmit="return false" novalidate>
+  <div class="fld"><div class="lr"><label for="f-title">${t('ed.titleLabel')}</label><span class="cnt">${create?0:10}/80</span></div><input class="input" id="f-title" value="${create?'':'Spanish B1'}" placeholder="${t('ed.titlePlaceholder')}" autocomplete="off"></div>
+  <div class="fld"><div class="lr"><label for="f-note">${t('ed.noteLabel')}</label><span class="cnt">0/2000</span></div><textarea class="input" id="f-note" aria-describedby="f-note-h"></textarea><p class="hint" id="f-note-h">${t('ed.noteHint')}</p></div>
+  <div class="fld"><label for="f-goal">${t('ed.goalLabel')}</label><select class="input" id="f-goal" aria-describedby="f-goal-h"><option>${t('ed.goalNone')}</option><option selected>Spanish</option><option>Guitar</option></select><p class="hint" id="f-goal-h">${t('ed.goalHint')}</p></div>
+  <div class="two"><div class="fld"><label for="f-target">${t('ed.targetLabel')}</label><div style="display:flex;align-items:baseline;gap:8px"><input class="input n" id="f-target" inputmode="decimal" value="${L==='vi'?'5':'5'}"><span class="muted">${t('noValueH')}</span></div><p class="hint">${t('ed.targetHint')}</p></div><div></div></div>
+  <div class="two"><div class="fld"><div class="lr"><label for="f-ml">${t('ed.milestoneLabelLabel')}</label><span class="cnt">4/40</span></div><input class="input" id="f-ml" value="Exam" placeholder="${t('ed.milestoneLabelPlaceholder')}"></div>
+  <div class="fld"><label for="f-md">${t('ed.milestoneDateLabel')}</label><input class="input" id="f-md" type="date" value="2027-06-01" aria-describedby="f-md-h"><p class="hint" id="f-md-h">${t('ed.milestoneHint')}</p></div></div>
+  <div class="btn-row"><button class="btn primary" type="submit">${create?t('ed.create'):t('ed.saveDetails')}</button></div>
+  ${create?`<p class="hint" style="margin-top:12px">${t('new.afterCreate')}</p>`:''}
+ </form>`}
+function itemForm(it,pi,errs){
+ const e1=errs?`<p class="err" id="e-pe"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg>${t('errors.ROADMAP_DATE_INVALID_order')}</p>`:'';
+ const e2=errs?`<p class="err" id="e-t"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg>${t('errors.ROADMAP_TITLE_REQUIRED')}</p>`:'';
+ return `<form class="form" onsubmit="return false" novalidate>
+  ${errs?`<div class="alert" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg><span>${t('ed.summary',{count:2})}</span></div>`:''}
+  <div class="fld"><div class="lr"><label for="it-t">${t('ed.itemTitleLabel')}</label><span class="cnt">${errs?0:it.title.length}/200</span></div><input class="input" id="it-t" value="${errs?'':esc(it.title)}" ${errs?'aria-invalid="true" aria-describedby="e-t"':''}>${e2}</div>
+  <div class="two"><div class="fld"><label for="it-ps">${t('ed.plannedStart')}</label><input class="input" id="it-ps" type="date" value="${errs?'2026-11-24':it.ps}"></div>
+  <div class="fld"><label for="it-pe">${t('ed.plannedEnd')}</label><input class="input" id="it-pe" type="date" value="${errs?'2026-11-18':it.pe}" ${errs?'aria-invalid="true" aria-describedby="e-pe"':''}>${e1}</div></div>
+  <div class="fld"><label for="it-ph">${t('ed.itemPhaseLabel')}</label><select class="input" id="it-ph">${phases.map((p,k)=>`<option ${k===pi?'selected':''}>${esc(p.title)}</option>`).join('')}</select></div>
+  <div class="fld"><div class="lr"><label for="it-n">${t('ed.itemNoteLabel')}</label><span class="cnt">0/1000</span></div><textarea class="input" id="it-n"></textarea></div>
+  <div class="btn-row"><button class="btn primary sm" type="submit">${t('ed.saveItem')}</button><button class="btn secondary sm" type="button" data-cancel>${t('ed.cancel')}</button></div></form>`}
+function structure(errs){
+ let h=`<section class="sec" aria-labelledby="ph-h"><h2 class="eyebrow" id="ph-h">${t('ed.phasesTitle')}</h2>`;
+ phases.forEach((p,pi)=>{
+  h+=`<div class="ph" role="group" aria-label="${esc(p.title)}"><div class="ph-top"><div style="min-width:0"><h3>${esc(p.title)}</h3>${p.note?`<p class="pn">${esc(p.note)}</p>`:''}</div>
+   <div class="tools"><button class="ib" type="button" data-pm="${pi}:-1" aria-label="${t('ed.moveUpAria',{title:esc(p.title)})}" ${pi===0?'aria-disabled="true"':''}>${UP}</button><button class="ib" type="button" data-pm="${pi}:1" aria-label="${t('ed.moveDownAria',{title:esc(p.title)})}" ${pi===phases.length-1?'aria-disabled="true"':''}>${DN}</button>
+   <button class="btn secondary sm" type="button">${t('ed.editPhase')}</button><button class="btn dghost sm" type="button" data-delphase="${pi}">${t('ed.deletePhase')}</button></div></div>`;
+  if(!p.items.length)h+=`<p class="hint">${t('ed.noItemsInPhase')}</p>`;
+  p.items.forEach((it,k)=>{
+   h+=`<div class="it"><div class="it-row"><div class="it-t"><b>${esc(it.title)}</b><span>${fd(it.ps)} – ${fd(it.pe)}</span></div>
+    <div class="tools"><button class="ib" type="button" data-im="${pi}:${k}:-1" id="u-${it.id}" aria-label="${t('ed.moveUpAria',{title:esc(it.title)})}" ${k===0?'aria-disabled="true"':''}>${UP}</button><button class="ib" type="button" data-im="${pi}:${k}:1" id="d-${it.id}" aria-label="${t('ed.moveDownAria',{title:esc(it.title)})}" ${k===p.items.length-1?'aria-disabled="true"':''}>${DN}</button>
+    <button class="btn secondary sm" type="button" data-edit="${it.id}">${t('ed.editItem')}</button><button class="btn dghost sm" type="button">${t('ed.deleteItem')}</button></div></div>
+    ${editing===it.id?itemForm(it,pi,errs):''}</div>`;});
+  h+=`<div style="margin-top:8px"><button class="btn secondary sm" type="button">${t('ed.addItem')}</button></div></div>`;});
+ h+=`<div class="btn-row" style="margin-top:8px"><button class="btn secondary" type="button">${t('ed.addPhase')}</button></div></section>`;
+ h+=`<section class="sec" aria-labelledby="cp-h"><h2 class="eyebrow" id="cp-h">${t('ed.cpTitle')}</h2><div class="it" style="border-top:0;padding-top:0"><div class="it-row"><div class="it-t"><b>Mock 1</b><span>${t('cpName')}</span></div><div class="tools"><button class="btn secondary sm" type="button">${t('ed.editItem')}</button><button class="btn dghost sm" type="button">${t('ed.deleteItem')}</button></div></div></div><div class="btn-row" style="margin-top:8px"><button class="btn secondary" type="button">${t('ed.addCp')}</button></div></section>`;
+ h+=`<section class="dz"><h2 class="eyebrow" style="margin-bottom:12px">${t('ed.dangerTitle')}</h2><div class="btn-row"><button class="btn dghost" type="button" data-delrm>${t('ed.deleteRoadmap')}</button></div></section>
+ <div class="btn-row"><a class="btn primary" href="12-roadmap-detail.html">${t('ed.done')}</a></div>`;
+ return h}
+function render(){
+ L=document.getElementById('lang').value;document.documentElement.lang=L;
+ document.querySelectorAll('[data-k]').forEach(e=>e.textContent=t(e.dataset.k));
+ const mode=document.getElementById('mode').value;
+ document.getElementById('h1').textContent=mode==='new'?t('new.title'):t('ed.titleEdit');
+ document.getElementById('back').textContent='← '+t('detail.back');
+ document.getElementById('view').innerHTML=details(mode)+(mode==='new'?'':structure(mode==='errors'));
+ bind();
+ if(pendingFocus){const e=document.getElementById(pendingFocus);if(e)e.focus();pendingFocus=null}
+}
+function move(arr,i,d){const j=i+d;if(j<0||j>=arr.length)return false;[arr[i],arr[j]]=[arr[j],arr[i]];return true}
+function bind(){
+ document.querySelectorAll('[data-im]').forEach(b=>b.onclick=()=>{if(b.getAttribute('aria-disabled')==='true')return;const [pi,k,d]=b.dataset.im.split(':').map(Number);const p=phases[pi];const it=p.items[k];
+  if(!move(p.items,k,d))return;const pos=k+d+1,total=p.items.length;
+  pendingFocus=(d<0?'u-':'d-')+it.id;
+  document.getElementById('live').textContent=t('ed.movedStatus',{title:it.title,pos,total});render()});
+ document.querySelectorAll('[data-pm]').forEach(b=>b.onclick=()=>{if(b.getAttribute('aria-disabled')==='true')return;const [pi,d]=b.dataset.pm.split(':').map(Number);move(phases,pi,d);document.getElementById('live').textContent=t('ed.movedStatus',{title:phases[pi+d].title,pos:pi+d+1,total:phases.length});render()});
+ document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{editing=editing===b.dataset.edit?null:b.dataset.edit;render()});
+ document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{editing=null;render()});
+ const dlg=document.getElementById('dlg');
+ document.querySelectorAll('[data-delphase]').forEach(b=>b.onclick=()=>{const p=phases[+b.dataset.delphase];
+  document.getElementById('dlg-t').textContent=t('ed.deletePhaseTitle',{title:p.title});document.getElementById('dlg-b').textContent=t('ed.deletePhaseBodyN',{count:p.items.length});
+  document.getElementById('dlg-ok').textContent=t('ed.deletePhaseConfirm');document.getElementById('dlg-no').textContent=t('ed.cancel');dlg.showModal()});
+ document.querySelectorAll('[data-delrm]').forEach(b=>b.onclick=()=>{
+  document.getElementById('dlg-t').textContent=L==='vi'?'Xóa "Spanish B1"?':'Delete "Spanish B1"?';
+  document.getElementById('dlg-b').textContent=L==='vi'?'Thao tác này xóa lộ trình cùng 2 giai đoạn, 4 mục và 1 điểm kiểm tra. Mục tiêu và các lần ghi của nó không bị ảnh hưởng. Không thể hoàn tác.':"This deletes the roadmap with its 2 phases, 4 items and 1 checkpoint. Your goal and its entries are not affected. This can't be undone.";
+  document.getElementById('dlg-ok').textContent=t('ed.deleteRoadmap');document.getElementById('dlg-no').textContent=t('ed.cancel');dlg.showModal()});
+}
+document.getElementById('dlg-no').onclick=()=>document.getElementById('dlg').close();
+document.getElementById('dlg-ok').onclick=()=>document.getElementById('dlg').close();
+document.getElementById('lang').onchange=render;document.getElementById('mode').onchange=render;render();
+</script>
+</body>
+</html>

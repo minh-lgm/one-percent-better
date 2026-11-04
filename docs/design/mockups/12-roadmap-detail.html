@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chi tiết lộ trình — 1% Better (mockup S13, DESIGN v8.0)</title>
+<style>
+/* v7 tokens (DESIGN 6.1). The app self-hosts Fraunces + Manrope; this offline mockup falls back to Georgia / system-ui. */
+:root{color-scheme:light dark;
+--font:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--font-display:"Fraunces",Georgia,"Times New Roman",serif;
+--bg:#F6F2EA;--surface:#F6F2EA;--surface-2:#ECE6DA;--surface-raised:#FFFFFF;--surface-glass:rgba(246,242,234,.92);--border:#E3DCCF;--border-input:#B5AC9A;
+--text:#17160F;--text-muted:#6F6A5E;--primary:#AD3D1A;--primary-hover:#8F3114;--on-primary:#FFFFFF;--primary-soft:#F6DED3;--on-primary-soft:#8A2F12;
+--btn-bg:#17160F;--btn-fg:#F6F2EA;--danger:#A32D2D;--danger-soft:#F8E1DF;--on-danger-soft:#7A1D1D;--info:#1D4E9E;--info-soft:#E8F0FC;--focus:#2457C5;
+--heat-3:#D5532A;--r-md:10px;--r-full:999px;--tap:44px;--nav-w:232px;--tabbar-h:64px}
+@media (prefers-color-scheme:dark){:root{
+--bg:#171512;--surface:#171512;--surface-2:#221F1A;--surface-raised:#221F1A;--surface-glass:rgba(23,21,18,.92);--border:#2C2822;--border-input:#6B655A;
+--text:#F3EFE6;--text-muted:#A39C8E;--primary:#E8663C;--primary-hover:#F07D56;--on-primary:#171512;--primary-soft:#3A2419;--on-primary-soft:#F5B9A3;
+--btn-bg:#F3EFE6;--btn-fg:#171512;--danger:#FF8A80;--danger-soft:#3D1F1D;--on-danger-soft:#FFB4AD;--info:#8DB4F5;--info-soft:#1C2A44;--focus:#8DB4F5;--heat-3:#B8492A}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/24px var(--font);-webkit-text-size-adjust:100%}
+h1,h2,h3,p,ul,dl,dd,figure{margin:0}ul{padding:0;list-style:none}
+a{color:var(--primary)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-60px;background:var(--surface-raised);padding:8px 12px;border-radius:var(--r-md);z-index:60}.skip:focus{top:8px}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.muted{color:var(--text-muted)}.num{font-variant-numeric:tabular-nums}
+.eyebrow{font:600 12px/16px var(--font);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+/* shell */
+.nav{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;background:var(--surface-glass);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.nav .brand{display:none}
+.nav .item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;min-height:var(--tabbar-h);padding:6px 2px 2px;color:var(--text-muted);font:500 12px/16px var(--font);text-align:center;text-decoration:none}
+.nav .item .ic{width:22px;height:22px}.nav .item[aria-current=page]{color:var(--primary);font-weight:600}
+.mark{display:inline-grid;place-items:center;width:32px;height:32px;padding:2px;border-radius:9px;background:#fff;flex:none}.mark img{display:block;width:100%;height:100%;object-fit:contain}
+.content{min-width:0}main{max-width:720px;margin:0 auto;padding:16px 16px calc(var(--tabbar-h) + 80px)}
+@media (min-width:1024px){
+.nav{top:0;right:auto;width:var(--nav-w);flex-direction:column;justify-content:flex-start;gap:4px;padding:24px 12px;border-top:0;border-right:1px solid var(--border);background:var(--bg)}
+.nav .brand{display:flex;align-items:center;gap:10px;padding:0 12px 20px;font:400 18px/24px var(--font-display);color:var(--text);text-decoration:none}
+.nav .item{flex:none;flex-direction:row;justify-content:flex-start;align-items:center;gap:12px;min-height:var(--tap);padding:0 14px;border-radius:var(--r-full);font-size:15px;text-align:left}
+.nav .item .ic{width:24px;height:24px}.nav .item:hover{background:var(--surface-2)}.nav .item[aria-current=page]{background:var(--primary-soft);color:var(--on-primary-soft)}
+.content{margin-left:var(--nav-w)}main{max-width:1040px;padding:32px 48px 96px}}
+@media (min-width:1440px){main{max-width:1180px;padding:40px 56px 96px}}
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);padding:11px 20px;border:1px solid transparent;border-radius:var(--r-full);font:600 15px/20px var(--font);cursor:pointer;text-decoration:none;text-align:center;background:none;color:var(--text)}
+.btn.primary{background:var(--btn-bg);color:var(--btn-fg)}.btn.secondary{border-color:color-mix(in srgb,var(--text) 25%,transparent)}.btn.secondary:hover{background:color-mix(in srgb,var(--text) 6%,transparent)}
+.btn.sm{padding:8px 14px;font-size:14px}.btn.ghost{color:var(--primary);padding-inline:12px}
+.link{display:inline-flex;align-items:center;min-height:var(--tap);color:var(--primary);font-weight:600;text-decoration:none}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 12px 3px 8px;border-radius:var(--r-full);font:600 13px/20px var(--font);background:var(--surface-2);color:var(--text)}
+.chip .ic{width:16px;height:16px}.chip.good{background:var(--primary-soft);color:var(--on-primary-soft)}
+.chip.warn{background:var(--primary-soft);color:var(--on-primary-soft);box-shadow:inset 0 0 0 1.5px var(--primary)}
+.chip.crit{background:var(--danger-soft);color:var(--on-danger-soft)}.chip.idle{background:var(--surface-2)}
+.tag{display:inline-flex;align-items:center;padding:1px 10px;border-radius:var(--r-full);font:600 12px/18px var(--font);background:var(--surface-2);color:var(--text)}
+.tag.now{background:var(--primary-soft);color:var(--on-primary-soft);box-shadow:inset 0 0 0 1.5px var(--primary)}
+.tag.late,.tag.over{background:var(--danger-soft);color:var(--on-danger-soft)}.tag.early{background:var(--primary-soft);color:var(--on-primary-soft)}
+/* head */
+h1{font:400 36px/40px var(--font-display);letter-spacing:-.01em;overflow-wrap:anywhere}
+@media (min-width:640px){h1{font-size:44px;line-height:48px}}@media (min-width:1024px){h1{font-size:48px;line-height:52px}}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 16px;margin:0 0 20px}
+.head .goal{margin-top:8px;font-size:15px;line-height:22px;color:var(--text-muted)}
+.sec{padding:20px 0;border-top:1px solid var(--border)}.sec>h2{margin-bottom:12px}
+/* overview: 4 metrics */
+.ov{display:grid;grid-template-columns:1fr 1fr;gap:20px 16px}
+@media (min-width:640px){.ov{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.m .v{font:600 40px/44px var(--font-display);letter-spacing:-.01em;margin-top:6px;font-variant-numeric:tabular-nums}
+.m .v small{font:400 16px/24px var(--font);color:var(--text-muted);letter-spacing:0}
+.m .v.txt{font-size:26px;line-height:32px}
+.m .s{margin-top:4px;font-size:14px;line-height:20px;color:var(--text-muted)}
+.m .chip{margin-top:10px}
+.pbar{height:6px;background:var(--border);border-radius:3px;margin-top:10px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--primary)}
+/* week strip: 7 per row on phones (3 rows for 21), one row on desktop */
+.strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+@media (min-width:640px){.strip{grid-template-columns:repeat(auto-fill,44px)}}
+.cell{min-height:44px;display:grid;place-items:center;border-radius:8px;border:1.5px solid var(--border-input);background:transparent;color:var(--text-muted);font:600 13px/16px var(--font);font-variant-numeric:tabular-nums;cursor:pointer;padding:0}
+.cell .ic{width:16px;height:16px;stroke-width:2.6}
+.cell.done{background:var(--text);border-color:var(--text);color:var(--bg)}
+.cell.over{background:var(--danger-soft);border-color:var(--danger);color:var(--on-danger-soft)}
+.cell.cur{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--primary)}
+.cell.cur:not(.done){color:var(--on-primary-soft);background:var(--primary-soft);border-color:var(--primary)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:12px;font-size:13px;line-height:18px;color:var(--text-muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--border-input);display:inline-block}
+.legend i.d{background:var(--text);border-color:var(--text)}.legend i.c{background:var(--primary-soft);border-color:var(--primary)}.legend i.o{background:var(--danger-soft);border-color:var(--danger)}
+/* layout columns on desktop */
+.cols{display:block}
+@media (min-width:1024px){.cols{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:0 48px;align-items:start}}
+@media (min-width:1440px){.cols{grid-template-columns:minmax(0,1fr) 400px}}
+/* this week card */
+.now h3{font:400 24px/30px var(--font-display);margin:6px 0 2px;overflow-wrap:anywhere}
+.now .rng{color:var(--text-muted);font-size:14px;line-height:20px}
+.now .row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;margin-top:12px;font-variant-numeric:tabular-nums}
+.now .big{font:600 28px/32px var(--font-display)}
+.now .actions{margin-top:12px}
+/* phases + items */
+.ph{padding:20px 0 4px;border-top:1px solid var(--border)}
+.ph-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 12px}
+.ph-head h3{font:400 22px/28px var(--font-display);overflow-wrap:anywhere}.ph-head .c{font-size:13px;line-height:18px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.ph .pn{color:var(--text-muted);font-size:14px;line-height:20px}
+.it{display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 4px;padding:10px 0;border-top:1px solid var(--border)}
+.ph-head+.it,.pn+.it{margin-top:10px}
+.it:focus{outline:2px solid var(--focus);outline-offset:2px}
+.cb{width:44px;height:44px;display:grid;place-items:center;cursor:pointer}
+.cb input{width:22px;height:22px;margin:0;accent-color:var(--text)}
+.it-t{font-weight:600;overflow-wrap:anywhere;padding-top:10px}
+.it-tags{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:4px}
+.it-meta{margin-top:4px;font-size:14px;line-height:20px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.it-note{margin-top:4px;font-size:14px;line-height:20px;color:var(--text-muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.it-det{margin-top:6px}
+.det{display:none;margin-top:8px;padding:12px 0 4px;border-top:1px dashed var(--border);grid-template-columns:1fr;gap:12px}
+.it.open .det{display:grid}@media (min-width:640px){.det{grid-template-columns:1fr 1fr}.det .full{grid-column:1/-1}}
+.fld label{display:block;font:600 12px/16px var(--font);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.fld .in{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.input{font:400 17px/24px var(--font);color:var(--text);background:transparent;border:0;border-bottom:1px solid var(--border-input);padding:8px 0;min-height:44px;min-width:0;width:100%;border-radius:0}
+.input.d{width:auto;flex:1 1 120px;font:400 22px/28px var(--font-display)}
+textarea.input{min-height:72px;resize:vertical}
+.err{font-size:14px;line-height:20px;color:var(--danger);display:flex;gap:6px;margin-top:6px}
+.hint{font-size:14px;line-height:20px;color:var(--text-muted);margin-top:6px}
+/* checkpoints */
+table{border-collapse:collapse;width:100%}
+th{font:600 12px/16px var(--font);letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:0 8px 8px 0;vertical-align:bottom}
+td{padding:10px 8px 10px 0;border-top:1px solid var(--border);vertical-align:top;font-size:15px;line-height:22px}
+td:last-child,th:last-child{padding-right:0}
+.cp-n{font-weight:600;overflow-wrap:anywhere}.cp-w{font-size:13px;line-height:18px;color:var(--text-muted)}
+.score{display:flex;align-items:baseline;gap:6px}.score input{width:64px;font:400 22px/28px var(--font-display);text-align:right;padding:4px 0;min-height:44px;background:transparent;color:var(--text);border:0;border-bottom:1px solid var(--border-input);border-radius:0}
+.score input[aria-invalid=true]{border-bottom-color:var(--danger)}
+.st{margin-top:2px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:13px;line-height:18px;font-weight:600}
+.st .dl{font-variant-numeric:tabular-nums}
+.chart{margin-top:20px}.chart figcaption{font-size:14px;line-height:20px;color:var(--text-muted);margin-bottom:8px}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart text{font:600 11px var(--font);fill:var(--text-muted)}.chart .v{fill:var(--text);font-size:12px}
+.lgd{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:13px;line-height:18px;color:var(--text-muted)}.lgd span{display:inline-flex;align-items:center;gap:6px}
+.lgd i{width:14px;height:14px;display:inline-block;border-radius:3px}
+.noteb{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:24px}
+details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}details p{color:var(--text-muted);font-size:14px;line-height:22px;padding-bottom:8px}
+.callout{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:var(--r-md);background:var(--info-soft);color:var(--info);font-size:14px;line-height:20px;margin-top:10px}
+.mock-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-bottom:16px;padding:12px;border:1px dashed var(--border-input);border-radius:var(--r-md);font-size:14px;line-height:20px}
+.mock-bar select{font:inherit;min-height:44px;padding:0 8px;background:var(--surface-raised);color:var(--text);border:1px solid var(--border-input);border-radius:8px}
+.mock-note{margin-top:32px;padding:12px 16px;border:1px dashed var(--border-input);border-radius:var(--r-md);color:var(--text-muted);font-size:13px;line-height:18px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-k="a11y.skip">Chuyển tới nội dung</a>
+<nav class="nav" aria-label="Chính">
+  <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="../../../public/brand-mark-96.png" width="28" height="28" alt=""></span><span>1% Better per Day</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></svg><span data-k="nav.today">Hôm nay</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/></svg><span data-k="nav.goals">Mục tiêu</span></a>
+  <a class="item" href="11-roadmaps.html" aria-current="page"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6.5a3 3 0 0 0 0-6h-5a3 3 0 0 1 0-6H16"/></svg><span data-k="nav.roadmaps">Mục tiêu lớn</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20v-8M12 20V5M19 20v-12"/></svg><span data-k="nav.review">Tổng kết</span></a>
+  <a class="item" href="#"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span data-k="nav.settings">Cài đặt</span></a>
+</nav>
+<div class="content"><main id="main" tabindex="-1">
+  <div class="mock-bar">
+    <label>Ngôn ngữ / Language <select id="lang"><option value="vi">Tiếng Việt</option><option value="en">English</option></select></label>
+    <label>Tình huống / Variant <select id="variant">
+      <option value="q1">Q1 — Đúng tiến độ (W1 xong, W2 tuần này)</option>
+      <option value="q1b">Q1b — Chậm 1 tuần (W1 chưa xong)</option>
+      <option value="q1c">Q1 — Chậm 2 tuần (10/11, mức nghiêm trọng)</option>
+      <option value="q1d">Q1d — Chưa bắt đầu (26/10)</option>
+      <option value="q1e">Q1e — Mục tiêu đã bị xóa (giờ "—")</option>
+      <option value="arch">Mục tiêu đã lưu trữ</option>
+      <option value="none">Chưa liên kết mục tiêu</option>
+      <option value="done">Hoàn thành (23/03/2027)</option>
+    </select></label>
+    <label>Điểm CP2 <select id="cp2"><option value="">chưa có</option><option value="18">18 (dưới ngưỡng)</option><option value="21">21 (đạt)</option></select></label>
+  </div>
+  <div id="view"></div>
+  <p class="mock-note">Mockup S13 (DESIGN v8.0; M19 chi tiết + thao tác nhanh, M20 checkpoint). Số liệu tính bằng đúng quy tắc ARCH §4.8 (c) từ dataset Q1: 6 entry, hôm nay 04/11/2026. Bấm ô trong dải để cuộn tới mục; tick hoặc "Hôm nay" cập nhật ngay; "Ngày & ghi chú" mở chi tiết mục.</p>
+</main></div>
+<script>
+const DAY=864e5,P=s=>Date.parse(s+'T00:00:00Z'),F=ms=>new Date(ms).toISOString().slice(0,10);
+const D={
+en:{'a11y.skip':'Skip to content','nav.today':'Today','nav.goals':'Goals','nav.roadmaps':'Big goals','nav.review':'Review','nav.settings':'Settings','noValue':'—','h':'{{n}} h','min':'{{n}} min',
+'detail.back':'All big goals','detail.edit':'Edit roadmap','detail.goal':'Goal','detail.goalArchived':'archived','detail.goalNone':'No goal linked','detail.goalMissing':'The linked goal was deleted',
+'overview.label':'Overview','overview.pace':'Pace','overview.doneWeeks':'Weeks done','overview.doneItems':'Items done','overview.hours':'Study time','overview.hoursPlan':'Planned through this week: {{plan}}',
+'overview.hoursNone':'Link a goal to count study time.','overview.hoursMissing':'The linked goal was deleted.','overview.hoursArchived':'The linked goal is archived. Its time still counts.','overview.linkGoal':'Link a goal',
+'pace.notStarted':'Not started','pace.onTrack':'On track','pace.behindWeeks':'{{count}} weeks behind','pace.behindWeek':'1 week behind','pace.completed':'Completed',
+'pace.subNotStarted':'Starts {{date}}','pace.subOnTrack':'Nothing is overdue.','pace.subWarn':'Use a spare week or day to catch up.','pace.subCrit':'Consider moving your planned dates or milestone.','pace.subCompleted':'Every item is finished.',
+'milestone.unit1':'day left','milestoneN':'days left','milestone.date':'On {{date}}','milestone.today':'Today','milestone.past':'Passed',
+'strip.label':'Roadmap items, in order','strip.state.done':'done','strip.state.currentWeek':'this week','strip.state.overdue':'overdue, not done','strip.state.upcoming':'upcoming','strip.state.current':'current',
+'strip.legend.done':'Done','strip.legend.current':'This week','strip.legend.overdue':'Overdue, not done','tag.currentItem':'Now',
+'now.eyebrowWeek':'This week','now.eyebrowItem':'Current item','now.minutesOfTarget':'{{done}}/{{target}} min','now.minutesOnly':'{{done}} min studied','now.progressLabel':'Study time this week',
+'now.daysLeft1':'{{count}} day left','now.daysLeftN':'{{count}} days left','now.lastDay':'Last day','now.beforeStart':'Starts {{date}}. First up: {{title}}.','now.after':'The planned dates ended on {{date}}.',
+'item.markDone':'Mark done','item.undoDone':'Mark as not done','item.checkAria':'Mark {{title}} as done','item.planned':'Planned {{range}}','item.details':'Dates & note','item.actualStart':'Actual start','item.actualEnd':'Actual end',
+'item.today':'Today','item.todayAriaStart':'Today: set actual start of {{title}}','item.todayAriaEnd':'Today: set actual end of {{title}}','item.clear':'Clear','item.noteLabel':'Note','item.notePlaceholder':'Mistakes, topics to review…','item.hoursLabel':'Study time',
+'tag.currentWeek':'This week','tag.overdue':'Overdue','tag.inProgress':'In progress','tag.onTime':'On time','tag.early1':'Early by {{count}} day','tag.earlyN':'Early by {{count}} days','tag.late1':'Late by {{count}} day','tag.lateN':'Late by {{count}} days','tag.studied1':'studied {{count}} day','tag.studiedN':'studied {{count}} days',
+'phase.progress':'Done {{done}}/{{total}}',
+'cp.title':'Checkpoints','cp.colName':'Checkpoint','cp.colThreshold':'Threshold','cp.colScore':'Score','cp.week':'W{{n}}','cp.scoreAria':'Score for {{title}} (out of {{max}})','cp.state.pass':'Passed','cp.state.below':'Below threshold','cp.state.recorded':'Recorded','cp.state.pending':'No score yet',
+'cp.chartTitle':'Scores vs. thresholds','cp.legendThreshold':'Threshold','cp.err.range':'Score must be between 0 and the maximum score.',
+'note.title':'Notes','howHours.summary':'How study time is counted','howHours.body':"Study time comes from the entries on the linked goal. Each day's minutes count toward one item: the one you've started or finished on that date, otherwise the one whose planned dates include it. Days outside every item aren't counted here (they still count on the goal).",
+'roadmapTitle':'QPT 21 weeks','goalName':'QPT study','milestoneLabel':'QPT exam'},
+vi:{'a11y.skip':'Chuyển tới nội dung','nav.today':'Hôm nay','nav.goals':'Mục tiêu','nav.roadmaps':'Mục tiêu lớn','nav.review':'Tổng kết','nav.settings':'Cài đặt','noValue':'—','h':'{{n}} giờ','min':'{{n}} phút',
+'detail.back':'Tất cả mục tiêu lớn','detail.edit':'Sửa lộ trình','detail.goal':'Mục tiêu','detail.goalArchived':'đã lưu trữ','detail.goalNone':'Chưa liên kết mục tiêu','detail.goalMissing':'Mục tiêu liên kết đã bị xóa',
+'overview.label':'Tổng quan','overview.pace':'Nhịp độ','overview.doneWeeks':'Tuần đã xong','overview.doneItems':'Mục đã xong','overview.hours':'Giờ đã học','overview.hoursPlan':'Kế hoạch đến hết tuần này: {{plan}}',
+'overview.hoursNone':'Liên kết một mục tiêu để tính giờ học.','overview.hoursMissing':'Mục tiêu liên kết đã bị xóa.','overview.hoursArchived':'Mục tiêu liên kết đã được lưu trữ. Giờ học vẫn được tính.','overview.linkGoal':'Liên kết mục tiêu',
+'pace.notStarted':'Chưa bắt đầu','pace.onTrack':'Đúng tiến độ','pace.behindWeeks':'Chậm {{count}} tuần','pace.behindWeek':'Chậm 1 tuần','pace.completed':'Hoàn thành',
+'pace.subNotStarted':'Bắt đầu {{date}}','pace.subOnTrack':'Không có gì quá hạn.','pace.subWarn':'Dùng một tuần hoặc ngày dự phòng để bù.','pace.subCrit':'Cân nhắc dời các ngày kế hoạch hoặc mốc chính.','pace.subCompleted':'Mọi mục đều đã xong.',
+'milestone.unit1':'ngày nữa','milestoneN':'ngày nữa','milestone.date':'Ngày {{date}}','milestone.today':'Hôm nay','milestone.past':'Đã qua',
+'strip.label':'Các mục của lộ trình, theo thứ tự','strip.state.done':'đã xong','strip.state.currentWeek':'tuần này','strip.state.overdue':'quá hạn, chưa xong','strip.state.upcoming':'sắp tới','strip.state.current':'đang diễn ra',
+'strip.legend.done':'Đã xong','strip.legend.current':'Tuần này','strip.legend.overdue':'Quá hạn chưa xong','tag.currentItem':'Hiện tại',
+'now.eyebrowWeek':'Tuần này','now.eyebrowItem':'Mục hiện tại','now.minutesOfTarget':'{{done}}/{{target}} phút','now.minutesOnly':'Đã học {{done}} phút','now.progressLabel':'Giờ học tuần này',
+'now.daysLeft1':'Còn {{count}} ngày','now.daysLeftN':'Còn {{count}} ngày','now.lastDay':'Ngày cuối','now.beforeStart':'Bắt đầu {{date}}. Mục đầu tiên: {{title}}.','now.after':'Các ngày kế hoạch đã kết thúc ngày {{date}}.',
+'item.markDone':'Đánh dấu xong','item.undoDone':'Bỏ đánh dấu xong','item.checkAria':'Đánh dấu xong: {{title}}','item.planned':'Kế hoạch {{range}}','item.details':'Ngày & ghi chú','item.actualStart':'Bắt đầu thực tế','item.actualEnd':'Kết thúc thực tế',
+'item.today':'Hôm nay','item.todayAriaStart':'Hôm nay: đặt ngày bắt đầu thực tế của {{title}}','item.todayAriaEnd':'Hôm nay: đặt ngày kết thúc thực tế của {{title}}','item.clear':'Xóa','item.noteLabel':'Ghi chú','item.notePlaceholder':'Câu hay sai, phần cần ôn…','item.hoursLabel':'Giờ học',
+'tag.currentWeek':'Tuần này','tag.overdue':'Quá hạn','tag.inProgress':'Đang học','tag.onTime':'Đúng hạn','tag.early1':'Sớm {{count}} ngày','tag.earlyN':'Sớm {{count}} ngày','tag.late1':'Trễ {{count}} ngày','tag.lateN':'Trễ {{count}} ngày','tag.studied1':'học {{count}} ngày','tag.studiedN':'học {{count}} ngày',
+'phase.progress':'Xong {{done}}/{{total}}',
+'cp.title':'Điểm kiểm tra','cp.colName':'Mốc','cp.colThreshold':'Ngưỡng','cp.colScore':'Điểm','cp.week':'W{{n}}','cp.scoreAria':'Điểm của {{title}} (trên {{max}})','cp.state.pass':'Đạt','cp.state.below':'Dưới ngưỡng','cp.state.recorded':'Đã ghi','cp.state.pending':'Chưa có điểm',
+'cp.chartTitle':'Điểm so với ngưỡng','cp.legendThreshold':'Ngưỡng','cp.err.range':'Điểm phải từ 0 đến điểm tối đa.',
+'note.title':'Ghi chú','howHours.summary':'Cách tính giờ học','howHours.body':'Giờ học lấy từ các lần ghi của mục tiêu được liên kết. Mỗi ngày chỉ tính cho một mục: mục bạn đã bắt đầu hoặc đã xong vào ngày đó, nếu không có thì mục có ngày kế hoạch bao gồm ngày ấy. Ngày nằm ngoài mọi mục không tính ở đây (vẫn tính ở mục tiêu).',
+'roadmapTitle':'QPT 21 tuần','goalName':'QPT study','milestoneLabel':'Thi QPT'}};
+let L='vi';
+const t=(k,v)=>{let s=D[L][k]??D.en[k]??k;for(const x in v)s=s.split('{{'+x+'}}').join(v[x]);return s};
+const loc=()=>L==='vi'?'vi-VN':'en-US';
+const nf=n=>new Intl.NumberFormat(loc(),{maximumFractionDigits:1}).format(n);
+const hrs=m=>t('h',{n:nf(Math.round(m/6)/10)});
+const fd=ms=>{const d=new Date(ms),y=d.getUTCFullYear(),m=String(d.getUTCMonth()+1).padStart(2,'0'),dd=String(d.getUTCDate()).padStart(2,'0');return L==='vi'?`${dd}/${m}/${y}`:`${y}-${m}-${dd}`};
+const dm=ms=>{const d=new Date(ms),m=String(d.getUTCMonth()+1).padStart(2,'0'),dd=String(d.getUTCDate()).padStart(2,'0');return L==='vi'?`${dd}/${m}`:`${m}/${dd}`};
+const rng=(a,b)=>{const same=new Date(a).getUTCFullYear()===new Date(b).getUTCFullYear();return L==='vi'?(same?`${dm(a)} – ${fd(b)}`:`${fd(a)} – ${fd(b)}`):(same?`${fd(a)} – ${dm(b).replace('/','-')}`:`${fd(a)} – ${fd(b)}`)};
+const W={vi:[
+['Phase 1 · Linear Algebra','Course 1 · 34h',['Systems of linear equations: singular vs non-singular, determinant','Solving systems: elimination, row echelon form, rank','Vectors & linear transformations: dot product, nhân ma trận, nghịch đảo','Determinants in depth & eigenvectors: basis, span, eigenvalue, PCA']],
+['Phase 2 · Calculus','Course 2 · 27h',['Derivatives & optimization một biến','Gradients & gradient descent (nhiều biến)',"Optimization in neural networks, Newton's method",'Buffer Noel + Checkpoint 1 + bù tích phân']],
+['Phase 3 · Probability & Statistics','Course 3 · 33h',['Probability cơ bản & các phân phối','Describing distributions: kỳ vọng, phương sai, random vector','Sampling & point estimation: MLE, MAP','Confidence interval & hypothesis testing']],
+['Phase 4 · Differential Equations','HKUST · Chasnov',['First-order ODE: separable, linear, Euler method','Tết: nghỉ hoặc ôn nhẹ, không giao bài mới','Second-order ODE, Laplace transform','Systems of ODE + Checkpoint 2']],
+['Phase 5 · Lấp lỗ hổng & thi QPT','Mock + hồ sơ',['Ôn 2 mảng yếu nhất theo Checkpoint 2','Discrete math + mock QPT lần 1; gom hồ sơ','Sửa lỗi từ mock 1 + mock QPT lần 2','Thi QPT chính thức','Buffer; hoàn tất và nộp hồ sơ trước hạn']]],
+en:[
+['Phase 1 · Linear Algebra','Course 1 · 34h',['Systems of linear equations: singular vs non-singular, determinant','Solving systems: elimination, row echelon form, rank','Vectors & linear transformations: dot product, matrix multiplication, inverse','Determinants in depth & eigenvectors: basis, span, eigenvalue, PCA']],
+['Phase 2 · Calculus','Course 2 · 27h',['Derivatives & optimization in one variable','Gradients & gradient descent (several variables)',"Optimization in neural networks, Newton's method",'Christmas buffer + Checkpoint 1 + integral catch-up']],
+['Phase 3 · Probability & Statistics','Course 3 · 33h',['Basic probability & distributions','Describing distributions: expected value, variance, random vectors','Sampling & point estimation: MLE, MAP','Confidence interval & hypothesis testing']],
+['Phase 4 · Differential Equations','HKUST · Chasnov',['First-order ODE: separable, linear, Euler method','Lunar New Year: rest or light review, no new material','Second-order ODE, Laplace transform','Systems of ODE + Checkpoint 2']],
+['Phase 5 · Close the gaps & sit the QPT','Mock + application',['Review the 2 weakest areas from Checkpoint 2','Discrete math + QPT mock 1; gather application documents','Fix mistakes from mock 1 + QPT mock 2','Official QPT exam','Buffer; finish and submit the application before the deadline']]]};
+const NOTE={vi:'Nhịp học mỗi tuần\nThứ 2–4: 1h/tối · video + ghi chú tay\nThứ 5: 1h · quiz, ghi câu sai vào sổ lỗi\nThứ 7: 2h · lab + 10–15 bài tập ngoài\nChủ nhật: 1h · ôn sổ lỗi, tick tuần\nThứ 6: Buffer\nQuiz chưa đạt 80% thì chưa sang module mới.',
+en:'Weekly rhythm\nMon–Wed: 1 h each evening · video + handwritten notes\nThu: 1 h · quiz, log wrong answers in your mistakes notebook\nSat: 2 h · lab + 10–15 extra exercises\nSun: 1 h · review the mistakes notebook, tick off the week\nFri: buffer\nQuiz below 80% means no new module yet.'};
+const CPS=[['Diagnostic','2026-09-24',null,5,''],['Checkpoint 1','2026-12-21',null,null,{vi:'≥ 3/4 mỗi mảng LA, Calc',en:'≥ 3/4 per area: LA, Calc'}],['Checkpoint 2','2027-02-15',20,null,''],['Mock 1','2027-03-01',24,null,''],['Mock 2','2027-03-08',26,null,'']];
+const ENT={'2026-10-20':50,'2026-10-27':60,'2026-10-29':90,'2026-11-01':120,'2026-11-03':45,'2026-11-04':30};
+const START=P('2026-10-27');
+let V,items,state;
+function build(){
+ const v=document.getElementById('variant').value;
+ const today={q1:'2026-11-04',q1b:'2026-11-04',q1c:'2026-11-10',q1d:'2026-10-26',q1e:'2026-11-04',arch:'2026-11-04',none:'2026-11-04',done:'2027-03-23'}[v];
+ items=[];let i=0;W[L].forEach((ph,pi)=>ph[2].forEach(title=>{items.push({i,pi,title,ps:START+7*i*DAY,pe:START+7*i*DAY+6*DAY,as:null,ae:null,note:''});i++}));
+ if(v==='q1'||v==='q1e'||v==='arch'||v==='none'){items[0].as=START;items[0].ae=P('2026-11-01')}
+ if(v==='q1b'||v==='q1c'){items[0].as=START}
+ if(v==='done')items.forEach(x=>{x.ae=x.pe;x.as=x.ps});
+ if(v==='q1'||v==='q1b')items[1].note=L==='vi'?'sai dấu khi nhân ma trận':'sign slips when multiplying matrices';
+ state={v,today:P(today),link:v==='q1e'?'missing':v==='arch'?'archived':v==='none'?'none':'linked'};
+}
+function compute(){
+ const T=state.today;const mins=items.map(()=>0);
+ if(state.link==='linked'||state.link==='archived'){
+  for(const d in ENT){const dd=P(d);if(dd>T)continue;const c=items.filter(x=>{const S=x.as??x.ps,E=x.ae??(x.as?Math.max(x.pe,T):x.pe);return S<=dd&&dd<=E});
+   if(!c.length)continue;c.sort((a,b)=>((b.as||b.ae)?1:0)-((a.as||a.ae)?1:0)||((b.as??b.ps)-(a.as??a.ps))||a.i-b.i);mins[c[0].i]+=ENT[d]}}
+ const hasHours=state.link==='linked'||state.link==='archived';
+ const done=items.filter(x=>x.ae!=null).length,over=items.filter(x=>x.ae==null&&x.pe<T).length;
+ const end=items[items.length-1].pe,weeks=Math.min(21,T<START?0:Math.floor((T-START)/DAY/7)+1);
+ let pace;if(T<START)pace='notStarted';else if(done===items.length)pace='completed';else if(!over)pace='onTrack';else pace=over===1?'warn':'crit';
+ const cur=items.find(x=>x.ps<=T&&T<=x.pe);
+ return {mins,hasHours,done,over,weeks,pace,cur,end,total:hasHours?mins.reduce((a,b)=>a+b,0):null,plan:480*weeks};
+}
+const IC={good:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',idle:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',warn:'<path d="M12 4l9 16H3zM12 10v4M12 17h.01"/>',crit:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/>'};
+const chip=(k,txt)=>`<span class="chip ${k}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>${txt}</span>`;
+function paceView(c){
+ if(c.pace==='notStarted')return [chip('idle',t('pace.notStarted')),t('pace.subNotStarted',{date:fd(START)})];
+ if(c.pace==='completed')return [chip('good',t('pace.completed')),t('pace.subCompleted')];
+ if(c.pace==='onTrack')return [chip('good',t('pace.onTrack')),t('pace.subOnTrack')];
+ const txt=c.over===1?t('pace.behindWeek'):t('pace.behindWeeks',{count:c.over});
+ return [chip(c.pace,txt),t(c.pace==='warn'?'pace.subWarn':'pace.subCrit')];
+}
+function itemLabel(x){
+ const tags=[];const T=state.today;
+ if(x.ae!=null){const diff=Math.round((x.ae-x.pe)/DAY);const studied=x.as!=null?Math.round((x.ae-x.as)/DAY)+1:null;
+  let lab=diff===0?t('tag.onTime'):diff<0?t(-diff===1?'tag.early1':'tag.earlyN',{count:-diff}):t(diff===1?'tag.late1':'tag.lateN',{count:diff});
+  if(studied)lab+=' · '+t(studied===1?'tag.studied1':'tag.studiedN',{count:studied});
+  tags.push(`<span class="tag ${diff<=0?'early':'late'}">${lab}</span>`);}
+ else if(x.as!=null)tags.push(`<span class="tag">${t('tag.inProgress')}</span>`);
+ return tags;
+}
+let KEEP=false;
+function rerender(i){KEEP=true;render();KEEP=false;const e=document.querySelector('input[data-tick="'+i+'"]');if(e)e.focus()}
+function render(){
+ L=document.getElementById('lang').value;document.documentElement.lang=L;if(!KEEP)build();
+ const cp2=document.getElementById('cp2').value;if(cp2)CPS[2][3]=+cp2;else CPS[2][3]=null;
+ document.querySelectorAll('[data-k]').forEach(e=>e.textContent=t(e.dataset.k));
+ const c=compute();const [paceChip,paceSub]=paceView(c);const T=state.today;
+ const weekBased=true;
+ const goalLine=state.link==='none'?t('detail.goalNone'):state.link==='missing'?t('detail.goalMissing'):`${t('detail.goal')}: <a href="#">${t('goalName')}</a>${state.link==='archived'?` <span class="tag">${t('detail.goalArchived')}</span>`:''}`;
+ const hv=c.hasHours?`${nf(Math.round(c.total/6)/10)}<small> ${t('h',{n:''}).trim()}</small>`:t('noValue');
+ let hs;if(state.link==='none')hs=`${t('overview.hoursNone')} <a href="13-roadmap-editor.html">${t('overview.linkGoal')}</a>`;
+ else if(state.link==='missing')hs=`${t('overview.hoursMissing')} <a href="13-roadmap-editor.html">${t('overview.linkGoal')}</a>`;
+ else hs=(state.link==='archived'?t('overview.hoursArchived')+' ':'')+t('overview.hoursPlan',{plan:hrs(c.plan)});
+ const days=Math.round((P('2027-03-09')-T)/DAY);
+ const mv=days>0?`${days}<small> ${t('milestoneN')}</small>`:days===0?`<span class="txt-v">${t('milestone.today')}</span>`:`<span class="txt-v">${t('milestone.past')}</span>`;
+ const ov=`<section class="sec" aria-labelledby="ovh"><h2 class="eyebrow" id="ovh">${t('overview.label')}</h2><div class="ov">
+  <div class="m"><div class="eyebrow">${t('overview.pace')}</div>${paceChip}<div class="s">${paceSub}</div></div>
+  <div class="m"><div class="eyebrow">${t('overview.doneWeeks')}</div><div class="v">${c.done}/${items.length}</div><div class="pbar" aria-hidden="true"><i style="width:${c.done/items.length*100}%"></i></div></div>
+  <div class="m"><div class="eyebrow">${t('overview.hours')}</div><div class="v ${c.hasHours?'':'txt'}">${hv}</div><div class="s">${hs}</div></div>
+  <div class="m"><div class="eyebrow">${t('milestoneLabel')}</div><div class="v ${days>0?'':'txt'}">${mv}</div><div class="s">${t('milestone.date',{date:fd(P('2027-03-09'))})}</div></div></div></section>`;
+ // strip
+ const cells=items.map(x=>{
+  const st=x.ae!=null?'done':(x.pe<T?'over':'up');const isCur=c.cur&&c.cur.i===x.i;
+  const state_=x.ae!=null?t('strip.state.done'):x.pe<T?t('strip.state.overdue'):isCur?t('strip.state.currentWeek'):t('strip.state.upcoming');
+  const name=`${x.title}, ${dm(x.ps)} – ${dm(x.pe)}: ${state_}`;
+  return `<li><button class="cell ${st==='up'?'':st}${isCur?' cur':''}" type="button" data-i="${x.i}" aria-label="${name.replace(/"/g,'&quot;')}">${x.ae!=null?'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>':(st==='over'?'!':x.i+1)}</button></li>`}).join('');
+ const strip=`<section class="sec"><ul class="strip" role="list" aria-label="${t('strip.label')}" style="list-style:none">${cells}</ul>
+  <div class="legend"><span><i class="d"></i>${t('strip.legend.done')}</span><span><i class="c"></i>${t('strip.legend.current')}</span><span><i class="o"></i>${t('strip.legend.overdue')}</span></div></section>`;
+ // this week card
+ let now;
+ if(T<START)now=`<p class="eyebrow">${t('now.eyebrowWeek')}</p><p style="margin-top:6px">${t('now.beforeStart',{date:fd(START),title:items[0].title})}</p>`;
+ else if(!c.cur&&T>c.end)now=`<p class="eyebrow">${t('now.eyebrowWeek')}</p><p style="margin-top:6px">${t('now.after',{date:fd(c.end)})}</p>`;
+ else{const x=c.cur;const left=Math.max(0,Math.round((x.pe-T)/DAY));const m=c.mins[x.i];
+  const tgt=480;const hrsRow=c.hasHours?`<span class="big">${t('now.minutesOfTarget',{done:m,target:tgt})}</span>`:`<span class="big">${t('noValue')}</span>`;
+  now=`<p class="eyebrow">${t('now.eyebrowWeek')} · W${x.i+1} · ${rng(x.ps,x.pe)}</p><h3>${x.title}</h3>
+   <div class="row">${hrsRow}<span>${left===0?t('now.lastDay'):t(left===1?'now.daysLeft1':'now.daysLeftN',{count:left})}</span></div>
+   ${c.hasHours?`<div class="pbar" role="progressbar" aria-label="${t('now.progressLabel')}" aria-valuemin="0" aria-valuemax="${tgt}" aria-valuenow="${Math.min(m,tgt)}"><i style="width:${Math.min(100,m/tgt*100)}%"></i></div>`:''}
+   <div class="actions"><button class="btn secondary sm" type="button" data-tick="${x.i}">${x.ae!=null?t('item.undoDone'):t('item.markDone')}</button></div>`;}
+ const nowSec=`<section class="sec now" aria-live="off">${now}</section>`;
+ // phases
+ let phHtml='';
+ W[L].forEach((ph,pi)=>{const its=items.filter(x=>x.pi===pi);const dn=its.filter(x=>x.ae!=null).length;
+  phHtml+=`<section class="ph" aria-label="${ph[0]}"><div class="ph-head"><h3>${ph[0]}</h3><span class="c">${t('phase.progress',{done:dn,total:its.length})}</span></div><p class="pn">${ph[1]}</p>`;
+  its.forEach(x=>{
+   const isCur=c.cur&&c.cur.i===x.i;const tags=[];
+   if(isCur)tags.push(`<span class="tag now">${t('tag.currentWeek')}</span>`);
+   if(x.ae==null&&x.pe<T)tags.push(`<span class="tag over">${t('tag.overdue')}</span>`);
+   tags.push(...itemLabel(x));
+   const h=c.hasHours?hrs(c.mins[x.i]):t('noValue');
+   const open=isCur?' open':'';
+   phHtml+=`<div class="it${open}" id="it-${x.i}" tabindex="-1"><label class="cb"><input type="checkbox" data-tick="${x.i}" ${x.ae!=null?'checked':''} aria-label="${t('item.checkAria',{title:x.title}).replace(/"/g,'&quot;')}"></label>
+   <div><div class="it-t">${x.title}</div>${tags.length?`<div class="it-tags">${tags.join('')}</div>`:''}
+   <div class="it-meta">${t('item.planned',{range:rng(x.ps,x.pe)})} · <span class="sr-only">${t('item.hoursLabel')}: </span>${h}</div>
+   ${x.note?`<div class="it-note">${x.note}</div>`:''}
+   <div class="it-det"><button class="btn ghost sm" type="button" data-open="${x.i}" aria-expanded="${isCur}" aria-controls="det-${x.i}" id="ob-${x.i}">${t('item.details')}</button></div>
+   <div class="det" id="det-${x.i}">
+    <div class="fld"><label for="as-${x.i}">${t('item.actualStart')}</label><div class="in"><input class="input d" id="as-${x.i}" type="date" value="${x.as?F(x.as):''}"><button class="btn secondary sm" type="button" data-today="as" data-i="${x.i}" aria-label="${t('item.todayAriaStart',{title:x.title}).replace(/"/g,'&quot;')}">${t('item.today')}</button><button class="btn ghost sm" type="button">${t('item.clear')}</button></div></div>
+    <div class="fld"><label for="ae-${x.i}">${t('item.actualEnd')}</label><div class="in"><input class="input d" id="ae-${x.i}" type="date" value="${x.ae?F(x.ae):''}"><button class="btn secondary sm" type="button" data-today="ae" data-i="${x.i}" aria-label="${t('item.todayAriaEnd',{title:x.title}).replace(/"/g,'&quot;')}">${t('item.today')}</button><button class="btn ghost sm" type="button">${t('item.clear')}</button></div></div>
+    <div class="fld full"><label for="nt-${x.i}">${t('item.noteLabel')}</label><textarea class="input" id="nt-${x.i}" placeholder="${t('item.notePlaceholder')}">${x.note}</textarea></div>
+   </div></div></div>`;});
+  phHtml+='</section>';});
+ // checkpoints
+ const rows=CPS.map(cp=>{const mx=32,sc=cp[3],th=cp[2];
+  const stt=sc==null?'pending':th==null?'recorded':sc>=th?'pass':'below';
+  const wk=(()=>{const d=P(cp[1]);if(d<START||d>c.end)return fd(d);return t('cp.week',{n:Math.floor((d-START)/DAY/7)+1})})();
+  const delta=(sc!=null&&th!=null)?(sc-th>=0?'+':'−')+Math.abs(sc-th):'';
+  const note=cp[4]?cp[4][L]:'';
+  return `<tr><td><div class="cp-n">${cp[0]}</div><div class="cp-w">${wk}${note?' · '+note:''}</div></td><td class="num">${th==null?t('noValue'):'≥ '+th}</td>
+  <td><div class="score"><input inputmode="decimal" value="${sc==null?'':nf(sc)}" aria-label="${t('cp.scoreAria',{title:cp[0],max:mx}).replace(/"/g,'&quot;')}"><span class="muted">/ ${mx}</span></div>
+  <div class="st"><span>${t('cp.state.'+stt)}</span>${delta?`<span class="dl">${delta}</span>`:''}</div></td></tr>`}).join('');
+ // chart svg
+ const bw=44,gap=20,H=140,x0=34;
+ let bars='';CPS.forEach((cp,k)=>{const sc=cp[3],th=cp[2],x=x0+k*(bw+gap);const stt=sc==null?'pending':th==null?'recorded':sc>=th?'pass':'below';
+  const hh=sc==null?0:sc/32*H;const y=H-hh;
+  if(stt==='pending')bars+=`<rect x="${x}" y="${H-24}" width="${bw}" height="24" rx="3" fill="none" stroke="var(--border-input)" stroke-dasharray="4 3" stroke-width="1.5"/>`;
+  else bars+=`<rect x="${x}" y="${y}" width="${bw}" height="${hh}" rx="3" fill="${stt==='pass'?'var(--text)':stt==='below'?'url(#hatch)':'var(--primary)'}" ${stt==='below'?'stroke="var(--danger)" stroke-width="1.5"':''}/><text class="v" x="${x+bw/2}" y="${y-5}" text-anchor="middle">${nf(sc)}</text>`;
+  if(th!=null)bars+=`<line x1="${x-6}" x2="${x+bw+6}" y1="${H-th/32*H}" y2="${H-th/32*H}" stroke="var(--text)" stroke-width="2" stroke-dasharray="5 3"/>`;
+  bars+=`<text x="${x+bw/2}" y="${H+16}" text-anchor="middle">${cp[0].replace('Checkpoint ','CP').replace('Diagnostic','Diag')}</text>`;});
+ const srItems=CPS.map(cp=>{const sc=cp[3],th=cp[2];return sc==null?`${cp[0]}: ${L==='vi'?'chưa có điểm':'no score yet'}`:th==null?`${cp[0]}: ${nf(sc)}/32`:`${cp[0]}: ${nf(sc)}/32, ${t('cp.legendThreshold').toLowerCase()} ${th}, ${sc>=th?t('cp.state.pass').toLowerCase():t('cp.state.below').toLowerCase()}`}).join('; ');
+ const cpSec=`<section class="sec" aria-labelledby="cph"><h2 class="eyebrow" id="cph">${t('cp.title')}</h2>
+  <table><thead><tr><th scope="col">${t('cp.colName')}</th><th scope="col">${t('cp.colThreshold')}</th><th scope="col">${t('cp.colScore')}</th></tr></thead><tbody>${rows}</tbody></table>
+  <figure class="chart"><figcaption>${t('cp.chartTitle')}</figcaption>
+  <svg viewBox="0 0 ${x0+5*(bw+gap)} ${H+28}" role="img" aria-label="${srItems.replace(/"/g,'&quot;')}"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--danger-soft)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--danger)" stroke-width="2.5"/></pattern></defs>
+  <line x1="${x0-8}" x2="${x0+5*(bw+gap)}" y1="${H}" y2="${H}" stroke="var(--border-input)"/>${bars}</svg>
+  <div class="lgd"><span><i style="background:var(--text)"></i>${t('cp.state.pass')}</span><span><i style="background:repeating-linear-gradient(45deg,var(--danger) 0 2px,var(--danger-soft) 2px 5px);outline:1.5px solid var(--danger)"></i>${t('cp.state.below')}</span><span><i style="background:var(--primary)"></i>${t('cp.state.recorded')}</span><span><i style="border:1.5px dashed var(--border-input)"></i>${t('cp.state.pending')}</span><span>- - ${t('cp.legendThreshold')}</span></div></figure></section>`;
+ const noteSec=`<section class="sec"><h2 class="eyebrow">${t('note.title')}</h2><p class="noteb">${NOTE[L]}</p></section>`;
+ const how=`<section class="sec"><details><summary>${t('howHours.summary')}</summary><p>${t('howHours.body')}</p></details></section>`;
+ document.getElementById('view').innerHTML=`<p><a class="link" href="11-roadmaps.html">← ${t('detail.back')}</a></p>
+ <header class="head"><div><h1 tabindex="-1">${t('roadmapTitle')}</h1><p class="goal">${goalLine}</p></div><a class="btn secondary" href="13-roadmap-editor.html">${t('detail.edit')}</a></header>
+ ${ov}${strip}<div class="cols"><div>${nowSec}<div>${phHtml}</div></div><aside>${cpSec}${noteSec}${how}</aside></div>`;
+ // on desktop move the "this week" card to the aside top
+ document.querySelectorAll('[data-tick]').forEach(e=>e.addEventListener('click',ev=>{const i=+e.dataset.tick;const x=items[i];x.ae=x.ae==null?state.today:null;rerender(i)}));
+ document.querySelectorAll('[data-today]').forEach(e=>e.addEventListener('click',()=>{const x=items[+e.dataset.i];x[e.dataset.today]=state.today;rerender(x.i)}));
+ document.querySelectorAll('[data-open]').forEach(e=>e.addEventListener('click',()=>{const it=document.getElementById('it-'+e.dataset.open);const o=it.classList.toggle('open');e.setAttribute('aria-expanded',o)}));
+ document.querySelectorAll('.cell').forEach(e=>e.addEventListener('click',()=>{const it=document.getElementById('it-'+e.dataset.i);it.scrollIntoView({block:'center'});it.focus()}));
+}
+document.getElementById('lang').onchange=render;document.getElementById('variant').onchange=render;document.getElementById('cp2').onchange=render;render();
+</script>
+</body>
+</html>
