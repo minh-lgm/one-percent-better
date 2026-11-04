@@ -125,7 +125,8 @@ test.describe('M17 Big goals — data and list', () => {
     await importBackup(page, 'q1-goal-only-backup.json');
     await gotoHash(page, '/roadmaps');
     await expect(page.getByTestId('roadmaps-empty')).toContainText(ROADMAP_EN.list.empty);
-    await expect(page.getByTestId('roadmaps-empty').getByRole('button')).toHaveCount(0);
+    // M20: the empty state carries the template button (and the "Create empty roadmap" link of M19)
+    await expect(page.getByTestId('roadmaps-empty').getByRole('button')).toHaveText([ROADMAP_EN.list.createTemplate]);
     await gotoHash(page, '/today');
     await expect(goalCard(page, 'QPT study')).toBeVisible();
   });
