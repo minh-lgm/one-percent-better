@@ -26,7 +26,7 @@ const strip = (c: string) => c.trim().replace(/^`/, '').replace(/`$/, '');
 interface Row { key: string; ms: string; en: string; vi: string }
 const rows: Row[] = [];
 for (const line of design.slice(start, end > start ? end : undefined)) {
-  const m = /^\| `([A-Za-z0-9_.]+)` \| (M\d+)\b/.exec(line);
+  const m = /^\| `([A-Za-z0-9_.]+)` \| \*{0,2}(M\d+)\b/.exec(line) // v8.3: DESIGN may bold the MS cell;
   if (!m) continue;
   const cells = line.replace(/\|\s*$/, '').split('|').map((c) => c.trim());
   const e = strip(cells[cells.length - 2]);

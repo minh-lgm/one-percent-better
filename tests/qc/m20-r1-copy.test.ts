@@ -26,7 +26,7 @@ const strip = (c: string) => c.trim().replace(/^`/, '').replace(/`$/, '');
 interface Row { key: string; ms: string; en: string; vi: string }
 const rows: Row[] = [];
 for (const line of design.slice(start, end > start ? end : undefined)) {
-  const m = /^\| `([A-Za-z0-9_.]+)` \| (M\d+)\b/.exec(line);
+  const m = /^\| `([A-Za-z0-9_.]+)` \| \*{0,2}(M\d+)\b/.exec(line) // v8.3: DESIGN may bold the MS cell;
   if (!m) continue;
   const cells = line.replace(/\|\s*$/, '').split('|').map((c) => c.trim());
   const e = strip(cells[cells.length - 2]);
@@ -36,7 +36,7 @@ for (const line of design.slice(start, end > start ? end : undefined)) {
 }
 
 describe('M20 QC: roadmap namespace == DESIGN 7.9.2 verbatim', () => {
-  const live = rows.filter((r) => r.ms === 'M17' || r.ms === 'M19' || r.ms === 'M20');
+  const live = rows.filter((r) => r.ms === 'M17' || r.ms === 'M19' || r.ms === 'M20' || r.ms === 'M21');
   it('parsed a plausible number of rows', () => {
     expect(live.length).toBeGreaterThan(150);
   });
@@ -56,7 +56,7 @@ describe('M20 QC: roadmap namespace == DESIGN 7.9.2 verbatim', () => {
     expect(Object.keys(en).filter((k) => !known.has(k) && !['importLine', 'importLineKept'].includes(k)) /* M17 keys moved from 7.9.1 to the namespace (accepted at M17) */).toEqual([]);
   });
   it('M20 rows present (count) and every M20 key exists in both languages', () => {
-    const m20 = rows.filter((r) => r.ms === 'M20');
+    const m20 = rows.filter((r) => r.ms === 'M20' || r.ms === 'M21');
     expect(m20.length).toBeGreaterThan(40);
     expect(m20.filter((r) => !(r.key in en) || (!/_one$/.test(r.key) && !(r.key in vi))).map((r) => r.key)).toEqual([]);
   });

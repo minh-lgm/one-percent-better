@@ -129,7 +129,7 @@ test.describe('M20 QC r1', () => {
       left: await page.getByTestId('this-week-days').textContent(),
       diag: await cpRow(page, 'Diagnostic').getByTestId('cp-score').inputValue(),
     });
-    const q1 = { done: '1/21', hours: '5,8 giờ', plan: 'Kế hoạch đến hết tuần này: 16 giờ', pace: ROADMAP_VI.pace.onTrack, days: '125', w1: 'Sớm 1 ngày · học 6 ngày', week: '75/480 phút', left: 'Còn 5 ngày', diag: '5' };
+    const q1 = { done: '1/21', hours: '6,6 giờ', plan: 'Kế hoạch đến hết tuần này: 16 giờ', pace: ROADMAP_VI.pace.onTrack, days: '125', w1: 'Sớm 1 ngày · học 6 ngày', week: '75/480 phút', left: 'Còn 5 ngày', diag: '5' };
     expect(await numbers()).toEqual(q1);
     // scores
     await score(page, 'Checkpoint 2', '18');

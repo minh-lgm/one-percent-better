@@ -43,7 +43,7 @@ describe('Q1 oracle from the shipped fixture, numbers written by hand', () => {
     const f = parsed.value;
     expect([f.goals.length, f.entries.length, f.roadmaps?.length, f.roadmapPhases?.length, f.roadmapItems?.length, f.roadmapCheckpoints?.length]).toEqual([6, 29, 1, 5, 21, 5]);
   });
-  it('W1 270, W2 75, W3 0, total 345 (5.8 h); planned 960 (16 h); 1/21; 125 days; on track', () => {
+  it('W1 270, W2 75, W3 0, total 395 (6.6 h; v8.3: all goal time); planned 960 (16 h); 1/21; 125 days; on track', () => {
     if (!parsed.ok) throw new Error('fixture');
     const f = parsed.value;
     const goal = f.goals.find((g) => g.id === 'gq')!;
@@ -54,7 +54,7 @@ describe('Q1 oracle from the shipped fixture, numbers written by hand', () => {
     expect(v.itemMinutes.get(ord[0].id)).toBe(270); // 10-27 60 + 10-29 90 + 11-01 120
     expect(v.itemMinutes.get(ord[1].id)).toBe(75); // 11-03 45 + 11-04 30
     expect(v.itemMinutes.get(ord[2].id)).toBe(0);
-    expect(v.hoursDoneMinutes).toBe(345);
+    expect(v.hoursDoneMinutes).toBe(395);
     const row = toListRow(v);
     expect(row.doneCount).toBe(1);
     expect(row.itemCount).toBe(21);

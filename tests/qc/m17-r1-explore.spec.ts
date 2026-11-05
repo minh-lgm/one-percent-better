@@ -37,7 +37,7 @@ test.describe('M17 QC: list numbers, empty state, a11y, layout', () => {
 
   for (const [w, h] of [[360, 740], [1440, 900]] as const) {
     for (const loc of ['en', 'vi'] as const) {
-      test(`Q1 list ${w}x${h} ${loc}: numbers 1/21, 5.8 h of 16 h, 125 days, no horizontal scroll, axe light+dark, nav 5 items`, async ({ page }) => {
+      test(`Q1 list ${w}x${h} ${loc}: numbers 1/21, 6.6 h of 16 h, 125 days, no horizontal scroll, axe light+dark, nav 5 items`, async ({ page }) => {
         await page.setViewportSize({ width: w, height: h });
         await importBackup(page, 'q1-roadmap-backup.json');
         if (loc === 'vi') await setLocale(page, 'vi');
@@ -46,11 +46,11 @@ test.describe('M17 QC: list numbers, empty state, a11y, layout', () => {
         await expect(row).toHaveCount(1);
         if (loc === 'en') {
           await expect(row.getByTestId('roadmap-progress')).toHaveText('Done 1/21');
-          await expect(row.getByTestId('roadmap-hours')).toHaveText('Studied 5.8 h of 16 h');
+          await expect(row.getByTestId('roadmap-hours')).toHaveText('Studied 6.6 h of 16 h');
           await expect(row.getByTestId('roadmap-milestone')).toHaveText('Thi QPT: 125 days left');
           await expect(row.getByTestId('pace-chip')).toHaveText('On track');
         } else {
-          await expect(row.getByTestId('roadmap-hours')).toContainText('5,8 giờ');
+          await expect(row.getByTestId('roadmap-hours')).toContainText('6,6 giờ');
           await expect(row.getByTestId('roadmap-hours')).toContainText('16 giờ');
           await expect(row.getByTestId('roadmap-milestone')).toContainText('125');
           await expect(row.getByTestId('roadmap-progress')).toContainText('1/21');

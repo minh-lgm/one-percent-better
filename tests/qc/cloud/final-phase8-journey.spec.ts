@@ -41,7 +41,7 @@ for (const c of CASES) {
     test.setTimeout(240_000);
     const { copy, rm, lang } = c;
     const vi = lang === 'vi';
-    const hours = vi ? '5,8 giờ' : '5.8 h';
+    const hours = vi ? '6,6 giờ' : '6.6 h';
     const a = await device({ locale: c.locale, viewport: c.viewport });
     const page = a.page;
     const errors = collectErrors(page);
@@ -74,7 +74,7 @@ for (const c of CASES) {
       const row = rows(p);
       await expect(row).toHaveCount(1);
       await expect(row.getByTestId('roadmap-progress')).toContainText(done);
-      await expect(row.getByTestId('roadmap-hours')).toContainText(vi ? '5,8' : '5.8');
+      await expect(row.getByTestId('roadmap-hours')).toContainText(vi ? '6,6' : '6.6');
       await expect(row.getByTestId('roadmap-hours')).toContainText('16');
       await expect(row.getByTestId('pace-chip')).toHaveText(rm.pace.onTrack);
       await expect(row.getByTestId('roadmap-milestone')).toContainText('125');

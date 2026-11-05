@@ -35,7 +35,7 @@ test.describe('M19 QC r1', () => {
     await gotoHash(page, '/roadmaps/rq');
     await expect(page.getByTestId('done-value')).toHaveText('1/21');
     await expect(ov(page).getByTestId('pace-chip')).toHaveText('On track');
-    await expect(ov(page).getByTestId('hours-value')).toHaveText('5.8 h');
+    await expect(ov(page).getByTestId('hours-value')).toHaveText('6.6 h');
     await expect(ov(page)).toContainText('16 h');
     await expect(ov(page).getByTestId('milestone-value')).toContainText('125');
     await expect(cells(page)).toHaveCount(21);
@@ -66,7 +66,7 @@ test.describe('M19 QC r1', () => {
     await gotoHash(page, '/goals');
     await page.getByTestId('goal-row').filter({ hasText: 'QPT study' }).getByRole('button', { name: EN.goals.archive }).click();
     await gotoHash(page, '/roadmaps/rq');
-    await expect(ov(page).getByTestId('hours-value')).toHaveText('5.8 h');
+    await expect(ov(page).getByTestId('hours-value')).toHaveText('6.6 h');
     await expect(page.getByTestId('detail-goal')).toContainText(ROADMAP_EN.detail.goalArchived);
     await expect(page.locator('main')).toContainText(ROADMAP_EN.overview.hoursArchived);
     // delete (archived goals are listed under the archive toggle? try the row first)
@@ -132,7 +132,7 @@ test.describe('M19 QC r1', () => {
       await expect(w3.getByTestId('item-label')).toHaveText('Đang học');
       await expect(w3.getByTestId('item-hours')).toHaveText('0,5 giờ');
       await expect(w2.getByTestId('item-hours')).toHaveText('0,8 giờ');
-      await expect(ov(page).getByTestId('hours-value')).toHaveText('5,8 giờ');
+      await expect(ov(page).getByTestId('hours-value')).toHaveText('6,6 giờ');
       await w3.getByLabel('Kết thúc thực tế', { exact: true }).fill('2026-11-05');
       await expect(w3.getByRole('alert')).toHaveText(ROADMAP_VI.errors.DATE_IN_FUTURE);
       expect(ROADMAP_VI.errors.DATE_IN_FUTURE).not.toBe(VI.errors.DATE_IN_FUTURE);
