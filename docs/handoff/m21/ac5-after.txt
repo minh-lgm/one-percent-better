@@ -1,0 +1,116 @@
+vi-VN 360 GoalForm #1 2026-10-01: actual 220.0 natural 214.0 ok
+vi-VN 360 GoalForm #2 2026-10-31: actual 220.0 natural 214.0 ok
+vi-VN 690 GoalForm #1 2026-10-01: actual 220.0 natural 214.0 ok
+vi-VN 690 GoalForm #2 2026-10-31: actual 220.0 natural 214.0 ok
+vi-VN 1440 GoalForm #1 2026-10-01: actual 220.0 natural 214.0 ok
+vi-VN 1440 GoalForm #2 2026-10-31: actual 220.0 natural 214.0 ok
+vi-VN 360 DateNav #1 2026-11-03: actual 180.0 natural 160.0 ok
+vi-VN 690 DateNav #1 2026-11-03: actual 200.0 natural 160.0 ok
+vi-VN 1440 DateNav #1 2026-11-03: actual 200.0 natural 160.0 ok
+en-US 360 GoalForm #1 2026-10-01: actual 220.0 natural 214.0 ok
+en-US 360 GoalForm #2 2026-10-31: actual 220.0 natural 214.0 ok
+en-US 690 GoalForm #1 2026-10-01: actual 220.0 natural 214.0 ok
+en-US 690 GoalForm #2 2026-10-31: actual 220.0 natural 214.0 ok
+en-US 1440 GoalForm #1 2026-10-01: actual 220.0 natural 214.0 ok
+en-US 1440 GoalForm #2 2026-10-31: actual 220.0 natural 214.0 ok
+en-US 360 DateNav #1 2026-11-03: actual 180.0 natural 160.0 ok
+en-US 690 DateNav #1 2026-11-03: actual 200.0 natural 160.0 ok
+en-US 1440 DateNav #1 2026-11-03: actual 200.0 natural 160.0 ok
+en-US 360 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+en-US 360 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+en-US 390 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+en-US 390 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+en-US 690 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+en-US 690 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+en-US 768 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+en-US 768 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+en-US 1024 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+en-US 1024 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+en-US 1280 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+en-US 1280 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+en-US 1440 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+en-US 1440 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+en-US 360 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+en-US 360 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+en-US 390 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+en-US 390 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+en-US 690 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+en-US 690 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+en-US 768 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+en-US 768 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+en-US 1024 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+en-US 1024 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+en-US 1280 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+en-US 1280 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+en-US 1440 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+en-US 1440 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+en-US 360 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+en-US 390 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+en-US 690 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+en-US 768 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+en-US 1024 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+en-US 1280 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+en-US 1440 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+en-US 360 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+en-US 390 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+en-US 690 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+en-US 768 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+en-US 1024 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+en-US 1280 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+en-US 1440 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+en-US 360 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+en-US 390 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+en-US 690 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+en-US 768 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+en-US 1024 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+en-US 1280 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+en-US 1440 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 360 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 360 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 390 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 390 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 690 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 690 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 768 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 768 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 1024 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 1024 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 1280 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 1280 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 1440 (1) S13 W1 actual start / end #1 2026-10-27: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 1440 (1) S13 W1 actual start / end #2 2026-11-01: actual 175.0 natural 175.0 min-width 166px ok
+vi-VN 360 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 360 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 390 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 390 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 690 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 690 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 768 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 768 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 1024 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 1024 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 1280 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 1280 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 1440 (2) editor W1 planned start / end #1 2026-10-27: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 1440 (2) editor W1 planned start / end #2 2026-11-02: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 360 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 390 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 690 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 768 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 1024 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 1280 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 1440 (3) editor checkpoint Diagnostic date #1 2026-09-24: actual 220.0 natural 214.0 min-width 176px ok
+vi-VN 360 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 390 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 690 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 768 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 1024 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 1280 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 1440 (4) editor milestone date #1 2027-03-09: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 360 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 390 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 690 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 768 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 1024 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 1280 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
+vi-VN 1440 (5) QPT template dialog start date #1 2026-11-04: actual 220.0 natural 215.0 min-width 176px ok
